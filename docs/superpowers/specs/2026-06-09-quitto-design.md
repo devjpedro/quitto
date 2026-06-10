@@ -138,14 +138,28 @@ API tipada**:
 - **web** → Vercel (build estático, `*.vercel.app`).
 - **api** → Fly.io via Docker (`*.fly.dev`).
 - **Postgres** → Neon. **Arquivos** → R2.
-- Front fala com a API por URL em env var; CORS restrito à origem da Vercel.
+
+### Conectividade & sessão — proxy de mesma origem (reverse proxy)
+Como front (`*.vercel.app`) e back (`*.fly.dev`) são sites diferentes, o cookie de sessão padrão do
+Better Auth (`SameSite=Lax`) seria cookie de terceiro e os navegadores bloqueariam. Solução (padrão
+reverse proxy, recomendado pela doc do Better Auth quando não há domínio raiz comum):
+- **`vercel.json` no front** com um *rewrite* `"/api/:path*"` → `https://<api>.fly.dev/api/:path*`.
+- O navegador só conversa com `*.vercel.app`; a Vercel encaminha pro Fly nos bastidores. Cookie fica
+  **first-party** (`SameSite=Lax`, `httpOnly`, `Secure`) — sem depender de cookies de terceiros.
+- Bônus: vira **same-origin** → CORS deixa de ser necessário; o front chama só `/api/...` (relativo).
+- Custo: tráfego de API passa pelo edge da Vercel (free tier dá conta). **Não é gambiarra** — é
+  reverse proxy clássico (mesma ideia de nginx/BFF/rewrites do Next).
 
 ### Fluxo de dados (exemplo: enviar comprovante, contrato com confirmação)
-1. Comprador anexa arquivo → front envia multipart à API.
-2. API valida sessão, papel (é comprador?), tipo/tamanho/magic bytes do arquivo.
-3. Sobe no R2 (chave randômica) → cria `Proof`, muda parcela para `aguardando confirmação`.
-4. Grava `AuditEvent` → cria `Notification` para o vendedor.
-5. Front invalida as query keys afetadas → UI atualiza.
+Upload via **URL pré-assinada** — os bytes do arquivo vão direto do navegador para o R2 (não passam
+pela API nem pelo proxy), evitando limite de corpo e ganhando performance:
+1. Front pede URL de upload → `POST /api/parcelas/:id/comprovantes/presign`.
+2. API valida sessão + papel (é comprador?) → devolve **URL pré-assinada** do R2 (curta duração).
+3. Navegador faz `PUT` do arquivo **direto no R2** (chave randômica).
+4. Front confirma → `POST /api/parcelas/:id/comprovantes` com a chave do objeto.
+5. API verifica o objeto no R2 (tipo/tamanho), cria `Proof`, muda parcela para `aguardando
+   confirmação`, grava `AuditEvent` e cria `Notification` para o vendedor.
+6. Front invalida as query keys afetadas → UI atualiza.
 
 ### Job agendado (lembretes)
 Cron diário no Fly varre parcelas vencendo em X dias (configurável) e vencidas, e gera
@@ -194,10 +208,11 @@ na identidade B2 e em padrões reais de design.
 2. **SQL Injection:** Drizzle parametrizado, zero concatenação; entrada validada por Zod.
 3. **Mass assignment:** nunca jogar `req.body` no insert/update — só campos da whitelist do schema.
 4. **XSS:** React escapa por padrão; proibido `dangerouslySetInnerHTML` sem sanitização; CSP.
-5. **Upload:** valida MIME + extensão + magic bytes + tamanho; sem SVG; nomes randômicos; bucket
-   privado; download via URL assinada de curta duração com `Content-Disposition`.
-6. **Auth/sessão:** cookie httpOnly+Secure+SameSite; expiração/rotação; `state` no OAuth;
-   rate limit no login.
+5. **Upload (pré-assinado):** presign valida sessão+papel e restringe MIME/tamanho na própria URL do
+   R2; no confirm a API revalida o objeto (MIME + magic bytes + tamanho); sem SVG; nomes randômicos;
+   bucket privado; download via URL assinada de curta duração com `Content-Disposition`.
+6. **Auth/sessão:** cookie httpOnly+Secure+SameSite=Lax (first-party via proxy de mesma origem);
+   expiração/rotação; `state` no OAuth; rate limit no login.
 7. **CSRF:** cookies SameSite + proteção CSRF em requisições que alteram estado.
 8. **Convites:** token criptográfico, expiração, uso único, escopado.
 9. **Misconfiguration:** CORS restrito; erros verbosos só em dev; headers (CSP, HSTS,
@@ -207,7 +222,30 @@ na identidade B2 e em padrões reais de design.
 11. **Dependências:** `bun audit` + Dependabot no CI; libs atualizadas.
 12. **Logging/auditoria:** trilha de auditoria também como log de segurança; eventos de auth logados.
 
-## 8. Qualidade de código & tooling
+## 8. Tratamento de erros
+
+### Backend (Elysia)
+- Hierarquia `AppError` (`code`, `httpStatus`, `message`, `details?`) com subclasses:
+  `NotFoundError`, `ForbiddenError`, `ValidationError`, `ConflictError`, `BusinessRuleError`.
+- **`onError` central** mapeia tudo para um envelope JSON consistente + status correto; em produção
+  não vaza stack; loga no Sentry. Erros de validação de schema entram formatados por campo.
+- O Eden carrega o tipo do erro para o front.
+- **Envelope custom com `code`** (decisão): `{ "error": { "code": "CONTRACT_NOT_FOUND",
+  "message": "...", "details": { ... } } }`. `code` é um enum estável (ótimo para o front tratar e
+  traduzir por código), independente da mensagem.
+
+### Frontend (React)
+- **Client fino `apiClient`** envolvendo o Eden: configura base `/api` + `credentials:'include'` e
+  **normaliza** o `{ data, error }` do Eden lançando um `ApiError` tipado (React Query trata como
+  erro). Ponto único de import.
+- **TanStack Query:** `QueryCache`/`MutationCache` com `onError` global (toast para erro inesperado);
+  tratamento pontual para erros esperados; `throwOnError` em rotas → cai no error boundary.
+- **Error boundaries por rota** (`react-error-boundary`) com fallback amigável; reset ao navegar.
+- **Toasts** via `sonner`; erros de validação mapeados de `details` para os campos (React Hook Form).
+- Mapa erro→UX por `code`/status: 401 → login; 403 → "sem permissão"; 404 → not-found; 5xx →
+  genérico + Sentry.
+
+## 9. Qualidade de código & tooling
 
 - **Biome + Ultracite** (lint + format) e **Lefthook** no pre-commit.
 - Pre-commit: Biome nos arquivos staged + `tsc --noEmit` (typecheck).
@@ -218,7 +256,7 @@ na identidade B2 e em padrões reais de design.
 - **Validação de env no boot** (`Zod.parse(process.env)`) — falha cedo se faltar segredo.
 - **Migrations versionadas** (Drizzle Kit) no CI + seed para dev/testes.
 
-## 9. Testes
+## 10. Testes
 
 - **Unit:** regras de domínio puras (gerar cronograma, transições de estado, progresso/atraso).
 - **Integração (API):** endpoints contra Postgres efêmero, cobrindo permissões por papel e a
@@ -227,6 +265,6 @@ na identidade B2 e em padrões reais de design.
   notificação. Login via e-mail/senha para automatizar.
 - **CI (GitHub Actions):** lint + typecheck + migrations + suite completa a cada push.
 
-## 10. Decisões em aberto / a confirmar na implementação
+## 11. Decisões em aberto / a confirmar na implementação
 - Periodicidade das parcelas no MVP: mensal fixa (recorrência/outras periodicidades = backlog).
 - Detalhe da política de retenção LGPD dos comprovantes (prazo de expurgo após exclusão).
