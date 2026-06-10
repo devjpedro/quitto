@@ -93,7 +93,7 @@ acima do usuário sem migração traumática.
 
 ## 4. Arquitetura & stack
 
-### Repositório — monorepo leve (Bun workspaces)
+### Repositório — monorepo (Bun workspaces + Turborepo)
 ```
 / (repo)
 ├─ apps/
@@ -102,8 +102,12 @@ acima do usuário sem migração traumática.
 └─ packages/
    └─ shared/ → schemas Zod + tipos de domínio compartilhados
 ```
-Monorepo é necessário para o **Eden** importar o tipo do servidor Elysia no front
-(type-safety ponta-a-ponta sem codegen). Não é o "monorepo pesado de SaaS".
+- **Bun** é o gerenciador de pacotes (workspaces) dos dois apps + `shared`. No `api` também é
+  runtime (Elysia); no `web` é gerenciador/instalador (Vite roda o dev server). A Vercel suporta
+  instalação com Bun no deploy do front.
+- **Turborepo** é o orquestrador de tarefas com cache (`turbo run build/test/lint` em paralelo).
+- Monorepo é necessário para o **Eden** importar o tipo do servidor Elysia no front
+  (type-safety ponta-a-ponta sem codegen). Não é o "monorepo pesado de SaaS".
 
 ### Stack por camada
 | Camada | Escolha |
@@ -113,8 +117,22 @@ Monorepo é necessário para o **Eden** importar o tipo do servidor Elysia no fr
 | Banco | PostgreSQL no Neon (free tier) |
 | Arquivos | Cloudflare R2 (S3-compatible, bucket privado) |
 | Frontend | React + Vite; TanStack Router + TanStack Query; Tailwind + shadcn/ui; cliente Eden |
+| Monorepo | Bun workspaces (gerenciador) + Turborepo (task runner com cache) |
 | Agendado | Job diário no Fly (lembretes de vencimento/atraso → notificações in-app) |
 | Observabilidade | Sentry (free tier) + health check |
+
+### Risco conhecido & mitigação: Eden + Better Auth em monorepo
+A issue [eden#215](https://github.com/elysiajs/eden/issues/215) (aberta, Elysia 1.4.x) faz o **Eden
+Treaty perder a inferência (retorna `any`)** quando o plugin do Better Auth (`.mount()` + `.macro()`)
+é usado **dentro de um módulo importado cruzando pacotes**. Mitigação adotada — **desacoplar auth da
+API tipada**:
+- Better Auth montado como **handler puro** (`.mount('/api/auth', auth.handler)`) — não injeta tipos
+  de macro no app, não polui o Eden.
+- O **front usa o client do próprio Better Auth** (`createAuthClient`) para auth; o Eden tipa **apenas
+  as rotas de negócio** (contratos/parcelas).
+- Autorização nas rotas de negócio via guard `beforeHandle` (não altera tipo de resposta).
+- **Spike de type-safety no início** para confirmar que os tipos sobrevivem no workspace; se não
+  sobreviverem, fallback para cliente tipado via OpenAPI (que o Elysia já gera).
 
 ### Deploy (gratuito, sem domínio)
 - **web** → Vercel (build estático, `*.vercel.app`).
