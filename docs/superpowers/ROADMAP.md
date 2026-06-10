@@ -11,7 +11,7 @@ Spec de referência: `docs/superpowers/specs/2026-06-09-quitto-design.md`.
 
 | # | Fase | Entrega testável ao fim | Plano |
 |---|---|---|---|
-| **0** | Fundações + spike do Eden | Monorepo (Bun+Turbo), `api`/`web`/`shared`, tooling, Drizzle+Postgres, health check, deploy configs, CI verde. Prova Eden+Better Auth tipando cross-package. | `plans/2026-06-09-fase-0-fundacoes.md` ✅ escrito |
+| **0** | Fundações + spike do Eden | Monorepo (Bun+Turbo), `api`/`web`/`shared`, tooling, Drizzle+Postgres, health check, deploy configs, CI verde. Prova Eden+Better Auth tipando cross-package. | `plans/2026-06-09-fase-0-fundacoes.md` ✅ **concluído** (merge em `develop`; spike do Eden provado — tipo cruza o pacote sem virar `any`) |
 | **1** | Autenticação | Better Auth (Google + e-mail/senha) desacoplado, sessão, app shell (sidebar), login/logout, rota protegida. | a escrever |
 | **2** | Contratos + Parcelas (core) | Modelo de domínio, gerar cronograma, valores variáveis, RBAC por papel, tela de contrato + drawer. Criar/ver contratos solo. | a escrever |
 | **3** | Pagamento + comprovantes | Upload pré-assinado ao R2, máquina de estados (com/sem confirmação), trilha de auditoria. | a escrever |
