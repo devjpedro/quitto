@@ -25,15 +25,22 @@ export function LoginPage() {
       mode === "signin"
         ? signIn.email({ email, password, callbackURL: "/" })
         : signUp.email({ name, email, password, callbackURL: "/" });
-    const { error: err } = await action;
-    setLoading(false);
-    if (err) {
+    try {
+      const { error: err } = await action;
+      if (err) {
+        setError(
+          "Não foi possível entrar. Verifique os dados e tente novamente."
+        );
+        return;
+      }
+      window.location.href = "/";
+    } catch {
       setError(
         "Não foi possível entrar. Verifique os dados e tente novamente."
       );
-      return;
+    } finally {
+      setLoading(false);
     }
-    window.location.href = "/";
   }
 
   return (
@@ -46,6 +53,7 @@ export function LoginPage() {
 
         <Button
           className="mb-4 w-full"
+          disabled={loading}
           onClick={() =>
             signIn.social({ provider: "google", callbackURL: "/" })
           }
@@ -101,7 +109,10 @@ export function LoginPage() {
 
         <button
           className="mt-4 w-full text-center text-muted-foreground text-sm underline"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+          onClick={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError(null);
+          }}
           type="button"
         >
           {mode === "signin"
