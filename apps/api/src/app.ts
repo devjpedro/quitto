@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { auth } from "./auth";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
+import { meModule } from "./modules/me";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
   "/ping",
@@ -20,7 +21,8 @@ export function buildApp() {
     })
     .use(cors({ origin: env.WEB_ORIGIN, credentials: true }))
     .mount(auth.handler)
-    .use(apiRoutes);
+    .use(apiRoutes)
+    .use(meModule);
 }
 
 export const app = buildApp();
