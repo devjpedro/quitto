@@ -12,21 +12,25 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@elysiajs/eden": "latest",
     "@quitto/api": "workspace:*",
     "@quitto/shared": "workspace:*",
-    "@elysiajs/eden": "latest",
+    "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-router": "^1.170.15",
+    "better-auth": "^1.6.16",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "latest",
+    "@biomejs/biome": "latest",
     "@tailwindcss/vite": "latest",
-    "tailwindcss": "latest",
-    "vite": "latest",
-    "vitest": "latest",
+    "@tanstack/router-devtools": "^1.167.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "latest",
+    "tailwindcss": "latest",
     "typescript": "latest",
-    "@biomejs/biome": "latest"
+    "vite": "latest",
+    "vitest": "latest"
   }
 }
