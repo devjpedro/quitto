@@ -153,10 +153,10 @@ reverse proxy, recomendado pela doc do Better Auth quando não há domínio raiz
 ### Fluxo de dados (exemplo: enviar comprovante, contrato com confirmação)
 Upload via **URL pré-assinada** — os bytes do arquivo vão direto do navegador para o R2 (não passam
 pela API nem pelo proxy), evitando limite de corpo e ganhando performance:
-1. Front pede URL de upload → `POST /api/parcelas/:id/comprovantes/presign`.
+1. Front pede URL de upload → `POST /api/installments/:id/proofs/presign`.
 2. API valida sessão + papel (é comprador?) → devolve **URL pré-assinada** do R2 (curta duração).
 3. Navegador faz `PUT` do arquivo **direto no R2** (chave randômica).
-4. Front confirma → `POST /api/parcelas/:id/comprovantes` com a chave do objeto.
+4. Front confirma → `POST /api/installments/:id/proofs` com a chave do objeto.
 5. API verifica o objeto no R2 (tipo/tamanho), cria `Proof`, muda parcela para `aguardando
    confirmação`, grava `AuditEvent` e cria `Notification` para o vendedor.
 6. Front invalida as query keys afetadas → UI atualiza.
@@ -247,6 +247,17 @@ na identidade B2 e em padrões reais de design.
 
 ## 9. Qualidade de código & tooling
 
+### Convenção de idioma (obrigatória)
+- **Código em inglês:** identificadores (variáveis, funções, tipos, enums), nomes de arquivos/pastas,
+  rotas/paths da API, chaves de domínio e **comentários no código**. Entidades em inglês
+  (`Contract`, `Installment`, `Proof`, `Participant`, `Notification`), rotas em inglês
+  (`/api/contracts`, `/api/installments/:id/proofs`), códigos de erro em inglês
+  (`CONTRACT_NOT_FOUND`). Nada de "Portuglish" (`getContratoById`).
+- **Conteúdo ao usuário em pt-BR:** todo texto visível ao usuário — labels, botões, mensagens de
+  erro exibidas, notificações, textos de e-mail/PDF. Centralizado para facilitar (futuro i18n).
+- **Docs e mensagens de commit:** pt-BR (comunicação do time).
+
+### Tooling
 - **Biome + Ultracite** (lint + format) e **Lefthook** no pre-commit.
 - Pre-commit: Biome nos arquivos staged + `tsc --noEmit` (typecheck).
 - **tsconfig strict** (sem `any`).
