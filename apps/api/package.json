@@ -1,0 +1,32 @@
+{
+  "name": "@quitto/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/app.ts" },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --target bun --outdir dist",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@quitto/shared": "workspace:*",
+    "elysia": "latest",
+    "@elysiajs/cors": "latest",
+    "better-auth": "latest",
+    "drizzle-orm": "latest",
+    "postgres": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@elysiajs/eden": "latest",
+    "drizzle-kit": "latest",
+    "typescript": "latest",
+    "@biomejs/biome": "latest",
+    "@types/bun": "latest"
+  }
+}

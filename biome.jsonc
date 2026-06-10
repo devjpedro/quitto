@@ -1,0 +1,27 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  // Ultracite 7.x ships its Biome preset as versioned configs under the
+  // `ultracite/biome/*` export paths (there is no top-level "ultracite"
+  // config in 7.x, unlike older versions). core = base preset,
+  // react = JSX/React rules (apps/web), vitest = test-file rules.
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/vitest"
+  ],
+  "files": {
+    // We lint only first-party TS/TSX/CSS source and tests. Build/tool config
+    // files (vite/drizzle config), the static HTML entry, package manifests,
+    // and the drizzle-kit generated migrations/snapshots are intentionally
+    // excluded. A leading-negation list means "everything except these" in
+    // Biome 2.x; Biome canonicalizes it to this form (it strips a redundant
+    // explicit "**"), so do not re-add one — it will be removed on --write.
+    "includes": [
+      "!**/*.config.ts",
+      "!**/drizzle",
+      "!**/*.json",
+      "!**/*.jsonc",
+      "!**/*.html"
+    ]
+  }
+}
