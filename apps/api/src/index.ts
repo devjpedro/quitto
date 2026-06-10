@@ -1,5 +1,5 @@
-import { app } from './app'
+import { app } from "./app";
 
-app.listen(3000)
-// biome-ignore lint/suspicious/noConsole: server startup log
-console.log(`🦊 API on ${app.server?.hostname}:${app.server?.port}`)
+app.listen(3000);
+// Server startup log (ultracite's Biome preset does not enable noConsole).
+console.log(`🦊 API on ${app.server?.hostname}:${app.server?.port}`);
