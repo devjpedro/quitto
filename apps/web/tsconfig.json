@@ -3,7 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "paths": { "@quitto/api": ["../api/src/app.ts"] }
+    "paths": { "@quitto/api": ["../api/src/app.ts"], "@/*": ["./src/*"] }
   },
   "include": ["src", "tests"]
 }
