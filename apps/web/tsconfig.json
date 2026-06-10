@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": { "@quitto/api": ["../api/src/app.ts"] }
+  },
+  "include": ["src", "tests"]
+}
