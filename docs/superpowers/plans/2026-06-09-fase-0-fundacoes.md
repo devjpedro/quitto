@@ -10,6 +10,8 @@
 
 > **Pré-requisitos do ambiente:** `bun` instalado (`bun --version` ≥ 1.2). Um Postgres local para testes de integração: `docker run --name quitto-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=quitto -p 5432:5432 -d postgres:16`. O repo `quitto/` já existe e tem git inicializado.
 
+> **Convenção de idioma (ver spec §9):** código em inglês — identificadores, rotas, enums e **comentários no código**; conteúdo visível ao usuário em pt-BR; docs e mensagens de commit em pt-BR.
+
 ---
 
 ## Estrutura de arquivos (mapa)
@@ -196,17 +198,17 @@ git commit -m "chore: scaffold do monorepo (bun workspaces + turborepo)"
 ```ts
 import { z } from 'zod'
 
-/** Cria e valida um objeto de env a partir de um schema Zod, falhando cedo. */
+/** Builds and validates an env object from a Zod schema, failing fast. */
 export function makeEnv<T extends z.ZodTypeAny>(schema: T, source: unknown): z.infer<T> {
   const result = schema.safeParse(source)
   if (!result.success) {
     const issues = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n')
-    throw new Error(`Variáveis de ambiente inválidas:\n${issues}`)
+    throw new Error(`Invalid environment variables:\n${issues}`)
   }
   return result.data
 }
 
-/** Formato do envelope de erro da API (decisão do spec: code + message + details). */
+/** API error envelope shape (per spec: code + message + details). */
 export type ApiErrorBody = {
   error: { code: string; message: string; details?: Record<string, unknown> }
 }
@@ -295,11 +297,11 @@ import { describe, expect, it } from 'bun:test'
 import { parseEnv } from '../src/env'
 
 describe('parseEnv', () => {
-  it('rejeita quando DATABASE_URL está ausente', () => {
+  it('rejects when DATABASE_URL is missing', () => {
     expect(() => parseEnv({ BETTER_AUTH_SECRET: 'x'.repeat(32) })).toThrow(/DATABASE_URL/)
   })
 
-  it('aceita um env válido e retorna tipado', () => {
+  it('accepts a valid env and returns it typed', () => {
     const env = parseEnv({
       DATABASE_URL: 'postgres://u:p@localhost:5432/db',
       BETTER_AUTH_SECRET: 'x'.repeat(32),
@@ -466,7 +468,7 @@ import { sql } from 'drizzle-orm'
 import { db } from '../src/db/client'
 
 describe('db health', () => {
-  it('responde a um SELECT 1', async () => {
+  it('responds to a SELECT 1', async () => {
     const rows = await db.execute(sql`select 1 as ok`)
     expect(rows[0]).toMatchObject({ ok: 1 })
   })
@@ -541,8 +543,8 @@ export type App = typeof app
 import { app } from './app'
 
 app.listen(3000)
-// biome-ignore lint/suspicious/noConsole: log de inicialização do servidor
-console.log(`🦊 API em ${app.server?.hostname}:${app.server?.port}`)
+// biome-ignore lint/suspicious/noConsole: server startup log
+console.log(`🦊 API on ${app.server?.hostname}:${app.server?.port}`)
 ```
 
 - [ ] **Step 4: Escrever o teste do ping via Eden (in-process)**
@@ -557,11 +559,11 @@ import { app } from '../src/app'
 const api = treaty(app)
 
 describe('GET /api/ping', () => {
-  it('retorna status ok tipado (não any)', async () => {
+  it('returns typed ok status (not any)', async () => {
     const { data, error } = await api.api.ping.get()
     expect(error).toBeNull()
     expect(data).toEqual({ status: 'ok', service: 'quitto-api' })
-    // prova de tipo: o campo abaixo só compila se `data` for tipado corretamente
+    // type proof: the line below only compiles if `data` is correctly typed
     const status: 'ok' | undefined = data?.status
     expect(status).toBe('ok')
   })
@@ -705,7 +707,7 @@ export default defineConfig({
 import { treaty } from '@elysiajs/eden'
 import type { App } from '@quitto/api'
 
-// Mesma origem: o front chama '/api' (proxy do Vite em dev, vercel.json em prod).
+// Same origin: the front calls '/api' (Vite proxy in dev, vercel.json in prod).
 export const api = treaty<App>(window.location.origin, {
   fetch: { credentials: 'include' },
 })
@@ -744,7 +746,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import './index.css'
 
-// biome-ignore lint/style/noNonNullAssertion: #root existe no index.html
+// biome-ignore lint/style/noNonNullAssertion: #root exists in index.html
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
@@ -773,10 +775,10 @@ import { treaty } from '@elysiajs/eden'
 import { expectTypeOf, it } from 'vitest'
 import type { App } from '@quitto/api'
 
-it('Eden infere o tipo da resposta cross-package (mitigação eden#215)', () => {
+it('infers the Eden response type cross-package (eden#215 mitigation)', () => {
   const api = treaty<App>('http://localhost:3000')
   type PingResponse = Awaited<ReturnType<typeof api.api.ping.get>>['data']
-  // Se o Better Auth quebrasse os tipos, isto seria `any` e o teste falharia.
+  // If Better Auth broke the types, this would be `any` and the test would fail.
   expectTypeOf<PingResponse>().not.toBeAny()
   expectTypeOf<NonNullable<PingResponse>>().toEqualTypeOf<{ status: 'ok'; service: string }>()
 })
