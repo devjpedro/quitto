@@ -25,6 +25,24 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+export class NotFoundError extends AppError {
+  constructor(message = "Não encontrado") {
+    super({ code: "NOT_FOUND", httpStatus: 404, message });
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "Sem permissão") {
+    super({ code: "FORBIDDEN", httpStatus: 403, message });
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message = "Dados inválidos", details?: Record<string, unknown>) {
+    super({ code: "VALIDATION", httpStatus: 422, message, details });
+  }
+}
+
 export function toErrorBody(error: AppError): ApiErrorBody {
   return {
     error: { code: error.code, message: error.message, details: error.details },
