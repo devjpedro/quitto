@@ -1,4 +1,7 @@
 import { createRoute, createRouter } from "@tanstack/react-router";
+import { contractsQueryOptions } from "./hooks/use-contracts";
+import { queryClient } from "./lib/query";
+import { ContractsListPage } from "./routes/contracts-list";
 import { DashboardPage } from "./routes/dashboard";
 import { LoginPage } from "./routes/login";
 import { protectedRoute } from "./routes/protected";
@@ -16,9 +19,16 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 });
 
+const contractsListRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/contracts",
+  loader: () => queryClient.ensureQueryData(contractsQueryOptions),
+  component: ContractsListPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  protectedRoute.addChildren([dashboardRoute]),
+  protectedRoute.addChildren([dashboardRoute, contractsListRoute]),
 ]);
 
 export const router = createRouter({ routeTree });
