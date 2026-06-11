@@ -15,7 +15,7 @@ export const protectedRoute = createRoute({
   component: () => (
     <div className="flex min-h-screen">
       <AppSidebar />
-      <div className="flex-1">
+      <div className="flex-1 pb-16 sm:pb-0">
         <Outlet />
       </div>
     </div>
