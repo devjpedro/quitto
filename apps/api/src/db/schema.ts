@@ -134,5 +134,8 @@ export const participant = pgTable(
     }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("participant_contract_id_idx").on(table.contractId)]
+  (table) => [
+    index("participant_contract_id_idx").on(table.contractId),
+    index("participant_linked_user_id_idx").on(table.linkedUserId),
+  ]
 );

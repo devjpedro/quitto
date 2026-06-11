@@ -1,0 +1,1 @@
+CREATE INDEX "participant_linked_user_id_idx" ON "participant" USING btree ("linked_user_id");

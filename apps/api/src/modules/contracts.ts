@@ -134,8 +134,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       const today = new Date().toISOString().slice(0, 10);
 
       return rows.map((c) => {
-        const own = items.filter((it) => it.contractId === c.id);
-        const progress = computeProgress(own, today);
+        const contractInstallments = items.filter(
+          (it) => it.contractId === c.id
+        );
+        const progress = computeProgress(contractInstallments, today);
         return {
           id: c.id,
           title: c.title,
