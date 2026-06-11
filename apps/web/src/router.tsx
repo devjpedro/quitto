@@ -1,6 +1,10 @@
 import { createRoute, createRouter } from "@tanstack/react-router";
-import { contractsQueryOptions } from "./hooks/use-contracts";
+import {
+  contractQueryOptions,
+  contractsQueryOptions,
+} from "./hooks/use-contracts";
 import { queryClient } from "./lib/query";
+import { ContractDetailPage } from "./routes/contract-detail";
 import { ContractNewPage } from "./routes/contract-new";
 import { ContractsListPage } from "./routes/contracts-list";
 import { DashboardPage } from "./routes/dashboard";
@@ -33,12 +37,21 @@ const contractNewRoute = createRoute({
   component: ContractNewPage,
 });
 
+const contractDetailRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/contracts/$id",
+  loader: ({ params }) =>
+    queryClient.ensureQueryData(contractQueryOptions(params.id)),
+  component: ContractDetailPage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   protectedRoute.addChildren([
     dashboardRoute,
     contractsListRoute,
     contractNewRoute,
+    contractDetailRoute,
   ]),
 ]);
 
