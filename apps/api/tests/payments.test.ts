@@ -127,3 +127,32 @@ describe.if(configured)("confirm upload (sem confirmação)", () => {
     expect((await res.json()).status).toBe("paid");
   });
 });
+
+describe.if(configured)("confirm/dispute", () => {
+  it("vendedor/dono confirma após o upload", async () => {
+    const cookie = await signUpCookie("cf");
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    await uploadProof(cookie, iId);
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/confirm`, {
+        method: "POST",
+        headers: { cookie },
+      })
+    );
+    expect((await res.json()).status).toBe("confirmed");
+  });
+
+  it("rejeita confirmar uma parcela ainda pendente (transição inválida -> 422)", async () => {
+    const cookie = await signUpCookie("cf2");
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/confirm`, {
+        method: "POST",
+        headers: { cookie },
+      })
+    );
+    expect(res.status).toBe(422);
+  });
+});

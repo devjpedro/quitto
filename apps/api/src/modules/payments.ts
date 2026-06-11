@@ -124,4 +124,118 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       }),
       response: t.Object({ status: t.String() }),
     }
+  )
+  .post(
+    "/installments/:installmentId/confirm",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const {
+        inst,
+        contract: c,
+        role,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
+      if (role !== "owner" && role !== "seller") {
+        throw new ForbiddenError("Apenas o vendedor/dono confirma");
+      }
+      const newStatus = nextStatus(
+        inst.status,
+        "confirm",
+        c.requiresConfirmation
+      );
+      await db.transaction(async (tx) => {
+        await tx
+          .update(installment)
+          .set({
+            status: newStatus,
+            confirmedAt: new Date(),
+            paidAt: new Date(),
+          })
+          .where(eq(installment.id, inst.id));
+        await recordEvent(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          type: "payment_confirmed",
+        });
+      });
+      return { status: newStatus };
+    },
+    {
+      params: t.Object({ installmentId: t.String() }),
+      response: t.Object({ status: t.String() }),
+    }
+  )
+  .post(
+    "/installments/:installmentId/dispute",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      const {
+        inst,
+        contract: c,
+        role,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
+      if (role !== "owner" && role !== "seller") {
+        throw new ForbiddenError("Apenas o vendedor/dono contesta");
+      }
+      const newStatus = nextStatus(
+        inst.status,
+        "dispute",
+        c.requiresConfirmation
+      );
+      await db.transaction(async (tx) => {
+        await tx
+          .update(installment)
+          .set({ status: newStatus })
+          .where(eq(installment.id, inst.id));
+        await recordEvent(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          type: "payment_disputed",
+          metadata: body.reason ? { reason: body.reason } : undefined,
+        });
+      });
+      return { status: newStatus };
+    },
+    {
+      params: t.Object({ installmentId: t.String() }),
+      body: t.Object({ reason: t.Optional(t.String({ maxLength: 500 })) }),
+      response: t.Object({ status: t.String() }),
+    }
+  )
+  .post(
+    "/installments/:installmentId/mark-paid",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const {
+        inst,
+        contract: c,
+        role,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
+      if (role !== "owner" && role !== "buyer") {
+        throw new ForbiddenError("Apenas o comprador/dono marca como paga");
+      }
+      const newStatus = nextStatus(
+        inst.status,
+        "mark_paid",
+        c.requiresConfirmation
+      );
+      await db.transaction(async (tx) => {
+        await tx
+          .update(installment)
+          .set({ status: newStatus, paidAt: new Date() })
+          .where(eq(installment.id, inst.id));
+        await recordEvent(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          type: "installment_paid",
+        });
+      });
+      return { status: newStatus };
+    },
+    {
+      params: t.Object({ installmentId: t.String() }),
+      response: t.Object({ status: t.String() }),
+    }
   );
