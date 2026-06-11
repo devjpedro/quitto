@@ -1,4 +1,13 @@
-import { boolean, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  date,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -48,4 +57,73 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const ownerRoleEnum = pgEnum("owner_role", [
+  "buyer",
+  "seller",
+  "neutral",
+]);
+export const contractStatusEnum = pgEnum("contract_status", [
+  "active",
+  "completed",
+  "cancelled",
+]);
+export const installmentStatusEnum = pgEnum("installment_status", [
+  "pending",
+  "awaiting_confirmation",
+  "confirmed",
+  "disputed",
+  "paid",
+]);
+export const participantRoleEnum = pgEnum("participant_role", [
+  "owner",
+  "buyer",
+  "seller",
+  "viewer",
+]);
+
+export const contract = pgTable("contract", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ownerId: text("owner_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  ownerRole: ownerRoleEnum("owner_role").notNull(),
+  totalAmountCents: integer("total_amount_cents").notNull(),
+  installmentsCount: integer("installments_count").notNull(),
+  requiresConfirmation: boolean("requires_confirmation")
+    .notNull()
+    .default(false),
+  status: contractStatusEnum("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const installment = pgTable("installment", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id")
+    .notNull()
+    .references(() => contract.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  dueDate: date("due_date").notNull(),
+  status: installmentStatusEnum("status").notNull().default("pending"),
+  paidAt: timestamp("paid_at"),
+  confirmedAt: timestamp("confirmed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const participant = pgTable("participant", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  contractId: uuid("contract_id")
+    .notNull()
+    .references(() => contract.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  role: participantRoleEnum("role").notNull(),
+  linkedUserId: text("linked_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
