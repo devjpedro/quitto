@@ -51,6 +51,40 @@ async function firstInstallmentId(
   return (await res.json()).installments[0].id as string;
 }
 
+async function uploadProof(cookie: string, installmentId: string) {
+  const presign = await (
+    await app.handle(
+      new Request(
+        `http://localhost/api/installments/${installmentId}/proofs/presign`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({
+            fileName: "c.pdf",
+            mimeType: "application/pdf",
+          }),
+        }
+      )
+    )
+  ).json();
+  await fetch(presign.uploadUrl, {
+    method: "PUT",
+    headers: { "content-type": "application/pdf" },
+    body: "%PDF-1.4 fake",
+  });
+  return app.handle(
+    new Request(`http://localhost/api/installments/${installmentId}/proofs`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({
+        objectKey: presign.objectKey,
+        fileName: "c.pdf",
+        mimeType: "application/pdf",
+      }),
+    })
+  );
+}
+
 describe.if(configured)("POST presign", () => {
   it("retorna uploadUrl + objectKey para o dono", async () => {
     const cookie = await signUpCookie("presign");
@@ -70,5 +104,26 @@ describe.if(configured)("POST presign", () => {
     const body = await res.json();
     expect(body.uploadUrl).toContain("http");
     expect(body.objectKey).toContain(`/${iId}/`);
+  });
+});
+
+describe.if(configured)("confirm upload (com confirmação)", () => {
+  it("envia comprovante e vai para awaiting_confirmation", async () => {
+    const cookie = await signUpCookie("up1");
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const res = await uploadProof(cookie, iId);
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("awaiting_confirmation");
+  });
+});
+
+describe.if(configured)("confirm upload (sem confirmação)", () => {
+  it("envia comprovante e já fica paid", async () => {
+    const cookie = await signUpCookie("up2");
+    const cId = await createContract(cookie, false);
+    const iId = await firstInstallmentId(cookie, cId);
+    const res = await uploadProof(cookie, iId);
+    expect((await res.json()).status).toBe("paid");
   });
 });
