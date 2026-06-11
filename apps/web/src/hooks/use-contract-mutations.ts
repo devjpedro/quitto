@@ -33,6 +33,9 @@ export function useUpdateInstallmentMutation(contractId: string) {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
+      // Editing an installment changes the contract's aggregate progress
+      // (paidCents/percent/overdueCount/totalCents) shown in the contracts list.
+      qc.invalidateQueries({ queryKey: queryKeys.contracts });
     },
   });
 }

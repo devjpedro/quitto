@@ -6,6 +6,7 @@ import { makeTestQueryClient } from "./test-utils";
 
 const getContracts = vi.fn();
 const postContract = vi.fn();
+const patchInstallment = vi.fn();
 
 // Mock mirrors the real Eden treaty shape: `contracts` is callable (path param)
 // AND carries `.get`/`.post` as properties. Calling it returns the nested
@@ -14,7 +15,9 @@ vi.mock("@/lib/api", () => {
   const contracts = Object.assign(
     () => ({
       get: vi.fn(),
-      installments: () => ({ patch: vi.fn() }),
+      installments: () => ({
+        patch: (body: unknown) => patchInstallment(body),
+      }),
     }),
     {
       get: () => getContracts(),
@@ -24,7 +27,10 @@ vi.mock("@/lib/api", () => {
   return { api: { api: { contracts } } };
 });
 
-import { useCreateContractMutation } from "../src/hooks/use-contract-mutations";
+import {
+  useCreateContractMutation,
+  useUpdateInstallmentMutation,
+} from "../src/hooks/use-contract-mutations";
 import { useContractsQuery } from "../src/hooks/use-contracts";
 
 function wrapper(client = makeTestQueryClient()) {
@@ -85,5 +91,24 @@ describe("useCreateContractMutation", () => {
     });
     expect(created).toEqual({ id: "new-id" });
     expect(postContract).toHaveBeenCalledOnce();
+  });
+});
+
+describe("useUpdateInstallmentMutation", () => {
+  beforeEach(() => patchInstallment.mockReset());
+
+  it("invalidates both the contract detail and the list on success", async () => {
+    patchInstallment.mockResolvedValue({ data: { id: "i1" }, error: null });
+    const client = makeTestQueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(() => useUpdateInstallmentMutation("c1"), {
+      wrapper: wrapper(client),
+    });
+    await result.current.mutateAsync({
+      installmentId: "i1",
+      body: { amountCents: 100 },
+    });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["contract", "c1"] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["contracts"] });
   });
 });
