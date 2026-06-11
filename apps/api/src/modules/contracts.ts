@@ -1,6 +1,8 @@
+import { eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
+import { computeProgress } from "../lib/contract-progress";
 import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
 
@@ -34,68 +36,132 @@ const CreateContractBody = t.Object({
   schedule: t.Union([ScheduleAuto, ScheduleCustom]),
 });
 
-export const contractsModule = new Elysia({ prefix: "/api" }).post(
-  "/contracts",
-  async ({ request, body }) => {
-    const { user } = await requireAuth(request.headers);
+export const contractsModule = new Elysia({ prefix: "/api" })
+  .post(
+    "/contracts",
+    async ({ request, body }) => {
+      const { user } = await requireAuth(request.headers);
 
-    const rows =
-      body.schedule.mode === "auto"
-        ? generateSchedule({
-            totalAmountCents: body.schedule.totalAmountCents,
-            installmentsCount: body.schedule.installmentsCount,
-            firstDueDate: body.schedule.firstDueDate,
+      const rows =
+        body.schedule.mode === "auto"
+          ? generateSchedule({
+              totalAmountCents: body.schedule.totalAmountCents,
+              installmentsCount: body.schedule.installmentsCount,
+              firstDueDate: body.schedule.firstDueDate,
+            })
+          : body.schedule.installments.map((it, i) => ({
+              sequence: i + 1,
+              amountCents: it.amountCents,
+              dueDate: it.dueDate,
+            }));
+
+      const totalAmountCents = rows.reduce((acc, r) => acc + r.amountCents, 0);
+
+      const id = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(contract)
+          .values({
+            ownerId: user.id,
+            title: body.title,
+            description: body.description ?? null,
+            ownerRole: body.ownerRole,
+            totalAmountCents,
+            installmentsCount: rows.length,
+            requiresConfirmation: body.requiresConfirmation,
           })
-        : body.schedule.installments.map((it, i) => ({
-            sequence: i + 1,
-            amountCents: it.amountCents,
-            dueDate: it.dueDate,
-          }));
+          .returning({ id: contract.id });
 
-    const totalAmountCents = rows.reduce((acc, r) => acc + r.amountCents, 0);
+        if (!created) {
+          throw new Error("contract insert returned no row");
+        }
+        const contractId = created.id;
 
-    const id = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(contract)
-        .values({
-          ownerId: user.id,
-          title: body.title,
-          description: body.description ?? null,
-          ownerRole: body.ownerRole,
-          totalAmountCents,
-          installmentsCount: rows.length,
-          requiresConfirmation: body.requiresConfirmation,
-        })
-        .returning({ id: contract.id });
+        await tx.insert(installment).values(
+          rows.map((r) => ({
+            contractId,
+            sequence: r.sequence,
+            amountCents: r.amountCents,
+            dueDate: r.dueDate,
+          }))
+        );
 
-      if (!created) {
-        throw new Error("contract insert returned no row");
-      }
-      const contractId = created.id;
-
-      await tx.insert(installment).values(
-        rows.map((r) => ({
+        await tx.insert(participant).values({
           contractId,
-          sequence: r.sequence,
-          amountCents: r.amountCents,
-          dueDate: r.dueDate,
-        }))
-      );
+          displayName: user.name,
+          role: "owner",
+          linkedUserId: user.id,
+        });
 
-      await tx.insert(participant).values({
-        contractId,
-        displayName: user.name,
-        role: "owner",
-        linkedUserId: user.id,
+        return contractId;
       });
 
-      return contractId;
-    });
+      return { id };
+    },
+    {
+      body: CreateContractBody,
+      response: t.Object({ id: t.String() }),
+    }
+  )
+  .get(
+    "/contracts",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
 
-    return { id };
-  },
-  {
-    body: CreateContractBody,
-    response: t.Object({ id: t.String() }),
-  }
-);
+      const linked = await db
+        .select({ contractId: participant.contractId })
+        .from(participant)
+        .where(eq(participant.linkedUserId, user.id));
+      const linkedIds = linked.map((l) => l.contractId);
+
+      const rows = await db
+        .select()
+        .from(contract)
+        .where(
+          linkedIds.length > 0
+            ? or(eq(contract.ownerId, user.id), inArray(contract.id, linkedIds))
+            : eq(contract.ownerId, user.id)
+        );
+
+      if (rows.length === 0) {
+        return [];
+      }
+
+      const ids = rows.map((r) => r.id);
+      const items = await db
+        .select()
+        .from(installment)
+        .where(inArray(installment.contractId, ids));
+      const today = new Date().toISOString().slice(0, 10);
+
+      return rows.map((c) => {
+        const own = items.filter((it) => it.contractId === c.id);
+        const progress = computeProgress(own, today);
+        return {
+          id: c.id,
+          title: c.title,
+          ownerRole: c.ownerRole,
+          status: c.status,
+          totalCents: progress.totalCents,
+          paidCents: progress.paidCents,
+          percent: progress.percent,
+          overdueCount: progress.overdueCount,
+          installmentsCount: c.installmentsCount,
+        };
+      });
+    },
+    {
+      response: t.Array(
+        t.Object({
+          id: t.String(),
+          title: t.String(),
+          ownerRole: t.String(),
+          status: t.String(),
+          totalCents: t.Integer(),
+          paidCents: t.Integer(),
+          percent: t.Integer(),
+          overdueCount: t.Integer(),
+          installmentsCount: t.Integer(),
+        })
+      ),
+    }
+  );

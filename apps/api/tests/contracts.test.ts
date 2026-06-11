@@ -58,3 +58,19 @@ describe("POST /api/contracts", () => {
     expect(typeof body.id).toBe("string");
   });
 });
+
+describe("GET /api/contracts", () => {
+  it("lista apenas os contratos do usuário com progresso", async () => {
+    const cookie = await signUpCookie("list");
+    await createContract(cookie);
+    const res = await app.handle(
+      new Request("http://localhost/api/contracts", { headers: { cookie } })
+    );
+    expect(res.status).toBe(200);
+    const list = await res.json();
+    expect(Array.isArray(list)).toBe(true);
+    expect(list.length).toBeGreaterThanOrEqual(1);
+    expect(list[0]).toHaveProperty("percent");
+    expect(list[0].totalCents).toBe(12_000_000);
+  });
+});
