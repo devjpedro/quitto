@@ -32,6 +32,7 @@ describe("ContractRow", () => {
     expect(screen.getByText("Apê do irmão")).toBeInTheDocument();
     expect(screen.getByText(TOTAL)).toBeInTheDocument();
     expect(screen.getByText(OVERDUE)).toBeInTheDocument();
+    expect(screen.getByText("ativo")).toBeInTheDocument();
   });
 
   it("shows 'em dia' when there are no overdue installments", () => {

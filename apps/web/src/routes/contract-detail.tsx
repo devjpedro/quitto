@@ -1,5 +1,6 @@
 import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
+import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { InstallmentDrawer } from "@/components/installment-drawer";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +90,7 @@ export function ContractDetailPage() {
           <Badge tone="brand">
             {ROLE_LABELS[contract.ownerRole] ?? contract.ownerRole}
           </Badge>
+          <ContractStatusBadge status={contract.status} />
           {overdue ? (
             <Badge tone="danger">{progress.overdueCount} em atraso</Badge>
           ) : (

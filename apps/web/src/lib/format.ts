@@ -5,7 +5,7 @@ const BRL = new Intl.NumberFormat("pt-BR", {
 
 /** Formats integer cents as Brazilian currency (e.g. 200000 -> "R$ 2.000,00"). */
 export function formatBRL(cents: number): string {
-  return BRL.format(cents / 100).replace(/ /g, " ");
+  return BRL.format(cents / 100).replace(/[\u00a0\u202f]/g, " ");
 }
 
 /** Parses a BR currency string (with or without "R$") into integer cents, or null if invalid. */

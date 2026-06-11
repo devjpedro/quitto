@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatBRL } from "@/lib/format";
@@ -44,6 +45,7 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
           <Badge tone="brand">
             {ROLE_LABELS[contract.ownerRole] ?? contract.ownerRole}
           </Badge>
+          <ContractStatusBadge status={contract.status} />
         </div>
         <p className="mt-1.5 text-muted-foreground text-xs tabular-nums">
           <span className="font-medium text-foreground/80">
