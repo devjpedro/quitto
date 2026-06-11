@@ -2,7 +2,9 @@ import { eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
+import { getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
+import { NotFoundError } from "../lib/errors";
 import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
 
@@ -165,5 +167,103 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           installmentsCount: t.Integer(),
         })
       ),
+    }
+  )
+  .get(
+    "/contracts/:id",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const role = await getContractRole(user.id, params.id); // lança 404 se sem acesso
+
+      const [c] = await db
+        .select()
+        .from(contract)
+        .where(eq(contract.id, params.id))
+        .limit(1);
+      if (!c) {
+        throw new NotFoundError("Contrato não encontrado");
+      }
+      const items = await db
+        .select()
+        .from(installment)
+        .where(eq(installment.contractId, params.id));
+      const people = await db
+        .select()
+        .from(participant)
+        .where(eq(participant.contractId, params.id));
+      const today = new Date().toISOString().slice(0, 10);
+      const progress = computeProgress(items, today);
+
+      return {
+        role,
+        contract: {
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          ownerRole: c.ownerRole,
+          requiresConfirmation: c.requiresConfirmation,
+          status: c.status,
+        },
+        progress: {
+          totalCents: progress.totalCents,
+          paidCents: progress.paidCents,
+          remainingCents: progress.remainingCents,
+          percent: progress.percent,
+          overdueCount: progress.overdueCount,
+        },
+        installments: items
+          .sort((a, b) => a.sequence - b.sequence)
+          .map((it) => ({
+            id: it.id,
+            sequence: it.sequence,
+            amountCents: it.amountCents,
+            dueDate: it.dueDate,
+            status: it.status,
+          })),
+        participants: people.map((p) => ({
+          id: p.id,
+          displayName: p.displayName,
+          role: p.role,
+          linked: p.linkedUserId !== null,
+        })),
+      };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      response: t.Object({
+        role: t.String(),
+        contract: t.Object({
+          id: t.String(),
+          title: t.String(),
+          description: t.Union([t.String(), t.Null()]),
+          ownerRole: t.String(),
+          requiresConfirmation: t.Boolean(),
+          status: t.String(),
+        }),
+        progress: t.Object({
+          totalCents: t.Integer(),
+          paidCents: t.Integer(),
+          remainingCents: t.Integer(),
+          percent: t.Integer(),
+          overdueCount: t.Integer(),
+        }),
+        installments: t.Array(
+          t.Object({
+            id: t.String(),
+            sequence: t.Integer(),
+            amountCents: t.Integer(),
+            dueDate: t.String(),
+            status: t.String(),
+          })
+        ),
+        participants: t.Array(
+          t.Object({
+            id: t.String(),
+            displayName: t.String(),
+            role: t.String(),
+            linked: t.Boolean(),
+          })
+        ),
+      }),
     }
   );

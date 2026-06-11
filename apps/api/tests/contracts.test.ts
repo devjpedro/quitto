@@ -74,3 +74,31 @@ describe("GET /api/contracts", () => {
     expect(list[0].totalCents).toBe(12_000_000);
   });
 });
+
+describe("GET /api/contracts/:id", () => {
+  it("retorna o detalhe para o dono", async () => {
+    const cookie = await signUpCookie("detail");
+    const created = await (await createContract(cookie)).json();
+    const res = await app.handle(
+      new Request(`http://localhost/api/contracts/${created.id}`, {
+        headers: { cookie },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.role).toBe("owner");
+    expect(body.installments).toHaveLength(60);
+  });
+
+  it("retorna 404 para quem não tem acesso", async () => {
+    const ownerCookie = await signUpCookie("own");
+    const created = await (await createContract(ownerCookie)).json();
+    const strangerCookie = await signUpCookie("stranger");
+    const res = await app.handle(
+      new Request(`http://localhost/api/contracts/${created.id}`, {
+        headers: { cookie: strangerCookie },
+      })
+    );
+    expect(res.status).toBe(404);
+  });
+});
