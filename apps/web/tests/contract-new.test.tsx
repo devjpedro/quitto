@@ -54,4 +54,17 @@ describe("ContractNewPage (wizard)", () => {
       })
     );
   });
+
+  it("shows per-field schedule errors and never renders the literal 'undefined' [B3,B4]", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "Apê");
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+
+    await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
+
+    expect(
+      await screen.findByText("Data inválida (use AAAA-MM-DD)")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("undefined")).not.toBeInTheDocument();
+  });
 });

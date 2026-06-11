@@ -21,17 +21,29 @@ const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
 
 type ScheduleMode = "auto" | "custom";
 
+function getNestedError(
+  errors: unknown,
+  path: string
+): { message?: unknown } | undefined {
+  let current: unknown = errors;
+  for (const key of path.split(".")) {
+    if (current && typeof current === "object") {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return;
+    }
+  }
+  return current as { message?: unknown } | undefined;
+}
+
 function FieldError({ name }: { name: string }) {
   const { formState } = useFormContext<CreateContractInput>();
-  // biome-ignore lint/suspicious/noExplicitAny: RHF nested error access by string path
-  const err = (formState.errors as any)?.[name];
-  if (!err) {
+  const err = getNestedError(formState.errors, name);
+  if (typeof err?.message !== "string") {
     return null;
   }
   return (
-    <p className="mt-1.5 font-medium text-destructive text-xs">
-      {String(err.message)}
-    </p>
+    <p className="mt-1.5 font-medium text-destructive text-xs">{err.message}</p>
   );
 }
 
@@ -100,7 +112,7 @@ function AutoSchedule() {
           type="number"
           {...register("schedule.totalAmountCents", { valueAsNumber: true })}
         />
-        <FieldError name="schedule" />
+        <FieldError name="schedule.totalAmountCents" />
       </div>
       <div>
         <Label htmlFor="count">Nº de parcelas</Label>
@@ -110,6 +122,7 @@ function AutoSchedule() {
           type="number"
           {...register("schedule.installmentsCount", { valueAsNumber: true })}
         />
+        <FieldError name="schedule.installmentsCount" />
       </div>
       <div>
         <Label htmlFor="first">1º vencimento</Label>
@@ -119,6 +132,7 @@ function AutoSchedule() {
           placeholder="AAAA-MM-DD"
           {...register("schedule.firstDueDate")}
         />
+        <FieldError name="schedule.firstDueDate" />
       </div>
       {showPreview ? (
         <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
