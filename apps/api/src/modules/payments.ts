@@ -1,13 +1,13 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { contract, installment, proof } from "../db/schema";
+import { auditEvent, contract, installment, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { nextStatus } from "../lib/installment-state";
 import { requireAuth } from "../lib/session";
-import { headObject, presignUpload } from "../lib/storage";
+import { headObject, presignDownload, presignUpload } from "../lib/storage";
 
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
@@ -237,5 +237,73 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ installmentId: t.String() }),
       response: t.Object({ status: t.String() }),
+    }
+  )
+  .get(
+    "/installments/:installmentId",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const { inst } = await loadInstallmentForUser(
+        user.id,
+        params.installmentId
+      ); // 404 se sem acesso
+
+      const proofs = await db
+        .select()
+        .from(proof)
+        .where(eq(proof.installmentId, inst.id));
+      const events = await db
+        .select()
+        .from(auditEvent)
+        .where(eq(auditEvent.installmentId, inst.id))
+        .orderBy(desc(auditEvent.createdAt));
+
+      const proofsOut = await Promise.all(
+        proofs.map(async (p) => ({
+          id: p.id,
+          fileName: p.fileName,
+          mimeType: p.mimeType,
+          sizeBytes: p.sizeBytes,
+          downloadUrl: await presignDownload(p.objectKey),
+          createdAt: p.createdAt.toISOString(),
+        }))
+      );
+
+      return {
+        id: inst.id,
+        sequence: inst.sequence,
+        amountCents: inst.amountCents,
+        dueDate: inst.dueDate,
+        status: inst.status,
+        proofs: proofsOut,
+        events: events.map((e) => ({
+          id: e.id,
+          type: e.type,
+          createdAt: e.createdAt.toISOString(),
+        })),
+      };
+    },
+    {
+      params: t.Object({ installmentId: t.String() }),
+      response: t.Object({
+        id: t.String(),
+        sequence: t.Integer(),
+        amountCents: t.Integer(),
+        dueDate: t.String(),
+        status: t.String(),
+        proofs: t.Array(
+          t.Object({
+            id: t.String(),
+            fileName: t.String(),
+            mimeType: t.String(),
+            sizeBytes: t.Integer(),
+            downloadUrl: t.String(),
+            createdAt: t.String(),
+          })
+        ),
+        events: t.Array(
+          t.Object({ id: t.String(), type: t.String(), createdAt: t.String() })
+        ),
+      }),
     }
   );

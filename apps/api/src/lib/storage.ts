@@ -1,4 +1,5 @@
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   type HeadObjectCommandOutput,
   PutObjectCommand,
@@ -72,4 +73,14 @@ export function headObject(
 ): Promise<HeadObjectCommandOutput> {
   const { client: c, bucket } = s3();
   return c.send(new HeadObjectCommand({ Bucket: bucket, Key: objectKey }));
+}
+
+/** Presigned GET URL for download (private bucket). Expires in 5 min. */
+export function presignDownload(objectKey: string): Promise<string> {
+  const { client: c, bucket } = s3();
+  return getSignedUrl(
+    c,
+    new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
+    { expiresIn: 300 }
+  );
 }

@@ -156,3 +156,21 @@ describe.if(configured)("confirm/dispute", () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe.if(configured)("GET installment detail", () => {
+  it("traz proofs com downloadUrl e a timeline de eventos", async () => {
+    const cookie = await signUpCookie("det");
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    await uploadProof(cookie, iId);
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}`, {
+        headers: { cookie },
+      })
+    );
+    const body = await res.json();
+    expect(body.proofs).toHaveLength(1);
+    expect(body.proofs[0].downloadUrl).toContain("http");
+    expect(body.events.length).toBeGreaterThanOrEqual(1);
+  });
+});
