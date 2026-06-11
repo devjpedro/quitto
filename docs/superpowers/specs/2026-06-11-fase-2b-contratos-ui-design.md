@@ -35,7 +35,7 @@ O dashboard (`/`) permanece como está (placeholder da Fase 1); ligá-lo a dados
 - **Query keys estruturadas**: `['contracts']` (lista), `['contract', id]` (detalhe). Sem `invalidateQueries()` global.
 - **Prefetch via route loaders**: loaders chamam `queryClient.ensureQueryData(...)` para evitar waterfalls (spec §6); componentes usam `useQuery` e leem do cache quente.
 - **Mutations com invalidação alvo**: criar contrato → invalida `['contracts']` e navega para `/contracts/:id`; editar parcela → invalida `['contract', id]`. Optimistic update no PATCH quando fizer sentido (atualiza a parcela no cache, com rollback no erro).
-- **Estado de UI com Zustand** (nunca Context API): store do wizard (dados dos passos + passo atual, navegável sem perda) e estado do drawer (parcela selecionada / aberto). Estado de servidor fica no TanStack Query.
+- **Estado de UI**: preferir `useState` local quando bastar; usar **Zustand** só quando a partilha for realmente necessária; **nunca Context API**. Estado de servidor fica no TanStack Query. Ver §8.
 
 ## 4. Componentes de UI
 
@@ -55,7 +55,7 @@ Uma linha-cartão por contrato (full width), empilhada; colapsa para 1 coluna no
 > **Atenção (lacuna da API):** o `GET /api/contracts` da 2a **não** retorna a "próxima parcela" (data/valor do próximo vencimento) — só o resumo de progresso acima. Mostrar próxima parcela na lista exigiria um campo novo no endpoint (ver decisão em §15). Por isso o layout não inclui esse dado por padrão na 2b.
 
 ### 5.2 Criar contrato (`/contracts/new`) — wizard 2 passos
-Stepper numerado no topo. Passos preenchidos são clicáveis para voltar; o estado vive no store Zustand, **nada se perde** ao navegar.
+Stepper numerado no topo. Passos preenchidos são clicáveis para voltar. O estado do wizard inteiro vive num **único `useForm` + `FormProvider`**; cada passo lê/escreve via `useFormContext`, então **nada se perde** ao navegar entre passos (sem `useState` manual, sem store — ver §8). O passo atual (índice) pode ser um `useState` simples no container.
 - **Passo 1 — Básico:** `title` (1–200), `description` (opcional, ≤2000), `ownerRole` (segmented: comprador/vendedor/neutro), `requiresConfirmation` (toggle). Avançar valida via Zod.
 - **Passo 2 — Parcelas:** toggle **Automático / Personalizado**.
   - *Automático:* `totalAmountCents`, `installmentsCount` (1–600), `firstDueDate` → **resumo compacto** ("N parcelas de R$ X · mensais · 1º→último · soma confere ✓") com "ver todas" expansível.
@@ -78,11 +78,14 @@ Loader da rota faz `ensureQueryData` → componente lê com `useQuery` (cache qu
 - Mapa erro→UX por `code`/status: **401 → login** (redirect), **403 → "sem permissão"**, **404 → not-found**, **5xx → genérico** (+ Sentry futuro).
 - Erros de validação: `details` do `ApiError` mapeados para os campos do React Hook Form.
 
-## 8. Estado compartilhado (Zustand)
-Regra do sistema: **nunca Context API**. Stores Zustand para: (a) **wizard** — `{ step, basic, schedule, setters }`, permitindo voltar sem perder dados; (b) **drawer da parcela** — `{ openInstallmentId, open/close }`. Providers de bibliotecas (QueryClientProvider, RouterProvider, Better Auth) seguem normais — a regra vale para o nosso estado.
+## 8. Estado compartilhado
+Regras do sistema: **(a)** nunca Context API para o *nosso* estado; **(b)** **não obriga store** — preferir o tipo mais simples que resolve; **(c)** evitar `useState`/`useEffect` desnecessários (uso consciente — derivar no render, dados via TanStack Query, forms via RHF).
+- **Wizard:** estado num **único `useForm` + `FormProvider`** (passos leem via `useFormContext`) — persiste entre passos sem `useState` manual nem store. O context do RHF é da biblioteca, **não** fere a regra (a) (igual a QueryClientProvider/RouterProvider/Better Auth). O índice do passo atual pode ser um `useState` simples.
+- **Drawer da parcela:** estado simples (parcela aberta) — derivar da URL/param ou um `useState` local na tela de contrato; sem store.
+- **Zustand** só entra se algum estado precisar ser lido por componentes distantes/fora do dono natural — improvável na 2b.
 
 ## 9. Formulários & validação
-React Hook Form + **Zod**. Schemas em **`@quitto/shared`** (reutilizáveis e fonte única no front): `createContractSchema` (incl. união auto/custom espelhando o body da API) e `updateInstallmentSchema`. Mensagens de erro em pt-BR. Os schemas Zod do front são independentes do TypeBox do backend (o backend revalida sempre — defesa em profundidade).
+React Hook Form + **Zod**. Schemas em **`@quitto/shared`** (reutilizáveis e fonte única no front): `createContractSchema` (incl. união auto/custom espelhando o body da API) e `updateInstallmentSchema`. O **wizard usa um único `useForm` + `FormProvider`** (passos via `useFormContext`); o drawer de edição usa um `useForm` próprio. Mensagens de erro em pt-BR; erros de validação do backend (`details` do `ApiError`) mapeados para os campos via `setError`. Os schemas Zod do front são independentes do TypeBox do backend (o backend revalida sempre — defesa em profundidade).
 
 ## 10. Responsividade & shell
 Telas **responsivas** (reflow mobile). O app shell passa a **bottom-nav no mobile** (sidebar no desktop), com os itens Dashboard e Contratos. Foco em teclado e alvos de toque adequados.
@@ -94,7 +97,7 @@ Ao construir **cada tela/componente visual**, **invocar as skills de design ante
 Vitest + Testing Library (componente/integração), além do spike de tipos do Eden (mantido). Cobrir os fluxos-chave: render da lista (com progresso, estado vazio), abrir o drawer e editar uma parcela (owner), validação e preview do cronograma no wizard (auto e custom), estados de loading/erro, e o mapeamento de `ApiError` para toast/campo. Mock do `apiClient`/rede onde fizer sentido; sem depender de backend real nos testes de UI.
 
 ## 13. Dependências novas (front)
-`zustand`, `react-hook-form`, `@hookform/resolvers`, `zod` (já no monorepo), `sonner`, `react-error-boundary`. Componentes shadcn adicionais conforme necessário (sheet/drawer, badge, progress, skeleton). Sem libs de data pesadas — usar helpers/Intl.
+`react-hook-form`, `@hookform/resolvers`, `zod` (já no monorepo), `sonner`, `react-error-boundary`. **`zustand` apenas se algum estado exigir store** (ver §8 — a 2b provavelmente resolve com `useState` local; só adicionar a dependência se necessário). Componentes shadcn adicionais conforme necessário (sheet/drawer, badge, progress, skeleton). Sem libs de data pesadas — usar helpers/Intl.
 
 ## 14. Fora de escopo (fases futuras)
 Comprovantes/upload pré-assinado + trilha de auditoria (F3) · marcar parcela como paga / máquina de estados (F3, sem endpoint ainda) · convites e participantes com vínculo (F4) · notificações/sininho (F5) · dashboard real, recibo/quitação PDF, export CSV/PDF, LGPD (F6) · abas Documentos/Histórico na tela de contrato (entram quando houver dado). O drawer apenas sinaliza "em breve".
