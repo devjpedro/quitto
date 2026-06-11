@@ -13,6 +13,7 @@ Spec de referência: `docs/superpowers/specs/2026-06-09-quitto-design.md`.
 |---|---|---|---|
 | **0** | Fundações + spike do Eden | Monorepo (Bun+Turbo), `api`/`web`/`shared`, tooling, Drizzle+Postgres, health check, deploy configs, CI verde. Prova Eden+Better Auth tipando cross-package. | `plans/2026-06-09-fase-0-fundacoes.md` ✅ **concluído** (merge em `develop`; spike do Eden provado — tipo cruza o pacote sem virar `any`) |
 | **1** | Autenticação | Better Auth (Google + e-mail/senha) desacoplado, sessão, app shell (sidebar), login/logout, rota protegida. | `plans/2026-06-10-fase-1-autenticacao.md` ✅ **concluído** (merge em `develop`; auth montado no app raiz com `/api/auth/*` resolvendo, `GET /api/me` protegida, login/logout e guard validados ponta a ponta) |
+| **CD** | Deploy contínuo (aprendizado guiado) | GitHub Actions como dono do deploy: portão de testes + migrations no Neon + deploy orquestrado Fly→Vercel, ambientes e rollback. **Implementado pelo usuário; Claude atua como professor (não escreve o código).** | `guides/2026-06-10-cd-deploy-guia-estudo.md` (guia de estudo) |
 | **2** | Contratos + Parcelas (core) | Modelo de domínio, gerar cronograma, valores variáveis, RBAC por papel, tela de contrato + drawer. Criar/ver contratos solo. | a escrever |
 | **3** | Pagamento + comprovantes | Upload pré-assinado ao R2, máquina de estados (com/sem confirmação), trilha de auditoria. | a escrever |
 | **4** | Participantes + convites | Contatos, link de convite, vínculo com usuário, acesso por papel. Compartilhar contrato. | a escrever |
