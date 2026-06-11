@@ -8,6 +8,27 @@
       "when": 1781053138617,
       "tag": "0000_silent_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781192411449,
+      "tag": "0001_flashy_enchantress",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781192598007,
+      "tag": "0002_silent_paladin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781198364059,
+      "tag": "0003_yummy_skin",
+      "breakpoints": true
     }
   ]
 }
