@@ -15,7 +15,7 @@ export function AuthBrandPanel({ mode }: { mode: AuthMode }) {
   const copy = PANEL_COPY[mode];
 
   return (
-    <aside className="relative flex flex-col overflow-hidden bg-brand-panel bg-primary px-8 py-8 text-primary-foreground md:w-[45%] md:px-12 md:py-14">
+    <aside className="relative flex min-w-0 flex-col overflow-hidden bg-brand-panel bg-primary px-8 py-8 text-primary-foreground md:w-[45%] md:px-12 md:py-14">
       {/* motivo decorativo (anéis) — só desktop, sem semântica */}
       <div
         aria-hidden="true"
@@ -30,11 +30,11 @@ export function AuthBrandPanel({ mode }: { mode: AuthMode }) {
         ◷ Quitto
       </span>
 
-      <div className="mt-auto">
-        <h2 className="font-bold font-display text-3xl leading-[1.08] tracking-tight md:text-4xl">
+      <div className="mt-auto min-w-0">
+        <h2 className="max-w-[14ch] text-balance font-bold font-display text-2xl leading-[1.12] tracking-tight md:max-w-none md:text-4xl md:leading-[1.08]">
           {copy.headline}
         </h2>
-        <p className="mt-3 max-w-sm text-primary-foreground/80 text-sm md:mt-4">
+        <p className="mt-3 max-w-xs text-primary-foreground/80 text-sm md:mt-4 md:max-w-sm">
           {copy.sub}
         </p>
 
