@@ -5,6 +5,7 @@ import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { contractsModule } from "./modules/contracts";
 import { meModule } from "./modules/me";
+import { paymentsModule } from "./modules/payments";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
   "/ping",
@@ -24,7 +25,8 @@ export function buildApp() {
     .mount(auth.handler)
     .use(apiRoutes)
     .use(meModule)
-    .use(contractsModule);
+    .use(contractsModule)
+    .use(paymentsModule);
 }
 
 export const app = buildApp();
