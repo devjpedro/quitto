@@ -1,10 +1,10 @@
-import { eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
-import { NotFoundError } from "../lib/errors";
+import { ForbiddenError, NotFoundError } from "../lib/errors";
 import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
 
@@ -265,5 +265,44 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           })
         ),
       }),
+    }
+  )
+  .patch(
+    "/contracts/:id/installments/:installmentId",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      const role = await getContractRole(user.id, params.id);
+      if (role !== "owner") {
+        throw new ForbiddenError("Apenas o dono edita parcelas");
+      }
+
+      const [updated] = await db
+        .update(installment)
+        .set({
+          ...(body.amountCents === undefined
+            ? {}
+            : { amountCents: body.amountCents }),
+          ...(body.dueDate === undefined ? {} : { dueDate: body.dueDate }),
+        })
+        .where(
+          and(
+            eq(installment.id, params.installmentId),
+            eq(installment.contractId, params.id)
+          )
+        )
+        .returning({ id: installment.id });
+
+      if (!updated) {
+        throw new ForbiddenError("Parcela não pertence ao contrato");
+      }
+      return { id: updated.id };
+    },
+    {
+      params: t.Object({ id: t.String(), installmentId: t.String() }),
+      body: t.Object({
+        amountCents: t.Optional(t.Integer({ minimum: 1 })),
+        dueDate: t.Optional(t.String({ format: "date" })),
+      }),
+      response: t.Object({ id: t.String() }),
     }
   );

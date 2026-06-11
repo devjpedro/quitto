@@ -102,3 +102,29 @@ describe("GET /api/contracts/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("PATCH installment", () => {
+  it("o dono edita o valor de uma parcela", async () => {
+    const cookie = await signUpCookie("patch");
+    const created = await (await createContract(cookie)).json();
+    const detail = await (
+      await app.handle(
+        new Request(`http://localhost/api/contracts/${created.id}`, {
+          headers: { cookie },
+        })
+      )
+    ).json();
+    const first = detail.installments[0];
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${created.id}/installments/${first.id}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({ amountCents: 99_999 }),
+        }
+      )
+    );
+    expect(res.status).toBe(200);
+  });
+});
