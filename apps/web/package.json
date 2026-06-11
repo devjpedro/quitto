@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@elysiajs/eden": "latest",
+    "@fontsource/space-grotesk": "^5.2.10",
     "@quitto/api": "workspace:*",
     "@quitto/shared": "workspace:*",
     "@tanstack/react-query": "^5.101.0",

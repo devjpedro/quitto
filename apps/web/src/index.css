@@ -21,6 +21,7 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -31,6 +32,7 @@
   --card-foreground: var(--foreground);
   --primary: oklch(0.52 0.09 175);
   --primary-foreground: oklch(0.98 0.01 85);
+  --primary-strong: oklch(0.4 0.08 178);
   --muted: oklch(0.95 0.012 85);
   --muted-foreground: oklch(0.55 0.02 70);
   --secondary: oklch(0.94 0.015 85);
@@ -50,5 +52,15 @@
   body {
     color: var(--color-foreground);
     background-color: var(--color-background);
+  }
+}
+
+@layer components {
+  .bg-brand-panel {
+    background-image: linear-gradient(
+      155deg,
+      var(--primary) 0%,
+      var(--primary-strong) 100%
+    );
   }
 }
