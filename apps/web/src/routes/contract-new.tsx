@@ -9,10 +9,14 @@ import {
   useForm,
   useFormContext,
 } from "react-hook-form";
+import { CurrencyField } from "@/components/currency-field";
+import { DateField } from "@/components/date-field";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,17 +25,29 @@ const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
 
 type ScheduleMode = "auto" | "custom";
 
+function getNestedError(
+  errors: unknown,
+  path: string
+): { message?: unknown } | undefined {
+  let current: unknown = errors;
+  for (const key of path.split(".")) {
+    if (current && typeof current === "object") {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return;
+    }
+  }
+  return current as { message?: unknown } | undefined;
+}
+
 function FieldError({ name }: { name: string }) {
   const { formState } = useFormContext<CreateContractInput>();
-  // biome-ignore lint/suspicious/noExplicitAny: RHF nested error access by string path
-  const err = (formState.errors as any)?.[name];
-  if (!err) {
+  const err = getNestedError(formState.errors, name);
+  if (typeof err?.message !== "string") {
     return null;
   }
   return (
-    <p className="mt-1.5 font-medium text-destructive text-xs">
-      {String(err.message)}
-    </p>
+    <p className="mt-1.5 font-medium text-destructive text-xs">{err.message}</p>
   );
 }
 
@@ -51,10 +67,11 @@ function StepBasic() {
       </div>
       <div>
         <Label htmlFor="description">Descrição (opcional)</Label>
-        <Input
+        <Textarea
           className="mt-1.5"
           id="description"
           placeholder="Detalhes do acordo"
+          rows={3}
           {...register("description")}
         />
       </div>
@@ -93,14 +110,9 @@ function AutoSchedule() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Label htmlFor="total">Valor total (centavos)</Label>
-        <Input
-          className="mt-1.5 tabular-nums"
-          id="total"
-          type="number"
-          {...register("schedule.totalAmountCents", { valueAsNumber: true })}
-        />
-        <FieldError name="schedule" />
+        <Label htmlFor="total">Valor total</Label>
+        <CurrencyField id="total" name="schedule.totalAmountCents" />
+        <FieldError name="schedule.totalAmountCents" />
       </div>
       <div>
         <Label htmlFor="count">Nº de parcelas</Label>
@@ -110,15 +122,12 @@ function AutoSchedule() {
           type="number"
           {...register("schedule.installmentsCount", { valueAsNumber: true })}
         />
+        <FieldError name="schedule.installmentsCount" />
       </div>
       <div>
         <Label htmlFor="first">1º vencimento</Label>
-        <Input
-          className="mt-1.5 tabular-nums"
-          id="first"
-          placeholder="AAAA-MM-DD"
-          {...register("schedule.firstDueDate")}
-        />
+        <DateField id="first" name="schedule.firstDueDate" />
+        <FieldError name="schedule.firstDueDate" />
       </div>
       {showPreview ? (
         <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -139,7 +148,7 @@ function AutoSchedule() {
 }
 
 function CustomSchedule() {
-  const { control, register } = useFormContext<CreateContractInput>();
+  const { control } = useFormContext<CreateContractInput>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "schedule.installments" as never,
@@ -152,22 +161,17 @@ function CustomSchedule() {
           key={field.id}
         >
           <div className="flex-1">
-            <Label>Valor (centavos)</Label>
-            <Input
-              className="mt-1.5 tabular-nums"
-              type="number"
-              {...register(
-                `schedule.installments.${index}.amountCents` as const,
-                { valueAsNumber: true }
-              )}
+            <Label>Valor</Label>
+            <CurrencyField
+              id={`amt-${index}`}
+              name={`schedule.installments.${index}.amountCents`}
             />
           </div>
           <div className="flex-1">
             <Label>Vencimento</Label>
-            <Input
-              className="mt-1.5 tabular-nums"
-              placeholder="AAAA-MM-DD"
-              {...register(`schedule.installments.${index}.dueDate` as const)}
+            <DateField
+              id={`due-${index}`}
+              name={`schedule.installments.${index}.dueDate`}
             />
           </div>
           <Button
@@ -240,7 +244,7 @@ export function ContractNewPage() {
     },
   });
 
-  const mode = form.watch("schedule.mode");
+  const [mode, setModeState] = useState<ScheduleMode>("auto");
 
   async function goNext() {
     const ok = await form.trigger([
@@ -259,6 +263,10 @@ export function ContractNewPage() {
   });
 
   function setMode(next: ScheduleMode) {
+    if (next === mode) {
+      return; // [B2] re-clicking the active mode must not reset
+    }
+    setModeState(next);
     form.setValue(
       "schedule",
       next === "auto"
@@ -268,12 +276,13 @@ export function ContractNewPage() {
             installmentsCount: 1,
             firstDueDate: "",
           }
-        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] }
+        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] },
+      { shouldValidate: false }
     );
   }
 
   return (
-    <div className="mx-auto max-w-xl p-6">
+    <div className="mx-auto max-w-2xl p-6">
       <div className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Novo contrato
@@ -283,55 +292,55 @@ export function ContractNewPage() {
         </p>
       </div>
 
-      <div className="mb-8">
+      <Card className="p-6 sm:p-8">
         <Stepper current={step} onStepClick={setStep} steps={STEPS} />
-      </div>
 
-      <FormProvider {...form}>
-        <form onSubmit={onSubmit}>
-          {step === 0 ? (
-            <>
-              <StepBasic />
-              <div className="mt-8 flex justify-end">
-                <Button onClick={goNext} type="button">
-                  Avançar
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-5 inline-flex overflow-hidden rounded-lg border border-border text-sm">
-                <ModeButton
-                  active={mode === "auto"}
-                  onClick={() => setMode("auto")}
-                >
-                  Automático
-                </ModeButton>
-                <span aria-hidden="true" className="w-px bg-border" />
-                <ModeButton
-                  active={mode === "custom"}
-                  onClick={() => setMode("custom")}
-                >
-                  Personalizado
-                </ModeButton>
-              </div>
-              {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
-              <div className="mt-8 flex justify-between">
-                <Button
-                  onClick={() => setStep(0)}
-                  type="button"
-                  variant="outline"
-                >
-                  Voltar
-                </Button>
-                <Button disabled={createMutation.isPending} type="submit">
-                  Criar contrato
-                </Button>
-              </div>
-            </>
-          )}
-        </form>
-      </FormProvider>
+        <FormProvider {...form}>
+          <form onSubmit={onSubmit}>
+            {step === 0 ? (
+              <>
+                <StepBasic />
+                <div className="mt-8 flex justify-end">
+                  <Button onClick={goNext} type="button">
+                    Avançar
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-5 inline-flex overflow-hidden rounded-lg border border-border text-sm">
+                  <ModeButton
+                    active={mode === "auto"}
+                    onClick={() => setMode("auto")}
+                  >
+                    Automático
+                  </ModeButton>
+                  <span aria-hidden="true" className="w-px bg-border" />
+                  <ModeButton
+                    active={mode === "custom"}
+                    onClick={() => setMode("custom")}
+                  >
+                    Personalizado
+                  </ModeButton>
+                </div>
+                {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
+                <div className="mt-8 flex justify-between">
+                  <Button
+                    onClick={() => setStep(0)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Voltar
+                  </Button>
+                  <Button disabled={createMutation.isPending} type="submit">
+                    Criar contrato
+                  </Button>
+                </div>
+              </>
+            )}
+          </form>
+        </FormProvider>
+      </Card>
     </div>
   );
 }

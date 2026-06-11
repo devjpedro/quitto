@@ -68,7 +68,7 @@ export function ContractsListPage() {
   const { data, isPending } = useContractsQuery();
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className="mx-auto max-w-5xl p-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">

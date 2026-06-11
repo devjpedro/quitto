@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatBRL, formatISODateBR, parseBRLToCents } from "../src/lib/format";
+import {
+  formatBRL,
+  formatISODateBR,
+  parseBRDateToISO,
+  parseBRLToCents,
+} from "../src/lib/format";
 
 describe("formatBRL", () => {
   it("formats integer cents as Brazilian currency", () => {
@@ -26,5 +31,17 @@ describe("formatISODateBR", () => {
   it("formats an ISO date as DD/MM/YYYY without timezone drift", () => {
     expect(formatISODateBR("2026-07-10")).toBe("10/07/2026");
     expect(formatISODateBR("2026-02-28")).toBe("28/02/2026");
+  });
+});
+
+describe("parseBRDateToISO", () => {
+  it("parseBRDateToISO converte dd/mm/aaaa válida em ISO", () => {
+    expect(parseBRDateToISO("31/12/2026")).toBe("2026-12-31");
+  });
+  it("parseBRDateToISO rejeita data impossível", () => {
+    expect(parseBRDateToISO("31/02/2026")).toBeNull();
+  });
+  it("parseBRDateToISO rejeita formato incompleto", () => {
+    expect(parseBRDateToISO("1/2/26")).toBeNull();
   });
 });
