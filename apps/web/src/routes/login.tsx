@@ -21,6 +21,10 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    const failMessage =
+      mode === "signin"
+        ? "Não foi possível entrar. Verifique os dados e tente novamente."
+        : "Não foi possível criar a conta. Verifique os dados e tente novamente.";
     const action =
       mode === "signin"
         ? signIn.email({ email, password, callbackURL: "/" })
@@ -28,16 +32,30 @@ export function LoginPage() {
     try {
       const { error: err } = await action;
       if (err) {
-        setError(
-          "Não foi possível entrar. Verifique os dados e tente novamente."
-        );
+        setError(failMessage);
         return;
       }
       window.location.href = "/";
     } catch {
-      setError(
-        "Não foi possível entrar. Verifique os dados e tente novamente."
-      );
+      setError(failMessage);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null);
+    setLoading(true);
+    try {
+      const { error: err } = await signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      });
+      if (err) {
+        setError("Não foi possível continuar com o Google. Tente novamente.");
+      }
+    } catch {
+      setError("Não foi possível continuar com o Google. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -61,9 +79,7 @@ export function LoginPage() {
           <Button
             className="w-full"
             disabled={loading}
-            onClick={() =>
-              signIn.social({ provider: "google", callbackURL: "/" })
-            }
+            onClick={handleGoogle}
             type="button"
             variant="outline"
           >
@@ -119,6 +135,7 @@ export function LoginPage() {
             onClick={() => {
               setMode(mode === "signin" ? "signup" : "signin");
               setError(null);
+              setName("");
             }}
             type="button"
           >
