@@ -1,4 +1,6 @@
 import { useParams } from "@tanstack/react-router";
+import { useState } from "react";
+import { InstallmentDrawer } from "@/components/installment-drawer";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -53,6 +55,7 @@ function Stat({
 export function ContractDetailPage() {
   const { id } = useParams({ from: "/protected/contracts/$id" });
   const { data, isPending } = useContractQuery(id);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   if (isPending || !data) {
     return (
@@ -74,6 +77,7 @@ export function ContractDetailPage() {
 
   const { contract, progress, installments, participants } = data;
   const overdue = progress.overdueCount > 0;
+  const selected = installments.find((it) => it.id === openId) ?? null;
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -152,29 +156,40 @@ export function ContractDetailPage() {
           {installments.map((it) => {
             const late = isOverdue(it.dueDate, it.status);
             return (
-              <li
-                className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 shadow-xs"
-                key={it.id}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`absolute inset-y-0 left-0 w-1 ${late ? "bg-destructive/70" : "bg-primary/40"}`}
-                />
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
-                  {it.sequence}
-                </span>
-                <span className="flex-1 text-foreground text-sm tabular-nums">
-                  {formatISODateBR(it.dueDate)}
-                </span>
-                <span className="font-display font-semibold text-foreground text-sm tabular-nums">
-                  {formatBRL(it.amountCents)}
-                </span>
-                <StatusBadge overdue={late} status={it.status} />
+              <li key={it.id}>
+                <button
+                  className="relative flex w-full items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onClick={() => setOpenId(it.id)}
+                  type="button"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-y-0 left-0 w-1 ${late ? "bg-destructive/70" : "bg-primary/40"}`}
+                  />
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
+                    {it.sequence}
+                  </span>
+                  <span className="flex-1 text-foreground text-sm tabular-nums">
+                    {formatISODateBR(it.dueDate)}
+                  </span>
+                  <span className="font-display font-semibold text-foreground text-sm tabular-nums">
+                    {formatBRL(it.amountCents)}
+                  </span>
+                  <StatusBadge overdue={late} status={it.status} />
+                </button>
               </li>
             );
           })}
         </ul>
       </section>
+
+      <InstallmentDrawer
+        contractId={contract.id}
+        installment={selected}
+        onClose={() => setOpenId(null)}
+        open={openId !== null}
+        role={data.role}
+      />
     </div>
   );
 }
