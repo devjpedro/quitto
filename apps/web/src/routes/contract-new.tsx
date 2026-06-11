@@ -13,6 +13,7 @@ import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -281,7 +282,7 @@ export function ContractNewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl p-6">
+    <div className="mx-auto max-w-2xl p-6">
       <div className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Novo contrato
@@ -291,55 +292,55 @@ export function ContractNewPage() {
         </p>
       </div>
 
-      <div className="mb-8">
+      <Card className="p-6 sm:p-8">
         <Stepper current={step} onStepClick={setStep} steps={STEPS} />
-      </div>
 
-      <FormProvider {...form}>
-        <form onSubmit={onSubmit}>
-          {step === 0 ? (
-            <>
-              <StepBasic />
-              <div className="mt-8 flex justify-end">
-                <Button onClick={goNext} type="button">
-                  Avançar
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-5 inline-flex overflow-hidden rounded-lg border border-border text-sm">
-                <ModeButton
-                  active={mode === "auto"}
-                  onClick={() => setMode("auto")}
-                >
-                  Automático
-                </ModeButton>
-                <span aria-hidden="true" className="w-px bg-border" />
-                <ModeButton
-                  active={mode === "custom"}
-                  onClick={() => setMode("custom")}
-                >
-                  Personalizado
-                </ModeButton>
-              </div>
-              {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
-              <div className="mt-8 flex justify-between">
-                <Button
-                  onClick={() => setStep(0)}
-                  type="button"
-                  variant="outline"
-                >
-                  Voltar
-                </Button>
-                <Button disabled={createMutation.isPending} type="submit">
-                  Criar contrato
-                </Button>
-              </div>
-            </>
-          )}
-        </form>
-      </FormProvider>
+        <FormProvider {...form}>
+          <form onSubmit={onSubmit}>
+            {step === 0 ? (
+              <>
+                <StepBasic />
+                <div className="mt-8 flex justify-end">
+                  <Button onClick={goNext} type="button">
+                    Avançar
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-5 inline-flex overflow-hidden rounded-lg border border-border text-sm">
+                  <ModeButton
+                    active={mode === "auto"}
+                    onClick={() => setMode("auto")}
+                  >
+                    Automático
+                  </ModeButton>
+                  <span aria-hidden="true" className="w-px bg-border" />
+                  <ModeButton
+                    active={mode === "custom"}
+                    onClick={() => setMode("custom")}
+                  >
+                    Personalizado
+                  </ModeButton>
+                </div>
+                {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
+                <div className="mt-8 flex justify-between">
+                  <Button
+                    onClick={() => setStep(0)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Voltar
+                  </Button>
+                  <Button disabled={createMutation.isPending} type="submit">
+                    Criar contrato
+                  </Button>
+                </div>
+              </>
+            )}
+          </form>
+        </FormProvider>
+      </Card>
     </div>
   );
 }
