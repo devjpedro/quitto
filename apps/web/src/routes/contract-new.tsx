@@ -10,6 +10,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 import { CurrencyField } from "@/components/currency-field";
+import { DateField } from "@/components/date-field";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,12 +125,7 @@ function AutoSchedule() {
       </div>
       <div>
         <Label htmlFor="first">1º vencimento</Label>
-        <Input
-          className="mt-1.5 tabular-nums"
-          id="first"
-          placeholder="AAAA-MM-DD"
-          {...register("schedule.firstDueDate")}
-        />
+        <DateField id="first" name="schedule.firstDueDate" />
         <FieldError name="schedule.firstDueDate" />
       </div>
       {showPreview ? (
@@ -151,7 +147,7 @@ function AutoSchedule() {
 }
 
 function CustomSchedule() {
-  const { control, register } = useFormContext<CreateContractInput>();
+  const { control } = useFormContext<CreateContractInput>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: "schedule.installments" as never,
@@ -172,10 +168,9 @@ function CustomSchedule() {
           </div>
           <div className="flex-1">
             <Label>Vencimento</Label>
-            <Input
-              className="mt-1.5 tabular-nums"
-              placeholder="AAAA-MM-DD"
-              {...register(`schedule.installments.${index}.dueDate` as const)}
+            <DateField
+              id={`due-${index}`}
+              name={`schedule.installments.${index}.dueDate`}
             />
           </div>
           <Button

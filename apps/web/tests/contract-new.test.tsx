@@ -46,7 +46,7 @@ describe("ContractNewPage (wizard)", () => {
 
     await userEvent.type(screen.getByLabelText(TOTAL), "120000");
     await userEvent.type(screen.getByLabelText(COUNT), "60");
-    await userEvent.type(screen.getByLabelText(FIRST_DUE), "2026-07-10");
+    await userEvent.type(screen.getByLabelText(FIRST_DUE), "10/07/2026");
     await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledOnce());
