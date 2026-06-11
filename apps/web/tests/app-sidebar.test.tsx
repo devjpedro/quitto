@@ -16,7 +16,7 @@ import { AppSidebar } from "../src/components/app-sidebar";
 describe("AppSidebar", () => {
   it("renders Dashboard and Contratos nav items", () => {
     render(<AppSidebar />);
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Contratos")).toBeInTheDocument();
+    expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Contratos").length).toBeGreaterThanOrEqual(1);
   });
 });

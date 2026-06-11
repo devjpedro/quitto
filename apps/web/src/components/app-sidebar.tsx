@@ -67,7 +67,7 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* Mobile bottom-nav — icons with sr-only labels for a11y, sm:hidden keeps it off desktop */}
+      {/* Mobile bottom-nav — icon + visible label for discoverability, sm:hidden keeps it off desktop */}
       <nav
         className="fixed inset-x-0 bottom-0 z-30 flex border-border border-t bg-card sm:hidden"
         style={{
@@ -78,12 +78,14 @@ export function AppSidebar() {
           const Icon = item.icon;
           return (
             <Link
-              aria-label={item.label}
-              className="flex min-h-[44px] flex-1 flex-col items-center justify-center py-2 text-muted-foreground transition-colors [&.active]:text-primary"
+              className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors [&.active]:text-primary"
               key={item.to}
               to={item.to}
             >
               <Icon aria-hidden="true" className="size-5 shrink-0" />
+              <span className="mt-0.5 text-[10px] leading-none">
+                {item.label}
+              </span>
             </Link>
           );
         })}
