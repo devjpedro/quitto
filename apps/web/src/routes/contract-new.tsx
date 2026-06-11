@@ -13,6 +13,7 @@ import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -63,10 +64,11 @@ function StepBasic() {
       </div>
       <div>
         <Label htmlFor="description">Descrição (opcional)</Label>
-        <Input
+        <Textarea
           className="mt-1.5"
           id="description"
           placeholder="Detalhes do acordo"
+          rows={3}
           {...register("description")}
         />
       </div>
