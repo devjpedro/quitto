@@ -9,6 +9,7 @@ import {
   useForm,
   useFormContext,
 } from "react-hook-form";
+import { CurrencyField } from "@/components/currency-field";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,13 +108,8 @@ function AutoSchedule() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <Label htmlFor="total">Valor total (centavos)</Label>
-        <Input
-          className="mt-1.5 tabular-nums"
-          id="total"
-          type="number"
-          {...register("schedule.totalAmountCents", { valueAsNumber: true })}
-        />
+        <Label htmlFor="total">Valor total</Label>
+        <CurrencyField id="total" name="schedule.totalAmountCents" />
         <FieldError name="schedule.totalAmountCents" />
       </div>
       <div>
@@ -168,14 +164,10 @@ function CustomSchedule() {
           key={field.id}
         >
           <div className="flex-1">
-            <Label>Valor (centavos)</Label>
-            <Input
-              className="mt-1.5 tabular-nums"
-              type="number"
-              {...register(
-                `schedule.installments.${index}.amountCents` as const,
-                { valueAsNumber: true }
-              )}
+            <Label>Valor</Label>
+            <CurrencyField
+              id={`amt-${index}`}
+              name={`schedule.installments.${index}.amountCents`}
             />
           </div>
           <div className="flex-1">
