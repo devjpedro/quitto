@@ -13,16 +13,20 @@ Registro vivo de bugs encontrados durante o desenvolvimento. Cada bug é triado 
 
 | # | Data | Descrição | Como reproduzir | Balde | Destino | Status |
 |---|------|-----------|-----------------|-------|---------|--------|
-| B1 | 2026-06-11 | Wizard: clicar em "Personalizado" não troca o modo; só muda quando outro campo é alterado; não volta pra "Automático" sem voltar ao step 1. **Raiz:** `mode` vem de `watch` + `setValue` do objeto inteiro → re-render não confiável. | `/contracts/new` → step 2 → clicar Personalizado | 🔴 | `fix/contract-wizard` | aberto |
-| B2 | 2026-06-11 | Wizard: reclicar o modo já ativo ("Automático") **zera** os valores do step. **Raiz:** `setMode` sempre faz `setValue` resetando o schedule. | step 2 → clicar Automático estando em Automático | 🔴 | `fix/contract-wizard` | aberto |
-| B3 | 2026-06-11 | Wizard: ao "Criar contrato" aparece erro literal **"undefined"** no valor total. **Raiz:** `FieldError name="schedule"` faz `String(err.message)` num objeto de erros aninhados sem `.message`. | step 2 → submeter inválido | 🔴 | `fix/contract-wizard` | aberto |
-| B4 | 2026-06-11 | Wizard: 1º vencimento não exibe erro de validação. **Raiz:** `FieldError` não resolve caminhos aninhados (`schedule.firstDueDate`) e não há `FieldError` no campo. | step 2 → deixar vencimento vazio → submeter | 🔴 | `fix/contract-wizard` | aberto |
-| B5 | 2026-06-11 | Wizard: "Descrição" deveria ser `textarea` (hoje é input de linha única). | `/contracts/new` → step 1 | 🟡 | `fix/contract-wizard` | aberto |
-| B6 | 2026-06-11 | Wizard: "Valor total" — tirar "(centavos)" da label e usar **máscara R$** (usuário digita em reais; converte p/ centavos). | step 2 (auto) | 🟡 | `fix/contract-wizard` | aberto |
-| B7 | 2026-06-11 | Wizard: "1º vencimento" deveria ser **date picker** + máscara BR `dd/mm/aaaa` ao digitar (converte p/ ISO). | step 2 | 🟡 | `fix/contract-wizard` | aberto |
-| B8 | 2026-06-11 | Botões sem `cursor: pointer`. **Raiz:** Tailwind v4 não injeta `cursor-pointer` no preflight; ajustar o componente `Button`. | hover em qualquer botão | 🟢 | `fix/contract-wizard` (rápido) | aberto |
-| B9 | 2026-06-11 | Layout muito vazio/estreito no desktop (lista de contratos e wizard). Wizard sem cartão âncora; coluna estreita demais. | desktop largo, `/contracts` e `/contracts/new` | 🟢 | design pass (pode pareiar com o fix) | aberto |
+| _(nenhum por enquanto)_ | | | | | | |
 
 ## Resolvidos
 
-_(nenhum por enquanto)_
+Todos os bugs do wizard de criação de contrato (B1–B9) foram corrigidos na branch `fix/contract-wizard` (mergeada em `develop` em 2026-06-11). Funcionais (B1–B4) com teste de regressão escrito antes do fix.
+
+| # | Data | Descrição | Balde | Correção | Resolvido em |
+|---|------|-----------|-------|----------|--------------|
+| B1 | 2026-06-11 | Wizard: clicar em "Personalizado" não troca o modo; re-render não confiável (`mode` vinha de `watch` + `setValue` do objeto inteiro). | 🔴 | `mode` agora é `useState` local (fonte de render). | 2026-06-11 |
+| B2 | 2026-06-11 | Wizard: reclicar o modo já ativo zerava os valores do step (`setMode` sempre resetava o schedule). | 🔴 | Guarda `if (next === mode) return` em `setMode`. | 2026-06-11 |
+| B3 | 2026-06-11 | Wizard: erro literal "undefined" no valor total (`FieldError` fazia `String(err.message)` num objeto de erros aninhados). | 🔴 | `FieldError` só renderiza quando `err.message` é string. | 2026-06-11 |
+| B4 | 2026-06-11 | Wizard: 1º vencimento não exibia erro de validação (`FieldError` não resolvia caminhos aninhados; faltava `FieldError` no campo). | 🔴 | `getNestedError` resolve paths aninhados + `FieldError` por campo no schedule. | 2026-06-11 |
+| B5 | 2026-06-11 | Wizard: "Descrição" era input de linha única. | 🟡 | Componente `Textarea` (shadcn) no `StepBasic`. | 2026-06-11 |
+| B6 | 2026-06-11 | Wizard: "Valor total" com "(centavos)" na label e sem máscara. | 🟡 | `CurrencyField` (máscara R$, armazena centavos); label sem "(centavos)". | 2026-06-11 |
+| B7 | 2026-06-11 | Wizard: "1º vencimento" sem date picker nem máscara BR. | 🟡 | `DateField` (máscara `dd/mm/aaaa` + picker nativo, armazena ISO) + `parseBRDateToISO`/`maskBRDate`. | 2026-06-11 |
+| B8 | 2026-06-11 | Botões sem `cursor: pointer` (Tailwind v4 não injeta no preflight). | 🟢 | `cursor-pointer` na base do `buttonVariants` (cva). | 2026-06-11 |
+| B9 | 2026-06-11 | Layout vazio/estreito no desktop (lista e wizard). | 🟢 | Wizard em `Card` (`max-w-2xl`); lista mais larga (`max-w-5xl`). | 2026-06-11 |
