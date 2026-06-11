@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -138,4 +139,43 @@ export const participant = pgTable(
     index("participant_contract_id_idx").on(table.contractId),
     index("participant_linked_user_id_idx").on(table.linkedUserId),
   ]
+);
+
+export const proof = pgTable(
+  "proof",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    installmentId: uuid("installment_id")
+      .notNull()
+      .references(() => installment.id, { onDelete: "cascade" }),
+    objectKey: text("object_key").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    uploadedBy: text("uploaded_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("proof_installment_id_idx").on(table.installmentId)]
+);
+
+export const auditEvent = pgTable(
+  "audit_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => contract.id, { onDelete: "cascade" }),
+    installmentId: uuid("installment_id").references(() => installment.id, {
+      onDelete: "cascade",
+    }),
+    actorUserId: text("actor_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    type: text("type").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("audit_event_installment_id_idx").on(table.installmentId)]
 );
