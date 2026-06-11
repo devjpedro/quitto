@@ -22,6 +22,9 @@ const TITLE = /título/i;
 const TOTAL = /valor total/i;
 const COUNT = /n.* de parcelas/i;
 const FIRST_DUE = /1.* vencimento/i;
+const MODE_AUTO = /automático/i;
+const MODE_CUSTOM = /personalizado/i;
+const ADD_INSTALLMENT = /adicionar parcela/i;
 
 describe("ContractNewPage (wizard)", () => {
   beforeEach(() => {
@@ -66,5 +69,27 @@ describe("ContractNewPage (wizard)", () => {
       await screen.findByText("Data inválida (use AAAA-MM-DD)")
     ).toBeInTheDocument();
     expect(screen.queryByText("undefined")).not.toBeInTheDocument();
+  });
+
+  it("toggles schedule mode reliably and never resets the active mode [B1,B2]", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "Apê");
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+
+    // [B1] switching to custom must reveal the custom schedule UI immediately
+    await userEvent.click(screen.getByRole("button", { name: MODE_CUSTOM }));
+    expect(
+      screen.getByRole("button", { name: ADD_INSTALLMENT })
+    ).toBeInTheDocument();
+
+    // back to auto, set a count
+    await userEvent.click(screen.getByRole("button", { name: MODE_AUTO }));
+    const count = screen.getByLabelText(COUNT) as HTMLInputElement;
+    await userEvent.clear(count);
+    await userEvent.type(count, "12");
+
+    // [B2] re-clicking the already-active mode must NOT reset the value
+    await userEvent.click(screen.getByRole("button", { name: MODE_AUTO }));
+    expect((screen.getByLabelText(COUNT) as HTMLInputElement).value).toBe("12");
   });
 });

@@ -254,7 +254,7 @@ export function ContractNewPage() {
     },
   });
 
-  const mode = form.watch("schedule.mode");
+  const [mode, setModeState] = useState<ScheduleMode>("auto");
 
   async function goNext() {
     const ok = await form.trigger([
@@ -273,6 +273,10 @@ export function ContractNewPage() {
   });
 
   function setMode(next: ScheduleMode) {
+    if (next === mode) {
+      return; // [B2] re-clicking the active mode must not reset
+    }
+    setModeState(next);
     form.setValue(
       "schedule",
       next === "auto"
@@ -282,7 +286,8 @@ export function ContractNewPage() {
             installmentsCount: 1,
             firstDueDate: "",
           }
-        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] }
+        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] },
+      { shouldValidate: false }
     );
   }
 
