@@ -1,0 +1,2 @@
+CREATE INDEX "installment_contract_id_idx" ON "installment" USING btree ("contract_id");--> statement-breakpoint
+CREATE INDEX "participant_contract_id_idx" ON "participant" USING btree ("contract_id");

@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -101,29 +102,37 @@ export const contract = pgTable("contract", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const installment = pgTable("installment", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  contractId: uuid("contract_id")
-    .notNull()
-    .references(() => contract.id, { onDelete: "cascade" }),
-  sequence: integer("sequence").notNull(),
-  amountCents: integer("amount_cents").notNull(),
-  dueDate: date("due_date").notNull(),
-  status: installmentStatusEnum("status").notNull().default("pending"),
-  paidAt: timestamp("paid_at"),
-  confirmedAt: timestamp("confirmed_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const installment = pgTable(
+  "installment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => contract.id, { onDelete: "cascade" }),
+    sequence: integer("sequence").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    dueDate: date("due_date").notNull(),
+    status: installmentStatusEnum("status").notNull().default("pending"),
+    paidAt: timestamp("paid_at"),
+    confirmedAt: timestamp("confirmed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("installment_contract_id_idx").on(table.contractId)]
+);
 
-export const participant = pgTable("participant", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  contractId: uuid("contract_id")
-    .notNull()
-    .references(() => contract.id, { onDelete: "cascade" }),
-  displayName: text("display_name").notNull(),
-  role: participantRoleEnum("role").notNull(),
-  linkedUserId: text("linked_user_id").references(() => user.id, {
-    onDelete: "set null",
-  }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const participant = pgTable(
+  "participant",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => contract.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    role: participantRoleEnum("role").notNull(),
+    linkedUserId: text("linked_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("participant_contract_id_idx").on(table.contractId)]
+);
