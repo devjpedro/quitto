@@ -2,4 +2,5 @@
 export const queryKeys = {
   contracts: ["contracts"] as const,
   contract: (id: string) => ["contract", id] as const,
+  installment: (id: string) => ["installment", id] as const,
 };
