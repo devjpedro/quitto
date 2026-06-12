@@ -11,6 +11,14 @@ import { headObject, presignDownload, presignUpload } from "../lib/storage";
 
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
+// Explicit literal tuple (not `ALLOWED_MIME.map(...)`): a mapped array widens to
+// `TSchema[]`, which makes Eden infer the body field as `never` cross-package.
+const proofMimeSchema = t.Union([
+  t.Literal("application/pdf"),
+  t.Literal("image/jpeg"),
+  t.Literal("image/png"),
+]);
+
 /** Loads installment + parent contract and the caller's role. Throws 404 if no access. */
 async function loadInstallmentForUser(userId: string, installmentId: string) {
   const [inst] = await db
@@ -54,7 +62,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       params: t.Object({ installmentId: t.String() }),
       body: t.Object({
         fileName: t.String({ minLength: 1, maxLength: 200 }),
-        mimeType: t.Union(ALLOWED_MIME.map((m) => t.Literal(m))),
+        mimeType: proofMimeSchema,
       }),
       response: t.Object({ uploadUrl: t.String(), objectKey: t.String() }),
     }
@@ -131,7 +139,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       body: t.Object({
         objectKey: t.String({ minLength: 1 }),
         fileName: t.String({ minLength: 1, maxLength: 200 }),
-        mimeType: t.Union(ALLOWED_MIME.map((m) => t.Literal(m))),
+        mimeType: proofMimeSchema,
       }),
       response: t.Object({ status: t.String() }),
     }
