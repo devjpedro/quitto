@@ -7,15 +7,31 @@ const mutateAsync = vi.fn();
 vi.mock("../src/hooks/use-contract-mutations", () => ({
   useUpdateInstallmentMutation: () => ({ mutateAsync, isPending: false }),
 }));
+vi.mock("../src/hooks/use-payment-mutations", () => ({
+  useSubmitProofMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useConfirmPaymentMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDisputePaymentMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMarkPaidMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+const detail = {
+  id: "i2",
+  sequence: 2,
+  amountCents: 200_000,
+  dueDate: "2026-08-10",
+  status: "pending",
+  proofs: [],
+  events: [],
+};
+vi.mock("../src/hooks/use-installment", () => ({
+  useInstallmentQuery: () => ({ data: detail, isPending: false }),
+}));
 
 import { InstallmentDrawer } from "../src/components/installment-drawer";
 
 const EDIT = /editar parcela/i;
 const AMOUNT = /valor/i;
 const SAVE = /salvar/i;
-const TITLE = /parcela 2/i;
-
-const noop = () => undefined;
+const UPLOAD = /escolher comprovante/i;
 
 const installment = {
   id: "i2",
@@ -24,6 +40,7 @@ const installment = {
   dueDate: "2026-08-10",
   status: "pending",
 };
+const noop = () => undefined;
 
 describe("InstallmentDrawer", () => {
   beforeEach(() => {
@@ -31,46 +48,49 @@ describe("InstallmentDrawer", () => {
     mutateAsync.mockResolvedValue({ id: "i2" });
   });
 
-  it("shows read-only detail and an edit button for the owner", () => {
+  it("shows edit button for owner and the upload action (buyer/owner, pending)", () => {
     renderWithProviders(
-      // biome-ignore lint/a11y/useValidAriaRole: `role` is a domain prop of InstallmentDrawer (owner/viewer), not an ARIA role
       <InstallmentDrawer
         contractId="c1"
+        contractRole="owner"
         installment={installment}
         onClose={noop}
         open
-        role="owner"
+        requiresConfirmation
       />
     );
-    expect(screen.getByText(TITLE)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: EDIT })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: UPLOAD })).toBeInTheDocument();
   });
 
-  it("hides the edit button for a non-owner", () => {
+  it("hides edit + actions for a viewer", () => {
     renderWithProviders(
-      // biome-ignore lint/a11y/useValidAriaRole: `role` is a domain prop of InstallmentDrawer (owner/viewer), not an ARIA role
       <InstallmentDrawer
         contractId="c1"
+        contractRole="viewer"
         installment={installment}
         onClose={noop}
         open
-        role="viewer"
+        requiresConfirmation
       />
     );
     expect(
       screen.queryByRole("button", { name: EDIT })
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: UPLOAD })
+    ).not.toBeInTheDocument();
   });
 
   it("owner edits the amount and saves (calls the mutation)", async () => {
     renderWithProviders(
-      // biome-ignore lint/a11y/useValidAriaRole: `role` is a domain prop of InstallmentDrawer (owner/viewer), not an ARIA role
       <InstallmentDrawer
         contractId="c1"
+        contractRole="owner"
         installment={installment}
         onClose={noop}
         open
-        role="owner"
+        requiresConfirmation
       />
     );
     await userEvent.click(screen.getByRole("button", { name: EDIT }));

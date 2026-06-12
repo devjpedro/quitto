@@ -52,3 +52,33 @@ it("infers the Fase-2a contract endpoints cross-package (eden#215 mitigation)", 
   expectTypeOf<PatchResponse>().not.toBeAny();
   expectTypeOf<NonNullable<PatchResponse>>().toEqualTypeOf<{ id: string }>();
 });
+
+it("infers the Fase-3a installment endpoints cross-package (eden#215 mitigation)", () => {
+  const api = treaty<App>("http://localhost:3000");
+
+  // GET /api/installments/:installmentId — detail with proofs + events.
+  const detailGet = api.api.installments({ installmentId: "i" }).get;
+  type DetailResponse = Awaited<ReturnType<typeof detailGet>>["data"];
+  expectTypeOf<DetailResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<DetailResponse>["status"]>().toEqualTypeOf<string>();
+  expectTypeOf<NonNullable<DetailResponse>["proofs"]>().toBeArray();
+  expectTypeOf<NonNullable<DetailResponse>["events"]>().toBeArray();
+
+  // POST presign — response is { uploadUrl, objectKey }.
+  const presign = api.api.installments({ installmentId: "i" }).proofs.presign
+    .post;
+  type PresignResponse = Awaited<ReturnType<typeof presign>>["data"];
+  expectTypeOf<PresignResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<PresignResponse>>().toEqualTypeOf<{
+    uploadUrl: string;
+    objectKey: string;
+  }>();
+
+  // POST confirm — response is { status }.
+  const confirm = api.api.installments({ installmentId: "i" }).confirm.post;
+  type ConfirmResponse = Awaited<ReturnType<typeof confirm>>["data"];
+  expectTypeOf<ConfirmResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<ConfirmResponse>>().toEqualTypeOf<{
+    status: string;
+  }>();
+});
