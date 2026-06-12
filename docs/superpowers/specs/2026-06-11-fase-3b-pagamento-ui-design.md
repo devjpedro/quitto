@@ -26,8 +26,9 @@ refatoração em abas nem PDF do contrato original nesta fase.
   **Contestar** (diálogo com motivo opcional, máx. 500). Comprador/dono: **Marcar como paga**
   (fluxo sem confirmação).
 - **Lista de comprovantes** com link "baixar" (abre a URL assinada em nova aba).
-- **Timeline de auditoria** (label pt-BR por tipo de evento, data, motivo da contestação; resolve o
-  nome do ator pelos participantes/sessão quando disponível).
+- **Timeline de auditoria** (label pt-BR por tipo de evento, data, motivo da contestação). **Nome do
+  ator fica deferido** — a API (3a) só devolve `actorUserId` e o detalhe do contrato não expõe o
+  vínculo `linkedUserId` dos participantes, então não há como resolver o nome no cliente ainda (§7).
 - **Badges de status** reaproveitando o `status-badge` existente.
 
 ### Fora de escopo (fases futuras)
@@ -83,7 +84,7 @@ calcula a visibilidade dos botões a partir de (`contractRole`, `requiresConfirm
 - `proof-upload.tsx` — selecionar → revisar → enviar; validação local (pdf/jpg/png, 0 < tamanho ≤ 10MB).
 - `proof-list.tsx` — comprovantes com link "baixar" (URL assinada).
 - `payment-actions.tsx` — botões cientes de papel/status (Confirmar, Contestar, Marcar paga) + diálogos.
-- `audit-timeline.tsx` — eventos com label pt-BR, data, motivo (metadata) e ator (quando resolvível).
+- `audit-timeline.tsx` — eventos com label pt-BR, data e motivo (metadata). Ator deferido (ver §7).
 - `ui/dialog.tsx` — wrapper Radix Dialog (hoje só existe `Sheet`) para confirmar/contestar.
 
 ### Novos hooks (`apps/web/src/hooks/`)
@@ -122,6 +123,10 @@ calcula a visibilidade dos botões a partir de (`contractRole`, `requiresConfirm
   `exigeConfirmação` ou avisar que só faz sentido com contraparte — para não impor a cerimônia de
   autoconfirmação. O drawer 3b **não** faz special-case de "solo" (estado frágil de detectar e que muda
   na Fase 4); ele honra o flag fielmente.
+- **Follow-up (nome do ator na timeline):** para exibir *quem* fez cada evento, a API precisa expor o
+  ator de forma resolvível — ex.: o detalhe da parcela (GET 3a) devolver o nome do ator por evento, ou
+  o detalhe do contrato expor `linkedUserId` dos participantes + a sessão atual. Enquanto isso, a
+  timeline mostra só evento + data + motivo.
 
 ## 8. Testes
 
