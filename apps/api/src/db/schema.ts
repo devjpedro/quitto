@@ -177,5 +177,8 @@ export const auditEvent = pgTable(
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("audit_event_installment_id_idx").on(table.installmentId)]
+  (table) => [
+    index("audit_event_installment_id_idx").on(table.installmentId),
+    index("audit_event_contract_id_idx").on(table.contractId),
+  ]
 );

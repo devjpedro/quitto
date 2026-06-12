@@ -1,0 +1,1 @@
+CREATE INDEX "audit_event_contract_id_idx" ON "audit_event" USING btree ("contract_id");
