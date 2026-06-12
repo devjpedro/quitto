@@ -1,7 +1,29 @@
 import { describe, expect, it } from "bun:test";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { app } from "../src/app";
 
 const configured = Boolean(process.env.S3_ENDPOINT);
+
+/** Writes an object straight to storage with an arbitrary content-type (bypasses presign). */
+async function putObjectRaw(objectKey: string, contentType: string) {
+  const client = new S3Client({
+    endpoint: process.env.S3_ENDPOINT,
+    region: process.env.S3_REGION,
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID as string,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY as string,
+    },
+    forcePathStyle: true,
+  });
+  await client.send(
+    new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET as string,
+      Key: objectKey,
+      Body: "x",
+      ContentType: contentType,
+    })
+  );
+}
 
 async function signUpCookie(tag: string): Promise<string> {
   const res = await app.handle(
@@ -172,5 +194,31 @@ describe.if(configured)("GET installment detail", () => {
     expect(body.proofs).toHaveLength(1);
     expect(body.proofs[0].downloadUrl).toContain("http");
     expect(body.events.length).toBeGreaterThanOrEqual(1);
+    // timeline expõe ator e metadata (motivo/arquivo) para o drawer da 3b
+    expect(body.events[0].type).toBe("proof_submitted");
+    expect(typeof body.events[0].actorUserId).toBe("string");
+    expect(body.events[0].metadata.fileName).toBe("c.pdf");
+  });
+});
+
+describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
+  it("rejeita objeto com content-type fora da whitelist (-> 422)", async () => {
+    const cookie = await signUpCookie("mime");
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const objectKey = `proofs/${cId}/${iId}/${crypto.randomUUID()}-evil.txt`;
+    await putObjectRaw(objectKey, "text/plain");
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/proofs`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          objectKey,
+          fileName: "evil.pdf",
+          mimeType: "application/pdf",
+        }),
+      })
+    );
+    expect(res.status).toBe(422);
   });
 });

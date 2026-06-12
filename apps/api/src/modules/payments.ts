@@ -81,6 +81,17 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       if (sizeBytes <= 0 || sizeBytes > 10 * 1024 * 1024) {
         throw new ValidationError("Arquivo inválido (vazio ou maior que 10MB)");
       }
+      // o tipo do objeto realmente armazenado manda — não confiar só no body
+      const storedMime = head.ContentType;
+      if (
+        !(
+          storedMime && (ALLOWED_MIME as readonly string[]).includes(storedMime)
+        )
+      ) {
+        throw new ValidationError(
+          "Tipo de arquivo do comprovante não permitido"
+        );
+      }
 
       const newStatus = nextStatus(
         inst.status,
@@ -93,7 +104,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           installmentId: inst.id,
           objectKey: body.objectKey,
           fileName: body.fileName,
-          mimeType: body.mimeType,
+          mimeType: storedMime,
           sizeBytes,
           uploadedBy: user.id,
         });
@@ -279,6 +290,8 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         events: events.map((e) => ({
           id: e.id,
           type: e.type,
+          actorUserId: e.actorUserId,
+          metadata: e.metadata as Record<string, unknown> | null,
           createdAt: e.createdAt.toISOString(),
         })),
       };
@@ -302,7 +315,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           })
         ),
         events: t.Array(
-          t.Object({ id: t.String(), type: t.String(), createdAt: t.String() })
+          t.Object({
+            id: t.String(),
+            type: t.String(),
+            actorUserId: t.Union([t.String(), t.Null()]),
+            metadata: t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
+            createdAt: t.String(),
+          })
         ),
       }),
     }
