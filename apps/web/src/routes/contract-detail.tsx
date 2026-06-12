@@ -187,10 +187,11 @@ export function ContractDetailPage() {
 
       <InstallmentDrawer
         contractId={contract.id}
+        contractRole={data.role}
         installment={selected}
         onClose={() => setOpenId(null)}
         open={openId !== null}
-        role={data.role}
+        requiresConfirmation={contract.requiresConfirmation}
       />
     </div>
   );
