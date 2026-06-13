@@ -57,6 +57,13 @@
       "when": 1781362151904,
       "tag": "0007_backfill_owner_participant_role",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781380094592,
+      "tag": "0008_round_doorman",
+      "breakpoints": true
     }
   ]
 }
