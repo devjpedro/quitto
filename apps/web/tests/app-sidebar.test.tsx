@@ -10,6 +10,12 @@ vi.mock("@/lib/auth-client", () => ({
   useSession: () => ({ data: { user: { name: "Test" } } }),
   signOut: vi.fn(),
 }));
+vi.mock("@/components/notification-bell", () => ({
+  NotificationBell: () => <div data-testid="bell" />,
+}));
+vi.mock("@/hooks/use-notifications", () => ({
+  useUnreadCountQuery: () => ({ data: { count: 0 } }),
+}));
 
 import { AppSidebar } from "../src/components/app-sidebar";
 
@@ -18,5 +24,12 @@ describe("AppSidebar", () => {
     render(<AppSidebar />);
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Contratos").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders the Notificações nav item", () => {
+    render(<AppSidebar />);
+    expect(screen.getAllByText("Notificações").length).toBeGreaterThanOrEqual(
+      1
+    );
   });
 });
