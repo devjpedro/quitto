@@ -1,10 +1,12 @@
-import { isOverdue } from "@quitto/shared";
+import { isOverdue, PARTICIPANT_ROLE } from "@quitto/shared";
 import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { InstallmentDrawer } from "@/components/installment-drawer";
+import { ParticipantsDrawer } from "@/components/participants-drawer";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractQuery } from "@/hooks/use-contracts";
@@ -44,6 +46,7 @@ export function ContractDetailPage() {
   const { id } = useParams({ from: "/protected/contracts/$id" });
   const { data, isPending } = useContractQuery(id);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [managing, setManaging] = useState(false);
 
   if (isPending || !data) {
     return (
@@ -64,6 +67,7 @@ export function ContractDetailPage() {
   }
 
   const { contract, progress, installments, participants } = data;
+  const isOwner = data.role === PARTICIPANT_ROLE.owner;
   const overdue = progress.overdueCount > 0;
   const selected = installments.find((it) => it.id === openId) ?? null;
 
@@ -113,9 +117,21 @@ export function ContractDetailPage() {
       </div>
 
       <section className="mb-6 rounded-xl border border-border bg-card p-4 shadow-xs">
-        <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          Participantes
-        </h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+            Participantes
+          </h2>
+          {isOwner ? (
+            <Button
+              onClick={() => setManaging(true)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Gerenciar
+            </Button>
+          ) : null}
+        </div>
         <ul className="flex flex-col gap-2">
           {participants.map((p) => (
             <li className="flex items-center gap-3 text-sm" key={p.id}>
@@ -180,6 +196,15 @@ export function ContractDetailPage() {
         open={openId !== null}
         requiresConfirmation={contract.requiresConfirmation}
       />
+
+      {isOwner ? (
+        <ParticipantsDrawer
+          contractId={contract.id}
+          onClose={() => setManaging(false)}
+          open={managing}
+          participants={participants}
+        />
+      ) : null}
     </div>
   );
 }

@@ -143,4 +143,14 @@ it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mi
   expectTypeOf<NonNullable<AcceptInviteResponse>>().toEqualTypeOf<{
     contractId: string;
   }>();
+
+  // GET /api/invites/mine — response is an array of pending invites.
+  const mineGet = api.api.invites.mine.get;
+  type MineResponse = Awaited<ReturnType<typeof mineGet>>["data"];
+  expectTypeOf<MineResponse>().not.toBeAny();
+  type MineItem = NonNullable<MineResponse>[number];
+  expectTypeOf<MineItem["token"]>().toEqualTypeOf<string>();
+  expectTypeOf<MineItem["contractTitle"]>().toEqualTypeOf<string>();
+  expectTypeOf<MineItem["role"]>().toEqualTypeOf<string>();
+  expectTypeOf<MineItem["expiresAt"]>().toEqualTypeOf<string>();
 });

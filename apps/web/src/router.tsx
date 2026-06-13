@@ -4,6 +4,7 @@ import {
   contractsQueryOptions,
 } from "./hooks/use-contracts";
 import { queryClient } from "./lib/query";
+import { AcceptInvitePage } from "./routes/accept-invite";
 import { ContractDetailPage } from "./routes/contract-detail";
 import { ContractNewPage } from "./routes/contract-new";
 import { ContractsListPage } from "./routes/contracts-list";
@@ -15,6 +16,9 @@ import { rootRoute } from "./routes/root";
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   component: LoginPage,
 });
 
@@ -45,6 +49,12 @@ const contractDetailRoute = createRoute({
   component: ContractDetailPage,
 });
 
+const acceptInviteRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/invites/$token",
+  component: AcceptInvitePage,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   protectedRoute.addChildren([
@@ -52,6 +62,7 @@ const routeTree = rootRoute.addChildren([
     contractsListRoute,
     contractNewRoute,
     contractDetailRoute,
+    acceptInviteRoute,
   ]),
 ]);
 

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, invite, participant } from "../db/schema";
@@ -25,6 +25,47 @@ async function loadValidInvite(token: string) {
 }
 
 export const invitesModule = new Elysia({ prefix: "/api" })
+  .get(
+    "/invites/mine",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      const email = normalizeEmail(user.email);
+      const rows = await db
+        .select({
+          token: invite.token,
+          contractTitle: contract.title,
+          role: participant.role,
+          expiresAt: invite.expiresAt,
+        })
+        .from(invite)
+        .innerJoin(contract, eq(invite.contractId, contract.id))
+        .innerJoin(participant, eq(invite.participantId, participant.id))
+        .where(
+          and(
+            eq(invite.email, email),
+            isNull(invite.acceptedAt),
+            gt(invite.expiresAt, new Date())
+          )
+        )
+        .orderBy(desc(invite.createdAt));
+      return rows.map((r) => ({
+        token: r.token,
+        contractTitle: r.contractTitle,
+        role: r.role,
+        expiresAt: r.expiresAt.toISOString(),
+      }));
+    },
+    {
+      response: t.Array(
+        t.Object({
+          token: t.String(),
+          contractTitle: t.String(),
+          role: t.String(),
+          expiresAt: t.String(),
+        })
+      ),
+    }
+  )
   .get(
     "/invites/:token",
     async ({ request, params }) => {
