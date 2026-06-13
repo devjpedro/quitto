@@ -51,9 +51,10 @@ describe("InstallmentDrawer", () => {
   it("shows edit button for owner and the upload action (buyer/owner, pending)", () => {
     renderWithProviders(
       <InstallmentDrawer
+        capabilities={{ isPayer: true, isApprover: true }}
         contractId="c1"
-        contractRole="owner"
         installment={installment}
+        isOwner
         onClose={noop}
         open
         requiresConfirmation
@@ -66,9 +67,10 @@ describe("InstallmentDrawer", () => {
   it("hides edit + actions for a viewer", () => {
     renderWithProviders(
       <InstallmentDrawer
+        capabilities={{ isPayer: false, isApprover: false }}
         contractId="c1"
-        contractRole="viewer"
         installment={installment}
+        isOwner={false}
         onClose={noop}
         open
         requiresConfirmation
@@ -85,9 +87,10 @@ describe("InstallmentDrawer", () => {
   it("owner edits the amount and saves (calls the mutation)", async () => {
     renderWithProviders(
       <InstallmentDrawer
+        capabilities={{ isPayer: true, isApprover: true }}
         contractId="c1"
-        contractRole="owner"
         installment={installment}
+        isOwner
         onClose={noop}
         open
         requiresConfirmation

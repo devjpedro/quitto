@@ -40,7 +40,7 @@ describe("PaymentActions", () => {
     renderWithProviders(
       <PaymentActions
         {...base}
-        contractRole="seller"
+        capabilities={{ isPayer: false, isApprover: true }}
         requiresConfirmation
         status="awaiting_confirmation"
       />
@@ -57,7 +57,7 @@ describe("PaymentActions", () => {
     renderWithProviders(
       <PaymentActions
         {...base}
-        contractRole="seller"
+        capabilities={{ isPayer: false, isApprover: true }}
         requiresConfirmation
         status="awaiting_confirmation"
       />
@@ -79,7 +79,7 @@ describe("PaymentActions", () => {
     renderWithProviders(
       <PaymentActions
         {...base}
-        contractRole="buyer"
+        capabilities={{ isPayer: true, isApprover: false }}
         requiresConfirmation={false}
         status="pending"
       />
@@ -99,7 +99,7 @@ describe("PaymentActions", () => {
     renderWithProviders(
       <PaymentActions
         {...base}
-        contractRole="viewer"
+        capabilities={{ isPayer: false, isApprover: false }}
         requiresConfirmation
         status="awaiting_confirmation"
       />

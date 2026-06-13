@@ -1,4 +1,4 @@
-import { isOverdue, PARTICIPANT_ROLE } from "@quitto/shared";
+import { isOverdue } from "@quitto/shared";
 import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
@@ -67,7 +67,7 @@ export function ContractDetailPage() {
   }
 
   const { contract, progress, installments, participants } = data;
-  const isOwner = data.role === PARTICIPANT_ROLE.owner;
+  const isOwner = data.isOwner;
   const overdue = progress.overdueCount > 0;
   const selected = installments.find((it) => it.id === openId) ?? null;
 
@@ -192,9 +192,10 @@ export function ContractDetailPage() {
       </section>
 
       <InstallmentDrawer
+        capabilities={{ isPayer: data.isPayer, isApprover: data.isApprover }}
         contractId={contract.id}
-        contractRole={data.role}
         installment={selected}
+        isOwner={data.isOwner}
         onClose={() => setOpenId(null)}
         open={openId !== null}
         requiresConfirmation={contract.requiresConfirmation}

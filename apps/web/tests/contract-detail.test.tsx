@@ -16,6 +16,9 @@ const MANAGE_BUTTON = /gerenciar/i;
 
 const detail = {
   role: "owner",
+  isOwner: true,
+  isPayer: true,
+  isApprover: true,
   contract: {
     id: "c1",
     title: "Apê do irmão",
@@ -81,7 +84,7 @@ describe("ContractDetailPage", () => {
 
   it("não mostra Gerenciar para não-dono", () => {
     useContractQuery.mockReturnValue({
-      data: { ...detail, role: "viewer" },
+      data: { ...detail, role: "viewer", isOwner: false },
       isPending: false,
     });
     renderWithProviders(<ContractDetailPage />);

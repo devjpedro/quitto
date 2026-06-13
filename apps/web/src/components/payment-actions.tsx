@@ -8,22 +8,22 @@ import {
   useDisputePaymentMutation,
   useMarkPaidMutation,
 } from "@/hooks/use-payment-mutations";
-import { availableActions } from "@/lib/installment-actions";
+import { availableActions, type Capabilities } from "@/lib/installment-actions";
 
 export function PaymentActions({
   contractId,
   installmentId,
-  contractRole,
+  capabilities,
   requiresConfirmation,
   status,
 }: {
   contractId: string;
   installmentId: string;
-  contractRole: string;
+  capabilities: Capabilities;
   requiresConfirmation: boolean;
   status: string;
 }) {
-  const actions = availableActions(contractRole, requiresConfirmation, status);
+  const actions = availableActions(capabilities, requiresConfirmation, status);
   const confirmMutation = useConfirmPaymentMutation(contractId, installmentId);
   const disputeMutation = useDisputePaymentMutation(contractId, installmentId);
   const markPaidMutation = useMarkPaidMutation(contractId, installmentId);
