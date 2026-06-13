@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ContractRow } from "@/components/contract-row";
+import { PendingInvitesBanner } from "@/components/pending-invites-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractsQuery } from "@/hooks/use-contracts";
@@ -82,6 +83,8 @@ export function ContractsListPage() {
           <Link to="/contracts/new">Novo contrato</Link>
         </Button>
       </div>
+
+      <PendingInvitesBanner />
 
       <ContractsListBody data={data} isPending={isPending} />
     </div>
