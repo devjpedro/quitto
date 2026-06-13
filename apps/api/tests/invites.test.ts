@@ -244,6 +244,67 @@ describe("invites", () => {
     expect(acc.status).toBe(422);
   });
 
+  // ─── Fase 4b: GET /api/invites/mine ──────────────────────────────────────
+
+  it("GET /invites/mine lista convites pendentes do e-mail da sessão", async () => {
+    const ts = Date.now();
+    const owner = await signUpCookie(`mine-own-${ts}@e.com`);
+    const inviteeEmail = `mine-friend-${ts}@e.com`;
+    const { contractId } = await setupInvite(owner, inviteeEmail);
+    const invitee = await signUpCookie(inviteeEmail);
+
+    const res = await app.handle(
+      new Request("http://localhost/api/invites/mine", {
+        headers: { cookie: invitee },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body.length).toBe(1);
+    expect(body[0].contractTitle).toBe("Contrato Teste");
+    expect(body[0].role).toBe("seller");
+    expect(typeof body[0].token).toBe("string");
+    expect(contractId).toBeTruthy();
+  });
+
+  it("GET /invites/mine não retorna convites de outro e-mail", async () => {
+    const ts = Date.now();
+    const owner = await signUpCookie(`mine-own2-${ts}@e.com`);
+    await setupInvite(owner, `mine-target-${ts}@e.com`);
+    const other = await signUpCookie(`mine-other-${ts}@e.com`);
+
+    const res = await app.handle(
+      new Request("http://localhost/api/invites/mine", {
+        headers: { cookie: other },
+      })
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).length).toBe(0);
+  });
+
+  it("GET /invites/mine exclui convites já aceitos", async () => {
+    const ts = Date.now();
+    const owner = await signUpCookie(`mine-own3-${ts}@e.com`);
+    const email = `mine-accepted-${ts}@e.com`;
+    const { token } = await setupInvite(owner, email);
+    const invitee = await signUpCookie(email);
+    await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+
+    const res = await app.handle(
+      new Request("http://localhost/api/invites/mine", {
+        headers: { cookie: invitee },
+      })
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).length).toBe(0);
+  });
+
   it("convite expirado retorna 422 ao visualizar (GET)", async () => {
     const ts = Date.now() + 1; // +1 para token único em relação ao teste anterior
     const ownerEmail = `own-exp-view-${ts}@example.com`;
