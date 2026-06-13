@@ -54,6 +54,24 @@ export const AUDIT_TYPE = {
 } as const;
 export type AuditType = (typeof AUDIT_TYPE)[keyof typeof AUDIT_TYPE];
 
+export const NOTIFICATION_TYPE = {
+  proofSubmitted: "proof_submitted",
+  paymentConfirmed: "payment_confirmed",
+  paymentDisputed: "payment_disputed",
+  installmentPaid: "installment_paid",
+  installmentDueSoon: "installment_due_soon",
+  installmentOverdue: "installment_overdue",
+} as const;
+export type NotificationType =
+  (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
+export const NOTIFICATION_TYPES = Object.values(NOTIFICATION_TYPE) as [
+  NotificationType,
+  ...NotificationType[],
+];
+
+/** Quantos dias antes do vencimento o lembrete "due_soon" dispara. */
+export const REMINDER_WINDOW_DAYS = 3;
+
 const PAID_STATUSES: ReadonlySet<string> = new Set([
   INSTALLMENT_STATUS.paid,
   INSTALLMENT_STATUS.confirmed,

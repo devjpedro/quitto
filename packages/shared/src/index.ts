@@ -5,6 +5,7 @@ export type {
   AuditType,
   ContractStatus,
   InstallmentStatus,
+  NotificationType,
   OwnerRole,
   ParticipantRole,
 } from "./domain";
@@ -17,9 +18,12 @@ export {
   INSTALLMENT_STATUSES,
   isOverdue,
   isPaidStatus,
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPES,
   OWNER_ROLE,
   OWNER_ROLES,
   PARTICIPANT_ROLE,
+  REMINDER_WINDOW_DAYS,
 } from "./domain";
 
 /** Builds and validates an env object from a Zod schema, failing fast. */
