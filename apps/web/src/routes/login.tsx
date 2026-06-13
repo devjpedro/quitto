@@ -1,3 +1,4 @@
+import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,11 @@ function submitLabel(mode: "signin" | "signup") {
 }
 
 export function LoginPage() {
+  const search = useSearch({ strict: false }) as { redirect?: string };
+  const target =
+    search.redirect?.startsWith("/") && !search.redirect.startsWith("//")
+      ? search.redirect
+      : "/";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,15 +33,15 @@ export function LoginPage() {
         : "Não foi possível criar a conta. Verifique os dados e tente novamente.";
     const action =
       mode === "signin"
-        ? signIn.email({ email, password, callbackURL: "/" })
-        : signUp.email({ name, email, password, callbackURL: "/" });
+        ? signIn.email({ email, password, callbackURL: target })
+        : signUp.email({ name, email, password, callbackURL: target });
     try {
       const { error: err } = await action;
       if (err) {
         setError(failMessage);
         return;
       }
-      window.location.href = "/";
+      window.location.href = target;
     } catch {
       setError(failMessage);
     } finally {
@@ -49,7 +55,7 @@ export function LoginPage() {
     try {
       const { error: err } = await signIn.social({
         provider: "google",
-        callbackURL: "/",
+        callbackURL: target,
       });
       if (err) {
         setError("Não foi possível continuar com o Google. Tente novamente.");

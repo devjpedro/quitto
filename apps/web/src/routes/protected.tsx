@@ -27,10 +27,10 @@ function ProtectedLayout() {
 export const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const { data } = await authClient.getSession();
     if (!data) {
-      throw redirect({ to: "/login" });
+      throw redirect({ to: "/login", search: { redirect: location.href } });
     }
   },
   component: ProtectedLayout,
