@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
+import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
 
@@ -331,5 +332,44 @@ describe("endpoints de notificação", () => {
       )
     ).json();
     expect(count.count).toBe(0);
+  });
+});
+
+describe("sweep de lembretes", () => {
+  it("gera lembrete para parcela vencida e é idempotente", async () => {
+    const cookie = await signUpCookie("rem-1");
+    const payerId = await meId(cookie);
+    // contrato com primeira parcela já vencida
+    const res = await app.handle(
+      new Request("http://localhost/api/contracts", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          title: "Vencida",
+          ownerRole: "buyer",
+          requiresConfirmation: false,
+          schedule: {
+            mode: "custom",
+            installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+          },
+        }),
+      })
+    );
+    const contractId = (await res.json()).id as string;
+
+    await runReminderSweep();
+    await runReminderSweep(); // segunda passada não duplica
+
+    const rows = await db
+      .select()
+      .from(notification)
+      .where(
+        and(
+          eq(notification.userId, payerId),
+          eq(notification.contractId, contractId)
+        )
+      );
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.type).toBe("installment_overdue");
   });
 });
