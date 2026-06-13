@@ -37,7 +37,11 @@ export function AcceptInvitePage() {
 
   async function onAccept() {
     const res = await acceptMutation.mutateAsync();
-    navigate({ to: "/contracts/$id", params: { id: res.contractId } });
+    navigate({
+      to: "/contracts/$id",
+      params: { id: res.contractId },
+      search: { installment: undefined },
+    });
   }
 
   async function onSwitchAccount() {

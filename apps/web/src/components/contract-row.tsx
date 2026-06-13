@@ -30,6 +30,7 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
     <Link
       className="group relative flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-6"
       params={{ id: contract.id }}
+      search={{ installment: undefined }}
       to="/contracts/$id"
     >
       <span

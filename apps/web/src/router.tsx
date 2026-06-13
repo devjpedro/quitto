@@ -3,6 +3,7 @@ import {
   contractQueryOptions,
   contractsQueryOptions,
 } from "./hooks/use-contracts";
+import { notificationsQueryOptions } from "./hooks/use-notifications";
 import { queryClient } from "./lib/query";
 import { AcceptInvitePage } from "./routes/accept-invite";
 import { ContractDetailPage } from "./routes/contract-detail";
@@ -10,6 +11,7 @@ import { ContractNewPage } from "./routes/contract-new";
 import { ContractsListPage } from "./routes/contracts-list";
 import { DashboardPage } from "./routes/dashboard";
 import { LoginPage } from "./routes/login";
+import { NotificationsPage } from "./routes/notifications";
 import { protectedRoute } from "./routes/protected";
 import { rootRoute } from "./routes/root";
 
@@ -44,9 +46,20 @@ const contractNewRoute = createRoute({
 const contractDetailRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/contracts/$id",
+  validateSearch: (search: Record<string, unknown>) => ({
+    installment:
+      typeof search.installment === "string" ? search.installment : undefined,
+  }),
   loader: ({ params }) =>
     queryClient.ensureQueryData(contractQueryOptions(params.id)),
   component: ContractDetailPage,
+});
+
+const notificationsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/notifications",
+  loader: () => queryClient.ensureQueryData(notificationsQueryOptions),
+  component: NotificationsPage,
 });
 
 const acceptInviteRoute = createRoute({
@@ -63,6 +76,7 @@ const routeTree = rootRoute.addChildren([
     contractNewRoute,
     contractDetailRoute,
     acceptInviteRoute,
+    notificationsRoute,
   ]),
 ]);
 

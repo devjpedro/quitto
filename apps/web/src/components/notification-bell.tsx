@@ -31,9 +31,7 @@ export function NotificationBell() {
     navigate({
       to: "/contracts/$id",
       params: { id: item.contractId },
-      ...(item.installmentId
-        ? { search: { installment: item.installmentId } }
-        : {}),
+      search: { installment: item.installmentId ?? undefined },
     });
   }
 
