@@ -49,6 +49,7 @@ describe("AcceptInvitePage", () => {
       expect(navigate).toHaveBeenCalledWith({
         to: "/contracts/$id",
         params: { id: "c1" },
+        search: { installment: undefined },
       })
     );
   });
