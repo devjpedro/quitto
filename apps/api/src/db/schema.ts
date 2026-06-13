@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -203,4 +204,32 @@ export const invite = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("invite_token_idx").on(table.token)]
+);
+
+export const notification = pgTable(
+  "notification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    contractId: uuid("contract_id")
+      .notNull()
+      .references(() => contract.id, { onDelete: "cascade" }),
+    installmentId: uuid("installment_id").references(() => installment.id, {
+      onDelete: "cascade",
+    }),
+    metadata: jsonb("metadata"),
+    dedupeKey: text("dedupe_key"),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("notification_user_id_created_at_idx").on(
+      table.userId,
+      table.createdAt
+    ),
+    unique("notification_dedupe_key_key").on(table.dedupeKey),
+  ]
 );

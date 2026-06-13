@@ -1,5 +1,20 @@
 import { describe, expect, it } from "bun:test";
-import { addMonths, toISODate } from "../src/lib/dates";
+import { addDays, addMonths, toISODate } from "../src/lib/dates";
+
+describe("addDays", () => {
+  it("adds days within a month", () => {
+    expect(addDays("2026-07-10", 3)).toBe("2026-07-13");
+  });
+  it("rolls over month boundaries", () => {
+    expect(addDays("2026-07-30", 3)).toBe("2026-08-02");
+  });
+  it("supports negative offsets", () => {
+    expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
+  });
+  it("rolls over year boundaries", () => {
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+});
 
 describe("addMonths", () => {
   it("adds whole months", () => {
