@@ -1,6 +1,6 @@
 import { isOverdue } from "@quitto/shared";
-import { useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useParams, useSearch } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { InstallmentDrawer } from "@/components/installment-drawer";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
@@ -44,8 +44,15 @@ function Stat({
 
 export function ContractDetailPage() {
   const { id } = useParams({ from: "/protected/contracts/$id" });
+  const { installment } = useSearch({ from: "/protected/contracts/$id" });
   const { data, isPending } = useContractQuery(id);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(installment ?? null);
+
+  useEffect(() => {
+    if (installment) {
+      setOpenId(installment);
+    }
+  }, [installment]);
   const [managing, setManaging] = useState(false);
 
   if (isPending || !data) {
