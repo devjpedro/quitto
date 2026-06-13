@@ -13,12 +13,12 @@ import {
   AuditTimeline,
 } from "@/components/audit-timeline";
 import { CurrencyField } from "@/components/currency-field";
+import { DateField } from "@/components/date-field";
 import { PaymentActions } from "@/components/payment-actions";
 import { ProofList, type ProofView } from "@/components/proof-list";
 import { ProofUpload } from "@/components/proof-upload";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUpdateInstallmentMutation } from "@/hooks/use-contract-mutations";
@@ -75,13 +75,7 @@ function InstallmentEditForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="due">Vencimento</Label>
-          <Input
-            id="due"
-            placeholder="AAAA-MM-DD"
-            {...form.register("dueDate", {
-              setValueAs: (v) => (v === "" ? undefined : v),
-            })}
-          />
+          <DateField id="due" name="dueDate" />
           {form.formState.errors.dueDate ? (
             <p className="text-destructive text-xs">
               {form.formState.errors.dueDate.message}

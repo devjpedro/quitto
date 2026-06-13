@@ -6,7 +6,7 @@ import { db } from "../db/client";
 import { invite, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { normalizeEmail } from "../lib/email";
-import { ForbiddenError, NotFoundError } from "../lib/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
 const INVITE_TTL_DAYS = 7;
@@ -31,6 +31,27 @@ export const participantsModule = new Elysia({ prefix: "/api" })
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
       await requireOwner(user.id, params.id);
+
+      // buyer/seller são papéis únicos por contrato; viewer é ilimitado.
+      if (
+        body.role === PARTICIPANT_ROLE.buyer ||
+        body.role === PARTICIPANT_ROLE.seller
+      ) {
+        const [taken] = await db
+          .select({ id: participant.id })
+          .from(participant)
+          .where(
+            and(
+              eq(participant.contractId, params.id),
+              eq(participant.role, body.role)
+            )
+          )
+          .limit(1);
+        if (taken) {
+          throw new ValidationError("Este papel já está ocupado");
+        }
+      }
+
       const [created] = await db
         .insert(participant)
         .values({
@@ -71,7 +92,9 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       if (!target) {
         throw new NotFoundError("Participante não encontrado");
       }
-      if (target.role === PARTICIPANT_ROLE.owner) {
+      // requireOwner já provou que user.id === contract.ownerId,
+      // logo comparar com o usuário autenticado dispensa o SELECT.
+      if (target.linkedUserId === user.id) {
         throw new ForbiddenError("O dono não pode ser removido");
       }
       await db

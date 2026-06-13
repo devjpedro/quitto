@@ -3,19 +3,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-utils";
 
 const INVITE_ACTION = /convidar/i;
-const EMAIL_LABEL = /e-mail/i;
+const EMAIL_LABEL = /^e-mail do convidado$/i;
+const ADD_EMAIL_LABEL = /e-mail do convidado \(opcional\)/i;
 const GENERATE_LINK_ACTION = /gerar link/i;
 const REMOVE_ACTION = /remover/i;
 const REMOVE_CONFIRM_ACTION = /^remover$/i;
+const NAME_LABEL = /^nome$/i;
+const ADD_PARTICIPANT_ACTION = /\+ adicionar participante/i;
+const SUBMIT_ADD_ACTION = /^adicionar$/i;
 const INVITE_LINK_SUFFIX = /\/invites\/tok123$/;
 
+const addParticipant = vi.fn().mockResolvedValue({ id: "p-new" });
 const createInvite = vi.fn().mockResolvedValue({
   token: "tok123",
   expiresAt: "2026-07-01T00:00:00.000Z",
 });
 const removeParticipant = vi.fn().mockResolvedValue({ ok: true });
 vi.mock("../src/hooks/use-participant-mutations", () => ({
-  useAddParticipantMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useAddParticipantMutation: () => ({
+    mutateAsync: addParticipant,
+    isPending: false,
+  }),
   useCreateInviteMutation: () => ({
     mutateAsync: createInvite,
     isPending: false,
@@ -29,11 +37,18 @@ vi.mock("../src/hooks/use-participant-mutations", () => ({
 import { ParticipantsDrawer } from "../src/components/participants-drawer";
 
 const participants = [
-  { id: "p1", displayName: "Maria", role: "seller", linked: false },
+  {
+    id: "p1",
+    displayName: "Maria",
+    role: "seller",
+    linked: false,
+    isOwner: false,
+  },
 ];
 
 describe("ParticipantsDrawer", () => {
   beforeEach(() => {
+    addParticipant.mockClear();
     createInvite.mockClear();
     removeParticipant.mockClear();
     Object.assign(navigator, {
@@ -67,6 +82,59 @@ describe("ParticipantsDrawer", () => {
     await waitFor(() =>
       expect(screen.getByDisplayValue(INVITE_LINK_SUFFIX)).toBeInTheDocument()
     );
+  });
+
+  it("adicionar com e-mail gera convite e exibe o link no drawer", async () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={participants}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: ADD_PARTICIPANT_ACTION })
+    );
+    fireEvent.change(screen.getByLabelText(NAME_LABEL), {
+      target: { value: "João" },
+    });
+    fireEvent.change(screen.getByLabelText(ADD_EMAIL_LABEL), {
+      target: { value: "joao@example.com" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: SUBMIT_ADD_ACTION }));
+
+    await waitFor(() => expect(addParticipant).toHaveBeenCalled());
+    expect(createInvite).toHaveBeenCalledWith({
+      participantId: "p-new",
+      body: { email: "joao@example.com" },
+    });
+    await waitFor(() =>
+      expect(screen.getByDisplayValue(INVITE_LINK_SUFFIX)).toBeInTheDocument()
+    );
+  });
+
+  it("adicionar sem e-mail não gera convite", async () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={participants}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: ADD_PARTICIPANT_ACTION })
+    );
+    fireEvent.change(screen.getByLabelText(NAME_LABEL), {
+      target: { value: "Sem Email" },
+    });
+    fireEvent.submit(screen.getByRole("button", { name: SUBMIT_ADD_ACTION }));
+
+    await waitFor(() => expect(addParticipant).toHaveBeenCalled());
+    expect(createInvite).not.toHaveBeenCalled();
   });
 
   it("remove participante após confirmação", async () => {

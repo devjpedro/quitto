@@ -92,6 +92,32 @@ describe("POST /api/contracts/:id/participants", () => {
     expect(res.status).toBe(422);
   });
 
+  it("papéis buyer/seller são únicos; viewer é ilimitado", async () => {
+    const owner = await signUpCookie("po-uniq");
+    const contractId = await createContract(owner); // dono ocupa o slot buyer
+
+    const add = (role: string, name: string) =>
+      app.handle(
+        new Request(
+          `http://localhost/api/contracts/${contractId}/participants`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json", cookie: owner },
+            body: JSON.stringify({ displayName: name, role }),
+          }
+        )
+      );
+
+    // owner já é buyer → segundo buyer é rejeitado
+    expect((await add("buyer", "B2")).status).toBe(422);
+    // primeiro seller passa, segundo é rejeitado
+    expect((await add("seller", "V1")).status).toBe(200);
+    expect((await add("seller", "V2")).status).toBe(422);
+    // viewer é ilimitado
+    expect((await add("viewer", "C1")).status).toBe(200);
+    expect((await add("viewer", "C2")).status).toBe(200);
+  });
+
   it("não autenticado retorna 401", async () => {
     const owner = await signUpCookie("po-unauth");
     const contractId = await createContract(owner);
@@ -141,7 +167,7 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: owner },
-        body: JSON.stringify({ displayName: "Alvo", role: "buyer" }),
+        body: JSON.stringify({ displayName: "Alvo", role: "viewer" }),
       })
     );
     expect(addRes.status).toBe(200);
@@ -155,6 +181,32 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
       )
     );
     expect(res.status).toBe(404);
+  });
+
+  it("o dono não pode ser removido (403) mesmo com papel buyer/seller", async () => {
+    const owner = await signUpCookie("po-del-owner");
+    const contractId = await createContract(owner);
+
+    const detail = await (
+      await app.handle(
+        new Request(`http://localhost/api/contracts/${contractId}`, {
+          headers: { cookie: owner },
+        })
+      )
+    ).json();
+    const ownerParticipant = detail.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerParticipant).toBeTruthy();
+    expect(ownerParticipant.role).not.toBe("owner");
+
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${ownerParticipant.id}`,
+        { method: "DELETE", headers: { cookie: owner } }
+      )
+    );
+    expect(res.status).toBe(403);
   });
 
   it("participante inexistente retorna 404", async () => {

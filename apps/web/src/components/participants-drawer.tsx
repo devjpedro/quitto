@@ -2,7 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type CreateInviteInput,
   createInviteSchema,
+  INVITABLE_PARTICIPANT_ROLES,
   PARTICIPANT_ROLE,
+  type ParticipantRole,
 } from "@quitto/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -23,8 +25,26 @@ import { ROLE_LABEL } from "@/lib/labels";
 interface ParticipantView {
   displayName: string;
   id: string;
+  isOwner: boolean;
   linked: boolean;
   role: string;
+}
+
+/** Read-only invite link with copy button — shared by InvitePanel and the add flow. */
+function InviteLink({ id, token }: { id: string; token: string }) {
+  const link = `${window.location.origin}/invites/${token}`;
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-muted/40 p-3">
+      <Label htmlFor={`link-${id}`}>Link do convite</Label>
+      <div className="flex gap-2">
+        <Input className="flex-1" id={`link-${id}`} readOnly value={link} />
+        <CopyButton value={link} />
+      </div>
+      <p className="text-muted-foreground text-xs">
+        Este link expira em 7 dias e só funciona para esse e-mail.
+      </p>
+    </div>
+  );
 }
 
 function InvitePanel({
@@ -47,24 +67,7 @@ function InvitePanel({
   });
 
   if (token) {
-    const link = `${window.location.origin}/invites/${token}`;
-    return (
-      <div className="flex flex-col gap-2 rounded-lg bg-muted/40 p-3">
-        <Label htmlFor={`link-${participantId}`}>Link do convite</Label>
-        <div className="flex gap-2">
-          <Input
-            className="flex-1"
-            id={`link-${participantId}`}
-            readOnly
-            value={link}
-          />
-          <CopyButton value={link} />
-        </div>
-        <p className="text-muted-foreground text-xs">
-          Este link expira em 7 dias e só funciona para esse e-mail.
-        </p>
-      </div>
-    );
+    return <InviteLink id={participantId} token={token} />;
   }
 
   return (
@@ -101,7 +104,7 @@ function ParticipantItem({
   const removeMutation = useRemoveParticipantMutation(contractId);
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const isOwner = participant.role === PARTICIPANT_ROLE.owner;
+  const isOwner = participant.isOwner;
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-xs">
@@ -189,11 +192,33 @@ export function ParticipantsDrawer({
   onClose: () => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const [newLinkToken, setNewLinkToken] = useState<string | null>(null);
+
+  const takenUnique = new Set(
+    participants
+      .filter(
+        (p) =>
+          p.role === PARTICIPANT_ROLE.buyer ||
+          p.role === PARTICIPANT_ROLE.seller
+      )
+      .map((p) => p.role)
+  );
+  const availableRoles = INVITABLE_PARTICIPANT_ROLES.filter(
+    (r) => r === PARTICIPANT_ROLE.viewer || !takenUnique.has(r)
+  ) as ParticipantRole[];
 
   return (
-    <Sheet onOpenChange={(o) => !o && onClose()} open={open}>
+    <Sheet
+      onOpenChange={(o) => {
+        if (!o) {
+          setNewLinkToken(null);
+          onClose();
+        }
+      }}
+      open={open}
+    >
       <SheetContent title="Participantes">
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="-mx-1 flex flex-1 flex-col gap-4 overflow-y-auto px-1">
           <ul className="flex flex-col gap-2">
             {participants.map((p) => (
               <ParticipantItem
@@ -204,14 +229,21 @@ export function ParticipantsDrawer({
             ))}
           </ul>
 
+          {newLinkToken ? <InviteLink id="new" token={newLinkToken} /> : null}
+
           {adding ? (
             <AddParticipantForm
+              availableRoles={availableRoles}
               contractId={contractId}
+              onCreated={setNewLinkToken}
               onDone={() => setAdding(false)}
             />
           ) : (
             <Button
-              onClick={() => setAdding(true)}
+              onClick={() => {
+                setNewLinkToken(null);
+                setAdding(true);
+              }}
               type="button"
               variant="outline"
             >
