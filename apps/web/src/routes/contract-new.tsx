@@ -1,5 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type CreateContractInput, createContractSchema } from "@quitto/shared";
+import {
+  type CreateContractInput,
+  createContractSchema,
+  OWNER_ROLE,
+} from "@quitto/shared";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -18,7 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
-import { formatBRL } from "@/lib/format";
+import { capitalize, formatBRL } from "@/lib/format";
+import { ROLE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
@@ -82,9 +87,11 @@ function StepBasic() {
           id="ownerRole"
           {...register("ownerRole")}
         >
-          <option value="buyer">Comprador</option>
-          <option value="seller">Vendedor</option>
-          <option value="neutral">Neutro</option>
+          {Object.values(OWNER_ROLE).map((r) => (
+            <option key={r} value={r}>
+              {capitalize(ROLE_LABEL[r] ?? r)}
+            </option>
+          ))}
         </select>
       </div>
       <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-primary/40">
@@ -233,7 +240,7 @@ export function ContractNewPage() {
     mode: "onTouched",
     defaultValues: {
       title: "",
-      ownerRole: "buyer",
+      ownerRole: OWNER_ROLE.buyer,
       requiresConfirmation: false,
       schedule: {
         mode: "auto",
