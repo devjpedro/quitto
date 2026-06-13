@@ -58,6 +58,27 @@ describe("getContractRole", () => {
       naoEncontradoRe
     );
   });
+
+  it("dono com ownerRole neutral e sem linha de participante → 404", async () => {
+    const uid = `neutral-${Date.now()}`;
+    await makeUser(uid);
+    // Insere o contrato directamente (sem makeContract, que criaria a linha de participante).
+    const rows = await db
+      .insert(contract)
+      .values({
+        ownerId: uid,
+        title: "T-neutral",
+        ownerRole: "neutral",
+        totalAmountCents: 1000,
+        installmentsCount: 1,
+      })
+      .returning();
+    const cId = rows[0]?.id;
+    if (!cId) {
+      throw new Error("insert did not return a row");
+    }
+    await expect(getContractRole(uid, cId)).rejects.toThrow(naoEncontradoRe);
+  });
 });
 
 describe("getCapabilities", () => {

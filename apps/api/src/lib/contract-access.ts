@@ -52,11 +52,8 @@ export async function getContractRole(
     return { role: slot, isOwner };
   }
   // Safety net: dono sem linha de participante (inconsistência legada) cai no ownerRole.
-  if (isOwner) {
-    return {
-      role: row.ownerRole === "seller" ? "seller" : "buyer",
-      isOwner: true,
-    };
+  if (isOwner && (row.ownerRole === "buyer" || row.ownerRole === "seller")) {
+    return { role: row.ownerRole, isOwner: true };
   }
   throw new NotFoundError("Contrato não encontrado");
 }
