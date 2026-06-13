@@ -186,6 +186,9 @@ describe("ParticipantsDrawer", () => {
       />
     );
     expect(screen.getByText("Dono")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: ACOES_MARIA })
+    ).not.toBeInTheDocument();
   });
 
   it("renderiza um Select de papel editável para o participante", () => {

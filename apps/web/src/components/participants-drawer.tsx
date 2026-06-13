@@ -190,12 +190,12 @@ function ParticipantItem({
                 type="button"
                 variant="ghost"
               >
-                <MoreHorizontal />
+                <MoreHorizontal aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {participant.linked ? null : (
-                <DropdownMenuItem onSelect={() => setInviting((v) => !v)}>
+                <DropdownMenuItem onSelect={() => setInviting(true)}>
                   Convidar
                 </DropdownMenuItem>
               )}
@@ -219,10 +219,7 @@ function ParticipantItem({
           }
           value={participant.role}
         >
-          <SelectTrigger
-            aria-label={`Papel de ${participant.displayName}`}
-            id={`role-${participant.id}`}
-          >
+          <SelectTrigger id={`role-${participant.id}`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
