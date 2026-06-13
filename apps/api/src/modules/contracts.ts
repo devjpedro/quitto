@@ -86,7 +86,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         await tx.insert(participant).values({
           contractId,
           displayName: user.name,
-          role: "owner",
+          role: body.ownerRole, // dono ocupa o slot comprador/vendedor
           linkedUserId: user.id,
         });
 
@@ -221,6 +221,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           displayName: p.displayName,
           role: p.role,
           linked: p.linkedUserId !== null,
+          isOwner: p.linkedUserId === c.ownerId,
         })),
       };
     },
@@ -258,6 +259,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
             displayName: t.String(),
             role: t.String(),
             linked: t.Boolean(),
+            isOwner: t.Boolean(),
           })
         ),
       }),

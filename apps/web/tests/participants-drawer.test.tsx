@@ -29,7 +29,13 @@ vi.mock("../src/hooks/use-participant-mutations", () => ({
 import { ParticipantsDrawer } from "../src/components/participants-drawer";
 
 const participants = [
-  { id: "p1", displayName: "Maria", role: "seller", linked: false },
+  {
+    id: "p1",
+    displayName: "Maria",
+    role: "seller",
+    linked: false,
+    isOwner: false,
+  },
 ];
 
 describe("ParticipantsDrawer", () => {

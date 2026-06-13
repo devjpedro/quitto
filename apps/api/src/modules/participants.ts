@@ -71,7 +71,9 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       if (!target) {
         throw new NotFoundError("Participante não encontrado");
       }
-      if (target.role === PARTICIPANT_ROLE.owner) {
+      // requireOwner já provou que user.id === contract.ownerId,
+      // logo comparar com o usuário autenticado dispensa o SELECT.
+      if (target.linkedUserId === user.id) {
         throw new ForbiddenError("O dono não pode ser removido");
       }
       await db

@@ -1,9 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  type CreateInviteInput,
-  createInviteSchema,
-  PARTICIPANT_ROLE,
-} from "@quitto/shared";
+import { type CreateInviteInput, createInviteSchema } from "@quitto/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { AddParticipantForm } from "@/components/add-participant-form";
@@ -23,6 +19,7 @@ import { ROLE_LABEL } from "@/lib/labels";
 interface ParticipantView {
   displayName: string;
   id: string;
+  isOwner: boolean;
   linked: boolean;
   role: string;
 }
@@ -101,7 +98,7 @@ function ParticipantItem({
   const removeMutation = useRemoveParticipantMutation(contractId);
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const isOwner = participant.role === PARTICIPANT_ROLE.owner;
+  const isOwner = participant.isOwner;
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-xs">

@@ -112,6 +112,22 @@ describe("GET /api/contracts/:id", () => {
     expect(body.installments).toHaveLength(60);
   });
 
+  it("dono aparece com seu papel (não 'owner') e isOwner=true", async () => {
+    const cookie = await signUpCookie("detail-owner");
+    const created = await (await createContract(cookie)).json();
+    const res = await app.handle(
+      new Request(`http://localhost/api/contracts/${created.id}`, {
+        headers: { cookie },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const me = body.participants.find((p: { isOwner: boolean }) => p.isOwner);
+    expect(me).toBeTruthy();
+    expect(me.role).not.toBe("owner");
+    expect(me.role).toBe("buyer"); // createContract usa ownerRole: "buyer"
+  });
+
   it("retorna 404 para quem não tem acesso", async () => {
     const ownerCookie = await signUpCookie("own");
     const created = await (await createContract(ownerCookie)).json();

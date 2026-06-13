@@ -157,6 +157,32 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
     expect(res.status).toBe(404);
   });
 
+  it("o dono não pode ser removido (403) mesmo com papel buyer/seller", async () => {
+    const owner = await signUpCookie("po-del-owner");
+    const contractId = await createContract(owner);
+
+    const detail = await (
+      await app.handle(
+        new Request(`http://localhost/api/contracts/${contractId}`, {
+          headers: { cookie: owner },
+        })
+      )
+    ).json();
+    const ownerParticipant = detail.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerParticipant).toBeTruthy();
+    expect(ownerParticipant.role).not.toBe("owner");
+
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${ownerParticipant.id}`,
+        { method: "DELETE", headers: { cookie: owner } }
+      )
+    );
+    expect(res.status).toBe(403);
+  });
+
   it("participante inexistente retorna 404", async () => {
     const owner = await signUpCookie("po-del-notfound");
     const contractId = await createContract(owner);
