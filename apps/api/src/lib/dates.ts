@@ -18,6 +18,16 @@ export function addMonths(iso: string, months: number): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/** Adds `days` to an ISO date (YYYY-MM-DD), UTC-safe. Returns ISO string. */
+export function addDays(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 /** Identity helper kept for symmetry/readability in callers and tests. */
 export function toISODate(iso: string): string {
   return iso;
