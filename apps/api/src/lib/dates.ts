@@ -20,7 +20,7 @@ export function addMonths(iso: string, months: number): string {
 
 /** Adds `days` to an ISO date (YYYY-MM-DD), UTC-safe. Returns ISO string. */
 export function addDays(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  const { y, m, d } = parseISODate(iso);
   const dt = new Date(Date.UTC(y, m - 1, d + days));
   const yy = dt.getUTCFullYear();
   const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");

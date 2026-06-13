@@ -11,6 +11,9 @@ describe("addDays", () => {
   it("supports negative offsets", () => {
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
   });
+  it("rolls over year boundaries", () => {
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
 });
 
 describe("addMonths", () => {
