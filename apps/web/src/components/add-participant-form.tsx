@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type AddParticipantInput,
+  optionalEmail,
   PARTICIPANT_ROLE,
   type ParticipantRole,
 } from "@quitto/shared";
@@ -30,14 +31,7 @@ const formSchema = z.object({
     .max(120, "Máximo 120 caracteres"),
   role: z.string().min(1),
   // E-mail é opcional: string vazia passa; valor preenchido é validado como e-mail.
-  email: z
-    .string()
-    .trim()
-    .max(200, "Máximo 200 caracteres")
-    .refine((v) => v === "" || z.string().email().safeParse(v).success, {
-      message: "E-mail inválido",
-    })
-    .optional(),
+  email: optionalEmail,
 });
 
 type FormValues = z.infer<typeof formSchema>;

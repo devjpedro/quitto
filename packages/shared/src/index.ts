@@ -130,3 +130,13 @@ export const createInviteSchema = z.object({
     .email("E-mail inválido"),
 });
 export type CreateInviteInput = z.infer<typeof createInviteSchema>;
+
+/** Optional e-mail: blank passes; a non-blank value must be a valid e-mail. */
+export const optionalEmail = z
+  .string()
+  .trim()
+  .max(200, "Máximo 200 caracteres")
+  .refine((v) => v === "" || z.string().email().safeParse(v).success, {
+    message: "E-mail inválido",
+  })
+  .optional();
