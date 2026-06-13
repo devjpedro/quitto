@@ -2,7 +2,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
-import { getContractRole } from "../lib/contract-access";
+import { getCapabilities, getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
 import { generateSchedule } from "../lib/schedule";
@@ -169,7 +169,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     "/contracts/:id",
     async ({ request, params }) => {
       const { user } = await requireAuth(request.headers);
-      const role = await getContractRole(user.id, params.id); // lança 404 se sem acesso
+      const access = await getCapabilities(user.id, params.id); // lança 404 se sem acesso
 
       const [c] = await db
         .select()
@@ -191,7 +191,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       const progress = computeProgress(items, today);
 
       return {
-        role,
+        role: access.role,
+        isOwner: access.isOwner,
+        isPayer: access.isPayer,
+        isApprover: access.isApprover,
         contract: {
           id: c.id,
           title: c.title,
@@ -229,6 +232,9 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       params: t.Object({ id: t.String() }),
       response: t.Object({
         role: t.String(),
+        isOwner: t.Boolean(),
+        isPayer: t.Boolean(),
+        isApprover: t.Boolean(),
         contract: t.Object({
           id: t.String(),
           title: t.String(),
@@ -269,8 +275,8 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     "/contracts/:id/installments/:installmentId",
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
-      const role = await getContractRole(user.id, params.id);
-      if (role !== "owner") {
+      const { isOwner } = await getContractRole(user.id, params.id);
+      if (!isOwner) {
         throw new ForbiddenError("Apenas o dono edita parcelas");
       }
 

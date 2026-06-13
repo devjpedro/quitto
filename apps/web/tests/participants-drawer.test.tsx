@@ -1,7 +1,9 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-utils";
 
+const ACOES_MARIA = /ações de maria/i;
 const INVITE_ACTION = /convidar/i;
 const EMAIL_LABEL = /^e-mail do convidado$/i;
 const ADD_EMAIL_LABEL = /e-mail do convidado \(opcional\)/i;
@@ -72,7 +74,10 @@ describe("ParticipantsDrawer", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: INVITE_ACTION }));
+    await userEvent.click(screen.getByRole("button", { name: ACOES_MARIA }));
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: INVITE_ACTION })
+    );
     fireEvent.change(screen.getByLabelText(EMAIL_LABEL), {
       target: { value: "maria@example.com" },
     });
@@ -153,7 +158,10 @@ describe("ParticipantsDrawer", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: REMOVE_ACTION }));
+    await userEvent.click(screen.getByRole("button", { name: ACOES_MARIA }));
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: REMOVE_ACTION })
+    );
     fireEvent.click(
       screen.getByRole("button", { name: REMOVE_CONFIRM_ACTION })
     );
@@ -178,6 +186,9 @@ describe("ParticipantsDrawer", () => {
       />
     );
     expect(screen.getByText("Dono")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: ACOES_MARIA })
+    ).not.toBeInTheDocument();
   });
 
   it("renderiza um Select de papel editável para o participante", () => {

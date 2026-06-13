@@ -48,8 +48,8 @@ const roleSchema = t.Union([
 ]);
 
 async function requireOwner(userId: string, contractId: string) {
-  const role = await getContractRole(userId, contractId); // 404 se sem acesso
-  if (role !== PARTICIPANT_ROLE.owner) {
+  const { isOwner } = await getContractRole(userId, contractId); // 404 se sem acesso
+  if (!isOwner) {
     throw new ForbiddenError("Apenas o dono gerencia participantes");
   }
 }

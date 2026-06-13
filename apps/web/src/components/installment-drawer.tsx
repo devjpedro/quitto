@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   INSTALLMENT_STATUS,
-  PARTICIPANT_ROLE,
   type UpdateInstallmentInput,
   updateInstallmentSchema,
 } from "@quitto/shared";
@@ -24,7 +23,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUpdateInstallmentMutation } from "@/hooks/use-contract-mutations";
 import { useInstallmentQuery } from "@/hooks/use-installment";
 import { formatBRL, formatISODateBR } from "@/lib/format";
-import { availableActions } from "@/lib/installment-actions";
+import { availableActions, type Capabilities } from "@/lib/installment-actions";
 import { buildInstallmentPatch } from "@/lib/installment-form";
 
 interface Installment {
@@ -111,25 +110,27 @@ function InstallmentEditForm({
 
 /** Read-only detail + role-aware payment flow (upload, actions, proofs, history). */
 function InstallmentDetailView({
+  capabilities,
   contractId,
-  contractRole,
-  requiresConfirmation,
-  installment,
-  status,
-  proofs,
   events,
+  installment,
+  isOwner,
   onEdit,
+  proofs,
+  requiresConfirmation,
+  status,
 }: {
+  capabilities: Capabilities;
   contractId: string;
-  contractRole: string;
-  requiresConfirmation: boolean;
-  installment: Installment;
-  status: string;
-  proofs: ProofView[];
   events: AuditEventView[];
+  installment: Installment;
+  isOwner: boolean;
   onEdit: () => void;
+  proofs: ProofView[];
+  requiresConfirmation: boolean;
+  status: string;
 }) {
-  const actions = availableActions(contractRole, requiresConfirmation, status);
+  const actions = availableActions(capabilities, requiresConfirmation, status);
 
   return (
     <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
@@ -148,7 +149,7 @@ function InstallmentDetailView({
         </div>
       </dl>
 
-      {contractRole === PARTICIPANT_ROLE.owner ? (
+      {isOwner ? (
         <Button
           className="gap-2"
           onClick={onEdit}
@@ -172,8 +173,8 @@ function InstallmentDetailView({
       ) : null}
 
       <PaymentActions
+        capabilities={capabilities}
         contractId={contractId}
-        contractRole={contractRole}
         installmentId={installment.id}
         requiresConfirmation={requiresConfirmation}
         status={status}
@@ -197,19 +198,21 @@ function InstallmentDetailView({
 }
 
 export function InstallmentDrawer({
+  capabilities,
   contractId,
-  contractRole,
-  requiresConfirmation,
   installment,
-  open,
+  isOwner,
   onClose,
+  open,
+  requiresConfirmation,
 }: {
+  capabilities: Capabilities;
   contractId: string;
-  contractRole: string;
-  requiresConfirmation: boolean;
   installment: Installment | null;
-  open: boolean;
+  isOwner: boolean;
   onClose: () => void;
+  open: boolean;
+  requiresConfirmation: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const detailQuery = useInstallmentQuery(
@@ -254,10 +257,11 @@ export function InstallmentDrawer({
           />
         ) : (
           <InstallmentDetailView
+            capabilities={capabilities}
             contractId={contractId}
-            contractRole={contractRole}
             events={events}
             installment={installment}
+            isOwner={isOwner}
             onEdit={() => setEditing(true)}
             proofs={proofs}
             requiresConfirmation={requiresConfirmation}

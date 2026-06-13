@@ -1,4 +1,9 @@
-import { INSTALLMENT_STATUS, PARTICIPANT_ROLE } from "@quitto/shared";
+import { INSTALLMENT_STATUS } from "@quitto/shared";
+
+export interface Capabilities {
+  isApprover: boolean;
+  isPayer: boolean;
+}
 
 export interface InstallmentActions {
   canConfirm: boolean;
@@ -10,28 +15,26 @@ export interface InstallmentActions {
 }
 
 /**
- * Pure UI mirror of the 3a RBAC + state machine. The backend remains the
- * authority; this only decides which buttons to show.
+ * Espelho de UI do RBAC do backend (a autoridade). `isPayer`/`isApprover`
+ * vêm prontos da API (GET /contracts/:id).
  */
 export function availableActions(
-  role: string,
+  caps: Capabilities,
   requiresConfirmation: boolean,
   status: string
 ): InstallmentActions {
-  const isPayer =
-    role === PARTICIPANT_ROLE.owner || role === PARTICIPANT_ROLE.buyer;
-  const isApprover =
-    role === PARTICIPANT_ROLE.owner || role === PARTICIPANT_ROLE.seller;
   const awaiting =
     requiresConfirmation && status === INSTALLMENT_STATUS.awaitingConfirmation;
   return {
     canUpload:
-      isPayer &&
+      caps.isPayer &&
       (status === INSTALLMENT_STATUS.pending ||
         status === INSTALLMENT_STATUS.disputed),
     canMarkPaid:
-      isPayer && !requiresConfirmation && status === INSTALLMENT_STATUS.pending,
-    canConfirm: isApprover && awaiting,
-    canDispute: isApprover && awaiting,
+      caps.isPayer &&
+      !requiresConfirmation &&
+      status === INSTALLMENT_STATUS.pending,
+    canConfirm: caps.isApprover && awaiting,
+    canDispute: caps.isApprover && awaiting,
   };
 }

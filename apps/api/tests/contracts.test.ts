@@ -108,7 +108,8 @@ describe("GET /api/contracts/:id", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.role).toBe("owner");
+    expect(body.role).toBe("buyer"); // createContract usa ownerRole: "buyer"
+    expect(body.isOwner).toBe(true);
     expect(body.installments).toHaveLength(60);
   });
 

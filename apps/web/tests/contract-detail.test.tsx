@@ -15,7 +15,10 @@ const INSTALLMENT_BRL = /R\$\s?2\.000,00/;
 const MANAGE_BUTTON = /gerenciar/i;
 
 const detail = {
-  role: "owner",
+  role: "buyer",
+  isOwner: true,
+  isPayer: true,
+  isApprover: true,
   contract: {
     id: "c1",
     title: "Apê do irmão",
@@ -51,7 +54,7 @@ const detail = {
     {
       id: "p1",
       displayName: "Você",
-      role: "owner",
+      role: "buyer",
       linked: true,
       isOwner: true,
     },
@@ -81,7 +84,13 @@ describe("ContractDetailPage", () => {
 
   it("não mostra Gerenciar para não-dono", () => {
     useContractQuery.mockReturnValue({
-      data: { ...detail, role: "viewer" },
+      data: {
+        ...detail,
+        role: "viewer",
+        isOwner: false,
+        isPayer: false,
+        isApprover: false,
+      },
       isPending: false,
     });
     renderWithProviders(<ContractDetailPage />);
@@ -93,12 +102,14 @@ describe("ContractDetailPage", () => {
   it("exibe o badge 'Dono' para o participante com isOwner=true", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
     renderWithProviders(<ContractDetailPage />);
-    expect(screen.getByText("Dono")).toBeInTheDocument();
+    // header badge + participants list badge — ambos rendem "Dono"
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
   });
 
   it("não exibe o badge 'Dono' para participante sem isOwner", () => {
     const detailNoOwner = {
       ...detail,
+      isOwner: false,
       participants: [
         {
           id: "p1",
@@ -118,5 +129,26 @@ describe("ContractDetailPage", () => {
     useContractQuery.mockReturnValue({ data: undefined, isPending: true });
     const { container } = renderWithProviders(<ContractDetailPage />);
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
+  });
+
+  it("mostra o papel do usuário logado na badge (vendedor)", () => {
+    useContractQuery.mockReturnValue({
+      data: { ...detail, role: "seller", isOwner: false },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText("vendedor")).toBeInTheDocument();
+  });
+
+  it("mostra papel + tag Dono no header quando isOwner", () => {
+    useContractQuery.mockReturnValue({
+      data: { ...detail, role: "buyer", isOwner: true },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    // "comprador" aparece no header e na lista de participantes (fixture base tem buyer)
+    expect(screen.getAllByText("comprador").length).toBeGreaterThanOrEqual(1);
+    // "Dono" aparece no header e na lista de participantes; basta existir >=2
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
   });
 });

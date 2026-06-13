@@ -9,7 +9,7 @@ import {
   user as userTable,
 } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { getContractRole } from "../lib/contract-access";
+import { getCapabilities } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { nextStatus } from "../lib/installment-state";
 import { requireAuth } from "../lib/session";
@@ -25,7 +25,7 @@ const proofMimeSchema = t.Union([
   t.Literal("image/png"),
 ]);
 
-/** Loads installment + parent contract and the caller's role. Throws 404 if no access. */
+/** Loads installment + parent contract and the caller's capabilities. Throws 404 if no access. */
 async function loadInstallmentForUser(userId: string, installmentId: string) {
   const [inst] = await db
     .select()
@@ -35,7 +35,7 @@ async function loadInstallmentForUser(userId: string, installmentId: string) {
   if (!inst) {
     throw new NotFoundError("Parcela não encontrada");
   }
-  const role = await getContractRole(userId, inst.contractId); // 404 se sem acesso
+  const caps = await getCapabilities(userId, inst.contractId); // 404 se sem acesso
   const [c] = await db
     .select()
     .from(contract)
@@ -44,7 +44,7 @@ async function loadInstallmentForUser(userId: string, installmentId: string) {
   if (!c) {
     throw new NotFoundError("Contrato não encontrado");
   }
-  return { inst, contract: c, role };
+  return { inst, contract: c, caps };
 }
 
 export const paymentsModule = new Elysia({ prefix: "/api" })
@@ -52,11 +52,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
     "/installments/:installmentId/proofs/presign",
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
-      const { inst, role } = await loadInstallmentForUser(
+      const { inst, caps } = await loadInstallmentForUser(
         user.id,
         params.installmentId
       );
-      if (role !== "owner" && role !== "buyer") {
+      if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
       const safeName = body.fileName.replace(/[^\w.-]/g, "_").slice(0, 120);
@@ -80,9 +80,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const {
         inst,
         contract: c,
-        role,
+        caps,
       } = await loadInstallmentForUser(user.id, params.installmentId);
-      if (role !== "owner" && role !== "buyer") {
+      if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
 
@@ -157,9 +157,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const {
         inst,
         contract: c,
-        role,
+        caps,
       } = await loadInstallmentForUser(user.id, params.installmentId);
-      if (role !== "owner" && role !== "seller") {
+      if (!caps.isApprover) {
         throw new ForbiddenError("Apenas o vendedor/dono confirma");
       }
       const newStatus = nextStatus(
@@ -197,9 +197,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const {
         inst,
         contract: c,
-        role,
+        caps,
       } = await loadInstallmentForUser(user.id, params.installmentId);
-      if (role !== "owner" && role !== "seller") {
+      if (!caps.isApprover) {
         throw new ForbiddenError("Apenas o vendedor/dono contesta");
       }
       const newStatus = nextStatus(
@@ -235,9 +235,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const {
         inst,
         contract: c,
-        role,
+        caps,
       } = await loadInstallmentForUser(user.id, params.installmentId);
-      if (role !== "owner" && role !== "buyer") {
+      if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono marca como paga");
       }
       const newStatus = nextStatus(

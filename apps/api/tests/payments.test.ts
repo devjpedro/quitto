@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { app } from "../src/app";
+import { db } from "../src/db/client";
+import { participant } from "../src/db/schema";
 
 const configured = Boolean(process.env.S3_ENDPOINT);
 
@@ -176,6 +178,36 @@ describe.if(configured)("confirm/dispute", () => {
       })
     );
     expect(res.status).toBe(422);
+  });
+});
+
+async function meId(cookie: string): Promise<string> {
+  const res = await app.handle(
+    new Request("http://localhost/api/me", { headers: { cookie } })
+  );
+  return (await res.json()).id as string;
+}
+
+describe("autorização por capacidade (dono+comprador com vendedor vinculado)", () => {
+  it("dono+comprador recebe 403 ao confirmar quando há vendedor vinculado", async () => {
+    const ownerCookie = await signUpCookie("cap-owner");
+    const cId = await createContract(ownerCookie, true); // ownerRole: "buyer"
+    const sellerCookie = await signUpCookie("cap-seller");
+    const sellerId = await meId(sellerCookie);
+    await db.insert(participant).values({
+      contractId: cId,
+      displayName: "Vendedor",
+      role: "seller",
+      linkedUserId: sellerId,
+    });
+    const iId = await firstInstallmentId(ownerCookie, cId);
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/confirm`, {
+        method: "POST",
+        headers: { cookie: ownerCookie },
+      })
+    );
+    expect(res.status).toBe(403);
   });
 });
 
