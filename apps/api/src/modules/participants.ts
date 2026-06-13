@@ -1,11 +1,15 @@
+import { randomBytes } from "node:crypto";
 import { PARTICIPANT_ROLE } from "@quitto/shared";
 import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { participant } from "../db/schema";
+import { invite, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
+import { normalizeEmail } from "../lib/email";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
+
+const INVITE_TTL_DAYS = 7;
 
 // Explicit literal union — mapping over an array widens to TSchema[], which breaks Eden inference.
 const roleSchema = t.Union([
@@ -78,5 +82,49 @@ export const participantsModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ id: t.String(), participantId: t.String() }),
       response: t.Object({ ok: t.Literal(true) }),
+    }
+  )
+  .post(
+    "/contracts/:id/participants/:participantId/invite",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      await requireOwner(user.id, params.id);
+
+      const [target] = await db
+        .select()
+        .from(participant)
+        .where(
+          and(
+            eq(participant.id, params.participantId),
+            eq(participant.contractId, params.id)
+          )
+        )
+        .limit(1);
+      if (!target) {
+        throw new NotFoundError("Participante não encontrado");
+      }
+      if (target.linkedUserId) {
+        throw new ForbiddenError("Participante já vinculado a um usuário");
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(
+        Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+      );
+      await db.insert(invite).values({
+        contractId: params.id,
+        participantId: params.participantId,
+        email: normalizeEmail(body.email),
+        token,
+        expiresAt,
+      });
+      return { token, expiresAt: expiresAt.toISOString() };
+    },
+    {
+      params: t.Object({ id: t.String(), participantId: t.String() }),
+      body: t.Object({
+        email: t.String({ format: "email", minLength: 3, maxLength: 200 }),
+      }),
+      response: t.Object({ token: t.String(), expiresAt: t.String() }),
     }
   );

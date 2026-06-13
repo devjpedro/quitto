@@ -170,3 +170,63 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /api/contracts/:id/participants/:participantId/invite", () => {
+  it("owner gera convite com token e expiração", async () => {
+    const owner = await signUpCookie("inv");
+    const contractId = await createContract(owner);
+
+    const addRes = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner },
+        body: JSON.stringify({ displayName: "Irmão", role: "seller" }),
+      })
+    );
+    expect(addRes.status).toBe(200);
+    const { id: participantId } = await addRes.json();
+
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ email: "irmao@example.com" }),
+        }
+      )
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.token).toHaveLength(64); // 32 bytes em hex
+    expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("estranho recebe 404 ao tentar gerar convite (não vaza existência)", async () => {
+    const owner = await signUpCookie("inv-stranger");
+    const contractId = await createContract(owner);
+
+    const addRes = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner },
+        body: JSON.stringify({ displayName: "Convidado", role: "seller" }),
+      })
+    );
+    expect(addRes.status).toBe(200);
+    const { id: participantId } = await addRes.json();
+
+    const stranger = await signUpCookie("inv-stranger-2");
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: stranger },
+          body: JSON.stringify({ email: "stranger@example.com" }),
+        }
+      )
+    );
+    expect(res.status).toBe(404);
+  });
+});
