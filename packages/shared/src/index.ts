@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OWNER_ROLES } from "./domain";
+import { OWNER_ROLES, PARTICIPANT_ROLE } from "./domain";
 
 export type {
   AuditType,
@@ -96,3 +96,32 @@ export const updateInstallmentSchema = z
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
+
+// ── Participants & invites ───────────────────────────────────────────────────
+
+/** Papéis que o dono pode atribuir a um participante (owner não é convidável). */
+export const INVITABLE_PARTICIPANT_ROLES = [
+  PARTICIPANT_ROLE.buyer,
+  PARTICIPANT_ROLE.seller,
+  PARTICIPANT_ROLE.viewer,
+] as const;
+
+export const addParticipantSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Informe um nome")
+    .max(120, "Máximo 120 caracteres"),
+  role: z.enum(INVITABLE_PARTICIPANT_ROLES),
+});
+export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
+
+export const createInviteSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(3, "E-mail inválido")
+    .max(200, "Máximo 200 caracteres")
+    .email("E-mail inválido"),
+});
+export type CreateInviteInput = z.infer<typeof createInviteSchema>;
