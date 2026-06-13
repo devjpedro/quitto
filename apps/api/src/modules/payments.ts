@@ -244,6 +244,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           actorUserId: user.id,
           target: "payer",
           type: NOTIFICATION_TYPE.paymentDisputed,
+          metadata: body.reason ? { reason: body.reason } : null,
         });
       });
       return { status: newStatus };

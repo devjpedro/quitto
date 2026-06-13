@@ -184,4 +184,45 @@ describe("gatilhos de notificação", () => {
     const toOwner = await notifsFor(ownerId, contractId);
     expect(toOwner.map((n) => n.type)).toContain("payment_confirmed");
   });
+
+  it.skipIf(!hasStorage)(
+    "contestar notifica o pagador com o motivo no metadata",
+    async () => {
+      const ownerCookie = await signUpCookie("payn-dp-own");
+      const contractId = await createContract(ownerCookie, true); // requiresConfirmation
+      const ownerId = await meId(ownerCookie);
+
+      const sellerCookie = await signUpCookie("payn-dp-sell");
+      const sellerId = await meId(sellerCookie);
+      await db.insert(participant).values({
+        contractId,
+        displayName: "Vendedor",
+        role: "seller",
+        linkedUserId: sellerId,
+      });
+
+      const instId = await firstInstallmentId(ownerCookie, contractId);
+      await uploadProof(ownerCookie, instId); // payer (owner=buyer) envia comprovante
+
+      const disputeReason = "Comprovante ilegível, não é possível confirmar";
+      const disputeRes = await app.handle(
+        new Request(`http://localhost/api/installments/${instId}/dispute`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            cookie: sellerCookie,
+          },
+          body: JSON.stringify({ reason: disputeReason }),
+        })
+      ); // aprovador (seller) contesta
+      expect(disputeRes.status).toBe(200);
+
+      const toOwner = await notifsFor(ownerId, contractId);
+      const disputed = toOwner.find((n) => n.type === "payment_disputed");
+      expect(disputed).toBeDefined();
+      expect((disputed?.metadata as Record<string, unknown>)?.reason).toBe(
+        disputeReason
+      );
+    }
+  );
 });
