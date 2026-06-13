@@ -2,7 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const markRead = vi.fn().mockResolvedValue(undefined);
+const markRead = vi.fn();
+const markAll = vi.fn();
 const navigate = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
@@ -24,18 +25,20 @@ vi.mock("@/hooks/use-notifications", () => ({
       },
     ],
   }),
-  useMarkReadMutation: () => ({ mutateAsync: markRead }),
-  useMarkAllReadMutation: () => ({ mutate: vi.fn() }),
+  useMarkReadMutation: () => ({ mutate: markRead }),
+  useMarkAllReadMutation: () => ({ mutate: markAll }),
 }));
 
 import { NotificationBell } from "../src/components/notification-bell";
 
 const BELL_BUTTON = /notificações/i;
 const ITEM_BUTTON = /parcela vencida/i;
+const MARK_ALL = /marcar todas como lidas/i;
 
 describe("NotificationBell", () => {
   beforeEach(() => {
     markRead.mockClear();
+    markAll.mockClear();
     navigate.mockClear();
   });
 
@@ -56,5 +59,12 @@ describe("NotificationBell", () => {
       params: { id: "c1" },
       search: { installment: "i1" },
     });
+  });
+
+  it("marks all as read from the header", async () => {
+    render(<NotificationBell />);
+    await userEvent.click(screen.getByRole("button", { name: BELL_BUTTON }));
+    await userEvent.click(screen.getByRole("button", { name: MARK_ALL }));
+    expect(markAll).toHaveBeenCalled();
   });
 });

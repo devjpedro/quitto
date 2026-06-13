@@ -23,20 +23,18 @@ export function NotificationBell() {
   const markAll = useMarkAllReadMutation();
   const count = counter?.count ?? 0;
 
-  async function handleOpen(item: NotificationItem) {
+  function handleOpen(item: NotificationItem) {
     setOpen(false);
     if (!item.readAt) {
-      await markRead.mutateAsync(item.id);
+      markRead.mutate(item.id);
     }
-    if (item.installmentId) {
-      navigate({
-        to: "/contracts/$id",
-        params: { id: item.contractId },
-        search: { installment: item.installmentId },
-      });
-      return;
-    }
-    navigate({ to: "/contracts/$id", params: { id: item.contractId } });
+    navigate({
+      to: "/contracts/$id",
+      params: { id: item.contractId },
+      ...(item.installmentId
+        ? { search: { installment: item.installmentId } }
+        : {}),
+    });
   }
 
   return (
