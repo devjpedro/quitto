@@ -1,4 +1,5 @@
 import {
+  AUDIT_TYPE,
   CONTRACT_STATUS,
   type ContractStatus,
   INSTALLMENT_STATUS,
@@ -45,4 +46,11 @@ export const ROLE_LABEL: Record<string, string> = {
   [PARTICIPANT_ROLE.viewer]: "convidado",
   [OWNER_ROLE.neutral]: "neutro",
   counterparty: "contraparte",
+};
+
+export const AUDIT_TYPE_LABEL: Record<string, string> = {
+  [AUDIT_TYPE.proofSubmitted]: "Comprovante enviado",
+  [AUDIT_TYPE.paymentConfirmed]: "Pagamento confirmado",
+  [AUDIT_TYPE.paymentDisputed]: "Pagamento contestado",
+  [AUDIT_TYPE.installmentPaid]: "Parcela paga",
 };

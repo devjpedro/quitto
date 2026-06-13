@@ -1,17 +1,13 @@
+import { AUDIT_TYPE_LABEL } from "@/lib/labels";
+
 export interface AuditEventView {
+  actorName: string | null;
   actorUserId: string | null;
   createdAt: string;
   id: string;
   metadata: Record<string, unknown> | null;
   type: string;
 }
-
-const EVENT_LABELS: Record<string, string> = {
-  proof_submitted: "Comprovante enviado",
-  payment_confirmed: "Pagamento confirmado",
-  payment_disputed: "Pagamento contestado",
-  installment_paid: "Parcela paga",
-};
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("pt-BR", {
@@ -47,7 +43,13 @@ export function AuditTimeline({ events }: { events: AuditEventView[] }) {
             />
             <div className="flex flex-col">
               <span className="text-foreground text-sm">
-                {EVENT_LABELS[e.type] ?? e.type}
+                {AUDIT_TYPE_LABEL[e.type] ?? e.type}
+                {e.actorName ? (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · por {e.actorName}
+                  </span>
+                ) : null}
               </span>
               <span className="text-muted-foreground text-xs tabular-nums">
                 {formatDateTime(e.createdAt)}
