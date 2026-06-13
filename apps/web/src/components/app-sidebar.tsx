@@ -3,6 +3,7 @@ import { Bell, FileText, LayoutDashboard, LogOut } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { signOut, useSession } from "@/lib/auth-client";
+import { formatUnreadCount } from "@/lib/format";
 
 async function handleSignOut() {
   await signOut();
@@ -54,8 +55,11 @@ export function AppSidebar() {
                 />
                 {item.label}
                 {item.to === "/notifications" && unread > 0 ? (
-                  <span className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-semibold text-[10px] text-primary-foreground leading-5">
-                    {unread > 9 ? "9+" : unread}
+                  <span
+                    aria-hidden="true"
+                    className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-semibold text-[10px] text-primary-foreground leading-5"
+                  >
+                    {formatUnreadCount(unread)}
                   </span>
                 ) : null}
               </Link>
@@ -99,7 +103,7 @@ export function AppSidebar() {
                   aria-hidden="true"
                   className="absolute top-2 left-1/2 ml-2 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1 font-semibold text-[10px] text-primary-foreground leading-none ring-1 ring-background"
                 >
-                  {unread > 9 ? "9+" : unread}
+                  {formatUnreadCount(unread)}
                 </span>
               ) : null}
               <span className="mt-0.5 text-[10px] leading-none">

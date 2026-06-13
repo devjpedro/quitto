@@ -81,6 +81,11 @@ export function parseISOToLocalDate(iso: string): Date | undefined {
   return Number.isNaN(dt.getTime()) ? undefined : dt;
 }
 
+/** Caps an unread count for compact badges ("9+" when over 9). */
+export function formatUnreadCount(count: number): string {
+  return count > 9 ? "9+" : String(count);
+}
+
 /** Uppercases the first character of a label for display (e.g. "comprador" -> "Comprador"). */
 export function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);

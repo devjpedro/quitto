@@ -12,6 +12,7 @@ import {
   useNotificationsQuery,
   useUnreadCountQuery,
 } from "@/hooks/use-notifications";
+import { formatUnreadCount } from "@/lib/format";
 import { type NotificationItem, NotificationList } from "./notification-list";
 
 export function NotificationBell() {
@@ -47,7 +48,7 @@ export function NotificationBell() {
             aria-hidden="true"
             className="absolute -top-0.5 -right-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1 font-semibold text-[10px] text-primary-foreground leading-none shadow-sm ring-1 ring-background"
           >
-            {count > 9 ? "9+" : count}
+            {formatUnreadCount(count)}
           </span>
         ) : null}
       </PopoverTrigger>
