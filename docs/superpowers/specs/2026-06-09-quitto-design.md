@@ -257,6 +257,19 @@ na identidade B2 e em padrões reais de design.
   erro exibidas, notificações, textos de e-mail/PDF. Centralizado para facilitar (futuro i18n).
 - **Docs e mensagens de commit:** pt-BR (comunicação do time).
 
+### Arquitetura de frontend (obrigatória)
+- **Componentes finos:** lógica de negócio/derivação mora em hooks (`use-*`) ou utils puros
+  (`lib/*`), nunca no `.tsx`. O componente compõe e renderiza.
+- **Sem valores mágicos:** conjuntos de domínio (status, papéis, tipos) vêm de constantes/enums
+  em `@quitto/shared` (`INSTALLMENT_STATUS`, `CONTRACT_STATUS`, `OWNER_ROLE`, `PARTICIPANT_ROLE`,
+  `AUDIT_TYPE`); comparações sempre via constante nomeada, nunca literal solto.
+- **DRY:** utilitário reusável mora em `lib`, nunca duplicado/local no componente. Predicados de
+  domínio compartilhados entre back e front (ex.: `isPaidStatus`, `isOverdue`) vivem no `shared`.
+- **Apresentação centralizada:** labels pt-BR + tones em `lib/labels.ts` (fonte única); a camada
+  de apresentação consome as constantes de domínio do `shared`.
+- **Disciplina por fase:** todo plano de fase futura inclui um checklist de clean-arch e roda a
+  skill `react-clean-architecture` na parte de UI.
+
 ### Tooling
 - **Biome + Ultracite** (lint + format) e **Lefthook** no pre-commit.
 - Pre-commit: Biome nos arquivos staged + `tsc --noEmit` (typecheck).
