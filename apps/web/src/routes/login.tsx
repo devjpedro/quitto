@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signIn, signUp } from "@/lib/auth-client";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 function submitLabel(mode: "signin" | "signup") {
   return mode === "signin" ? "Entrar" : "Criar conta";
@@ -12,10 +13,7 @@ function submitLabel(mode: "signin" | "signup") {
 
 export function LoginPage() {
   const search = useSearch({ strict: false }) as { redirect?: string };
-  const target =
-    search.redirect?.startsWith("/") && !search.redirect.startsWith("//")
-      ? search.redirect
-      : "/";
+  const target = safeRedirect(search.redirect, window.location.origin);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
