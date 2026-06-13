@@ -19,6 +19,7 @@ const createInvite = vi.fn().mockResolvedValue({
   expiresAt: "2026-07-01T00:00:00.000Z",
 });
 const removeParticipant = vi.fn().mockResolvedValue({ ok: true });
+const updateRole = vi.fn().mockResolvedValue({ id: "p1", role: "buyer" });
 vi.mock("../src/hooks/use-participant-mutations", () => ({
   useAddParticipantMutation: () => ({
     mutateAsync: addParticipant,
@@ -30,6 +31,10 @@ vi.mock("../src/hooks/use-participant-mutations", () => ({
   }),
   useRemoveParticipantMutation: () => ({
     mutateAsync: removeParticipant,
+    isPending: false,
+  }),
+  useUpdateParticipantRoleMutation: () => ({
+    mutateAsync: updateRole,
     isPending: false,
   }),
 }));
@@ -51,6 +56,7 @@ describe("ParticipantsDrawer", () => {
     addParticipant.mockClear();
     createInvite.mockClear();
     removeParticipant.mockClear();
+    updateRole.mockClear();
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
     });
@@ -172,6 +178,21 @@ describe("ParticipantsDrawer", () => {
       />
     );
     expect(screen.getByText("Dono")).toBeInTheDocument();
+  });
+
+  it("renderiza um Select de papel editável para o participante", () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={participants}
+      />
+    );
+    // Radix Select expõe o gatilho como combobox; o portal de opções não abre
+    // de forma confiável no jsdom, então validamos só a presença do controle.
+    const comboboxes = screen.getAllByRole("combobox");
+    expect(comboboxes).toHaveLength(1);
   });
 
   it("não exibe o badge 'Dono' quando isOwner=false", () => {

@@ -4,6 +4,9 @@ import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 
+/** Papéis atribuíveis a um participante (owner não é selecionável). */
+type AssignableRole = AddParticipantInput["role"];
+
 export function useAddParticipantMutation(contractId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -23,6 +26,27 @@ export function useRemoveParticipantMutation(contractId: string) {
           .contracts({ id: contractId })
           .participants({ participantId })
           .delete()
+      ),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) }),
+  });
+}
+
+export function useUpdateParticipantRoleMutation(contractId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      participantId,
+      role,
+    }: {
+      participantId: string;
+      role: AssignableRole;
+    }) =>
+      unwrap(
+        api.api
+          .contracts({ id: contractId })
+          .participants({ participantId })
+          .patch({ role })
       ),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) }),

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { PARTICIPANT_ROLE } from "@quitto/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { invite, participant } from "../db/schema";
@@ -10,6 +10,35 @@ import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
 const INVITE_TTL_DAYS = 7;
+
+/**
+ * buyer/seller são papéis únicos por contrato; viewer é ilimitado.
+ * `exceptParticipantId` ignora o próprio participante (útil ao editar o papel).
+ */
+async function assertRoleAvailable(
+  contractId: string,
+  role: string,
+  exceptParticipantId?: string
+) {
+  if (role !== PARTICIPANT_ROLE.buyer && role !== PARTICIPANT_ROLE.seller) {
+    return;
+  }
+  const clauses = [
+    eq(participant.contractId, contractId),
+    eq(participant.role, role),
+  ];
+  if (exceptParticipantId) {
+    clauses.push(ne(participant.id, exceptParticipantId));
+  }
+  const [taken] = await db
+    .select({ id: participant.id })
+    .from(participant)
+    .where(and(...clauses))
+    .limit(1);
+  if (taken) {
+    throw new ValidationError("Este papel já está ocupado");
+  }
+}
 
 // Explicit literal union — mapping over an array widens to TSchema[], which breaks Eden inference.
 const roleSchema = t.Union([
@@ -32,25 +61,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       const { user } = await requireAuth(request.headers);
       await requireOwner(user.id, params.id);
 
-      // buyer/seller são papéis únicos por contrato; viewer é ilimitado.
-      if (
-        body.role === PARTICIPANT_ROLE.buyer ||
-        body.role === PARTICIPANT_ROLE.seller
-      ) {
-        const [taken] = await db
-          .select({ id: participant.id })
-          .from(participant)
-          .where(
-            and(
-              eq(participant.contractId, params.id),
-              eq(participant.role, body.role)
-            )
-          )
-          .limit(1);
-        if (taken) {
-          throw new ValidationError("Este papel já está ocupado");
-        }
-      }
+      await assertRoleAvailable(params.id, body.role);
 
       const [created] = await db
         .insert(participant)
@@ -105,6 +116,49 @@ export const participantsModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ id: t.String(), participantId: t.String() }),
       response: t.Object({ ok: t.Literal(true) }),
+    }
+  )
+  .patch(
+    "/contracts/:id/participants/:participantId",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      await requireOwner(user.id, params.id);
+
+      const [target] = await db
+        .select()
+        .from(participant)
+        .where(
+          and(
+            eq(participant.id, params.participantId),
+            eq(participant.contractId, params.id)
+          )
+        )
+        .limit(1);
+      if (!target) {
+        throw new NotFoundError("Participante não encontrado");
+      }
+
+      // requireOwner provou que user.id === contract.ownerId, logo o slot do
+      // dono é o participante vinculado ao usuário autenticado.
+      if (
+        target.linkedUserId === user.id &&
+        body.role === PARTICIPANT_ROLE.viewer
+      ) {
+        throw new ValidationError("O dono deve ser comprador ou vendedor");
+      }
+
+      await assertRoleAvailable(params.id, body.role, params.participantId);
+
+      await db
+        .update(participant)
+        .set({ role: body.role })
+        .where(eq(participant.id, params.participantId));
+      return { id: target.id, role: body.role };
+    },
+    {
+      params: t.Object({ id: t.String(), participantId: t.String() }),
+      body: t.Object({ role: roleSchema }),
+      response: t.Object({ id: t.String(), role: roleSchema }),
     }
   )
   .post(
