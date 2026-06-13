@@ -9,6 +9,6 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": { "zod": "latest" },
+  "dependencies": { "zod": "^4.4.3" },
   "devDependencies": { "typescript": "latest", "@biomejs/biome": "latest" }
 }

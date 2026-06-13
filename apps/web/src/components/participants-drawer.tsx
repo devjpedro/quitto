@@ -4,7 +4,6 @@ import {
   createInviteSchema,
   INVITABLE_PARTICIPANT_ROLES,
   PARTICIPANT_ROLE,
-  type ParticipantRole,
 } from "@quitto/shared";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -15,10 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
+  useUpdateParticipantRoleMutation,
 } from "@/hooks/use-participant-mutations";
 import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
 
@@ -28,6 +35,49 @@ interface ParticipantView {
   isOwner: boolean;
   linked: boolean;
   role: string;
+}
+
+/** Papéis atribuíveis (owner nunca é selecionável). */
+type AssignableRole = (typeof INVITABLE_PARTICIPANT_ROLES)[number];
+
+const UNIQUE_ROLES: AssignableRole[] = [
+  PARTICIPANT_ROLE.buyer,
+  PARTICIPANT_ROLE.seller,
+];
+
+/**
+ * Papéis selecionáveis para um participante.
+ * - buyer/seller já ocupados por OUTRO participante são removidos.
+ * - viewer é ilimitado, mas é proibido para o slot do dono (sempre é parte).
+ * - o papel atual está sempre presente (no-op permitido).
+ */
+function availableRolesFor(
+  participant: ParticipantView,
+  participants: ParticipantView[]
+): AssignableRole[] {
+  const taken = new Set(
+    participants
+      .filter(
+        (p) =>
+          p.id !== participant.id &&
+          (p.role === PARTICIPANT_ROLE.buyer ||
+            p.role === PARTICIPANT_ROLE.seller)
+      )
+      .map((p) => p.role)
+  );
+  const base: readonly AssignableRole[] = participant.isOwner
+    ? UNIQUE_ROLES
+    : INVITABLE_PARTICIPANT_ROLES;
+  const filtered = base.filter(
+    (r) =>
+      r === participant.role || r === PARTICIPANT_ROLE.viewer || !taken.has(r)
+  );
+  // Safety net: always include the participant's current role so the Radix
+  // Select trigger is never rendered with an unrecognised value.
+  if (!filtered.includes(participant.role as AssignableRole)) {
+    filtered.push(participant.role as AssignableRole);
+  }
+  return filtered;
 }
 
 /** Read-only invite link with copy button — shared by InvitePanel and the add flow. */
@@ -97,11 +147,14 @@ function InvitePanel({
 function ParticipantItem({
   contractId,
   participant,
+  roleOptions,
 }: {
   contractId: string;
   participant: ParticipantView;
+  roleOptions: AssignableRole[];
 }) {
   const removeMutation = useRemoveParticipantMutation(contractId);
+  const updateRole = useUpdateParticipantRoleMutation(contractId);
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isOwner = participant.isOwner;
@@ -116,9 +169,30 @@ function ParticipantItem({
         <span className="font-medium text-foreground text-sm">
           {participant.displayName}
         </span>
-        <Badge tone="neutral">
-          {ROLE_LABEL[participant.role] ?? participant.role}
-        </Badge>
+        <Select
+          disabled={updateRole.isPending}
+          onValueChange={(role) =>
+            updateRole.mutateAsync({
+              participantId: participant.id,
+              role: role as AssignableRole,
+            })
+          }
+          value={participant.role}
+        >
+          <SelectTrigger
+            aria-label={`Papel de ${participant.displayName}`}
+            className="h-7 w-auto gap-1 px-2 text-xs"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {roleOptions.map((r) => (
+              <SelectItem key={r} value={r}>
+                {ROLE_LABEL[r] ?? r}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
         <div className="ml-auto flex gap-1">
           {participant.linked || isOwner ? null : (
@@ -206,7 +280,7 @@ export function ParticipantsDrawer({
   );
   const availableRoles = INVITABLE_PARTICIPANT_ROLES.filter(
     (r) => r === PARTICIPANT_ROLE.viewer || !takenUnique.has(r)
-  ) as ParticipantRole[];
+  );
 
   return (
     <Sheet
@@ -226,6 +300,7 @@ export function ParticipantsDrawer({
                 contractId={contractId}
                 key={p.id}
                 participant={p}
+                roleOptions={availableRolesFor(p, participants)}
               />
             ))}
           </ul>

@@ -223,6 +223,195 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
   });
 });
 
+function addParticipant(
+  contractId: string,
+  cookie: string,
+  role: string,
+  name: string
+) {
+  return app.handle(
+    new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({ displayName: name, role }),
+    })
+  );
+}
+
+async function getDetail(contractId: string, cookie: string) {
+  return (
+    await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}`, {
+        headers: { cookie },
+      })
+    )
+  ).json();
+}
+
+function patchRole(
+  contractId: string,
+  participantId: string,
+  cookie: string,
+  role: string
+) {
+  return app.handle(
+    new Request(
+      `http://localhost/api/contracts/${contractId}/participants/${participantId}`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ role }),
+      }
+    )
+  );
+}
+
+describe("PATCH /api/contracts/:id/participants/:participantId", () => {
+  it("owner altera o papel de um participante com sucesso", async () => {
+    const owner = await signUpCookie("pr-ok");
+    const contractId = await createContract(owner);
+
+    const { id: participantId } = await (
+      await addParticipant(contractId, owner, "viewer", "Convidado")
+    ).json();
+
+    const res = await patchRole(contractId, participantId, owner, "seller");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.role).toBe("seller");
+
+    const detail = await getDetail(contractId, owner);
+    const updated = detail.participants.find(
+      (p: { id: string }) => p.id === participantId
+    );
+    expect(updated.role).toBe("seller");
+  });
+
+  it("rejeita papel já ocupado (422)", async () => {
+    const owner = await signUpCookie("pr-uniq");
+    const contractId = await createContract(owner);
+
+    await addParticipant(contractId, owner, "seller", "Vendedor");
+    const { id: viewerId } = await (
+      await addParticipant(contractId, owner, "viewer", "Convidado")
+    ).json();
+
+    const res = await patchRole(contractId, viewerId, owner, "seller");
+    expect(res.status).toBe(422);
+  });
+
+  it("o slot do dono não pode virar viewer (422)", async () => {
+    const owner = await signUpCookie("pr-owner-viewer");
+    const contractId = await createContract(owner);
+
+    const detail = await getDetail(contractId, owner);
+    const ownerParticipant = detail.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerParticipant).toBeTruthy();
+
+    const res = await patchRole(
+      contractId,
+      ownerParticipant.id,
+      owner,
+      "viewer"
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it("o dono pode trocar o próprio papel buyer→seller (200)", async () => {
+    const owner = await signUpCookie("pr-owner-swap");
+    const contractId = await createContract(owner); // dono é buyer
+
+    const detail = await getDetail(contractId, owner);
+    const ownerParticipant = detail.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerParticipant.role).toBe("buyer");
+
+    const res = await patchRole(
+      contractId,
+      ownerParticipant.id,
+      owner,
+      "seller"
+    );
+    expect(res.status).toBe(200);
+
+    const after = await getDetail(contractId, owner);
+    const ownerAfter = after.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerAfter.role).toBe("seller");
+  });
+
+  it("dono não pode trocar para papel já ocupado por outro participante (422)", async () => {
+    const owner = await signUpCookie("pr-owner-taken");
+    const contractId = await createContract(owner); // dono é buyer
+
+    // Adiciona um participante com papel seller
+    await addParticipant(contractId, owner, "seller", "Vendedor");
+
+    // Localiza o participante do dono via detalhe do contrato
+    const detail = await getDetail(contractId, owner);
+    const ownerParticipant = detail.participants.find(
+      (p: { isOwner: boolean }) => p.isOwner
+    );
+    expect(ownerParticipant).toBeTruthy();
+    expect(ownerParticipant.role).toBe("buyer");
+
+    // Dono tenta trocar para seller (já ocupado por outro) → deve retornar 422
+    const res = await patchRole(
+      contractId,
+      ownerParticipant.id,
+      owner,
+      "seller"
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it("estranho recebe 404 (não vaza existência)", async () => {
+    const owner = await signUpCookie("pr-leak");
+    const contractId = await createContract(owner);
+
+    const { id: participantId } = await (
+      await addParticipant(contractId, owner, "viewer", "Alvo")
+    ).json();
+
+    const stranger = await signUpCookie("pr-leak-2");
+    const res = await patchRole(contractId, participantId, stranger, "seller");
+    expect(res.status).toBe(404);
+  });
+
+  it("participante inexistente retorna 404", async () => {
+    const owner = await signUpCookie("pr-notfound");
+    const contractId = await createContract(owner);
+
+    const res = await patchRole(
+      contractId,
+      "00000000-0000-0000-0000-000000000000",
+      owner,
+      "seller"
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("papel inválido retorna 422 (rejeição do TypeBox)", async () => {
+    const owner = await signUpCookie("pr-invalid");
+    const contractId = await createContract(owner);
+
+    const { id: participantId } = await (
+      await addParticipant(contractId, owner, "viewer", "Alvo")
+    ).json();
+
+    expect(
+      (await patchRole(contractId, participantId, owner, "owner")).status
+    ).toBe(422);
+    expect(
+      (await patchRole(contractId, participantId, owner, "garbage")).status
+    ).toBe(422);
+  });
+});
+
 describe("POST /api/contracts/:id/participants/:participantId/invite", () => {
   it("owner gera convite com token e expiração", async () => {
     const owner = await signUpCookie("inv");
