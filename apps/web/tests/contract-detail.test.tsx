@@ -48,7 +48,13 @@ const detail = {
     },
   ],
   participants: [
-    { id: "p1", displayName: "Você", role: "owner", linked: true },
+    {
+      id: "p1",
+      displayName: "Você",
+      role: "owner",
+      linked: true,
+      isOwner: true,
+    },
   ],
 };
 
@@ -82,6 +88,30 @@ describe("ContractDetailPage", () => {
     expect(
       screen.queryByRole("button", { name: MANAGE_BUTTON })
     ).not.toBeInTheDocument();
+  });
+
+  it("exibe o badge 'Dono' para o participante com isOwner=true", () => {
+    useContractQuery.mockReturnValue({ data: detail, isPending: false });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText("Dono")).toBeInTheDocument();
+  });
+
+  it("não exibe o badge 'Dono' para participante sem isOwner", () => {
+    const detailNoOwner = {
+      ...detail,
+      participants: [
+        {
+          id: "p1",
+          displayName: "Você",
+          role: "owner",
+          linked: true,
+          isOwner: false,
+        },
+      ],
+    };
+    useContractQuery.mockReturnValue({ data: detailNoOwner, isPending: false });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.queryByText("Dono")).not.toBeInTheDocument();
   });
 
   it("shows a skeleton while pending", () => {

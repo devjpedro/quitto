@@ -20,7 +20,7 @@ import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
 } from "@/hooks/use-participant-mutations";
-import { ROLE_LABEL } from "@/lib/labels";
+import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
 
 interface ParticipantView {
   displayName: string;
@@ -119,6 +119,7 @@ function ParticipantItem({
         <Badge tone="neutral">
           {ROLE_LABEL[participant.role] ?? participant.role}
         </Badge>
+        {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
         <div className="ml-auto flex gap-1">
           {participant.linked || isOwner ? null : (
             <Button

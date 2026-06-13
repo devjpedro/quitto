@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-utils";
@@ -75,7 +75,7 @@ describe("PaymentActions", () => {
     );
   });
 
-  it("buyer marks as paid in the no-confirmation flow", async () => {
+  it("buyer marks as paid via confirmation dialog in the no-confirmation flow", async () => {
     renderWithProviders(
       <PaymentActions
         {...base}
@@ -84,7 +84,14 @@ describe("PaymentActions", () => {
         status="pending"
       />
     );
+    // clicking the trigger button opens the dialog; mutation must NOT fire yet
     await userEvent.click(screen.getByRole("button", { name: MARK_PAID }));
+    expect(markPaidFn).not.toHaveBeenCalled();
+    // dialog is open — scope to the dialog and click the confirm button inside it
+    const dialog = screen.getByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: MARK_PAID })
+    );
     await waitFor(() => expect(markPaidFn).toHaveBeenCalledOnce());
   });
 

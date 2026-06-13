@@ -28,9 +28,15 @@ export function PaymentActions({
   const disputeMutation = useDisputePaymentMutation(contractId, installmentId);
   const markPaidMutation = useMarkPaidMutation(contractId, installmentId);
 
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState("");
+
+  async function onMarkPaid() {
+    await markPaidMutation.mutateAsync();
+    setMarkPaidOpen(false);
+  }
 
   async function onConfirm() {
     await confirmMutation.mutateAsync();
@@ -51,12 +57,8 @@ export function PaymentActions({
   return (
     <div className="flex flex-col gap-2">
       {actions.canMarkPaid ? (
-        <Button
-          disabled={markPaidMutation.isPending}
-          onClick={() => markPaidMutation.mutateAsync()}
-          type="button"
-        >
-          {markPaidMutation.isPending ? "Marcando…" : "Marcar como paga"}
+        <Button onClick={() => setMarkPaidOpen(true)} type="button">
+          Marcar como paga
         </Button>
       ) : null}
 
@@ -75,6 +77,31 @@ export function PaymentActions({
           Contestar
         </Button>
       ) : null}
+
+      <Dialog onOpenChange={setMarkPaidOpen} open={markPaidOpen}>
+        <DialogContent
+          description="Esta ação marca a parcela como paga e não pode ser desfeita."
+          title="Marcar como paga"
+        >
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              disabled={markPaidMutation.isPending}
+              onClick={onMarkPaid}
+              type="button"
+            >
+              {markPaidMutation.isPending ? "Marcando…" : "Marcar como paga"}
+            </Button>
+            <Button
+              onClick={() => setMarkPaidOpen(false)}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <DialogContent

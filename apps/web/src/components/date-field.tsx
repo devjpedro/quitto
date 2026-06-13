@@ -1,7 +1,20 @@
+import { Calendar as CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { formatISODateBR, maskBRDate, parseBRDateToISO } from "@/lib/format";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  dateToISO,
+  formatISODateBR,
+  maskBRDate,
+  parseBRDateToISO,
+  parseISOToLocalDate,
+} from "@/lib/format";
 
 function DateInput({
   id,
@@ -15,6 +28,9 @@ function DateInput({
   onBlur: () => void;
 }) {
   const [text, setText] = useState(value ? formatISODateBR(value) : "");
+  const [open, setOpen] = useState(false);
+  const selected = value ? parseISOToLocalDate(value) : undefined;
+
   return (
     <div className="relative mt-1.5">
       <Input
@@ -30,22 +46,33 @@ function DateInput({
         placeholder="dd/mm/aaaa"
         value={text}
       />
-      <input
-        aria-label="Escolher data no calendário"
-        className="absolute inset-y-0 right-2 my-auto h-5 w-5 cursor-pointer opacity-70"
-        onChange={(e) => {
-          const iso = e.target.value;
-          onChange(iso);
-          setText(iso ? formatISODateBR(iso) : "");
-        }}
-        type="date"
-        value={value ?? ""}
-      />
+      <Popover onOpenChange={setOpen} open={open}>
+        <PopoverTrigger
+          aria-label="Escolher data no calendário"
+          className="absolute inset-y-0 right-2 my-auto flex h-5 w-5 cursor-pointer items-center justify-center text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+          type="button"
+        >
+          <CalendarIcon className="size-4" />
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-auto">
+          <Calendar
+            onSelect={(d) => {
+              if (d) {
+                const iso = dateToISO(d);
+                onChange(iso);
+                setText(formatISODateBR(iso));
+              }
+              setOpen(false);
+            }}
+            selected={selected}
+          />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
 
-/** RHF-bound date field: types as dd/mm/yyyy (masked) or picks via native calendar; stores ISO. */
+/** RHF-bound date field: types as dd/mm/yyyy (masked) or picks via calendar popover; stores ISO. */
 export function DateField({ name, id }: { name: string; id: string }) {
   const { control } = useFormContext();
   return (
