@@ -3,6 +3,7 @@ import {
   dateToISO,
   formatBRL,
   formatISODateBR,
+  formatRelativeTimeBR,
   parseBRDateToISO,
   parseBRLToCents,
   parseISOToLocalDate,
@@ -87,5 +88,24 @@ describe("parseISOToLocalDate", () => {
 
   it("accepts a valid leap day", () => {
     expect(parseISOToLocalDate("2024-02-29")).toBeInstanceOf(Date);
+  });
+});
+
+describe("formatRelativeTimeBR", () => {
+  const now = new Date("2026-06-13T12:00:00Z");
+
+  it("formats minutes ago", () => {
+    const iso = new Date("2026-06-13T11:30:00Z").toISOString();
+    expect(formatRelativeTimeBR(iso, now)).toBe("há 30 minutos");
+  });
+
+  it("formats days ago", () => {
+    const iso = new Date("2026-06-11T12:00:00Z").toISOString();
+    expect(formatRelativeTimeBR(iso, now)).toBe("há 2 dias");
+  });
+
+  it("formats just now as seconds", () => {
+    const iso = new Date("2026-06-13T11:59:55Z").toISOString();
+    expect(formatRelativeTimeBR(iso, now)).toBe("há 5 segundos");
   });
 });

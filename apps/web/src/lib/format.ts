@@ -92,3 +92,31 @@ export function maskBRDate(value: string): string {
   const parts = [d.slice(0, 2), d.slice(2, 4), d.slice(4, 8)].filter(Boolean);
   return parts.join("/");
 }
+
+const RTF = new Intl.RelativeTimeFormat("pt-BR", { numeric: "always" });
+const REL_THRESHOLDS: {
+  limit: number;
+  div: number;
+  unit: Intl.RelativeTimeFormatUnit;
+}[] = [
+  { limit: 60, div: 1, unit: "second" },
+  { limit: 3600, div: 60, unit: "minute" },
+  { limit: 86_400, div: 3600, unit: "hour" },
+  { limit: 2_592_000, div: 86_400, unit: "day" },
+  { limit: 31_536_000, div: 2_592_000, unit: "month" },
+  { limit: Number.POSITIVE_INFINITY, div: 31_536_000, unit: "year" },
+];
+
+/** Relative time in pt-BR ("há 2 dias"). `now` is injectable for tests. */
+export function formatRelativeTimeBR(
+  iso: string,
+  now: Date = new Date()
+): string {
+  const diffSec = Math.round((new Date(iso).getTime() - now.getTime()) / 1000);
+  const abs = Math.abs(diffSec);
+  const t = REL_THRESHOLDS.find((x) => abs < x.limit) ?? REL_THRESHOLDS.at(-1);
+  if (!t) {
+    return "";
+  }
+  return RTF.format(Math.round(diffSec / t.div), t.unit);
+}
