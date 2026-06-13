@@ -24,7 +24,7 @@
         "drizzle-orm": "latest",
         "elysia": "latest",
         "postgres": "latest",
-        "zod": "latest",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@biomejs/biome": "latest",
@@ -81,7 +81,7 @@
       "name": "@quitto/shared",
       "version": "0.0.0",
       "dependencies": {
-        "zod": "latest",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@biomejs/biome": "latest",
