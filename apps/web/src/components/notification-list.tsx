@@ -57,7 +57,6 @@ export function NotificationList({
 
         return (
           <li className="relative" key={item.id}>
-            {/* Unread left-accent stripe — echoes ContractRow's inset stripe */}
             <span
               aria-hidden="true"
               className={`absolute inset-y-0 left-0 w-0.5 rounded-r-full transition-colors ${

@@ -29,6 +29,7 @@ vi.mock("@/hooks/use-notifications", () => ({
 import { NotificationsPage } from "../src/routes/notifications";
 
 const MARK_ALL = /marcar todas como lidas/i;
+const PAGAMENTO_CONFIRMADO = /pagamento confirmado/i;
 
 describe("NotificationsPage", () => {
   it("lists notifications and marks all as read", async () => {
@@ -36,5 +37,18 @@ describe("NotificationsPage", () => {
     expect(screen.getByText("Pagamento confirmado")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: MARK_ALL }));
     expect(markAll).toHaveBeenCalled();
+  });
+
+  it("marks read and deep-links on item click", async () => {
+    render(<NotificationsPage />);
+    await userEvent.click(
+      screen.getByRole("button", { name: PAGAMENTO_CONFIRMADO })
+    );
+    expect(markRead).toHaveBeenCalledWith("n1");
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/contracts/$id",
+      params: { id: "c1" },
+      search: { installment: "i1" },
+    });
   });
 });
