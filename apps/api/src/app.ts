@@ -6,6 +6,7 @@ import { AppError, toErrorBody } from "./lib/errors";
 import { contractsModule } from "./modules/contracts";
 import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
+import { notificationsModule } from "./modules/notifications";
 import { participantsModule } from "./modules/participants";
 import { paymentsModule } from "./modules/payments";
 
@@ -30,7 +31,8 @@ export function buildApp() {
     .use(contractsModule)
     .use(paymentsModule)
     .use(participantsModule)
-    .use(invitesModule);
+    .use(invitesModule)
+    .use(notificationsModule);
 }
 
 export const app = buildApp();

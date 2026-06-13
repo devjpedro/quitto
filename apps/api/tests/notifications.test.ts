@@ -226,3 +226,109 @@ describe("gatilhos de notificação", () => {
     }
   );
 });
+
+describe("endpoints de notificação", () => {
+  async function seed(userId: string, contractId: string, readAt: Date | null) {
+    await db.insert(notification).values({
+      userId,
+      type: "payment_confirmed",
+      contractId,
+      readAt,
+    });
+  }
+
+  it("lista só as do próprio usuário e conta as não-lidas", async () => {
+    const aCookie = await signUpCookie("notif-a");
+    const aId = await meId(aCookie);
+    const bCookie = await signUpCookie("notif-b");
+    const bId = await meId(bCookie);
+    const contractId = await createContract(aCookie, false);
+
+    await seed(aId, contractId, null);
+    await seed(aId, contractId, null);
+    await seed(bId, contractId, null); // do outro usuário
+
+    const list = await (
+      await app.handle(
+        new Request("http://localhost/api/notifications", {
+          headers: { cookie: aCookie },
+        })
+      )
+    ).json();
+    expect(list.length).toBe(2);
+
+    const count = await (
+      await app.handle(
+        new Request("http://localhost/api/notifications/unread-count", {
+          headers: { cookie: aCookie },
+        })
+      )
+    ).json();
+    expect(count.count).toBe(2);
+  });
+
+  it("marcar uma como lida zera só ela; cross-user dá 404", async () => {
+    const aCookie = await signUpCookie("notif-mr-a");
+    const aId = await meId(aCookie);
+    const bCookie = await signUpCookie("notif-mr-b");
+    const contractId = await createContract(aCookie, false);
+    await seed(aId, contractId, null);
+
+    const rows = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.userId, aId));
+    const row = rows[0];
+    if (!row) {
+      throw new Error("notification not seeded");
+    }
+
+    const forbidden = await app.handle(
+      new Request(`http://localhost/api/notifications/${row.id}/read`, {
+        method: "POST",
+        headers: { cookie: bCookie },
+      })
+    );
+    expect(forbidden.status).toBe(404);
+
+    const ok = await app.handle(
+      new Request(`http://localhost/api/notifications/${row.id}/read`, {
+        method: "POST",
+        headers: { cookie: aCookie },
+      })
+    );
+    expect(ok.status).toBe(200);
+
+    const count = await (
+      await app.handle(
+        new Request("http://localhost/api/notifications/unread-count", {
+          headers: { cookie: aCookie },
+        })
+      )
+    ).json();
+    expect(count.count).toBe(0);
+  });
+
+  it("read-all zera o contador", async () => {
+    const cookie = await signUpCookie("notif-ra");
+    const id = await meId(cookie);
+    const contractId = await createContract(cookie, false);
+    await seed(id, contractId, null);
+    await seed(id, contractId, null);
+
+    await app.handle(
+      new Request("http://localhost/api/notifications/read-all", {
+        method: "POST",
+        headers: { cookie },
+      })
+    );
+    const count = await (
+      await app.handle(
+        new Request("http://localhost/api/notifications/unread-count", {
+          headers: { cookie },
+        })
+      )
+    ).json();
+    expect(count.count).toBe(0);
+  });
+});
