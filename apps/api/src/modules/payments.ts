@@ -1,3 +1,4 @@
+import { NOTIFICATION_TYPE } from "@quitto/shared";
 import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -12,6 +13,7 @@ import { recordEvent } from "../lib/audit";
 import { getCapabilities } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { nextStatus } from "../lib/installment-state";
+import { notifyTarget } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
 import { headObject, presignDownload, presignUpload } from "../lib/storage";
 
@@ -136,6 +138,16 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           type: c.requiresConfirmation ? "proof_submitted" : "installment_paid",
           metadata: { fileName: body.fileName },
         });
+        await notifyTarget(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          target: "approver",
+          type: c.requiresConfirmation
+            ? NOTIFICATION_TYPE.proofSubmitted
+            : NOTIFICATION_TYPE.installmentPaid,
+          metadata: { fileName: body.fileName },
+        });
       });
 
       return { status: newStatus };
@@ -182,6 +194,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           actorUserId: user.id,
           type: "payment_confirmed",
         });
+        await notifyTarget(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          target: "payer",
+          type: NOTIFICATION_TYPE.paymentConfirmed,
+        });
       });
       return { status: newStatus };
     },
@@ -219,6 +238,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           type: "payment_disputed",
           metadata: body.reason ? { reason: body.reason } : undefined,
         });
+        await notifyTarget(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          target: "payer",
+          type: NOTIFICATION_TYPE.paymentDisputed,
+        });
       });
       return { status: newStatus };
     },
@@ -255,6 +281,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           installmentId: inst.id,
           actorUserId: user.id,
           type: "installment_paid",
+        });
+        await notifyTarget(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          target: "approver",
+          type: NOTIFICATION_TYPE.installmentPaid,
         });
       });
       return { status: newStatus };
