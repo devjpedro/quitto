@@ -84,7 +84,13 @@ describe("ContractDetailPage", () => {
 
   it("não mostra Gerenciar para não-dono", () => {
     useContractQuery.mockReturnValue({
-      data: { ...detail, role: "viewer", isOwner: false },
+      data: {
+        ...detail,
+        role: "viewer",
+        isOwner: false,
+        isPayer: false,
+        isApprover: false,
+      },
       isPending: false,
     });
     renderWithProviders(<ContractDetailPage />);

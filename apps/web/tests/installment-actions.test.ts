@@ -53,6 +53,15 @@ describe("availableActions — sem confirmação", () => {
   it("mark-paid só faz sentido sem confirmação", () => {
     expect(availableActions(payer, true, "pending").canMarkPaid).toBe(false);
   });
+
+  it("nenhuma ação em paid", () => {
+    expect(availableActions(both, false, "paid")).toEqual({
+      canUpload: false,
+      canMarkPaid: false,
+      canConfirm: false,
+      canDispute: false,
+    });
+  });
 });
 
 describe("availableActions — dois lados e sem capacidade", () => {
@@ -70,5 +79,6 @@ describe("availableActions — dois lados e sem capacidade", () => {
       canConfirm: false,
       canDispute: false,
     });
+    expect(availableActions(none, false, "pending").canUpload).toBe(false);
   });
 });
