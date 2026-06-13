@@ -1,23 +1,9 @@
+import { isPaidStatus } from "@quitto/shared";
 import { Badge } from "@/components/ui/badge";
-
-// Status arrives from the Eden client typed as `string`; accept string and map with fallbacks.
-const LABELS: Record<string, string> = {
-  pending: "pendente",
-  awaiting_confirmation: "aguardando",
-  confirmed: "confirmada",
-  disputed: "contestada",
-  paid: "paga",
-};
-
-const TONES: Record<string, "success" | "warning" | "danger" | "neutral"> = {
-  paid: "success",
-  confirmed: "success",
-  pending: "warning",
-  awaiting_confirmation: "warning",
-  disputed: "danger",
-};
-
-const PAID = new Set(["paid", "confirmed"]);
+import {
+  INSTALLMENT_STATUS_LABEL,
+  INSTALLMENT_STATUS_TONE,
+} from "@/lib/labels";
 
 /** Maps an installment status string (+ overdue flag) to a semantic pt-BR badge. */
 export function StatusBadge({
@@ -27,10 +13,14 @@ export function StatusBadge({
   status: string;
   overdue?: boolean;
 }) {
-  if (overdue && !PAID.has(status)) {
+  if (overdue && !isPaidStatus(status)) {
     return <Badge tone="danger">atrasada</Badge>;
   }
-  return (
-    <Badge tone={TONES[status] ?? "neutral"}>{LABELS[status] ?? status}</Badge>
-  );
+  const label =
+    INSTALLMENT_STATUS_LABEL[status as keyof typeof INSTALLMENT_STATUS_LABEL] ??
+    status;
+  const tone =
+    INSTALLMENT_STATUS_TONE[status as keyof typeof INSTALLMENT_STATUS_TONE] ??
+    "neutral";
+  return <Badge tone={tone}>{label}</Badge>;
 }
