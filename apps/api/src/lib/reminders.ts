@@ -1,4 +1,9 @@
-import { NOTIFICATION_TYPE, REMINDER_WINDOW_DAYS } from "@quitto/shared";
+import {
+  INSTALLMENT_STATUS,
+  isPaidStatus,
+  NOTIFICATION_TYPE,
+  REMINDER_WINDOW_DAYS,
+} from "@quitto/shared";
 import { addDays } from "./dates";
 
 export interface ReminderInput {
@@ -6,6 +11,7 @@ export interface ReminderInput {
   dueDate: string; // YYYY-MM-DD
   installmentId: string;
   payerUserId: string | null;
+  status: string;
 }
 
 export interface ReminderNotification {
@@ -31,6 +37,13 @@ export function computeReminders(
   const out: ReminderNotification[] = [];
   for (const it of items) {
     if (!it.payerUserId) {
+      continue;
+    }
+    // Settled (paid/confirmed) or awaiting approval → payer has nothing to act on.
+    if (
+      isPaidStatus(it.status) ||
+      it.status === INSTALLMENT_STATUS.awaitingConfirmation
+    ) {
       continue;
     }
     let type: ReminderNotification["type"] | null = null;

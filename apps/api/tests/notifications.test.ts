@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { and, eq } from "drizzle-orm";
+import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
@@ -372,4 +373,63 @@ describe("sweep de lembretes", () => {
     expect(rows.length).toBe(1);
     expect(rows[0]?.type).toBe("installment_overdue");
   });
+
+  it.skipIf(!hasStorage)(
+    "não gera lembrete para parcela em awaiting_confirmation",
+    async () => {
+      const ownerCookie = await signUpCookie("rem-aw-own");
+      const payerId = await meId(ownerCookie);
+
+      // contrato com confirmação obrigatória e parcela vencida
+      const res = await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: ownerCookie },
+          body: JSON.stringify({
+            title: "Aguardando",
+            ownerRole: "buyer",
+            requiresConfirmation: true,
+            schedule: {
+              mode: "custom",
+              installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+            },
+          }),
+        })
+      );
+      const contractId = (await res.json()).id as string;
+
+      // vincula um vendedor (aprovador) ao contrato
+      const sellerCookie = await signUpCookie("rem-aw-sell");
+      const sellerId = await meId(sellerCookie);
+      await db.insert(participant).values({
+        contractId,
+        displayName: "Vendedor",
+        role: "seller",
+        linkedUserId: sellerId,
+      });
+
+      // payer envia comprovante → parcela muda para awaiting_confirmation
+      const instId = await firstInstallmentId(ownerCookie, contractId);
+      await uploadProof(ownerCookie, instId);
+
+      // sweep não deve criar reminder para o pagador (ele já agiu)
+      await runReminderSweep();
+
+      const reminderTypes = [
+        NOTIFICATION_TYPE.installmentOverdue,
+        NOTIFICATION_TYPE.installmentDueSoon,
+      ];
+      const rows = await db
+        .select()
+        .from(notification)
+        .where(
+          and(
+            eq(notification.userId, payerId),
+            eq(notification.contractId, contractId),
+            inArray(notification.type, reminderTypes)
+          )
+        );
+      expect(rows).toHaveLength(0);
+    }
+  );
 });

@@ -1,3 +1,4 @@
+import { CONTRACT_STATUS, INSTALLMENT_STATUS } from "@quitto/shared";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
@@ -20,7 +21,7 @@ export async function runReminderSweep(): Promise<number> {
   const activeContracts = await db
     .select({ id: contract.id, ownerId: contract.ownerId })
     .from(contract)
-    .where(eq(contract.status, "active"));
+    .where(eq(contract.status, CONTRACT_STATUS.active));
   if (activeContracts.length === 0) {
     return 0;
   }
@@ -51,12 +52,13 @@ export async function runReminderSweep(): Promise<number> {
       id: installment.id,
       contractId: installment.contractId,
       dueDate: installment.dueDate,
+      status: installment.status,
     })
     .from(installment)
     .where(
       and(
         inArray(installment.contractId, contractIds),
-        ne(installment.status, "paid")
+        ne(installment.status, INSTALLMENT_STATUS.paid)
       )
     );
 
@@ -64,6 +66,7 @@ export async function runReminderSweep(): Promise<number> {
     installmentId: i.id,
     contractId: i.contractId,
     dueDate: i.dueDate,
+    status: i.status,
     payerUserId: payerByContract.get(i.contractId) ?? null,
   }));
 
