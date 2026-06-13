@@ -146,6 +146,152 @@ describe("invites", () => {
     expect(again.status).toBe(422);
   });
 
+  // ─── Guard: já participa do contrato (dono/duplicado) ────────────────────
+
+  it("dono não pode aceitar convite para o próprio contrato (403)", async () => {
+    const ts = Date.now();
+    const ownerEmail = `own-self-${ts}@example.com`;
+    const owner = await signUpCookie(ownerEmail);
+    // Convite cujo e-mail é o do PRÓPRIO dono.
+    const { token } = await setupInvite(owner, ownerEmail);
+
+    const acc = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: owner },
+      })
+    );
+    expect(acc.status).toBe(403);
+  });
+
+  it("quem já participa não pode aceitar um segundo convite (403)", async () => {
+    const ts = Date.now();
+    const ownerEmail = `own-dup-${ts}@example.com`;
+    const inviteeEmail = `dup-${ts}@example.com`;
+    const owner = await signUpCookie(ownerEmail);
+    const { contractId, token } = await setupInvite(owner, inviteeEmail);
+    const invitee = await signUpCookie(inviteeEmail);
+
+    // userB aceita o primeiro convite e vira participante.
+    const first = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+    expect(first.status).toBe(200);
+
+    // Cria uma SEGUNDA vaga + convite para o mesmo e-mail no mesmo contrato.
+    // viewer é ilimitado por contrato (seller já está ocupado pela 1ª vaga).
+    const addRes = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner },
+        body: JSON.stringify({ displayName: "Convidado 2", role: "viewer" }),
+      })
+    );
+    const { id: participantId2 } = await addRes.json();
+    const invRes = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId2}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ email: inviteeEmail }),
+        }
+      )
+    );
+    const { token: token2 } = await invRes.json();
+
+    const acc2 = await app.handle(
+      new Request(`http://localhost/api/invites/${token2}/accept`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+    expect(acc2.status).toBe(403);
+  });
+
+  it("vaga já vinculada não pode ser aceita de novo (422)", async () => {
+    const ts = Date.now();
+    const ownerEmail = `own-slot-${ts}@example.com`;
+    const inviteeEmail = `slot-${ts}@example.com`;
+    const owner = await signUpCookie(ownerEmail);
+    const contractId = await createContract(owner);
+
+    // Uma única vaga, com DOIS convites para o mesmo e-mail.
+    const addRes = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner },
+        body: JSON.stringify({ displayName: "Convidado Slot", role: "seller" }),
+      })
+    );
+    const { id: participantId } = await addRes.json();
+
+    const inv1 = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ email: inviteeEmail }),
+        }
+      )
+    );
+    const { token: tokenA } = await inv1.json();
+    const inv2 = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ email: inviteeEmail }),
+        }
+      )
+    );
+    const { token: tokenB } = await inv2.json();
+
+    const invitee = await signUpCookie(inviteeEmail);
+
+    const first = await app.handle(
+      new Request(`http://localhost/api/invites/${tokenA}/accept`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+    expect(first.status).toBe(200);
+
+    // O segundo convite aponta para a MESMA vaga, agora já vinculada.
+    // O guard de "já participa" (403) dispara antes do "vaga vinculada" (422),
+    // pois o usuário virou participante no primeiro aceite. Ambos bloqueiam.
+    const second = await app.handle(
+      new Request(`http://localhost/api/invites/${tokenB}/accept`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+    expect([403, 422]).toContain(second.status);
+  });
+
+  it("GET convite: alreadyParticipant=true quando já participa do contrato", async () => {
+    const ts = Date.now();
+    const ownerEmail = `own-ap-${ts}@example.com`;
+    const owner = await signUpCookie(ownerEmail);
+    // Convite para o próprio dono → ele já participa (slot ligado ao ownerId).
+    const { token } = await setupInvite(owner, ownerEmail);
+
+    const res = await app.handle(
+      new Request(`http://localhost/api/invites/${token}`, {
+        headers: { cookie: owner },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.alreadyParticipant).toBe(true);
+    expect(body.emailMatches).toBe(true);
+  });
+
   // ─── Gap 1: GET /api/invites/:token (view) ───────────────────────────────
 
   it("GET convite: emailMatches=true quando e-mail bate (200)", async () => {

@@ -87,11 +87,24 @@ export const invitesModule = new Elysia({ prefix: "/api" })
       if (!p) {
         throw new NotFoundError("Participante não encontrado");
       }
+      // already a participant of this contract (covers the owner, whose slot is
+      // linked to ownerId)
+      const [mine] = await db
+        .select({ id: participant.id })
+        .from(participant)
+        .where(
+          and(
+            eq(participant.contractId, row.contractId),
+            eq(participant.linkedUserId, user.id)
+          )
+        )
+        .limit(1);
       return {
         contractTitle: c.title,
         role: p.role,
         email: row.email,
         emailMatches: normalizeEmail(user.email) === row.email,
+        alreadyParticipant: Boolean(mine),
       };
     },
     {
@@ -101,6 +114,7 @@ export const invitesModule = new Elysia({ prefix: "/api" })
         role: t.String(),
         email: t.String(),
         emailMatches: t.Boolean(),
+        alreadyParticipant: t.Boolean(),
       }),
     }
   )
@@ -113,6 +127,30 @@ export const invitesModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Este convite é para outro e-mail");
       }
       const contractId = await db.transaction(async (tx) => {
+        // slot must not already be linked (double-accept / race)
+        const [slot] = await tx
+          .select({ linkedUserId: participant.linkedUserId })
+          .from(participant)
+          .where(eq(participant.id, row.participantId))
+          .limit(1);
+        if (slot?.linkedUserId) {
+          throw new ValidationError("Esta vaga já foi vinculada");
+        }
+        // accepting user must not already participate in this contract (covers the
+        // owner, whose own slot is linked to ownerId)
+        const [existing] = await tx
+          .select({ id: participant.id })
+          .from(participant)
+          .where(
+            and(
+              eq(participant.contractId, row.contractId),
+              eq(participant.linkedUserId, user.id)
+            )
+          )
+          .limit(1);
+        if (existing) {
+          throw new ForbiddenError("Você já participa deste contrato");
+        }
         await tx
           .update(participant)
           .set({ linkedUserId: user.id })

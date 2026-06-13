@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAcceptInviteMutation, useInviteQuery } from "@/hooks/use-invite";
@@ -46,6 +47,53 @@ export function AcceptInvitePage() {
     )}`;
   }
 
+  let action: ReactNode;
+  if (data.alreadyParticipant) {
+    action = (
+      <div className="mt-4">
+        <p className="text-muted-foreground text-sm">
+          Você já participa deste contrato.
+        </p>
+        <Button
+          className="mt-3 w-full"
+          onClick={() => navigate({ to: "/contracts" })}
+          type="button"
+          variant="outline"
+        >
+          Ir para meus contratos
+        </Button>
+      </div>
+    );
+  } else if (data.emailMatches) {
+    action = (
+      <Button
+        className="mt-4 w-full"
+        disabled={acceptMutation.isPending}
+        onClick={onAccept}
+        type="button"
+      >
+        {acceptMutation.isPending ? "Aceitando…" : "Aceitar convite"}
+      </Button>
+    );
+  } else {
+    action = (
+      <div className="mt-4">
+        <p className="text-muted-foreground text-sm">
+          Este convite é para outro e-mail ({data.email}). Entre com a conta
+          correta para aceitar.
+        </p>
+        <Button
+          className="mt-3 w-full"
+          onClick={onSwitchAccount}
+          type="button"
+          variant="outline"
+        >
+          Entrar com outra conta
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md p-6">
       <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
@@ -56,32 +104,7 @@ export function AcceptInvitePage() {
           Você foi convidado para <strong>{data.contractTitle}</strong> como{" "}
           <strong>{ROLE_LABEL[data.role] ?? data.role}</strong>.
         </p>
-
-        {data.emailMatches ? (
-          <Button
-            className="mt-4 w-full"
-            disabled={acceptMutation.isPending}
-            onClick={onAccept}
-            type="button"
-          >
-            {acceptMutation.isPending ? "Aceitando…" : "Aceitar convite"}
-          </Button>
-        ) : (
-          <div className="mt-4">
-            <p className="text-muted-foreground text-sm">
-              Este convite é para outro e-mail ({data.email}). Entre com a conta
-              correta para aceitar.
-            </p>
-            <Button
-              className="mt-3 w-full"
-              onClick={onSwitchAccount}
-              type="button"
-              variant="outline"
-            >
-              Entrar com outra conta
-            </Button>
-          </div>
-        )}
+        {action}
       </div>
     </div>
   );

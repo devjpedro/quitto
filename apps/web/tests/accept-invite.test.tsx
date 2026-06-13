@@ -4,6 +4,7 @@ import { renderWithProviders } from "./test-utils";
 
 const ACCEPT_BUTTON = /aceitar/i;
 const OTHER_EMAIL = /outro e-mail/i;
+const ALREADY_PARTICIPANT = /já participa deste contrato/i;
 
 const useInviteQuery = vi.fn();
 const acceptMutate = vi.fn().mockResolvedValue({ contractId: "c1" });
@@ -50,6 +51,23 @@ describe("AcceptInvitePage", () => {
         params: { id: "c1" },
       })
     );
+  });
+
+  it("mostra mensagem e oculta aceitar quando já participa do contrato", () => {
+    useInviteQuery.mockReturnValue({
+      data: {
+        contractTitle: "Apê",
+        role: "seller",
+        email: "a@b.com",
+        emailMatches: true,
+        alreadyParticipant: true,
+      },
+      isPending: false,
+      error: null,
+    });
+    renderWithProviders(<AcceptInvitePage />);
+    expect(screen.getByText(ALREADY_PARTICIPANT)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: ACCEPT_BUTTON })).toBeNull();
   });
 
   it("desabilita aceitar quando o e-mail não bate", () => {
