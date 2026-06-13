@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  CONTRACT_OWNER_ROLES,
   type CreateContractInput,
   createContractSchema,
   OWNER_ROLE,
@@ -8,6 +9,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
+  Controller,
   FormProvider,
   useFieldArray,
   useForm,
@@ -20,6 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { capitalize, formatBRL } from "@/lib/format";
@@ -57,7 +66,7 @@ function FieldError({ name }: { name: string }) {
 }
 
 function StepBasic() {
-  const { register } = useFormContext<CreateContractInput>();
+  const { register, control } = useFormContext<CreateContractInput>();
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -82,17 +91,24 @@ function StepBasic() {
       </div>
       <div>
         <Label htmlFor="ownerRole">Meu papel</Label>
-        <select
-          className="mt-1.5 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          id="ownerRole"
-          {...register("ownerRole")}
-        >
-          {Object.values(OWNER_ROLE).map((r) => (
-            <option key={r} value={r}>
-              {capitalize(ROLE_LABEL[r] ?? r)}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={control}
+          name="ownerRole"
+          render={({ field }) => (
+            <Select onValueChange={field.onChange} value={field.value}>
+              <SelectTrigger className="mt-1.5" id="ownerRole">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTRACT_OWNER_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {capitalize(ROLE_LABEL[r] ?? r)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </div>
       <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-primary/40">
         <input
