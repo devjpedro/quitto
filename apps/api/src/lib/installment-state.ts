@@ -1,11 +1,7 @@
+import { INSTALLMENT_STATUS, type InstallmentStatus } from "@quitto/shared";
 import { ValidationError } from "./errors";
 
-export type InstallmentStatus =
-  | "pending"
-  | "awaiting_confirmation"
-  | "confirmed"
-  | "disputed"
-  | "paid";
+export type { InstallmentStatus } from "@quitto/shared";
 
 export type InstallmentAction =
   | "submit_proof"
@@ -25,21 +21,28 @@ export function nextStatus(
   if (requiresConfirmation) {
     if (
       action === "submit_proof" &&
-      (current === "pending" || current === "disputed")
+      (current === INSTALLMENT_STATUS.pending ||
+        current === INSTALLMENT_STATUS.disputed)
     ) {
-      return "awaiting_confirmation";
+      return INSTALLMENT_STATUS.awaitingConfirmation;
     }
-    if (action === "confirm" && current === "awaiting_confirmation") {
-      return "confirmed";
+    if (
+      action === "confirm" &&
+      current === INSTALLMENT_STATUS.awaitingConfirmation
+    ) {
+      return INSTALLMENT_STATUS.confirmed;
     }
-    if (action === "dispute" && current === "awaiting_confirmation") {
-      return "disputed";
+    if (
+      action === "dispute" &&
+      current === INSTALLMENT_STATUS.awaitingConfirmation
+    ) {
+      return INSTALLMENT_STATUS.disputed;
     }
   } else if (
     (action === "submit_proof" || action === "mark_paid") &&
-    current !== "paid"
+    current !== INSTALLMENT_STATUS.paid
   ) {
-    return "paid";
+    return INSTALLMENT_STATUS.paid;
   }
   throw new ValidationError(
     `Transição inválida: ${current} + ${action} (confirmação=${requiresConfirmation})`

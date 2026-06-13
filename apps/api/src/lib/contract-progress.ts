@@ -1,15 +1,14 @@
+import {
+  type InstallmentStatus,
+  isOverdue,
+  isPaidStatus,
+} from "@quitto/shared";
+
 interface InstallmentLike {
   amountCents: number;
   dueDate: string;
-  status:
-    | "pending"
-    | "awaiting_confirmation"
-    | "confirmed"
-    | "disputed"
-    | "paid";
+  status: InstallmentStatus;
 }
-
-const PAID_STATUSES = new Set(["paid", "confirmed"]);
 
 export interface ContractProgress {
   overdueCount: number;
@@ -33,16 +32,12 @@ export function computeProgress(
 
   for (const item of items) {
     totalCents += item.amountCents;
-    const isPaid = PAID_STATUSES.has(item.status);
-    if (isPaid) {
+    const paid = isPaidStatus(item.status);
+    if (paid) {
       paidCents += item.amountCents;
       paidCount += 1;
     }
-    if (
-      !isPaid &&
-      item.status !== "awaiting_confirmation" &&
-      item.dueDate < todayISO
-    ) {
+    if (isOverdue(item.dueDate, item.status, todayISO)) {
       overdueCount += 1;
     }
   }

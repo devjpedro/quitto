@@ -1,4 +1,26 @@
 import { z } from "zod";
+import { OWNER_ROLES } from "./domain";
+
+export type {
+  AuditType,
+  ContractStatus,
+  InstallmentStatus,
+  OwnerRole,
+  ParticipantRole,
+} from "./domain";
+// biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
+export {
+  AUDIT_TYPE,
+  CONTRACT_STATUS,
+  CONTRACT_STATUSES,
+  INSTALLMENT_STATUS,
+  INSTALLMENT_STATUSES,
+  isOverdue,
+  isPaidStatus,
+  OWNER_ROLE,
+  OWNER_ROLES,
+  PARTICIPANT_ROLE,
+} from "./domain";
 
 /** Builds and validates an env object from a Zod schema, failing fast. */
 export function makeEnv<T extends z.ZodTypeAny>(
@@ -26,7 +48,7 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
 
-export const ownerRoleSchema = z.enum(["buyer", "seller", "neutral"]);
+export const ownerRoleSchema = z.enum(OWNER_ROLES);
 
 const scheduleAutoSchema = z.object({
   mode: z.literal("auto"),
@@ -74,4 +96,3 @@ export const updateInstallmentSchema = z
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
-export type OwnerRole = z.infer<typeof ownerRoleSchema>;
