@@ -1,7 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { auditEvent, contract, installment, proof } from "../db/schema";
+import {
+  auditEvent,
+  contract,
+  installment,
+  proof,
+  user as userTable,
+} from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
@@ -272,8 +278,16 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         .from(proof)
         .where(eq(proof.installmentId, inst.id));
       const events = await db
-        .select()
+        .select({
+          id: auditEvent.id,
+          type: auditEvent.type,
+          actorUserId: auditEvent.actorUserId,
+          metadata: auditEvent.metadata,
+          createdAt: auditEvent.createdAt,
+          actorName: userTable.name,
+        })
         .from(auditEvent)
+        .leftJoin(userTable, eq(auditEvent.actorUserId, userTable.id))
         .where(eq(auditEvent.installmentId, inst.id))
         .orderBy(desc(auditEvent.createdAt));
 
@@ -299,6 +313,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           id: e.id,
           type: e.type,
           actorUserId: e.actorUserId,
+          actorName: e.actorName ?? null,
           metadata: e.metadata as Record<string, unknown> | null,
           createdAt: e.createdAt.toISOString(),
         })),
@@ -327,6 +342,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
             id: t.String(),
             type: t.String(),
             actorUserId: t.Union([t.String(), t.Null()]),
+            actorName: t.Union([t.String(), t.Null()]),
             metadata: t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
             createdAt: t.String(),
           })

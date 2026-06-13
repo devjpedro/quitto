@@ -82,3 +82,65 @@ it("infers the Fase-3a installment endpoints cross-package (eden#215 mitigation)
     status: string;
   }>();
 });
+
+it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mitigation)", () => {
+  const api = treaty<App>("http://localhost:3000");
+
+  // POST /api/contracts/:id/participants — response is { id: string }.
+  const participantsPost = api.api.contracts({ id: "x" }).participants.post;
+  type CreateParticipantResponse = Awaited<
+    ReturnType<typeof participantsPost>
+  >["data"];
+  expectTypeOf<CreateParticipantResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<CreateParticipantResponse>>().toEqualTypeOf<{
+    id: string;
+  }>();
+
+  // DELETE /api/contracts/:id/participants/:participantId — response is { ok: true }.
+  const participantsDelete = api.api
+    .contracts({ id: "x" })
+    .participants({ participantId: "y" }).delete;
+  type DeleteParticipantResponse = Awaited<
+    ReturnType<typeof participantsDelete>
+  >["data"];
+  expectTypeOf<DeleteParticipantResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<DeleteParticipantResponse>>().toEqualTypeOf<{
+    ok: true;
+  }>();
+
+  // POST /api/contracts/:id/participants/:participantId/invite — response is { token, expiresAt }.
+  const invitePost = api.api
+    .contracts({ id: "x" })
+    .participants({ participantId: "y" }).invite.post;
+  type CreateInviteResponse = Awaited<ReturnType<typeof invitePost>>["data"];
+  expectTypeOf<CreateInviteResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<CreateInviteResponse>>().toEqualTypeOf<{
+    token: string;
+    expiresAt: string;
+  }>();
+
+  // GET /api/invites/:token — response is { contractTitle, role, email, emailMatches }.
+  const inviteGet = api.api.invites({ token: "t" }).get;
+  type GetInviteResponse = Awaited<ReturnType<typeof inviteGet>>["data"];
+  expectTypeOf<GetInviteResponse>().not.toBeAny();
+  expectTypeOf<
+    NonNullable<GetInviteResponse>["contractTitle"]
+  >().toEqualTypeOf<string>();
+  expectTypeOf<
+    NonNullable<GetInviteResponse>["role"]
+  >().toEqualTypeOf<string>();
+  expectTypeOf<
+    NonNullable<GetInviteResponse>["email"]
+  >().toEqualTypeOf<string>();
+  expectTypeOf<
+    NonNullable<GetInviteResponse>["emailMatches"]
+  >().toEqualTypeOf<boolean>();
+
+  // POST /api/invites/:token/accept — response is { contractId: string }.
+  const acceptPost = api.api.invites({ token: "t" }).accept.post;
+  type AcceptInviteResponse = Awaited<ReturnType<typeof acceptPost>>["data"];
+  expectTypeOf<AcceptInviteResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<AcceptInviteResponse>>().toEqualTypeOf<{
+    contractId: string;
+  }>();
+});

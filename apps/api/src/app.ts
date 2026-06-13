@@ -4,7 +4,9 @@ import { auth } from "./auth";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { contractsModule } from "./modules/contracts";
+import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
+import { participantsModule } from "./modules/participants";
 import { paymentsModule } from "./modules/payments";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
@@ -26,7 +28,9 @@ export function buildApp() {
     .use(apiRoutes)
     .use(meModule)
     .use(contractsModule)
-    .use(paymentsModule);
+    .use(paymentsModule)
+    .use(participantsModule)
+    .use(invitesModule);
 }
 
 export const app = buildApp();
