@@ -15,7 +15,7 @@ const INSTALLMENT_BRL = /R\$\s?2\.000,00/;
 const MANAGE_BUTTON = /gerenciar/i;
 
 const detail = {
-  role: "owner",
+  role: "buyer",
   isOwner: true,
   isPayer: true,
   isApprover: true,
@@ -54,7 +54,7 @@ const detail = {
     {
       id: "p1",
       displayName: "Você",
-      role: "owner",
+      role: "buyer",
       linked: true,
       isOwner: true,
     },
@@ -103,7 +103,7 @@ describe("ContractDetailPage", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
     renderWithProviders(<ContractDetailPage />);
     // header badge + participants list badge — ambos rendem "Dono"
-    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
   });
 
   it("não exibe o badge 'Dono' para participante sem isOwner", () => {
@@ -146,8 +146,9 @@ describe("ContractDetailPage", () => {
       isPending: false,
     });
     renderWithProviders(<ContractDetailPage />);
-    expect(screen.getByText("comprador")).toBeInTheDocument();
-    // "Dono" aparece no header e na lista de participantes; basta existir >=1
-    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(1);
+    // "comprador" aparece no header e na lista de participantes (fixture base tem buyer)
+    expect(screen.getAllByText("comprador").length).toBeGreaterThanOrEqual(1);
+    // "Dono" aparece no header e na lista de participantes; basta existir >=2
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
   });
 });

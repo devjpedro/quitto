@@ -79,9 +79,7 @@ export function ContractDetailPage() {
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge tone="neutral">{ROLE_LABEL[data.role] ?? data.role}</Badge>
-          {data.isOwner ? (
-            <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge>
-          ) : null}
+          {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
           <ContractStatusBadge status={contract.status} />
           {overdue ? (
             <Badge tone="danger">{progress.overdueCount} em atraso</Badge>
