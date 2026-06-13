@@ -33,13 +33,15 @@ export function NotificationsPage() {
         <h1 className="font-bold font-display text-2xl tracking-tight">
           Notificações
         </h1>
-        <button
-          className="rounded px-2 py-1 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          onClick={() => markAll.mutate()}
-          type="button"
-        >
-          Marcar todas como lidas
-        </button>
+        {!isPending && (data?.length ?? 0) > 0 ? (
+          <button
+            className="rounded px-2 py-1 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            onClick={() => markAll.mutate()}
+            type="button"
+          >
+            Marcar todas como lidas
+          </button>
+        ) : null}
       </div>
       {isPending ? (
         <div className="space-y-2">

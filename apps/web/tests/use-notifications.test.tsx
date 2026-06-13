@@ -98,5 +98,8 @@ describe("use-notifications", () => {
     });
     await result.current.mutateAsync();
     expect(spy).toHaveBeenCalledWith({ queryKey: ["notifications"] });
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["notifications", "unread-count"],
+    });
   });
 });
