@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OWNER_ROLES, PARTICIPANT_ROLE } from "./domain";
+import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
 
 export type {
   AuditType,
@@ -48,7 +48,12 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
 
-export const ownerRoleSchema = z.enum(OWNER_ROLES);
+/** Papéis que o dono pode ter ao criar um contrato (neutral fica fora do produto). */
+export const CONTRACT_OWNER_ROLES = [
+  OWNER_ROLE.buyer,
+  OWNER_ROLE.seller,
+] as const;
+export const ownerRoleSchema = z.enum(CONTRACT_OWNER_ROLES);
 
 const scheduleAutoSchema = z.object({
   mode: z.literal("auto"),

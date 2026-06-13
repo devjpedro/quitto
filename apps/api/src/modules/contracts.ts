@@ -29,11 +29,7 @@ const ScheduleCustom = t.Object({
 const CreateContractBody = t.Object({
   title: t.String({ minLength: 1, maxLength: 200 }),
   description: t.Optional(t.String({ maxLength: 2000 })),
-  ownerRole: t.Union([
-    t.Literal("buyer"),
-    t.Literal("seller"),
-    t.Literal("neutral"),
-  ]),
+  ownerRole: t.Union([t.Literal("buyer"), t.Literal("seller")]),
   requiresConfirmation: t.Boolean(),
   schedule: t.Union([ScheduleAuto, ScheduleCustom]),
 });
