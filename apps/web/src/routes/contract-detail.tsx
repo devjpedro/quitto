@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractQuery } from "@/hooks/use-contracts";
 import { formatBRL, formatISODateBR, todayISO } from "@/lib/format";
-import { ROLE_LABEL } from "@/lib/labels";
+import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
 
 const STAT_TONE_CLASS: Record<"green" | "red" | "default", string> = {
   green: "text-emerald-700",
@@ -143,6 +143,9 @@ export function ContractDetailPage() {
                 {p.displayName}
               </span>
               <Badge tone="neutral">{ROLE_LABEL[p.role] ?? p.role}</Badge>
+              {p.isOwner ? (
+                <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge>
+              ) : null}
               {p.linked ? null : (
                 <span className="text-muted-foreground text-xs">
                   não vinculado

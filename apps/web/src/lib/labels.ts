@@ -48,6 +48,8 @@ export const ROLE_LABEL: Record<string, string> = {
   counterparty: "contraparte",
 };
 
+export const OWNER_BADGE_LABEL = "Dono";
+
 export const AUDIT_TYPE_LABEL: Record<string, string> = {
   [AUDIT_TYPE.proofSubmitted]: "Comprovante enviado",
   [AUDIT_TYPE.paymentConfirmed]: "Pagamento confirmado",

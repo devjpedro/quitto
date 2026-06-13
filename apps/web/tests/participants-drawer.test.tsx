@@ -153,4 +153,36 @@ describe("ParticipantsDrawer", () => {
     );
     await waitFor(() => expect(removeParticipant).toHaveBeenCalledWith("p1"));
   });
+
+  it("exibe o badge 'Dono' quando isOwner=true", () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={[
+          {
+            id: "p1",
+            displayName: "Maria",
+            role: "seller",
+            linked: false,
+            isOwner: true,
+          },
+        ]}
+      />
+    );
+    expect(screen.getByText("Dono")).toBeInTheDocument();
+  });
+
+  it("não exibe o badge 'Dono' quando isOwner=false", () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={participants}
+      />
+    );
+    expect(screen.queryByText("Dono")).not.toBeInTheDocument();
+  });
 });
