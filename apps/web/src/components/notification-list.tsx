@@ -66,14 +66,12 @@ export function NotificationList({
             />
 
             <button
-              aria-label={message}
               className={`group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset ${
                 isUnread ? "" : "opacity-60"
               }`}
               onClick={() => onOpen(item)}
               type="button"
             >
-              {/* Icon pill — bg-primary/8 on hover mirrors the banner treatment */}
               <span
                 aria-hidden="true"
                 className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/8 text-primary transition-colors group-hover:bg-primary/15"

@@ -35,4 +35,22 @@ describe("NotificationList", () => {
     await userEvent.click(screen.getByRole("button", { name: BUTTON_NAME }));
     expect(onOpen).toHaveBeenCalledWith(items[0]);
   });
+
+  it("appends the metadata reason to the message", () => {
+    const disputed = [
+      {
+        id: "n2",
+        type: "payment_disputed",
+        contractId: "c1",
+        installmentId: "i1",
+        metadata: { reason: "valor divergente" },
+        readAt: null,
+        createdAt: "2026-06-13T12:00:00.000Z",
+      },
+    ];
+    render(<NotificationList items={disputed} onOpen={vi.fn()} />);
+    expect(
+      screen.getByText("Pagamento contestado: valor divergente")
+    ).toBeInTheDocument();
+  });
 });
