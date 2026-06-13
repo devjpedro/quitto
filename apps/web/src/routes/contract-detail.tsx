@@ -1,3 +1,4 @@
+import { isOverdue } from "@quitto/shared";
 import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
@@ -7,28 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractQuery } from "@/hooks/use-contracts";
-import { formatBRL, formatISODateBR } from "@/lib/format";
-
-const ROLE_LABELS: Record<string, string> = {
-  buyer: "comprador",
-  seller: "vendedor",
-  neutral: "neutro",
-  owner: "dono",
-  counterparty: "contraparte",
-};
-
-const PAID_STATUSES = new Set(["paid", "confirmed", "awaiting_confirmation"]);
+import { formatBRL, formatISODateBR, todayISO } from "@/lib/format";
+import { ROLE_LABEL } from "@/lib/labels";
 
 const STAT_TONE_CLASS: Record<"green" | "red" | "default", string> = {
   green: "text-emerald-700",
   red: "text-red-700",
   default: "text-foreground",
 };
-
-function isOverdue(dueDate: string, status: string): boolean {
-  const today = new Date().toISOString().slice(0, 10);
-  return !PAID_STATUSES.has(status) && dueDate < today;
-}
 
 function Stat({
   label,
@@ -88,7 +75,7 @@ export function ContractDetailPage() {
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge tone="brand">
-            {ROLE_LABELS[contract.ownerRole] ?? contract.ownerRole}
+            {ROLE_LABEL[contract.ownerRole] ?? contract.ownerRole}
           </Badge>
           <ContractStatusBadge status={contract.status} />
           {overdue ? (
@@ -139,7 +126,7 @@ export function ContractDetailPage() {
               <span className="font-medium text-foreground">
                 {p.displayName}
               </span>
-              <Badge tone="neutral">{ROLE_LABELS[p.role] ?? p.role}</Badge>
+              <Badge tone="neutral">{ROLE_LABEL[p.role] ?? p.role}</Badge>
               {p.linked ? null : (
                 <span className="text-muted-foreground text-xs">
                   não vinculado
@@ -156,7 +143,7 @@ export function ContractDetailPage() {
         </h2>
         <ul className="flex flex-col gap-2">
           {installments.map((it) => {
-            const late = isOverdue(it.dueDate, it.status);
+            const late = isOverdue(it.dueDate, it.status, todayISO());
             return (
               <li key={it.id}>
                 <button

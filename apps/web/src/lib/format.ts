@@ -46,6 +46,11 @@ export function parseBRDateToISO(br: string): string | null {
   return `${y}-${mo}-${d}`;
 }
 
+/** Today's date as ISO (YYYY-MM-DD), UTC. */
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /** Inserts the BR date mask (dd/mm/yyyy) into raw typed digits. */
 export function maskBRDate(value: string): string {
   const d = value.replace(NON_DIGITS_RE, "").slice(0, 8);
