@@ -54,7 +54,21 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
         );
       return { count: row?.value ?? 0 };
     },
-    { response: t.Object({ count: t.Number() }) }
+    { response: t.Object({ count: t.Integer() }) }
+  )
+  .post(
+    "/notifications/read-all",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      await db
+        .update(notification)
+        .set({ readAt: new Date() })
+        .where(
+          and(eq(notification.userId, user.id), isNull(notification.readAt))
+        );
+      return { ok: true as const };
+    },
+    { response: t.Object({ ok: t.Literal(true) }) }
   )
   .post(
     "/notifications/:id/read",
@@ -76,18 +90,4 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
       params: t.Object({ id: t.String() }),
       response: t.Object({ ok: t.Literal(true) }),
     }
-  )
-  .post(
-    "/notifications/read-all",
-    async ({ request }) => {
-      const { user } = await requireAuth(request.headers);
-      await db
-        .update(notification)
-        .set({ readAt: new Date() })
-        .where(
-          and(eq(notification.userId, user.id), isNull(notification.readAt))
-        );
-      return { ok: true as const };
-    },
-    { response: t.Object({ ok: t.Literal(true) }) }
   );

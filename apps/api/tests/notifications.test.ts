@@ -316,12 +316,13 @@ describe("endpoints de notificação", () => {
     await seed(id, contractId, null);
     await seed(id, contractId, null);
 
-    await app.handle(
+    const ra = await app.handle(
       new Request("http://localhost/api/notifications/read-all", {
         method: "POST",
         headers: { cookie },
       })
     );
+    expect(ra.status).toBe(200);
     const count = await (
       await app.handle(
         new Request("http://localhost/api/notifications/unread-count", {
