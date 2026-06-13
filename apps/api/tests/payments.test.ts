@@ -197,6 +197,7 @@ describe.if(configured)("GET installment detail", () => {
     // timeline expõe ator e metadata (motivo/arquivo) para o drawer da 3b
     expect(body.events[0].type).toBe("proof_submitted");
     expect(typeof body.events[0].actorUserId).toBe("string");
+    expect(typeof body.events[0].actorName).toBe("string");
     expect(body.events[0].metadata.fileName).toBe("c.pdf");
   });
 });
