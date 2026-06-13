@@ -4,9 +4,20 @@ import {
   type ContractStatus,
   INSTALLMENT_STATUS,
   type InstallmentStatus,
+  NOTIFICATION_TYPE,
+  type NotificationType,
   OWNER_ROLE,
   PARTICIPANT_ROLE,
 } from "@quitto/shared";
+import {
+  AlertTriangle,
+  BellRing,
+  CheckCircle2,
+  Clock,
+  FileCheck,
+  type LucideIcon,
+  XCircle,
+} from "lucide-react";
 
 type Tone = "success" | "warning" | "danger" | "neutral" | "brand";
 
@@ -56,3 +67,23 @@ export const AUDIT_TYPE_LABEL: Record<string, string> = {
   [AUDIT_TYPE.paymentDisputed]: "Pagamento contestado",
   [AUDIT_TYPE.installmentPaid]: "Parcela paga",
 };
+
+export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
+  [NOTIFICATION_TYPE.proofSubmitted]: "Novo comprovante para confirmar",
+  [NOTIFICATION_TYPE.paymentConfirmed]: "Pagamento confirmado",
+  [NOTIFICATION_TYPE.paymentDisputed]: "Pagamento contestado",
+  [NOTIFICATION_TYPE.installmentPaid]: "Parcela marcada como paga",
+  [NOTIFICATION_TYPE.installmentDueSoon]: "Parcela vencendo em breve",
+  [NOTIFICATION_TYPE.installmentOverdue]: "Parcela vencida",
+};
+
+export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
+  [NOTIFICATION_TYPE.proofSubmitted]: FileCheck,
+  [NOTIFICATION_TYPE.paymentConfirmed]: CheckCircle2,
+  [NOTIFICATION_TYPE.paymentDisputed]: XCircle,
+  [NOTIFICATION_TYPE.installmentPaid]: CheckCircle2,
+  [NOTIFICATION_TYPE.installmentDueSoon]: Clock,
+  [NOTIFICATION_TYPE.installmentOverdue]: AlertTriangle,
+};
+
+export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;

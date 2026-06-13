@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: { children: React.ReactNode }) => (
@@ -10,13 +10,41 @@ vi.mock("@/lib/auth-client", () => ({
   useSession: () => ({ data: { user: { name: "Test" } } }),
   signOut: vi.fn(),
 }));
+vi.mock("@/components/notification-bell", () => ({
+  NotificationBell: () => <div data-testid="bell" />,
+}));
+vi.mock("@/hooks/use-notifications", () => ({
+  useUnreadCountQuery: vi.fn(() => ({ data: { count: 0 } })),
+}));
 
+import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { AppSidebar } from "../src/components/app-sidebar";
 
 describe("AppSidebar", () => {
+  beforeEach(() => {
+    vi.mocked(useUnreadCountQuery).mockReturnValue({
+      data: { count: 0 },
+    } as unknown as ReturnType<typeof useUnreadCountQuery>);
+  });
+
   it("renders Dashboard and Contratos nav items", () => {
     render(<AppSidebar />);
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Contratos").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders the Notificações nav item", () => {
+    render(<AppSidebar />);
+    expect(screen.getAllByText("Notificações").length).toBeGreaterThanOrEqual(
+      1
+    );
+  });
+
+  it("shows the unread badge on Notificações when count > 0", () => {
+    vi.mocked(useUnreadCountQuery).mockReturnValue({
+      data: { count: 3 },
+    } as unknown as ReturnType<typeof useUnreadCountQuery>);
+    render(<AppSidebar />);
+    expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
   });
 });

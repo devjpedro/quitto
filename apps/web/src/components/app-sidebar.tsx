@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, LogOut } from "lucide-react";
+import { Bell, FileText, LayoutDashboard, LogOut } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
+import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { signOut, useSession } from "@/lib/auth-client";
+import { formatUnreadCount } from "@/lib/format";
 
 async function handleSignOut() {
   await signOut();
@@ -10,10 +13,13 @@ async function handleSignOut() {
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contracts", label: "Contratos", icon: FileText },
+  { to: "/notifications", label: "Notificações", icon: Bell },
 ] as const;
 
 export function AppSidebar() {
   const { data: session } = useSession();
+  const { data: counter } = useUnreadCountQuery();
+  const unread = counter?.count ?? 0;
 
   return (
     <>
@@ -24,10 +30,11 @@ export function AppSidebar() {
           fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
         }}
       >
-        <div className="border-border border-b px-5 py-5">
+        <div className="flex items-center justify-between border-border border-b px-5 py-4">
           <span className="select-none font-extrabold text-lg text-primary tracking-tight">
             ◷ Quitto
           </span>
+          <NotificationBell />
         </div>
 
         <nav
@@ -47,6 +54,14 @@ export function AppSidebar() {
                   className="size-4 shrink-0 opacity-60 transition-opacity group-hover:opacity-80 [.active_&]:opacity-100"
                 />
                 {item.label}
+                {item.to === "/notifications" && unread > 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-semibold text-[10px] text-primary-foreground leading-5"
+                  >
+                    {formatUnreadCount(unread)}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -67,7 +82,7 @@ export function AppSidebar() {
         </div>
       </aside>
 
-      {/* Mobile bottom-nav — icon + visible label for discoverability, sm:hidden keeps it off desktop */}
+      {/* Mobile bottom-nav */}
       <nav
         className="fixed inset-x-0 bottom-0 z-30 flex border-border border-t bg-card sm:hidden"
         style={{
@@ -78,11 +93,19 @@ export function AppSidebar() {
           const Icon = item.icon;
           return (
             <Link
-              className="flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors [&.active]:text-primary"
+              className="relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors [&.active]:text-primary"
               key={item.to}
               to={item.to}
             >
               <Icon aria-hidden="true" className="size-5 shrink-0" />
+              {item.to === "/notifications" && unread > 0 ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-2 left-1/2 ml-2 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1 font-semibold text-[10px] text-primary-foreground leading-none ring-1 ring-background"
+                >
+                  {formatUnreadCount(unread)}
+                </span>
+              ) : null}
               <span className="mt-0.5 text-[10px] leading-none">
                 {item.label}
               </span>

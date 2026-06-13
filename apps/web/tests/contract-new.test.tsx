@@ -54,6 +54,7 @@ describe("ContractNewPage (wizard)", () => {
       expect(navigate).toHaveBeenCalledWith({
         to: "/contracts/$id",
         params: { id: "new-id" },
+        search: { installment: undefined },
       })
     );
   });

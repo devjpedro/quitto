@@ -282,7 +282,11 @@ export function ContractNewPage() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     const created = await createMutation.mutateAsync(values);
-    navigate({ to: "/contracts/$id", params: { id: created.id } });
+    navigate({
+      to: "/contracts/$id",
+      params: { id: created.id },
+      search: { installment: undefined },
+    });
   });
 
   function setMode(next: ScheduleMode) {

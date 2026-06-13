@@ -6,7 +6,10 @@ const useContractQuery = vi.fn();
 vi.mock("../src/hooks/use-contracts", () => ({
   useContractQuery: () => useContractQuery(),
 }));
-vi.mock("@tanstack/react-router", () => ({ useParams: () => ({ id: "c1" }) }));
+vi.mock("@tanstack/react-router", () => ({
+  useParams: () => ({ id: "c1" }),
+  useSearch: () => ({ installment: undefined }),
+}));
 
 import { ContractDetailPage } from "../src/routes/contract-detail";
 
