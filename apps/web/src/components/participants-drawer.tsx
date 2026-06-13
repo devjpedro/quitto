@@ -5,6 +5,7 @@ import {
   INVITABLE_PARTICIPANT_ROLES,
   PARTICIPANT_ROLE,
 } from "@quitto/shared";
+import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { AddParticipantForm } from "@/components/add-participant-form";
@@ -12,6 +13,12 @@ import { CopyButton } from "@/components/copy-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -160,7 +167,7 @@ function ParticipantItem({
   const isOwner = participant.isOwner;
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 shadow-xs">
+    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs">
       <div className="flex items-center gap-2">
         <span
           aria-hidden="true"
@@ -169,6 +176,39 @@ function ParticipantItem({
         <span className="font-medium text-foreground text-sm">
           {participant.displayName}
         </span>
+        {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
+        {participant.linked ? null : <Badge tone="neutral">pendente</Badge>}
+        {isOwner ? null : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={`Ações de ${participant.displayName}`}
+              asChild
+            >
+              <Button
+                className="ml-auto"
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {participant.linked ? null : (
+                <DropdownMenuItem onSelect={() => setInviting((v) => !v)}>
+                  Convidar
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>
+                Remover participante
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`role-${participant.id}`}>Papel</Label>
         <Select
           disabled={updateRole.isPending}
           onValueChange={(role) =>
@@ -181,7 +221,7 @@ function ParticipantItem({
         >
           <SelectTrigger
             aria-label={`Papel de ${participant.displayName}`}
-            className="h-7 w-auto gap-1 px-2 text-xs"
+            id={`role-${participant.id}`}
           >
             <SelectValue />
           </SelectTrigger>
@@ -193,29 +233,6 @@ function ParticipantItem({
             ))}
           </SelectContent>
         </Select>
-        {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
-        <div className="ml-auto flex gap-1">
-          {participant.linked || isOwner ? null : (
-            <Button
-              onClick={() => setInviting((v) => !v)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              Convidar
-            </Button>
-          )}
-          {isOwner ? null : (
-            <Button
-              onClick={() => setConfirmOpen(true)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              Remover participante
-            </Button>
-          )}
-        </div>
       </div>
 
       {inviting && !participant.linked ? (
