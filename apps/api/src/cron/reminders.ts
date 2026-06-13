@@ -4,12 +4,16 @@ import { contract, installment, participant } from "../db/schema";
 import { createNotifications, resolvePayerUserIds } from "../lib/notifications";
 import { computeReminders, type ReminderInput } from "../lib/reminders";
 
-/** YYYY-MM-DD de hoje (UTC). */
+/** Today's date as YYYY-MM-DD (UTC). Note: near local midnight this can drift one day from the user's wall-clock date; acceptable for a daily sweep since dedupeKey prevents duplicates and the next run self-corrects. */
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Loads open installments of active contracts, resolves payer, persists reminders. Idempotent via dedupeKey. */
+/**
+ * Loads open installments of active contracts, resolves payer, persists reminders. Idempotent via dedupeKey.
+ *
+ * @returns the number of reminders COMPUTED for today (requested). Idempotent inserts via dedupeKey may persist fewer rows on repeat runs.
+ */
 export async function runReminderSweep(): Promise<number> {
   const today = todayISO();
 
@@ -38,6 +42,7 @@ export async function runReminderSweep(): Promise<number> {
       people.filter((p) => p.contractId === c.id),
       c.ownerId
     );
+    // A contract has at most one payer (buyer slot is unique per contract; the owner only inherits payer when no buyer is linked), so taking the first element is deterministic.
     payerByContract.set(c.id, set.values().next().value ?? null);
   }
 
