@@ -12,6 +12,7 @@ import { ContractDetailPage } from "../src/routes/contract-detail";
 
 const REMAINING_BRL = /R\$\s?74\.400,00/;
 const INSTALLMENT_BRL = /R\$\s?2\.000,00/;
+const MANAGE_BUTTON = /gerenciar/i;
 
 const detail = {
   role: "owner",
@@ -62,6 +63,25 @@ describe("ContractDetailPage", () => {
     expect(screen.getAllByText(INSTALLMENT_BRL).length).toBeGreaterThanOrEqual(
       2
     );
+  });
+
+  it("mostra o botão Gerenciar para o dono", () => {
+    useContractQuery.mockReturnValue({ data: detail, isPending: false });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.getByRole("button", { name: MANAGE_BUTTON })
+    ).toBeInTheDocument();
+  });
+
+  it("não mostra Gerenciar para não-dono", () => {
+    useContractQuery.mockReturnValue({
+      data: { ...detail, role: "viewer" },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.queryByRole("button", { name: MANAGE_BUTTON })
+    ).not.toBeInTheDocument();
   });
 
   it("shows a skeleton while pending", () => {
