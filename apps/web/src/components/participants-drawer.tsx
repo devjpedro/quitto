@@ -193,7 +193,7 @@ export function ParticipantsDrawer({
   return (
     <Sheet onOpenChange={(o) => !o && onClose()} open={open}>
       <SheetContent title="Participantes">
-        <div className="flex flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="-mx-1 flex flex-1 flex-col gap-4 overflow-y-auto px-1">
           <ul className="flex flex-col gap-2">
             {participants.map((p) => (
               <ParticipantItem
