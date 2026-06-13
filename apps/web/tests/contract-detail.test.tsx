@@ -102,12 +102,14 @@ describe("ContractDetailPage", () => {
   it("exibe o badge 'Dono' para o participante com isOwner=true", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
     renderWithProviders(<ContractDetailPage />);
-    expect(screen.getByText("Dono")).toBeInTheDocument();
+    // header badge + participants list badge — ambos rendem "Dono"
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(1);
   });
 
   it("não exibe o badge 'Dono' para participante sem isOwner", () => {
     const detailNoOwner = {
       ...detail,
+      isOwner: false,
       participants: [
         {
           id: "p1",
@@ -127,5 +129,25 @@ describe("ContractDetailPage", () => {
     useContractQuery.mockReturnValue({ data: undefined, isPending: true });
     const { container } = renderWithProviders(<ContractDetailPage />);
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
+  });
+
+  it("mostra o papel do usuário logado na badge (vendedor)", () => {
+    useContractQuery.mockReturnValue({
+      data: { ...detail, role: "seller", isOwner: false },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText("vendedor")).toBeInTheDocument();
+  });
+
+  it("mostra papel + tag Dono no header quando isOwner", () => {
+    useContractQuery.mockReturnValue({
+      data: { ...detail, role: "buyer", isOwner: true },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText("comprador")).toBeInTheDocument();
+    // "Dono" aparece no header e na lista de participantes; basta existir >=1
+    expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(1);
   });
 });
