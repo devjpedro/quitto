@@ -83,7 +83,7 @@
       "name": "@quitto/e2e",
       "version": "0.0.0",
       "devDependencies": {
-        "@playwright/test": "latest",
+        "@playwright/test": "^1.60.0",
       },
     },
     "packages/shared": {
