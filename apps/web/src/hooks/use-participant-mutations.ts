@@ -2,6 +2,7 @@ import type { AddParticipantInput, CreateInviteInput } from "@quitto/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
+import { FEEDBACK } from "@/lib/feedback";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 
 /** Papéis atribuíveis a um participante (owner não é selecionável). */
@@ -12,6 +13,7 @@ export function useAddParticipantMutation(contractId: string) {
   return useMutation({
     mutationFn: (body: AddParticipantInput) =>
       unwrap(api.api.contracts({ id: contractId }).participants.post(body)),
+    meta: { successMessage: FEEDBACK.participantAdded },
     onSuccess: () => invalidateContractViews(qc, contractId),
   });
 }
@@ -26,6 +28,7 @@ export function useRemoveParticipantMutation(contractId: string) {
           .participants({ participantId })
           .delete()
       ),
+    meta: { successMessage: FEEDBACK.participantRemoved },
     onSuccess: () => invalidateContractViews(qc, contractId),
   });
 }
@@ -46,6 +49,7 @@ export function useUpdateParticipantRoleMutation(contractId: string) {
           .participants({ participantId })
           .patch({ role })
       ),
+    meta: { successMessage: FEEDBACK.roleUpdated },
     onSuccess: () => invalidateContractViews(qc, contractId),
   });
 }
@@ -65,5 +69,6 @@ export function useCreateInviteMutation(contractId: string) {
           .participants({ participantId })
           .invite.post(body)
       ),
+    meta: { successMessage: FEEDBACK.inviteCreated },
   });
 }

@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ApiError, unwrap } from "@/lib/api-client";
+import { FEEDBACK } from "@/lib/feedback";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import type { ProofMime } from "@/lib/proof";
 import { queryKeys } from "@/lib/query-keys";
@@ -52,6 +53,7 @@ export function useSubmitProofMutation(
         })
       );
     },
+    meta: { successMessage: FEEDBACK.proofSubmitted },
     onSuccess: () => invalidatePayment(qc, contractId, installmentId),
   });
 }
@@ -64,6 +66,7 @@ export function useConfirmPaymentMutation(
   return useMutation({
     mutationFn: () =>
       unwrap(api.api.installments({ installmentId }).confirm.post()),
+    meta: { successMessage: FEEDBACK.paymentConfirmed },
     onSuccess: () => invalidatePayment(qc, contractId, installmentId),
   });
 }
@@ -80,6 +83,7 @@ export function useDisputePaymentMutation(
           .installments({ installmentId })
           .dispute.post(reason ? { reason } : {})
       ),
+    meta: { successMessage: FEEDBACK.paymentDisputed },
     onSuccess: () => invalidatePayment(qc, contractId, installmentId),
   });
 }
@@ -89,6 +93,7 @@ export function useMarkPaidMutation(contractId: string, installmentId: string) {
   return useMutation({
     mutationFn: () =>
       unwrap(api.api.installments({ installmentId })["mark-paid"].post()),
+    meta: { successMessage: FEEDBACK.installmentPaid },
     onSuccess: () => invalidatePayment(qc, contractId, installmentId),
   });
 }
