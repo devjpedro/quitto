@@ -2,6 +2,7 @@ import {
   type ContractStatus,
   DIRECTION,
   type InstallmentStatus,
+  todayISO,
 } from "@quitto/shared";
 import { eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
@@ -31,7 +32,7 @@ function slotFor(
 export const dashboardModule = new Elysia({ prefix: "/api" }).get(
   "/dashboard",
   async ({ request }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
     const { user } = await requireAuth(request.headers);
 
     const linked = await db

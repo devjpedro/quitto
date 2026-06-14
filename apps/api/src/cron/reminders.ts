@@ -1,14 +1,9 @@
-import { CONTRACT_STATUS, INSTALLMENT_STATUS } from "@quitto/shared";
+import { CONTRACT_STATUS, INSTALLMENT_STATUS, todayISO } from "@quitto/shared";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { createNotifications, resolvePayerUserIds } from "../lib/notifications";
 import { computeReminders, type ReminderInput } from "../lib/reminders";
-
-/** Today's date as YYYY-MM-DD (UTC). Note: near local midnight this can drift one day from the user's wall-clock date; acceptable for a daily sweep since dedupeKey prevents duplicates and the next run self-corrects. */
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /**
  * Loads open installments of active contracts, resolves payer, persists reminders. Idempotent via dedupeKey.

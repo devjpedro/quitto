@@ -1,3 +1,5 @@
+import { todayISO as todayISOShared } from "@quitto/shared";
+
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -47,9 +49,9 @@ export function parseBRDateToISO(br: string): string | null {
   return `${y}-${mo}-${d}`;
 }
 
-/** Today's date as ISO (YYYY-MM-DD), UTC. */
+/** Today's date as ISO (YYYY-MM-DD) in the app's timezone. */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayISOShared();
 }
 
 /**

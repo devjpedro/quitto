@@ -1,3 +1,4 @@
+import { todayISO } from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -129,7 +130,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .select()
         .from(installment)
         .where(inArray(installment.contractId, ids));
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISO();
 
       return rows.map((c) => {
         const contractInstallments = items.filter(
@@ -187,7 +188,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .select()
         .from(participant)
         .where(eq(participant.contractId, params.id));
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayISO();
       const progress = computeProgress(items, today);
 
       return {

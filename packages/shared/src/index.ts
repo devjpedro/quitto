@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
 
+// biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
+export { APP_TIME_ZONE, isoDateInTimeZone, todayISO } from "./date";
 export type {
   AuditType,
   ContractStatus,
@@ -10,7 +12,6 @@ export type {
   OwnerRole,
   ParticipantRole,
 } from "./domain";
-// biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
 export {
   AUDIT_TYPE,
   CONTRACT_STATUS,
