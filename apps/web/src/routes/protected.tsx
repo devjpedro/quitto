@@ -1,13 +1,9 @@
-import {
-  createRoute,
-  Outlet,
-  redirect,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { ErrorBoundary } from "react-error-boundary";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ErrorFallback } from "@/components/error-fallback";
-import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/lib/query";
+import { requireSession } from "@/lib/require-session";
 import { rootRoute } from "./root";
 
 function ProtectedLayout() {
@@ -27,11 +23,6 @@ function ProtectedLayout() {
 export const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
-  beforeLoad: async ({ location }) => {
-    const { data } = await authClient.getSession();
-    if (!data) {
-      throw redirect({ to: "/login", search: { redirect: location.href } });
-    }
-  },
+  beforeLoad: ({ location }) => requireSession(queryClient, location.href),
   component: ProtectedLayout,
 });

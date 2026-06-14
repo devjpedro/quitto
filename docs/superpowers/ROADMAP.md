@@ -26,7 +26,10 @@ Spec de referência: `docs/superpowers/specs/2026-06-09-quitto-design.md`.
 | **6a** | Dashboard (visão geral) | A pagar/receber, atrasadas, contratos ativos, próximas parcelas com deep-link pro drawer. Endpoint de agregação `GET /api/dashboard`. | `plans/2026-06-13-fase-6a-dashboard.md` ✅ **concluído** (merge em `develop`; suite verde — `computeDashboard` puro + endpoint escopado ao usuário + página com stats/upcoming/empty state e deep-link, identidade B2) |
 | **6b** | Recibo/quitação + export | Recibo/quitação em PDF, export CSV/PDF dos contratos/parcelas. | `plans/2026-06-13-fase-6b-documentos.md` ✅ **concluído** (merge em `develop`; suite verde — modelo puro + CSV + renderer pdfkit, endpoints recibo/extrato com RBAC e 409, download por âncora same-origin, layout B2) |
 | **6c** | LGPD | Exportar dados do usuário, excluir conta. | `plans/2026-06-13-fase-6c-lgpd.md` ✅ **concluído** (merge em `develop`; suite verde — export JSON, exclusão com cascata + purga R2 best-effort, comprovante de terceiro preservado/anonimizado, frase de confirmação) |
-| **7** | Polimento | A11y/WCAG 2.2 AA, Lighthouse 100, E2E Playwright dos fluxos críticos. | a escrever |
+| **7a** | Hardening de frontend | Sessão via `/api/me` cacheado (sem `getSession` por navegação, token não exposto ao JS), coerência de cache (`invalidateContractViews` em todas as escritas → dashboard sempre atualizado). | `plans/2026-06-13-fase-7a-frontend-hardening.md` ✅ **concluído** (merge em `develop`; suite verde — 154 testes web, typecheck/lint nos 3 pacotes) |
+| **7b** | E2E (Playwright) | Testes ponta a ponta dos fluxos críticos (login, criar contrato, pagar/confirmar parcela, convite). | a escrever |
+| **7c** | A11y/WCAG 2.2 AA | Auditoria e correções de acessibilidade nos fluxos principais. | a escrever |
+| **7d** | Performance / Lighthouse | Lighthouse 100, code-splitting, otimização de carregamento. | a escrever |
 
 ## Fluxo de execução de cada fase
 

@@ -1,5 +1,6 @@
 /** Structured query keys — no global invalidation; target the affected key. */
 export const queryKeys = {
+  me: ["me"] as const,
   dashboard: ["dashboard"] as const,
   contracts: ["contracts"] as const,
   contract: (id: string) => ["contract", id] as const,

@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ApiError, unwrap } from "@/lib/api-client";
+import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import type { ProofMime } from "@/lib/proof";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -14,8 +15,7 @@ function invalidatePayment(
   installmentId: string
 ) {
   qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) });
-  qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
-  qc.invalidateQueries({ queryKey: queryKeys.contracts });
+  invalidateContractViews(qc, contractId);
 }
 
 /** presign → PUT (direto no storage) → confirm. `file.type` já foi validado em validateProofFile. */

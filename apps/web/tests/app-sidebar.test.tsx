@@ -6,9 +6,11 @@ vi.mock("@tanstack/react-router", () => ({
     <a {...props}>{children}</a>
   ),
 }));
-vi.mock("@/lib/auth-client", () => ({
-  useSession: () => ({ data: { user: { name: "Test" } } }),
-  signOut: vi.fn(),
+vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn() }));
+vi.mock("@/hooks/use-me", () => ({
+  useMeQuery: () => ({
+    data: { id: "u1", name: "Test", email: "t@e.com", image: null },
+  }),
 }));
 vi.mock("@/components/notification-bell", () => ({
   NotificationBell: () => <div data-testid="bell" />,
@@ -38,6 +40,11 @@ describe("AppSidebar", () => {
     expect(screen.getAllByText("Notificações").length).toBeGreaterThanOrEqual(
       1
     );
+  });
+
+  it("shows the user name from useMeQuery in the footer", () => {
+    render(<AppSidebar />);
+    expect(screen.getByText("Test")).toBeInTheDocument();
   });
 
   it("shows the unread badge on Notificações when count > 0", () => {

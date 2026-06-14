@@ -5,16 +5,14 @@ import type {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
-import { queryKeys } from "@/lib/query-keys";
+import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 
 export function useCreateContractMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateContractInput) =>
       unwrap(api.api.contracts.post(input)),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.contracts });
-    },
+    onSuccess: () => invalidateContractViews(qc),
   });
 }
 
@@ -31,11 +29,6 @@ export function useUpdateInstallmentMutation(contractId: string) {
           .installments({ installmentId: vars.installmentId })
           .patch(vars.body)
       ),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
-      // Editing an installment changes the contract's aggregate progress
-      // (paidCents/percent/overdueCount/totalCents) shown in the contracts list.
-      qc.invalidateQueries({ queryKey: queryKeys.contracts });
-    },
+    onSuccess: () => invalidateContractViews(qc, contractId),
   });
 }

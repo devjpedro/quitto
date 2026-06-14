@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
+import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { queryKeys } from "@/lib/query-keys";
 
 /** GET /api/invites/:token — preview do convite (título, papel, emailMatches). */
@@ -24,7 +25,7 @@ export function useAcceptInviteMutation(token: string) {
   return useMutation({
     mutationFn: () => unwrap(api.api.invites({ token }).accept.post()),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.contracts });
+      invalidateContractViews(qc);
       qc.invalidateQueries({ queryKey: queryKeys.myInvites });
     },
   });
