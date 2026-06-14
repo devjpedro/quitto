@@ -67,11 +67,13 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
         </p>
       </div>
 
-      {overdue ? (
-        <Badge tone="danger">{contract.overdueCount} atrasadas</Badge>
-      ) : (
-        <Badge tone="success">em dia</Badge>
-      )}
+      <div>
+        {overdue ? (
+          <Badge tone="danger">{contract.overdueCount} atrasadas</Badge>
+        ) : (
+          <Badge tone="success">em dia</Badge>
+        )}
+      </div>
     </Link>
   );
 }

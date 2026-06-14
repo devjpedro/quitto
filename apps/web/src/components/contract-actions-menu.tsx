@@ -50,12 +50,12 @@ export function ContractActionsMenu({
           <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>
             {isOwner ? (
               <>
-                <Trash2 aria-hidden="true" />
+                <Trash2 aria-hidden="true" className="size-4" />
                 Excluir contrato
               </>
             ) : (
               <>
-                <LogOut aria-hidden="true" />
+                <LogOut aria-hidden="true" className="size-4" />
                 Sair do contrato
               </>
             )}
