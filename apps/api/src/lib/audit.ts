@@ -1,11 +1,8 @@
+import type { AuditType } from "@quitto/shared";
 import type { db } from "../db/client";
 import { auditEvent } from "../db/schema";
 
-export type AuditType =
-  | "proof_submitted"
-  | "payment_confirmed"
-  | "payment_disputed"
-  | "installment_paid";
+export type { AuditType } from "@quitto/shared";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
