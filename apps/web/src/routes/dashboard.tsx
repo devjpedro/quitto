@@ -90,7 +90,10 @@ function UpcomingRow({
 
 function DashboardEmptyState() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-border border-dashed bg-card/50 p-12 text-center">
+    <div
+      className="flex flex-col items-center gap-4 rounded-xl border border-border border-dashed bg-card/50 p-12 text-center"
+      data-testid="dashboard-empty-state"
+    >
       <div
         aria-hidden="true"
         className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
@@ -183,6 +186,7 @@ export function DashboardPage() {
         />
         <Stat
           label="Contratos ativos"
+          testId="stat-active"
           value={String(data.activeContractsCount)}
         />
       </section>
