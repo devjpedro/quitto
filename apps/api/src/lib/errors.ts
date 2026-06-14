@@ -43,6 +43,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message = "Conflito") {
+    super({ code: "CONFLICT", httpStatus: 409, message });
+  }
+}
+
 export function toErrorBody(error: AppError): ApiErrorBody {
   return {
     error: { code: error.code, message: error.message, details: error.details },
