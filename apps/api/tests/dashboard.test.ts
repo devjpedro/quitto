@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { app } from "../src/app";
 import {
   computeDashboard,
   type DashboardContractInput,
@@ -151,5 +152,79 @@ describe("computeDashboard", () => {
     );
     expect(out.activeContractsCount).toBe(1);
     expect(out.completedContractsCount).toBe(1);
+  });
+});
+
+async function signUpCookie(tag: string): Promise<string> {
+  const res = await app.handle(
+    new Request("http://localhost/api/auth/sign-up/email", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "T",
+        email: `${tag}-${Date.now()}@e.com`,
+        password: "password123",
+      }),
+    })
+  );
+  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
+}
+
+async function createContract(cookie: string, requiresConfirmation: boolean) {
+  const res = await app.handle(
+    new Request("http://localhost/api/contracts", {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({
+        title: "C",
+        ownerRole: "buyer",
+        requiresConfirmation,
+        schedule: {
+          mode: "auto",
+          totalAmountCents: 3000,
+          installmentsCount: 3,
+          firstDueDate: "2026-07-10",
+        },
+      }),
+    })
+  );
+  return (await res.json()).id as string;
+}
+
+describe("GET /api/dashboard", () => {
+  it("requires auth", async () => {
+    const res = await app.handle(new Request("http://localhost/api/dashboard"));
+    expect(res.status).toBe(401);
+  });
+
+  it("aggregates only the caller's contracts (buyer → a pagar)", async () => {
+    const cookie = await signUpCookie("dash-buyer");
+    await createContract(cookie, false); // ownerRole buyer, 3 parcelas de 1000 = 3000
+
+    const res = await app.handle(
+      new Request("http://localhost/api/dashboard", { headers: { cookie } })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.toPayCents).toBe(3000);
+    expect(body.toReceiveCents).toBe(0);
+    expect(body.activeContractsCount).toBe(1);
+    expect(body.upcoming.length).toBeGreaterThan(0);
+    expect(body.upcoming[0].direction).toBe("pay");
+  });
+
+  it("does not leak other users' contracts", async () => {
+    const other = await signUpCookie("dash-other");
+    await createContract(other, false);
+    const mine = await signUpCookie("dash-mine");
+
+    const res = await app.handle(
+      new Request("http://localhost/api/dashboard", {
+        headers: { cookie: mine },
+      })
+    );
+    const body = await res.json();
+    expect(body.toPayCents).toBe(0);
+    expect(body.activeContractsCount).toBe(0);
   });
 });
