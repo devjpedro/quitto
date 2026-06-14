@@ -7,8 +7,9 @@ import {
   Settings,
 } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
+import { useMeQuery } from "@/hooks/use-me";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
-import { signOut, useSession } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 import { formatUnreadCount } from "@/lib/format";
 
 async function handleSignOut() {
@@ -24,7 +25,7 @@ const NAV = [
 ] as const;
 
 export function AppSidebar() {
-  const { data: session } = useSession();
+  const { data: me } = useMeQuery();
   const { data: counter } = useUnreadCountQuery();
   const unread = counter?.count ?? 0;
 
@@ -76,7 +77,7 @@ export function AppSidebar() {
 
         <div className="mt-auto border-border border-t p-3">
           <div className="mb-1 truncate px-1 font-medium text-foreground text-sm leading-tight">
-            {session?.user.name ?? "..."}
+            {me?.name ?? "..."}
           </div>
           <button
             className="flex items-center gap-1.5 rounded-md px-1 py-1 text-muted-foreground text-xs transition-colors hover:text-destructive"
