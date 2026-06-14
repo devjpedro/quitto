@@ -24,14 +24,16 @@
     "better-auth": "latest",
     "drizzle-orm": "latest",
     "elysia": "latest",
+    "pdfkit": "^0.19.1",
     "postgres": "latest",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@elysiajs/eden": "latest",
-    "drizzle-kit": "latest",
-    "typescript": "latest",
     "@biomejs/biome": "latest",
-    "@types/bun": "latest"
+    "@elysiajs/eden": "latest",
+    "@types/bun": "latest",
+    "@types/pdfkit": "^0.17.6",
+    "drizzle-kit": "latest",
+    "typescript": "latest"
   }
 }

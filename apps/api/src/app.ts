@@ -5,6 +5,7 @@ import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { contractsModule } from "./modules/contracts";
 import { dashboardModule } from "./modules/dashboard";
+import { documentsModule } from "./modules/documents";
 import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
 import { notificationsModule } from "./modules/notifications";
@@ -31,6 +32,7 @@ export function buildApp() {
     .use(meModule)
     .use(contractsModule)
     .use(paymentsModule)
+    .use(documentsModule)
     .use(participantsModule)
     .use(invitesModule)
     .use(notificationsModule)

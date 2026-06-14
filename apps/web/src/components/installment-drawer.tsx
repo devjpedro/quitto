@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   INSTALLMENT_STATUS,
+  type InstallmentStatus,
   type UpdateInstallmentInput,
   updateInstallmentSchema,
 } from "@quitto/shared";
@@ -16,6 +17,7 @@ import { DateField } from "@/components/date-field";
 import { PaymentActions } from "@/components/payment-actions";
 import { ProofList, type ProofView } from "@/components/proof-list";
 import { ProofUpload } from "@/components/proof-upload";
+import { ReceiptLink } from "@/components/receipt-link";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -178,6 +180,11 @@ function InstallmentDetailView({
         installmentId={installment.id}
         requiresConfirmation={requiresConfirmation}
         status={status}
+      />
+
+      <ReceiptLink
+        installmentId={installment.id}
+        status={status as InstallmentStatus}
       />
 
       <section className="flex flex-col gap-2">

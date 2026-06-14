@@ -2,6 +2,7 @@ import { isOverdue } from "@quitto/shared";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
+import { ExportMenu } from "@/components/export-menu";
 import { InstallmentDrawer } from "@/components/installment-drawer";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
 import { StatusBadge } from "@/components/status-badge";
@@ -94,9 +95,12 @@ export function ContractDetailPage() {
   return (
     <div className="mx-auto max-w-3xl p-6">
       <header className="mb-6">
-        <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
-          {contract.title}
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="min-w-0 font-bold font-display text-2xl text-foreground tracking-tight">
+            {contract.title}
+          </h1>
+          <ExportMenu contractId={id} />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge tone="neutral">{ROLE_LABEL[data.role] ?? data.role}</Badge>
           {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}

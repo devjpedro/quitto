@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { addDays, addMonths, toISODate } from "../src/lib/dates";
+import {
+  addDays,
+  addMonths,
+  formatISODateBR,
+  toISODate,
+} from "../src/lib/dates";
 
 describe("addDays", () => {
   it("adds days within a month", () => {
@@ -28,5 +33,11 @@ describe("addMonths", () => {
 
   it("rolls over the year", () => {
     expect(toISODate(addMonths("2026-12-10", 2))).toBe("2027-02-10");
+  });
+});
+
+describe("formatISODateBR", () => {
+  it("formats ISO as DD/MM/YYYY", () => {
+    expect(formatISODateBR("2026-07-10")).toBe("10/07/2026");
   });
 });
