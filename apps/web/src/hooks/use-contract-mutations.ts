@@ -32,3 +32,20 @@ export function useUpdateInstallmentMutation(contractId: string) {
     onSuccess: () => invalidateContractViews(qc, contractId),
   });
 }
+
+export function useDeleteContractMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (contractId: string) =>
+      unwrap(api.api.contracts({ id: contractId }).delete()),
+    onSuccess: () => invalidateContractViews(qc),
+  });
+}
+
+export function useLeaveContractMutation(contractId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.api.contracts({ id: contractId }).me.delete()),
+    onSuccess: () => invalidateContractViews(qc),
+  });
+}

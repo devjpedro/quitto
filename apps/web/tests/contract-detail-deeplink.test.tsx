@@ -30,6 +30,9 @@ vi.mock("@/components/installment-drawer", () => ({
 vi.mock("@/components/participants-drawer", () => ({
   ParticipantsDrawer: () => null,
 }));
+vi.mock("@/components/contract-actions-menu", () => ({
+  ContractActionsMenu: () => null,
+}));
 
 vi.mock("@/hooks/use-contracts", () => ({
   useContractQuery: () => ({

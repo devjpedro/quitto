@@ -2,12 +2,13 @@ import { todayISO } from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { contract, installment, participant } from "../db/schema";
+import { contract, installment, participant, proof } from "../db/schema";
 import { getCapabilities, getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
 import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
+import { deleteObjects } from "../lib/storage";
 
 const ScheduleAuto = t.Object({
   mode: t.Literal("auto"),
@@ -309,5 +310,58 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         dueDate: t.Optional(t.String({ format: "date" })),
       }),
       response: t.Object({ id: t.String() }),
+    }
+  )
+  .delete(
+    "/contracts/:id",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const { isOwner } = await getContractRole(user.id, params.id); // 404 se sem acesso
+      if (!isOwner) {
+        throw new ForbiddenError("Apenas o dono exclui o contrato");
+      }
+
+      const keys = await db
+        .select({ objectKey: proof.objectKey })
+        .from(proof)
+        .innerJoin(installment, eq(proof.installmentId, installment.id))
+        .where(eq(installment.contractId, params.id));
+
+      await db.delete(contract).where(eq(contract.id, params.id)); // cascata cuida do resto
+
+      try {
+        await deleteObjects(keys.map((k) => k.objectKey));
+      } catch (err) {
+        console.error("[delete-contract] falha ao purgar R2", err);
+      }
+
+      return { ok: true as const };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      response: t.Object({ ok: t.Literal(true) }),
+    }
+  )
+  .delete(
+    "/contracts/:id/me",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const { isOwner } = await getContractRole(user.id, params.id); // 404 se sem acesso
+      if (isOwner) {
+        throw new ForbiddenError("O dono não pode sair; exclua o contrato");
+      }
+      await db
+        .delete(participant)
+        .where(
+          and(
+            eq(participant.contractId, params.id),
+            eq(participant.linkedUserId, user.id)
+          )
+        );
+      return { ok: true as const };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      response: t.Object({ ok: t.Literal(true) }),
     }
   );

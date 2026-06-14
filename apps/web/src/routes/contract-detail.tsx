@@ -1,6 +1,7 @@
 import { isOverdue } from "@quitto/shared";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { ContractActionsMenu } from "@/components/contract-actions-menu";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { ExportMenu } from "@/components/export-menu";
 import { InstallmentDrawer } from "@/components/installment-drawer";
@@ -99,7 +100,10 @@ export function ContractDetailPage() {
           <h1 className="min-w-0 font-bold font-display text-2xl text-foreground tracking-tight">
             {contract.title}
           </h1>
-          <ExportMenu contractId={id} />
+          <div className="flex shrink-0 items-center gap-1">
+            <ExportMenu contractId={id} />
+            <ContractActionsMenu contractId={id} isOwner={isOwner} />
+          </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge tone="neutral">{ROLE_LABEL[data.role] ?? data.role}</Badge>
