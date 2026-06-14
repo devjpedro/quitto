@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { splitAmount } from "../src/lib/money";
+import { formatCentsBRL, splitAmount } from "../src/lib/money";
 
 describe("splitAmount", () => {
   it("splits evenly when divisible", () => {
@@ -19,5 +19,14 @@ describe("splitAmount", () => {
 
   it("throws for non-positive count", () => {
     expect(() => splitAmount(1000, 0)).toThrow();
+  });
+});
+
+describe("formatCentsBRL", () => {
+  it("formats integer cents as BRL with a normal space", () => {
+    expect(formatCentsBRL(123_456)).toBe("R$ 1.234,56");
+  });
+  it("formats zero", () => {
+    expect(formatCentsBRL(0)).toBe("R$ 0,00");
   });
 });
