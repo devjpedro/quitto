@@ -7,6 +7,7 @@ import {
   type ModelInstallment,
   type ModelParticipant,
 } from "../src/lib/documents/model";
+import { renderReceiptPdf, renderStatementPdf } from "../src/lib/documents/pdf";
 
 const contract: ModelContract = {
   title: "Aluguel",
@@ -115,5 +116,39 @@ describe("buildStatementCsv", () => {
     );
     const lines = buildStatementCsv(model).trim().split("\r\n");
     expect(lines[1]).toBe("1;10/07/2026;R$ 10,00;Pendente;");
+  });
+});
+
+const PDF_MAGIC = "%PDF";
+
+describe("pdf renderer", () => {
+  it("renders a receipt PDF", async () => {
+    const model = buildReceiptModel(
+      contract,
+      mkInst({
+        sequence: 1,
+        status: "paid",
+        paidAt: "2026-07-12",
+        amountCents: 5000,
+      }),
+      participants
+    );
+    const bytes = await renderReceiptPdf(model);
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
+  });
+
+  it("renders a statement PDF (with quittance seal when fully paid)", async () => {
+    const model = buildStatementModel(
+      contract,
+      [
+        mkInst({ sequence: 1, status: "paid", paidAt: "2026-07-01" }),
+        mkInst({ sequence: 2, status: "paid", paidAt: "2026-07-12" }),
+      ],
+      participants,
+      today
+    );
+    const bytes = await renderStatementPdf(model);
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
   });
 });

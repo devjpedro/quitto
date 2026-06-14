@@ -31,5 +31,13 @@ export const DOC_TEXT = {
     `Contrato "${title}" integralmente quitado em ${date}.`,
   generatedAt: (date: string) =>
     `Documento gerado eletronicamente pelo Quitto em ${date}.`,
+  installmentOfTotal: (n: number, total: number) => `Parcela ${n} de ${total}`,
+  progressSummary: (
+    total: string,
+    paid: string,
+    percent: number,
+    overdue: number
+  ) =>
+    `Total ${total}   .   Pago ${paid}   .   ${percent}% quitado   .   ${overdue} atrasada(s)`,
   tableHeaders: ["Nº", "Vencimento", "Valor", "Status", "Pago em"] as const,
 } as const;
