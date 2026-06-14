@@ -32,7 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { capitalize, formatBRL } from "@/lib/format";
-import { ROLE_LABEL } from "@/lib/labels";
+import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
@@ -74,7 +74,7 @@ function StepBasic() {
         <Input
           className="mt-1.5"
           id="title"
-          placeholder="Ex.: Apartamento do irmão"
+          placeholder={PLACEHOLDER.contractTitle}
           {...register("title")}
         />
         <FieldError name="title" />
@@ -180,7 +180,7 @@ function CustomSchedule() {
     <div className="flex flex-col gap-3">
       {fields.map((field, index) => (
         <div
-          className="flex items-end gap-2 rounded-lg border border-border bg-card p-3"
+          className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end"
           key={field.id}
         >
           <div className="flex-1">
@@ -199,6 +199,7 @@ function CustomSchedule() {
           </div>
           <Button
             aria-label="Remover parcela"
+            className="self-end"
             onClick={() => remove(index)}
             size="icon"
             type="button"
@@ -309,7 +310,7 @@ export function ContractNewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
+    <div className="mx-auto max-w-2xl p-4 sm:p-6">
       <div className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Novo contrato

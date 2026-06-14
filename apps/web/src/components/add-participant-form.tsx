@@ -21,7 +21,7 @@ import {
   useAddParticipantMutation,
   useCreateInviteMutation,
 } from "@/hooks/use-participant-mutations";
-import { ROLE_LABEL } from "@/lib/labels";
+import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
 
 const formSchema = z.object({
   displayName: z
@@ -85,7 +85,7 @@ export function AddParticipantForm({
         <Label htmlFor="participant-name">Nome</Label>
         <Input
           id="participant-name"
-          placeholder="Ex.: Irmão"
+          placeholder={PLACEHOLDER.participantName}
           {...form.register("displayName")}
         />
         {form.formState.errors.displayName ? (

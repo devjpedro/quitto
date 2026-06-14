@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PLACEHOLDER } from "../src/lib/labels";
 import { renderWithProviders } from "./test-utils";
 
 const NAME_LABEL = /nome/i;
@@ -85,6 +86,16 @@ describe("AddParticipantForm", () => {
       body: { email: "maria@example.com" },
     });
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("tok-new"));
+  });
+
+  it("usa um placeholder de nome genérico", () => {
+    renderWithProviders(
+      <AddParticipantForm {...DEFAULT_PROPS} onDone={vi.fn()} />
+    );
+    expect(screen.getByLabelText(NAME_LABEL)).toHaveAttribute(
+      "placeholder",
+      PLACEHOLDER.participantName
+    );
   });
 
   it("bloqueia envio com nome vazio", async () => {

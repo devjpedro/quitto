@@ -1,6 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PLACEHOLDER } from "../src/lib/labels";
 import { renderWithProviders } from "./test-utils";
 
 const navigate = vi.fn();
@@ -31,6 +32,14 @@ describe("ContractNewPage (wizard)", () => {
     navigate.mockReset();
     mutateAsync.mockReset();
     mutateAsync.mockResolvedValue({ id: "new-id" });
+  });
+
+  it("usa um placeholder de título genérico", () => {
+    renderWithProviders(<ContractNewPage />);
+    expect(screen.getByLabelText(TITLE)).toHaveAttribute(
+      "placeholder",
+      PLACEHOLDER.contractTitle
+    );
   });
 
   it("blocks advancing from step 1 when title is empty", async () => {

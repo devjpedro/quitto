@@ -168,12 +168,12 @@ function ParticipantItem({
 
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           aria-hidden="true"
           className={`size-2 shrink-0 rounded-full ${participant.linked ? "bg-primary" : "bg-muted-foreground/40"}`}
         />
-        <span className="font-medium text-foreground text-sm">
+        <span className="min-w-0 font-medium text-foreground text-sm">
           {participant.displayName}
         </span>
         {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}

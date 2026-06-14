@@ -30,6 +30,8 @@ Spec de referência: `docs/superpowers/specs/2026-06-09-quitto-design.md`.
 | **7b** | E2E (Playwright) | Testes ponta a ponta dos fluxos críticos (login, criar contrato, pagar/confirmar parcela, convite). | a escrever |
 | **7c** | A11y/WCAG 2.2 AA | Auditoria e correções de acessibilidade nos fluxos principais. | a escrever |
 | **7d** | Performance / Lighthouse | Lighthouse 100, code-splitting, otimização de carregamento. | a escrever |
+| **7e** | UX polish (mobile) | Placeholders genéricos centralizados (`PLACEHOLDER`); responsivo a 320px (valor da parcela sem quebra, parcelas custom empilhadas, header de notificações, item de participante com wrap, padding mobile-first). | `plans/2026-06-14-fase-7e-ux-polish.md` ✅ **concluído** (merge em `develop`; suite verde — 157 testes web, typecheck/lint nos 3 pacotes) |
+| **7f** | Excluir / sair de contrato | `DELETE /api/contracts/:id` (owner, cascata + purga R2 best-effort) e `DELETE /api/contracts/:id/me` (não-dono sai); menu de ações no detalhe com confirmação. | `plans/2026-06-14-fase-7f-excluir-sair-contrato.md` (a executar) |
 
 ## Fluxo de execução de cada fase
 

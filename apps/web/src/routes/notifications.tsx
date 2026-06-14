@@ -28,14 +28,14 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-bold font-display text-2xl tracking-tight">
+    <div className="mx-auto max-w-2xl p-4 sm:p-6">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="font-bold font-display text-xl tracking-tight sm:text-2xl">
           Notificações
         </h1>
         {!isPending && (data?.length ?? 0) > 0 ? (
           <button
-            className="rounded px-2 py-1 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="self-start rounded px-2 py-1 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:self-auto"
             onClick={() => markAll.mutate()}
             type="button"
           >

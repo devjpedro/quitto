@@ -71,7 +71,7 @@ export function ContractDetailPage() {
 
   if (isPending || !data) {
     return (
-      <div className="mx-auto max-w-3xl p-6">
+      <div className="mx-auto max-w-3xl p-4 sm:p-6">
         <Skeleton className="mb-3 h-9 w-1/2" />
         <Skeleton className="mb-6 h-4 w-32" />
         <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -93,7 +93,7 @@ export function ContractDetailPage() {
   const selected = installments.find((it) => it.id === openId) ?? null;
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <header className="mb-6">
         <div className="flex items-start justify-between gap-3">
           <h1 className="min-w-0 font-bold font-display text-2xl text-foreground tracking-tight">
@@ -157,12 +157,15 @@ export function ContractDetailPage() {
         </div>
         <ul className="flex flex-col gap-2">
           {participants.map((p) => (
-            <li className="flex items-center gap-3 text-sm" key={p.id}>
+            <li
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+              key={p.id}
+            >
               <span
                 aria-hidden="true"
                 className={`size-2 shrink-0 rounded-full ${p.linked ? "bg-primary" : "bg-muted-foreground/40"}`}
               />
-              <span className="font-medium text-foreground">
+              <span className="min-w-0 font-medium text-foreground">
                 {p.displayName}
               </span>
               <Badge tone="neutral">{ROLE_LABEL[p.role] ?? p.role}</Badge>
@@ -200,10 +203,10 @@ export function ContractDetailPage() {
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
                     {it.sequence}
                   </span>
-                  <span className="flex-1 text-foreground text-sm tabular-nums">
+                  <span className="min-w-0 flex-1 truncate text-foreground text-sm tabular-nums">
                     {formatISODateBR(it.dueDate)}
                   </span>
-                  <span className="font-display font-semibold text-foreground text-sm tabular-nums">
+                  <span className="shrink-0 whitespace-nowrap font-display font-semibold text-foreground text-sm tabular-nums">
                     {formatBRL(it.amountCents)}
                   </span>
                   <StatusBadge overdue={late} status={it.status} />
