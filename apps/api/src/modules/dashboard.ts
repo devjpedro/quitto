@@ -1,4 +1,9 @@
-import type { ContractStatus, InstallmentStatus } from "@quitto/shared";
+import {
+  type ContractStatus,
+  DIRECTION,
+  type InstallmentStatus,
+  todayISO,
+} from "@quitto/shared";
 import { eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -27,7 +32,7 @@ function slotFor(
 export const dashboardModule = new Elysia({ prefix: "/api" }).get(
   "/dashboard",
   async ({ request }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
     const { user } = await requireAuth(request.headers);
 
     const linked = await db
@@ -93,7 +98,10 @@ export const dashboardModule = new Elysia({ prefix: "/api" }).get(
           sequence: t.Integer(),
           amountCents: t.Integer(),
           dueDate: t.String(),
-          direction: t.Union([t.Literal("pay"), t.Literal("receive")]),
+          direction: t.Union([
+            t.Literal(DIRECTION.pay),
+            t.Literal(DIRECTION.receive),
+          ]),
           isOverdue: t.Boolean(),
         })
       ),

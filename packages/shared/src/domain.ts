@@ -37,6 +37,16 @@ export const OWNER_ROLES = Object.values(OWNER_ROLE) as [
   ...OwnerRole[],
 ];
 
+export const DIRECTION = {
+  pay: "pay",
+  receive: "receive",
+} as const;
+export type Direction = (typeof DIRECTION)[keyof typeof DIRECTION];
+export const DIRECTIONS = Object.values(DIRECTION) as [
+  Direction,
+  ...Direction[],
+];
+
 export const PARTICIPANT_ROLE = {
   owner: "owner",
   buyer: "buyer",

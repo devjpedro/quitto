@@ -1,6 +1,8 @@
 import {
   CONTRACT_STATUS,
   type ContractStatus,
+  DIRECTION,
+  type Direction,
   type InstallmentStatus,
   isOverdue,
   isPaidStatus,
@@ -26,7 +28,7 @@ export interface UpcomingInstallment {
   amountCents: number;
   contractId: string;
   contractTitle: string;
-  direction: "pay" | "receive";
+  direction: Direction;
   dueDate: string;
   id: string;
   isOverdue: boolean;
@@ -69,13 +71,14 @@ export function computeDashboard(
     } else if (c.status === CONTRACT_STATUS.completed) {
       summary.completedContractsCount += 1;
     }
-    const direction = c.userSlot === "buyer" ? "pay" : "receive";
+    const direction: Direction =
+      c.userSlot === "buyer" ? DIRECTION.pay : DIRECTION.receive;
 
     for (const it of c.installments) {
       if (isPaidStatus(it.status)) {
         continue;
       }
-      if (direction === "pay") {
+      if (direction === DIRECTION.pay) {
         summary.toPayCents += it.amountCents;
       } else {
         summary.toReceiveCents += it.amountCents;
