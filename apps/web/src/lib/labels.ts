@@ -94,3 +94,10 @@ export const DIRECTION_LABEL: Record<Direction, string> = {
   [DIRECTION.pay]: "a pagar",
   [DIRECTION.receive]: "a receber",
 };
+
+/** Exemplos genéricos de placeholder de formulário (sem nomes/relações pessoais). */
+export const PLACEHOLDER = {
+  contractTitle: "Ex.: Aluguel do apartamento",
+  participantName: "Ex.: Maria",
+  disputeReason: "Ex.: valor diferente do combinado",
+} as const;

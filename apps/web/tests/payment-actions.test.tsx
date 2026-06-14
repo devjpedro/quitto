@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PLACEHOLDER } from "../src/lib/labels";
 import { renderWithProviders } from "./test-utils";
 
 const CONFIRM_TRIGGER = /confirmar pagamento/i;
@@ -72,6 +73,24 @@ describe("PaymentActions", () => {
     await userEvent.click(screen.getByRole("button", { name: DISPUTE_SUBMIT }));
     await waitFor(() =>
       expect(disputeFn).toHaveBeenCalledWith("Não recebi o valor")
+    );
+  });
+
+  it("usa um placeholder de motivo genérico na contestação", async () => {
+    renderWithProviders(
+      <PaymentActions
+        {...base}
+        capabilities={{ isPayer: false, isApprover: true }}
+        requiresConfirmation
+        status="awaiting_confirmation"
+      />
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: DISPUTE_TRIGGER })
+    );
+    expect(screen.getByLabelText(REASON_LABEL)).toHaveAttribute(
+      "placeholder",
+      PLACEHOLDER.disputeReason
     );
   });
 

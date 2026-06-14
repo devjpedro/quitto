@@ -32,7 +32,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { capitalize, formatBRL } from "@/lib/format";
-import { ROLE_LABEL } from "@/lib/labels";
+import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
@@ -74,7 +74,7 @@ function StepBasic() {
         <Input
           className="mt-1.5"
           id="title"
-          placeholder="Ex.: Apartamento do irmão"
+          placeholder={PLACEHOLDER.contractTitle}
           {...register("title")}
         />
         <FieldError name="title" />

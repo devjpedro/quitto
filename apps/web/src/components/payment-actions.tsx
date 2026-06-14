@@ -9,6 +9,7 @@ import {
   useMarkPaidMutation,
 } from "@/hooks/use-payment-mutations";
 import { availableActions, type Capabilities } from "@/lib/installment-actions";
+import { PLACEHOLDER } from "@/lib/labels";
 
 export function PaymentActions({
   contractId,
@@ -139,7 +140,7 @@ export function PaymentActions({
               id="dispute-reason"
               maxLength={500}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ex.: não identifiquei o valor na conta"
+              placeholder={PLACEHOLDER.disputeReason}
               value={reason}
             />
           </div>
