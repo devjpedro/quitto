@@ -1,6 +1,6 @@
 import { isOverdue } from "@quitto/shared";
-import { useParams, useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { InstallmentDrawer } from "@/components/installment-drawer";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
@@ -45,15 +45,18 @@ function Stat({
 export function ContractDetailPage() {
   const { id } = useParams({ from: "/protected/contracts/$id" });
   const { installment } = useSearch({ from: "/protected/contracts/$id" });
+  const navigate = useNavigate();
   const { data, isPending } = useContractQuery(id);
-  const [openId, setOpenId] = useState<string | null>(installment ?? null);
-
-  useEffect(() => {
-    if (installment) {
-      setOpenId(installment);
-    }
-  }, [installment]);
   const [managing, setManaging] = useState(false);
+
+  function openInstallment(installmentId: string | undefined) {
+    navigate({
+      to: "/contracts/$id",
+      params: { id },
+      search: { installment: installmentId },
+      replace: true,
+    });
+  }
 
   if (isPending || !data) {
     return (
@@ -76,7 +79,7 @@ export function ContractDetailPage() {
   const { contract, progress, installments, participants } = data;
   const isOwner = data.isOwner;
   const overdue = progress.overdueCount > 0;
-  const selected = installments.find((it) => it.id === openId) ?? null;
+  const selected = installments.find((it) => it.id === installment) ?? null;
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -173,7 +176,7 @@ export function ContractDetailPage() {
               <li key={it.id}>
                 <button
                   className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                  onClick={() => setOpenId(it.id)}
+                  onClick={() => openInstallment(it.id)}
                   type="button"
                 >
                   <span
@@ -202,8 +205,8 @@ export function ContractDetailPage() {
         contractId={contract.id}
         installment={selected}
         isOwner={data.isOwner}
-        onClose={() => setOpenId(null)}
-        open={openId !== null}
+        onClose={() => openInstallment(undefined)}
+        open={selected !== null}
         requiresConfirmation={contract.requiresConfirmation}
       />
 
