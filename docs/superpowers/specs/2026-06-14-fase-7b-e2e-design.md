@@ -73,6 +73,21 @@ se um teste falhar, é bug real ou seletor — investigar (não é TDD red-green
 8. **dashboard.spec** — empty-state → CTA `/contracts/new`; após contratos + pagamento os stats
    batem; item de "próximas parcelas" deep-linka pro drawer.
 
+## Ambiente de execução
+
+- **CI = efêmero dentro do job, nunca prod.** O job sobe Postgres + MinIO descartáveis (como o
+  `verify` atual), migra um banco zerado, sobe api+web no runner e o Playwright bate em
+  `localhost:3001`. Tudo nasce/morre no job. Apontar para Neon/R2 de produção é proibido (o E2E
+  exclui conta/contrato e sobe arquivos — destrutivo). Sem staging persistente.
+- **Local:** o mesmo, via o `docker-compose` (pg+minio) + `webServer` do Playwright.
+
+## Sem endpoints de teste (decisão)
+
+Não há rota de seed/reset/login-bypass. O setup usa os **endpoints reais** com o cookie do
+usuário (mantém o E2E honesto e evita backdoor — coerente com segurança-by-design). O isolamento
+vem do usuário-novo-por-teste. Casos que a API pública não monta (convite **expirado**, **cron** de
+lembretes) ficam cobertos no unit/integração, não no E2E.
+
 ## CI (fronteira com a trilha CD)
 
 A 7b entrega o harness + specs **rodáveis localmente** e a **documentação do job de E2E**
