@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { buildStatementCsv } from "../src/lib/documents/csv";
 import {
   buildReceiptModel,
   buildStatementModel,
@@ -74,5 +75,45 @@ describe("buildReceiptModel", () => {
     expect(model.amountCents).toBe(5000);
     expect(model.paidAt).toBe("2026-07-12");
     expect(model.parties.payerName).toBe("Comprador");
+  });
+});
+
+describe("buildStatementCsv", () => {
+  it("emits a semicolon-delimited statement with a header and BR values", () => {
+    const model = buildStatementModel(
+      contract,
+      [
+        mkInst({
+          sequence: 1,
+          amountCents: 123_456,
+          status: "paid",
+          paidAt: "2026-07-12",
+        }),
+      ],
+      participants,
+      today
+    );
+    const csv = buildStatementCsv(model);
+    const lines = csv.trim().split("\r\n");
+    expect(lines[0]).toBe("Nº;Vencimento;Valor;Status;Pago em");
+    expect(lines[1]).toBe("1;10/07/2026;R$ 1.234,56;Paga;12/07/2026");
+  });
+
+  it("leaves 'Pago em' empty for unpaid rows", () => {
+    const model = buildStatementModel(
+      contract,
+      [
+        mkInst({
+          sequence: 1,
+          amountCents: 1000,
+          status: "pending",
+          paidAt: null,
+        }),
+      ],
+      participants,
+      today
+    );
+    const lines = buildStatementCsv(model).trim().split("\r\n");
+    expect(lines[1]).toBe("1;10/07/2026;R$ 10,00;Pendente;");
   });
 });
