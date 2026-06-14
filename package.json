@@ -2,7 +2,7 @@
   "name": "quitto",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": ["apps/*", "packages/*", "e2e"],
   "packageManager": "bun@1.2.0",
   "scripts": {
     "build": "turbo run build",
