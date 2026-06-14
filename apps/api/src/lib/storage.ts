@@ -1,4 +1,5 @@
 import {
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
   type HeadObjectCommandOutput,
@@ -83,4 +84,23 @@ export function presignDownload(objectKey: string): Promise<string> {
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
     { expiresIn: 300 }
   );
+}
+
+const DELETE_BATCH = 1000;
+
+/** Deletes objects from the bucket in batches. No-op for an empty list. Throws on a request-level AWS error; per-key failures (returned in the response `Errors`) are not surfaced. */
+export async function deleteObjects(keys: string[]): Promise<void> {
+  if (keys.length === 0) {
+    return;
+  }
+  const { client: c, bucket } = s3();
+  for (let i = 0; i < keys.length; i += DELETE_BATCH) {
+    const batch = keys.slice(i, i + DELETE_BATCH);
+    await c.send(
+      new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: { Objects: batch.map((Key) => ({ Key })) },
+      })
+    );
+  }
 }

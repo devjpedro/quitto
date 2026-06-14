@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { env } from "../src/env";
-import { headObject, presignUpload } from "../src/lib/storage";
+import { deleteObjects, headObject, presignUpload } from "../src/lib/storage";
 
 const configured = Boolean(env.S3_ENDPOINT && env.S3_BUCKET);
 
@@ -36,5 +36,25 @@ describe.if(configured)("storage (MinIO)", () => {
     expect(put.ok).toBe(true);
     const head = await headObject(key);
     expect(head.ContentLength).toBe(5);
+  });
+
+  it("removes objects from the bucket", async () => {
+    const key = `test/lgpd/${crypto.randomUUID()}.txt`;
+    const url = await presignUpload(key, "text/plain");
+    await fetch(url, {
+      method: "PUT",
+      headers: { "content-type": "text/plain" },
+      body: "x",
+    });
+    await headObject(key);
+    await deleteObjects([key]);
+    await expect(headObject(key)).rejects.toBeDefined();
+  });
+});
+
+describe("deleteObjects", () => {
+  it("is a no-op for an empty list", async () => {
+    await deleteObjects([]);
+    expect(true).toBe(true);
   });
 });
