@@ -21,14 +21,19 @@ function Stat({
   value,
   hint,
   tone = "default",
+  testId,
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "green" | "red" | "default";
+  testId?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
+    <div
+      className="rounded-xl border border-border bg-card p-3.5 shadow-xs"
+      data-testid={testId}
+    >
       <p className="font-medium text-[0.7rem] text-muted-foreground uppercase tracking-wide">
         {label}
       </p>
@@ -165,7 +170,11 @@ export function DashboardPage() {
           tone={data.toReceiveCents > 0 ? "green" : "default"}
           value={formatBRL(data.toReceiveCents)}
         />
-        <Stat label="A pagar" value={formatBRL(data.toPayCents)} />
+        <Stat
+          label="A pagar"
+          testId="stat-to-pay"
+          value={formatBRL(data.toPayCents)}
+        />
         <Stat
           hint={overdue ? formatBRL(data.overdueCents) : undefined}
           label="Atrasadas"
