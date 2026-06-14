@@ -34,6 +34,7 @@ import { NotificationBell } from "../src/components/notification-bell";
 const BELL_BUTTON = /notificações/i;
 const ITEM_BUTTON = /parcela vencida/i;
 const MARK_ALL = /marcar todas como lidas/i;
+const SEE_ALL = /ver todas/i;
 
 describe("NotificationBell", () => {
   beforeEach(() => {
@@ -66,5 +67,12 @@ describe("NotificationBell", () => {
     await userEvent.click(screen.getByRole("button", { name: BELL_BUTTON }));
     await userEvent.click(screen.getByRole("button", { name: MARK_ALL }));
     expect(markAll).toHaveBeenCalled();
+  });
+
+  it("navigates to the full page from the footer", async () => {
+    render(<NotificationBell />);
+    await userEvent.click(screen.getByRole("button", { name: BELL_BUTTON }));
+    await userEvent.click(screen.getByRole("button", { name: SEE_ALL }));
+    expect(navigate).toHaveBeenCalledWith({ to: "/notifications" });
   });
 });

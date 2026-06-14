@@ -15,6 +15,8 @@ import {
 import { formatUnreadCount } from "@/lib/format";
 import { type NotificationItem, NotificationList } from "./notification-list";
 
+const POPOVER_LIMIT = 8;
+
 export function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -23,6 +25,7 @@ export function NotificationBell() {
   const markRead = useMarkReadMutation();
   const markAll = useMarkAllReadMutation();
   const count = counter?.count ?? 0;
+  const recent = (items ?? []).slice(0, POPOVER_LIMIT);
 
   function handleOpen(item: NotificationItem) {
     setOpen(false);
@@ -34,6 +37,11 @@ export function NotificationBell() {
       params: { id: item.contractId },
       search: { installment: item.installmentId ?? undefined },
     });
+  }
+
+  function handleSeeAll() {
+    setOpen(false);
+    navigate({ to: "/notifications" });
   }
 
   return (
@@ -71,8 +79,19 @@ export function NotificationBell() {
           ) : null}
         </div>
         <div className="max-h-96 overflow-y-auto">
-          <NotificationList items={items ?? []} onOpen={handleOpen} />
+          <NotificationList items={recent} onOpen={handleOpen} />
         </div>
+        {recent.length > 0 ? (
+          <div className="border-border border-t p-1.5">
+            <button
+              className="w-full rounded-lg px-3 py-2 text-center font-medium text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              onClick={handleSeeAll}
+              type="button"
+            >
+              Ver todas as notificações
+            </button>
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   );
