@@ -1,4 +1,8 @@
-import type { ContractStatus, InstallmentStatus } from "@quitto/shared";
+import {
+  type ContractStatus,
+  DIRECTION,
+  type InstallmentStatus,
+} from "@quitto/shared";
 import { eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -93,7 +97,10 @@ export const dashboardModule = new Elysia({ prefix: "/api" }).get(
           sequence: t.Integer(),
           amountCents: t.Integer(),
           dueDate: t.String(),
-          direction: t.Union([t.Literal("pay"), t.Literal("receive")]),
+          direction: t.Union([
+            t.Literal(DIRECTION.pay),
+            t.Literal(DIRECTION.receive),
+          ]),
           isOverdue: t.Boolean(),
         })
       ),

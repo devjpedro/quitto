@@ -2,6 +2,8 @@ import {
   AUDIT_TYPE,
   CONTRACT_STATUS,
   type ContractStatus,
+  DIRECTION,
+  type Direction,
   INSTALLMENT_STATUS,
   type InstallmentStatus,
   NOTIFICATION_TYPE,
@@ -88,7 +90,7 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
 
 export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;
 
-export const DIRECTION_LABEL: Record<"pay" | "receive", string> = {
-  pay: "a pagar",
-  receive: "a receber",
+export const DIRECTION_LABEL: Record<Direction, string> = {
+  [DIRECTION.pay]: "a pagar",
+  [DIRECTION.receive]: "a receber",
 };

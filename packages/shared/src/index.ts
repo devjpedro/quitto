@@ -4,6 +4,7 @@ import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
 export type {
   AuditType,
   ContractStatus,
+  Direction,
   InstallmentStatus,
   NotificationType,
   OwnerRole,
@@ -14,6 +15,8 @@ export {
   AUDIT_TYPE,
   CONTRACT_STATUS,
   CONTRACT_STATUSES,
+  DIRECTION,
+  DIRECTIONS,
   INSTALLMENT_STATUS,
   INSTALLMENT_STATUSES,
   isOverdue,
