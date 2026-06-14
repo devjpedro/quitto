@@ -64,6 +64,13 @@
       "when": 1781380094592,
       "tag": "0008_round_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781449145418,
+      "tag": "0009_flawless_colossus",
+      "breakpoints": true
     }
   ]
 }

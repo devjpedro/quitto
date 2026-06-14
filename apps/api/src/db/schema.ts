@@ -153,9 +153,9 @@ export const proof = pgTable(
     fileName: text("file_name").notNull(),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
-    uploadedBy: text("uploaded_by")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    uploadedBy: text("uploaded_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("proof_installment_id_idx").on(table.installmentId)]
