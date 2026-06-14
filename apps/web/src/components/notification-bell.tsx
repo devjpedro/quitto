@@ -78,7 +78,7 @@ export function NotificationBell() {
             </button>
           ) : null}
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="scrollbar-thin max-h-96 overflow-y-auto">
           <NotificationList items={recent} onOpen={handleOpen} />
         </div>
         {recent.length > 0 ? (
