@@ -21,14 +21,19 @@ function Stat({
   value,
   hint,
   tone = "default",
+  testId,
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "green" | "red" | "default";
+  testId?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
+    <div
+      className="rounded-xl border border-border bg-card p-3.5 shadow-xs"
+      data-testid={testId}
+    >
       <p className="font-medium text-[0.7rem] text-muted-foreground uppercase tracking-wide">
         {label}
       </p>
@@ -85,7 +90,10 @@ function UpcomingRow({
 
 function DashboardEmptyState() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-border border-dashed bg-card/50 p-12 text-center">
+    <div
+      className="flex flex-col items-center gap-4 rounded-xl border border-border border-dashed bg-card/50 p-12 text-center"
+      data-testid="dashboard-empty-state"
+    >
       <div
         aria-hidden="true"
         className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
@@ -165,7 +173,11 @@ export function DashboardPage() {
           tone={data.toReceiveCents > 0 ? "green" : "default"}
           value={formatBRL(data.toReceiveCents)}
         />
-        <Stat label="A pagar" value={formatBRL(data.toPayCents)} />
+        <Stat
+          label="A pagar"
+          testId="stat-to-pay"
+          value={formatBRL(data.toPayCents)}
+        />
         <Stat
           hint={overdue ? formatBRL(data.overdueCents) : undefined}
           label="Atrasadas"
@@ -174,6 +186,7 @@ export function DashboardPage() {
         />
         <Stat
           label="Contratos ativos"
+          testId="stat-active"
           value={String(data.activeContractsCount)}
         />
       </section>
