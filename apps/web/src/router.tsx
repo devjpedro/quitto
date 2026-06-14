@@ -15,6 +15,7 @@ import { LoginPage } from "./routes/login";
 import { NotificationsPage } from "./routes/notifications";
 import { protectedRoute } from "./routes/protected";
 import { rootRoute } from "./routes/root";
+import { SettingsPage } from "./routes/settings";
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -64,6 +65,12 @@ const notificationsRoute = createRoute({
   component: NotificationsPage,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/settings",
+  component: SettingsPage,
+});
+
 const acceptInviteRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/invites/$token",
@@ -79,6 +86,7 @@ const routeTree = rootRoute.addChildren([
     contractDetailRoute,
     acceptInviteRoute,
     notificationsRoute,
+    settingsRoute,
   ]),
 ]);
 
