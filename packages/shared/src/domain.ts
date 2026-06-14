@@ -61,6 +61,7 @@ export const AUDIT_TYPE = {
   paymentConfirmed: "payment_confirmed",
   paymentDisputed: "payment_disputed",
   installmentPaid: "installment_paid",
+  participantLeft: "participant_left",
 } as const;
 export type AuditType = (typeof AUDIT_TYPE)[keyof typeof AUDIT_TYPE];
 
@@ -71,6 +72,7 @@ export const NOTIFICATION_TYPE = {
   installmentPaid: "installment_paid",
   installmentDueSoon: "installment_due_soon",
   installmentOverdue: "installment_overdue",
+  participantLeft: "participant_left",
 } as const;
 export type NotificationType =
   (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];

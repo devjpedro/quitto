@@ -18,6 +18,7 @@ import {
   Clock,
   FileCheck,
   type LucideIcon,
+  UserMinus,
   XCircle,
 } from "lucide-react";
 
@@ -68,6 +69,7 @@ export const AUDIT_TYPE_LABEL: Record<string, string> = {
   [AUDIT_TYPE.paymentConfirmed]: "Pagamento confirmado",
   [AUDIT_TYPE.paymentDisputed]: "Pagamento contestado",
   [AUDIT_TYPE.installmentPaid]: "Parcela paga",
+  [AUDIT_TYPE.participantLeft]: "Participante saiu",
 };
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
@@ -77,6 +79,7 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.installmentPaid]: "Parcela marcada como paga",
   [NOTIFICATION_TYPE.installmentDueSoon]: "Parcela vencendo em breve",
   [NOTIFICATION_TYPE.installmentOverdue]: "Parcela vencida",
+  [NOTIFICATION_TYPE.participantLeft]: "Participante saiu do contrato",
 };
 
 export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
@@ -86,6 +89,7 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
   [NOTIFICATION_TYPE.installmentPaid]: CheckCircle2,
   [NOTIFICATION_TYPE.installmentDueSoon]: Clock,
   [NOTIFICATION_TYPE.installmentOverdue]: AlertTriangle,
+  [NOTIFICATION_TYPE.participantLeft]: UserMinus,
 };
 
 export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;

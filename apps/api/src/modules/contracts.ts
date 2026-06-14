@@ -1,11 +1,13 @@
-import { todayISO } from "@quitto/shared";
+import { AUDIT_TYPE, NOTIFICATION_TYPE, todayISO } from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
+import { recordEvent } from "../lib/audit";
 import { getCapabilities, getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
+import { createNotifications } from "../lib/notifications";
 import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
@@ -350,14 +352,51 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       if (isOwner) {
         throw new ForbiddenError("O dono não pode sair; exclua o contrato");
       }
-      await db
-        .delete(participant)
-        .where(
-          and(
-            eq(participant.contractId, params.id),
-            eq(participant.linkedUserId, user.id)
+
+      await db.transaction(async (tx) => {
+        const [slot] = await tx
+          .select({ displayName: participant.displayName })
+          .from(participant)
+          .where(
+            and(
+              eq(participant.contractId, params.id),
+              eq(participant.linkedUserId, user.id)
+            )
           )
-        );
+          .limit(1);
+        const [c] = await tx
+          .select({ ownerId: contract.ownerId })
+          .from(contract)
+          .where(eq(contract.id, params.id))
+          .limit(1);
+
+        await tx
+          .delete(participant)
+          .where(
+            and(
+              eq(participant.contractId, params.id),
+              eq(participant.linkedUserId, user.id)
+            )
+          );
+
+        await recordEvent(tx, {
+          contractId: params.id,
+          actorUserId: user.id,
+          type: AUDIT_TYPE.participantLeft,
+        });
+
+        if (c) {
+          await createNotifications(tx, [
+            {
+              userId: c.ownerId,
+              type: NOTIFICATION_TYPE.participantLeft,
+              contractId: params.id,
+              metadata: slot ? { participantName: slot.displayName } : null,
+            },
+          ]);
+        }
+      });
+
       return { ok: true as const };
     },
     {

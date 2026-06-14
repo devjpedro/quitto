@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
+import { db } from "../src/db/client";
+import { auditEvent, contract, notification } from "../src/db/schema";
 
 async function signUp(email: string): Promise<string> {
   const res = await app.handle(
@@ -158,6 +161,34 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
 
     expect((await getContract(contractId, member)).status).toBe(404);
     expect((await getContract(contractId, owner)).status).toBe(200);
+
+    const audits = await db
+      .select()
+      .from(auditEvent)
+      .where(
+        and(
+          eq(auditEvent.contractId, contractId),
+          eq(auditEvent.type, "participant_left")
+        )
+      );
+    expect(audits.length).toBe(1);
+
+    const [c] = await db
+      .select({ ownerId: contract.ownerId })
+      .from(contract)
+      .where(eq(contract.id, contractId))
+      .limit(1);
+    const notifs = await db
+      .select()
+      .from(notification)
+      .where(
+        and(
+          eq(notification.contractId, contractId),
+          eq(notification.type, "participant_left")
+        )
+      );
+    expect(notifs.length).toBe(1);
+    expect(notifs[0]?.userId).toBe(c?.ownerId);
   });
 
   it("dono não pode sair (use excluir) → 403", async () => {
