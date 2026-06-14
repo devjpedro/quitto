@@ -78,7 +78,7 @@ export function computeDashboard(
       if (isPaidStatus(it.status)) {
         continue;
       }
-      if (direction === "pay") {
+      if (direction === DIRECTION.pay) {
         summary.toPayCents += it.amountCents;
       } else {
         summary.toReceiveCents += it.amountCents;
