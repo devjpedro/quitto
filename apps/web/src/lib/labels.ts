@@ -87,3 +87,8 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
 };
 
 export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;
+
+export const DIRECTION_LABEL: Record<"pay" | "receive", string> = {
+  pay: "a pagar",
+  receive: "a receber",
+};

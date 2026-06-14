@@ -3,6 +3,7 @@ import {
   contractQueryOptions,
   contractsQueryOptions,
 } from "./hooks/use-contracts";
+import { dashboardQueryOptions } from "./hooks/use-dashboard";
 import { notificationsQueryOptions } from "./hooks/use-notifications";
 import { queryClient } from "./lib/query";
 import { AcceptInvitePage } from "./routes/accept-invite";
@@ -27,6 +28,7 @@ const loginRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/",
+  loader: () => queryClient.ensureQueryData(dashboardQueryOptions),
   component: DashboardPage,
 });
 

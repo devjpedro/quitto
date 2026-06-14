@@ -4,6 +4,7 @@ import { auth } from "./auth";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { contractsModule } from "./modules/contracts";
+import { dashboardModule } from "./modules/dashboard";
 import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
 import { notificationsModule } from "./modules/notifications";
@@ -32,7 +33,8 @@ export function buildApp() {
     .use(paymentsModule)
     .use(participantsModule)
     .use(invitesModule)
-    .use(notificationsModule);
+    .use(notificationsModule)
+    .use(dashboardModule);
 }
 
 export const app = buildApp();
