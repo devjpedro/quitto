@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { auth } from "./auth";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
+import { accountModule } from "./modules/account";
 import { contractsModule } from "./modules/contracts";
 import { dashboardModule } from "./modules/dashboard";
 import { documentsModule } from "./modules/documents";
@@ -36,7 +37,8 @@ export function buildApp() {
     .use(participantsModule)
     .use(invitesModule)
     .use(notificationsModule)
-    .use(dashboardModule);
+    .use(dashboardModule)
+    .use(accountModule);
 }
 
 export const app = buildApp();

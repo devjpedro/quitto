@@ -1,5 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, FileText, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  Bell,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -14,6 +20,7 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contracts", label: "Contratos", icon: FileText },
   { to: "/notifications", label: "Notificações", icon: Bell },
+  { to: "/settings", label: "Conta", icon: Settings },
 ] as const;
 
 export function AppSidebar() {
