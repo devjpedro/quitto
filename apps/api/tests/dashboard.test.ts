@@ -96,7 +96,7 @@ describe("computeDashboard", () => {
     expect(out.upcoming).toEqual([]);
   });
 
-  it("builds upcoming sorted by dueDate (overdue first), capped at 5", () => {
+  it("builds upcoming sorted by dueDate ascending (overdue, being earlier, surface first), capped at 5", () => {
     const installments = [
       inst({ id: "a", dueDate: "2026-08-10" }),
       inst({ id: "b", dueDate: "2026-06-01" }),
