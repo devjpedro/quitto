@@ -1,3 +1,5 @@
+import { Logo } from "@/components/logo";
+
 type AuthMode = "signin" | "signup";
 
 const PANEL_COPY: Record<AuthMode, { headline: string; sub: string }> = {
@@ -26,9 +28,7 @@ export function AuthBrandPanel({ mode }: { mode: AuthMode }) {
         <span className="absolute top-24 left-10 h-24 w-24 rounded-full border border-white/10" />
       </div>
 
-      <span className="font-bold font-display text-lg tracking-tight">
-        ◷ Quitto
-      </span>
+      <Logo size={20} variant="inverted" />
 
       <div className="mt-auto min-w-0">
         <h2 className="max-w-[14ch] text-balance font-bold font-display text-2xl leading-[1.12] tracking-tight md:max-w-none md:text-4xl md:leading-[1.08]">
