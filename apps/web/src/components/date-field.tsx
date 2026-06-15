@@ -21,11 +21,15 @@ function DateInput({
   value,
   onChange,
   onBlur,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
 }: {
   id: string;
   value: string;
   onChange: (iso: string) => void;
   onBlur: () => void;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 }) {
   const [text, setText] = useState(value ? formatISODateBR(value) : "");
   const [open, setOpen] = useState(false);
@@ -34,6 +38,8 @@ function DateInput({
   return (
     <div className="relative mt-1.5">
       <Input
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
         className="tabular-nums"
         id={id}
         inputMode="numeric"
@@ -73,7 +79,17 @@ function DateInput({
 }
 
 /** RHF-bound date field: types as dd/mm/yyyy (masked) or picks via calendar popover; stores ISO. */
-export function DateField({ name, id }: { name: string; id: string }) {
+export function DateField({
+  name,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+}: {
+  name: string;
+  id: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+}) {
   const { control } = useFormContext();
   return (
     <Controller
@@ -81,6 +97,8 @@ export function DateField({ name, id }: { name: string; id: string }) {
       name={name as never}
       render={({ field }) => (
         <DateInput
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           id={id}
           onBlur={field.onBlur}
           onChange={field.onChange}

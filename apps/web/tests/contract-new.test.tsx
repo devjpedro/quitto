@@ -48,6 +48,18 @@ describe("ContractNewPage (wizard)", () => {
     expect(await screen.findByText(TITLE_ERROR)).toBeInTheDocument();
   });
 
+  it("wires aria-invalid/aria-describedby on the title field when invalid", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveAttribute("id", "title-error");
+
+    const title = screen.getByLabelText(TITLE);
+    expect(title).toHaveAttribute("aria-invalid", "true");
+    expect(title).toHaveAttribute("aria-describedby", "title-error");
+  });
+
   it("creates a contract (auto) and navigates to its detail", async () => {
     renderWithProviders(<ContractNewPage />);
     await userEvent.type(screen.getByLabelText(TITLE), "Apê do irmão");
