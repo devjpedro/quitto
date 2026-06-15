@@ -1,0 +1,31 @@
+<svg
+  aria-label="Quitto"
+  height="32"
+  role="img"
+  viewBox="0 0 32 32"
+  width="32"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title>Quitto</title>
+  <!-- anel espelha RING em apps/web/src/components/logo.tsx (r/strokeWidth/dashArray/rotation); manter em sincronia -->
+  <rect fill="#0f766e" height="32" rx="8" width="32" />
+  <circle
+    cx="16"
+    cy="16"
+    fill="none"
+    r="9"
+    stroke="rgba(255,255,255,0.35)"
+    stroke-width="4"
+  />
+  <circle
+    cx="16"
+    cy="16"
+    fill="none"
+    r="9"
+    stroke="#ffffff"
+    stroke-dasharray="40 57"
+    stroke-linecap="round"
+    stroke-width="4"
+    transform="rotate(125 16 16)"
+  />
+</svg>

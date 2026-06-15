@@ -6,6 +6,7 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
+import { Logo } from "@/components/logo";
 import { NotificationBell } from "@/components/notification-bell";
 import { useMeQuery } from "@/hooks/use-me";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
@@ -39,9 +40,13 @@ export function AppSidebar() {
         }}
       >
         <div className="flex items-center justify-between border-border border-b px-5 py-4">
-          <span className="select-none font-extrabold text-lg text-primary tracking-tight">
-            ◷ Quitto
-          </span>
+          <Link
+            aria-label="Ir para o início"
+            className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            to="/"
+          >
+            <Logo size={20} variant="brand" />
+          </Link>
           <NotificationBell />
         </div>
 
