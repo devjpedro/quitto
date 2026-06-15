@@ -2,9 +2,14 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, ...props }: { children: React.ReactNode }) => (
-    <a {...props}>{children}</a>
-  ),
+  Link: ({
+    children,
+    activeProps: _activeProps,
+    ...props
+  }: {
+    children: React.ReactNode;
+    activeProps?: Record<string, unknown>;
+  }) => <a {...props}>{children}</a>,
 }));
 vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn() }));
 vi.mock("@/hooks/use-me", () => ({
@@ -21,6 +26,8 @@ vi.mock("@/hooks/use-notifications", () => ({
 
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { AppSidebar } from "../src/components/app-sidebar";
+
+const NAV_LABEL = /Navegação principal/i;
 
 describe("AppSidebar", () => {
   beforeEach(() => {
@@ -45,6 +52,13 @@ describe("AppSidebar", () => {
   it("shows the user name from useMeQuery in the footer", () => {
     render(<AppSidebar />);
     expect(screen.getByText("Test")).toBeInTheDocument();
+  });
+
+  it("labels both navigation landmarks (desktop + mobile) as 'Navegação principal'", () => {
+    render(<AppSidebar />);
+    expect(screen.getAllByRole("navigation", { name: NAV_LABEL })).toHaveLength(
+      2
+    );
   });
 
   it("shows the unread badge on Notificações when count > 0", () => {
