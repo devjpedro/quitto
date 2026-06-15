@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractQuery } from "@/hooks/use-contracts";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { formatBRL, formatISODateBR, todayISO } from "@/lib/format";
 import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 const STAT_TONE_CLASS: Record<"green" | "red" | "default", string> = {
   green: "text-emerald-700",
@@ -45,6 +47,7 @@ function Stat({
 }
 
 export function ContractDetailPage() {
+  useDocumentTitle(PAGE_TITLE.contractDetail);
   const { id } = useParams({ from: "/protected/contracts/$id" });
   const { installment } = useSearch({ from: "/protected/contracts/$id" });
   const navigate = useNavigate();

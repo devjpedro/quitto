@@ -4,7 +4,9 @@ import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { signIn, signUp } from "@/lib/auth-client";
+import { PAGE_TITLE } from "@/lib/page-title";
 import { safeRedirect } from "@/lib/safe-redirect";
 
 function submitLabel(mode: "signin" | "signup") {
@@ -12,6 +14,7 @@ function submitLabel(mode: "signin" | "signup") {
 }
 
 export function LoginPage() {
+  useDocumentTitle(PAGE_TITLE.login);
   const search = useSearch({ strict: false }) as { redirect?: string };
   const target = safeRedirect(search.redirect, window.location.origin);
   const [mode, setMode] = useState<"signin" | "signup">("signin");

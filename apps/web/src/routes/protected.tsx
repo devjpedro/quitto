@@ -10,12 +10,18 @@ function ProtectedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <div className="flex min-h-screen">
+      <a
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        href="#conteudo"
+      >
+        Pular para o conteúdo
+      </a>
       <AppSidebar />
-      <div className="flex-1 pb-16 sm:pb-0">
+      <main className="flex-1 pb-16 sm:pb-0" id="conteudo" tabIndex={-1}>
         <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[pathname]}>
           <Outlet />
         </ErrorBoundary>
-      </div>
+      </main>
     </div>
   );
 }

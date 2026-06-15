@@ -4,13 +4,16 @@ import {
   NotificationList,
 } from "@/components/notification-list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   useMarkAllReadMutation,
   useMarkReadMutation,
   useNotificationsQuery,
 } from "@/hooks/use-notifications";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 export function NotificationsPage() {
+  useDocumentTitle(PAGE_TITLE.notifications);
   const navigate = useNavigate();
   const { data, isPending } = useNotificationsQuery();
   const markRead = useMarkReadMutation();

@@ -4,6 +4,8 @@ import { PendingInvitesBanner } from "@/components/pending-invites-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractsQuery } from "@/hooks/use-contracts";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 type Contract = NonNullable<
   ReturnType<typeof useContractsQuery>["data"]
@@ -66,6 +68,7 @@ function ContractsListBody({
 }
 
 export function ContractsListPage() {
+  useDocumentTitle(PAGE_TITLE.contracts);
   const { data, isPending } = useContractsQuery();
 
   return (

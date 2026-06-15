@@ -31,8 +31,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { capitalize, formatBRL } from "@/lib/format";
 import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
+import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
@@ -248,6 +250,7 @@ function ModeButton({
 }
 
 export function ContractNewPage() {
+  useDocumentTitle(PAGE_TITLE.contractNew);
   const navigate = useNavigate();
   const createMutation = useCreateContractMutation();
   const [step, setStep] = useState(0);

@@ -1,7 +1,10 @@
 import { Download } from "lucide-react";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 export function SettingsPage() {
+  useDocumentTitle(PAGE_TITLE.settings);
   return (
     <div className="mx-auto max-w-2xl p-6">
       <header className="mb-6">
