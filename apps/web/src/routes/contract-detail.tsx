@@ -137,7 +137,7 @@ export function ContractDetailPage() {
       </section>
 
       <div className="mb-6">
-        <Progress value={progress.percent} />
+        <Progress aria-label="Progresso de quitação" value={progress.percent} />
         <p className="mt-1.5 text-muted-foreground text-xs tabular-nums">
           <span className="font-display font-semibold text-foreground">
             {progress.percent}%

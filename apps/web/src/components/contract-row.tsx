@@ -59,7 +59,7 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
       </div>
 
       <div className="w-full sm:w-44">
-        <Progress value={contract.percent} />
+        <Progress aria-label="Progresso de quitação" value={contract.percent} />
         <p className="mt-1.5 text-muted-foreground text-xs tabular-nums">
           <span className="font-display font-semibold text-foreground">
             {contract.percent}%

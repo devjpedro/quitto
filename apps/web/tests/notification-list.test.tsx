@@ -5,6 +5,7 @@ import { NotificationList } from "../src/components/notification-list";
 
 const EMPTY_TEXT = /nenhuma notificação/i;
 const BUTTON_NAME = /parcela vencida/i;
+const ARIA_LABEL_RE = /^Parcela vencida, .+/;
 
 const items = [
   {
@@ -34,6 +35,15 @@ describe("NotificationList", () => {
     render(<NotificationList items={items} onOpen={onOpen} />);
     await userEvent.click(screen.getByRole("button", { name: BUTTON_NAME }));
     expect(onOpen).toHaveBeenCalledWith(items[0]);
+  });
+
+  it("exposes an aria-label with the message and the relative time", () => {
+    render(<NotificationList items={items} onOpen={vi.fn()} />);
+    const button = screen.getByRole("button", { name: ARIA_LABEL_RE });
+    expect(button).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(ARIA_LABEL_RE)
+    );
   });
 
   it("appends the metadata reason to the message", () => {

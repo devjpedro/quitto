@@ -62,6 +62,7 @@ function UpcomingRow({
 }) {
   return (
     <button
+      aria-label={`${item.contractTitle}, ${DIRECTION_LABEL[item.direction]} ${formatBRL(item.amountCents)}${item.isOverdue ? ", vencida" : ""}`}
       className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       onClick={() => onOpen(item)}
       type="button"
