@@ -18,6 +18,7 @@ Legenda: ✅ verificado · 🟡 coberto por Radix + portão axe, não dirigido e
 | 3 | Abrir/fechar **drawer da parcela** devolve o foco ao gatilho | ✅ (corrigido) | Era um bug real (foco caía no `<body>` ao fechar — `Sheet` desmontava sincronamente, cortando o `FocusScope` do Radix). Corrigido em `installment-drawer.tsx` (cache da parcela via ref para atravessar a transição de fechamento + captura do gatilho + `onCloseAutoFocus`). Guarda de regressão: `e2e/specs/a11y-keyboard.spec.ts` ("devolve o foco ao gatilho"). |
 | 4 | Diálogos de pagamento (confirmar/contestar/marcar paga) devolvem o foco ao gatilho | ✅ (corrigido) | Também era bug real (diálogos Radix controlados **sem** `Trigger` → `onCloseAutoFocus` não tinha alvo, foco ia ao `<body>`). Corrigido em `payment-actions.tsx` (ref por gatilho + `onCloseAutoFocus` restaurando o foco). Guarda: `a11y-keyboard.spec.ts` ("diálogo de pagamento devolve o foco ao gatilho", via "Marcar como paga"). 📝 "Confirmar"/"Contestar" receberam o mesmo padrão; não cobertos por e2e independente (exigem cenário de 2 usuários) — mecanismo idêntico. |
 | 5 | Popover do sininho operável e devolve o foco ao gatilho | ✅ | `Enter` abre o popover (foco entra no conteúdo); `Escape` fecha e o foco **retorna ao botão do sininho**. |
+| 5b | Demais diálogos controlados devolvem o foco ao gatilho (excluir conta, menu de ações, participantes) | ✅ | Mesmo padrão estendido a `delete-account-dialog`, `contract-actions-menu` e `participants-drawer` (Sheet + confirm). Para os diálogos abertos por `DropdownMenuItem`, o foco volta ao **gatilho do dropdown** via ref estável (determinístico, sem corrida de timing) — extraído no hook `hooks/use-focus-restore.ts`. Guardas e2e: "excluir conta" (`/settings`) e "excluir contrato" (menu de ações). 📝 Sheet de participantes + confirm de remoção aplicados pelo mesmo mecanismo (não cobertos por e2e independente). |
 | 6 | Menu de ações do contrato operável | 🟡 | `DropdownMenu` do Radix (teclado/`aria-expanded`/foco geridos pelo Radix); rotas com o menu passam no portão axe. Não dirigido tecla-a-tecla nesta rodada. |
 | 7 | Wizard de novo contrato navegável | 🟡 | `/contracts/new` passa no portão axe (sem violações WCAG A/AA); usa controles de formulário padrão (Input/Select/datepicker Radix) com erros associados (`aria-invalid`/`aria-describedby`/`role="alert"` — Task 2). Fluxo completo não dirigido tecla-a-tecla. |
 | 8 | Anel de foco visível em todos os interativos | 📝 | Não asserido programaticamente (é concern de CSS). Os componentes `ui/*` usam classes `focus-visible:ring-*`; conferência visual recomendada na 7d (Lighthouse). |
@@ -35,7 +36,10 @@ Legenda: ✅ verificado · 🟡 coberto por Radix + portão axe, não dirigido e
 
 1. Drawer da parcela perdia o foco ao fechar (WCAG 2.4.3) → corrigido (`installment-drawer.tsx`).
 2. Diálogos de pagamento perdiam o foco ao fechar (WCAG 2.4.3) → corrigido (`payment-actions.tsx`).
-3. Contraste insuficiente em badges (`color-contrast`) → corrigido pontualmente em
+3. Restauração de foco estendida, por consistência, a todos os diálogos controlados restantes
+   (`delete-account-dialog`, `contract-actions-menu`, `participants-drawer`); os abertos por
+   dropdown usam ref do gatilho via hook `use-focus-restore` (determinístico).
+4. Contraste insuficiente em badges (`color-contrast`) → corrigido pontualmente em
    `index.css` (token `--muted-foreground` mais escuro; `--primary-strong` exposto) e
    `ui/badge.tsx`.
 
