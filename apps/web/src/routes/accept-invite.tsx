@@ -2,12 +2,15 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useAcceptInviteMutation, useInviteQuery } from "@/hooks/use-invite";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/error-message";
 import { ROLE_LABEL } from "@/lib/labels";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 export function AcceptInvitePage() {
+  useDocumentTitle(PAGE_TITLE.acceptInvite);
   const { token } = useParams({ from: "/protected/invites/$token" });
   const navigate = useNavigate();
   const { data, isPending, error } = useInviteQuery(token);

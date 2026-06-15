@@ -53,6 +53,7 @@ export function AppSidebar() {
             const Icon = item.icon;
             return (
               <Link
+                activeProps={{ "aria-current": "page" }}
                 className="group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-muted-foreground text-sm transition-colors duration-150 hover:border-border hover:bg-muted hover:text-foreground [&.active]:border-primary/20 [&.active]:bg-primary/8 [&.active]:font-semibold [&.active]:text-primary"
                 key={item.to}
                 to={item.to}
@@ -92,6 +93,7 @@ export function AppSidebar() {
 
       {/* Mobile bottom-nav */}
       <nav
+        aria-label="Navegação principal"
         className="fixed inset-x-0 bottom-0 z-30 flex border-border border-t bg-card sm:hidden"
         style={{
           fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
@@ -101,6 +103,7 @@ export function AppSidebar() {
           const Icon = item.icon;
           return (
             <Link
+              activeProps={{ "aria-current": "page" }}
               className="relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors [&.active]:text-primary"
               key={item.to}
               to={item.to}

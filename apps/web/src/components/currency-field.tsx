@@ -5,7 +5,17 @@ import { formatBRL } from "@/lib/format";
 const NON_DIGIT = /\D/g;
 
 /** Currency input: shows R$ formatted, stores integer cents. Digits accumulate from the right. */
-export function CurrencyField({ name, id }: { name: string; id: string }) {
+export function CurrencyField({
+  name,
+  id,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
+}: {
+  name: string;
+  id: string;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
+}) {
   const { control } = useFormContext();
   return (
     <Controller
@@ -15,6 +25,8 @@ export function CurrencyField({ name, id }: { name: string; id: string }) {
         const cents = typeof field.value === "number" ? field.value : 0;
         return (
           <Input
+            aria-describedby={ariaDescribedBy}
+            aria-invalid={ariaInvalid}
             className="mt-1.5 tabular-nums"
             id={id}
             inputMode="numeric"

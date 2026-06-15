@@ -62,6 +62,7 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
+        aria-label="Notificações"
         className="w-80 rounded-xl border-border p-0 shadow-lg"
       >
         <div className="flex items-center justify-between border-border border-b px-4 py-3">

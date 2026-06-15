@@ -4,7 +4,9 @@ import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { signIn, signUp } from "@/lib/auth-client";
+import { PAGE_TITLE } from "@/lib/page-title";
 import { safeRedirect } from "@/lib/safe-redirect";
 
 function submitLabel(mode: "signin" | "signup") {
@@ -12,6 +14,7 @@ function submitLabel(mode: "signin" | "signup") {
 }
 
 export function LoginPage() {
+  useDocumentTitle(PAGE_TITLE.login);
   const search = useSearch({ strict: false }) as { redirect?: string };
   const target = safeRedirect(search.redirect, window.location.origin);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -111,6 +114,8 @@ export function LoginPage() {
             <div className="space-y-1">
               <Label htmlFor="email">E-mail</Label>
               <Input
+                aria-describedby={error ? "auth-error" : undefined}
+                aria-invalid={error ? true : undefined}
                 id="email"
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -121,6 +126,8 @@ export function LoginPage() {
             <div className="space-y-1">
               <Label htmlFor="password">Senha</Label>
               <Input
+                aria-describedby={error ? "auth-error" : undefined}
+                aria-invalid={error ? true : undefined}
                 id="password"
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -128,13 +135,26 @@ export function LoginPage() {
                 value={password}
               />
             </div>
-            {error && <p className="text-destructive text-sm">{error}</p>}
+            {error && (
+              <p
+                className="text-destructive text-sm"
+                id="auth-error"
+                role="alert"
+              >
+                {error}
+              </p>
+            )}
             <Button className="w-full" disabled={loading} type="submit">
               {loading ? "Aguarde..." : submitLabel(mode)}
             </Button>
           </form>
 
           <button
+            aria-label={
+              mode === "signin"
+                ? "Alternar para criar conta"
+                : "Alternar para entrar"
+            }
             className="mt-4 w-full text-center text-muted-foreground text-sm underline"
             onClick={() => {
               setMode(mode === "signin" ? "signup" : "signin");

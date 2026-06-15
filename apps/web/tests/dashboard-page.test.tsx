@@ -43,6 +43,7 @@ const empty = {
 
 const ALUGUEL_RE = /aluguel/i;
 const CRIAR_CONTRATO_RE = /criar contrato/i;
+const UPCOMING_ARIA_RE = /^Aluguel, a pagar R\$\s?500,00, vencida$/;
 
 const mockData: { data: typeof filled; isPending: boolean } = {
   data: filled,
@@ -75,6 +76,15 @@ describe("DashboardPage", () => {
       params: { id: "c1" },
       search: { installment: "i1" },
     });
+  });
+
+  it("exposes an aria-label with title, direction, amount and overdue on upcoming rows", () => {
+    render(<DashboardPage />);
+    const button = screen.getByRole("button", { name: ALUGUEL_RE });
+    expect(button).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(UPCOMING_ARIA_RE)
+    );
   });
 
   it("shows the empty state with a CTA when there are no contracts", () => {

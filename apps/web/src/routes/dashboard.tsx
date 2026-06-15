@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardQuery } from "@/hooks/use-dashboard";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { formatBRL, formatISODateBR } from "@/lib/format";
 import { DIRECTION_LABEL } from "@/lib/labels";
+import { PAGE_TITLE } from "@/lib/page-title";
 
 type Dashboard = NonNullable<ReturnType<typeof useDashboardQuery>["data"]>;
 type Upcoming = Dashboard["upcoming"][number];
@@ -60,6 +62,7 @@ function UpcomingRow({
 }) {
   return (
     <button
+      aria-label={`${item.contractTitle}, ${DIRECTION_LABEL[item.direction]} ${formatBRL(item.amountCents)}${item.isOverdue ? ", vencida" : ""}`}
       className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       onClick={() => onOpen(item)}
       type="button"
@@ -137,6 +140,7 @@ function DashboardSkeleton() {
 }
 
 export function DashboardPage() {
+  useDocumentTitle(PAGE_TITLE.dashboard);
   const navigate = useNavigate();
   const { data, isPending } = useDashboardQuery();
 

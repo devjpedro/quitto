@@ -31,8 +31,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { capitalize, formatBRL } from "@/lib/format";
 import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
+import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
@@ -54,19 +56,41 @@ function getNestedError(
   return current as { message?: unknown } | undefined;
 }
 
-function FieldError({ name }: { name: string }) {
+function useFieldError(name: string) {
   const { formState } = useFormContext<CreateContractInput>();
   const err = getNestedError(formState.errors, name);
-  if (typeof err?.message !== "string") {
+  return typeof err?.message === "string" ? err.message : null;
+}
+
+function FieldError({ id, name }: { id: string; name: string }) {
+  const message = useFieldError(name);
+  if (message === null) {
     return null;
   }
   return (
-    <p className="mt-1.5 font-medium text-destructive text-xs">{err.message}</p>
+    <p
+      className="mt-1.5 font-medium text-destructive text-xs"
+      id={id}
+      role="alert"
+    >
+      {message}
+    </p>
   );
+}
+
+/** Returns aria-invalid/aria-describedby for a field, only when it has an error. */
+function useErrorAria(name: string, id: string) {
+  const hasError = useFieldError(name) !== null;
+  return {
+    "aria-invalid": hasError ? true : undefined,
+    "aria-describedby": hasError ? id : undefined,
+  };
 }
 
 function StepBasic() {
   const { register, control } = useFormContext<CreateContractInput>();
+  const titleAria = useErrorAria("title", "title-error");
+  const ownerRoleAria = useErrorAria("ownerRole", "ownerRole-error");
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -75,9 +99,10 @@ function StepBasic() {
           className="mt-1.5"
           id="title"
           placeholder={PLACEHOLDER.contractTitle}
+          {...titleAria}
           {...register("title")}
         />
-        <FieldError name="title" />
+        <FieldError id="title-error" name="title" />
       </div>
       <div>
         <Label htmlFor="description">Descrição (opcional)</Label>
@@ -96,7 +121,11 @@ function StepBasic() {
           name="ownerRole"
           render={({ field }) => (
             <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger className="mt-1.5" id="ownerRole">
+              <SelectTrigger
+                className="mt-1.5"
+                id="ownerRole"
+                {...ownerRoleAria}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -109,6 +138,7 @@ function StepBasic() {
             </Select>
           )}
         />
+        <FieldError id="ownerRole-error" name="ownerRole" />
       </div>
       <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-primary/40">
         <input
@@ -130,12 +160,19 @@ function AutoSchedule() {
   const count = Number(watch("schedule.installmentsCount")) || 0;
   const per = count > 0 ? Math.floor(total / count) : 0;
   const showPreview = count > 0 && total > 0;
+  const totalAria = useErrorAria("schedule.totalAmountCents", "total-error");
+  const countAria = useErrorAria("schedule.installmentsCount", "count-error");
+  const firstDueAria = useErrorAria("schedule.firstDueDate", "first-error");
   return (
     <div className="flex flex-col gap-5">
       <div>
         <Label htmlFor="total">Valor total</Label>
-        <CurrencyField id="total" name="schedule.totalAmountCents" />
-        <FieldError name="schedule.totalAmountCents" />
+        <CurrencyField
+          id="total"
+          name="schedule.totalAmountCents"
+          {...totalAria}
+        />
+        <FieldError id="total-error" name="schedule.totalAmountCents" />
       </div>
       <div>
         <Label htmlFor="count">Nº de parcelas</Label>
@@ -143,14 +180,15 @@ function AutoSchedule() {
           className="mt-1.5 tabular-nums"
           id="count"
           type="number"
+          {...countAria}
           {...register("schedule.installmentsCount", { valueAsNumber: true })}
         />
-        <FieldError name="schedule.installmentsCount" />
+        <FieldError id="count-error" name="schedule.installmentsCount" />
       </div>
       <div>
         <Label htmlFor="first">1º vencimento</Label>
-        <DateField id="first" name="schedule.firstDueDate" />
-        <FieldError name="schedule.firstDueDate" />
+        <DateField id="first" name="schedule.firstDueDate" {...firstDueAria} />
+        <FieldError id="first-error" name="schedule.firstDueDate" />
       </div>
       {showPreview ? (
         <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -170,6 +208,45 @@ function AutoSchedule() {
   );
 }
 
+function InstallmentRow({
+  index,
+  onRemove,
+}: {
+  index: number;
+  onRemove: () => void;
+}) {
+  const amountName = `schedule.installments.${index}.amountCents`;
+  const dueName = `schedule.installments.${index}.dueDate`;
+  const amountErrorId = `installment-${index}-amount-error`;
+  const dueErrorId = `installment-${index}-dueDate-error`;
+  const amountAria = useErrorAria(amountName, amountErrorId);
+  const dueAria = useErrorAria(dueName, dueErrorId);
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end">
+      <div className="flex-1">
+        <Label htmlFor={`amt-${index}`}>Valor</Label>
+        <CurrencyField id={`amt-${index}`} name={amountName} {...amountAria} />
+        <FieldError id={amountErrorId} name={amountName} />
+      </div>
+      <div className="flex-1">
+        <Label htmlFor={`due-${index}`}>Vencimento</Label>
+        <DateField id={`due-${index}`} name={dueName} {...dueAria} />
+        <FieldError id={dueErrorId} name={dueName} />
+      </div>
+      <Button
+        aria-label="Remover parcela"
+        className="self-end"
+        onClick={onRemove}
+        size="icon"
+        type="button"
+        variant="ghost"
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
 function CustomSchedule() {
   const { control } = useFormContext<CreateContractInput>();
   const { fields, append, remove } = useFieldArray({
@@ -179,35 +256,11 @@ function CustomSchedule() {
   return (
     <div className="flex flex-col gap-3">
       {fields.map((field, index) => (
-        <div
-          className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end"
+        <InstallmentRow
+          index={index}
           key={field.id}
-        >
-          <div className="flex-1">
-            <Label>Valor</Label>
-            <CurrencyField
-              id={`amt-${index}`}
-              name={`schedule.installments.${index}.amountCents`}
-            />
-          </div>
-          <div className="flex-1">
-            <Label>Vencimento</Label>
-            <DateField
-              id={`due-${index}`}
-              name={`schedule.installments.${index}.dueDate`}
-            />
-          </div>
-          <Button
-            aria-label="Remover parcela"
-            className="self-end"
-            onClick={() => remove(index)}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </div>
+          onRemove={() => remove(index)}
+        />
       ))}
       <Button
         className="self-start"
@@ -248,6 +301,7 @@ function ModeButton({
 }
 
 export function ContractNewPage() {
+  useDocumentTitle(PAGE_TITLE.contractNew);
   const navigate = useNavigate();
   const createMutation = useCreateContractMutation();
   const [step, setStep] = useState(0);

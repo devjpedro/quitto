@@ -6,7 +6,7 @@ import {
   PARTICIPANT_ROLE,
 } from "@quitto/shared";
 import { MoreHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AddParticipantForm } from "@/components/add-participant-form";
 import { CopyButton } from "@/components/copy-button";
@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
@@ -165,6 +166,12 @@ function ParticipantItem({
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isOwner = participant.isOwner;
+  // The confirm dialog is opened from a DropdownMenuItem, which unmounts when
+  // the dropdown closes. Radix Menu hands focus back to its own trigger
+  // asynchronously, so we can't reliably capture document.activeElement. Hold a
+  // stable ref to the always-mounted trigger button and restore focus to it in
+  // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
+  const { triggerRef, restoreFocus } = useFocusRestore();
 
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs">
@@ -186,6 +193,7 @@ function ParticipantItem({
             >
               <Button
                 className="ml-auto"
+                ref={triggerRef}
                 size="icon-sm"
                 type="button"
                 variant="ghost"
@@ -239,6 +247,7 @@ function ParticipantItem({
       <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <DialogContent
           description={`Remover ${participant.displayName} deste contrato? Convites pendentes serão cancelados.`}
+          onCloseAutoFocus={restoreFocus}
           title="Remover participante"
         >
           <div className="flex gap-2">
@@ -282,6 +291,16 @@ export function ParticipantsDrawer({
 }) {
   const [adding, setAdding] = useState(false);
   const [newLinkToken, setNewLinkToken] = useState<string | null>(null);
+  // The Sheet is controlled with no Radix Trigger (opened from an external
+  // button on the contract detail page), so Radix has no element to hand focus
+  // back to on close. Capture the element focused right before the drawer
+  // opened and restore it in onCloseAutoFocus (WCAG 2.4.3 Focus Order).
+  const triggerRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null;
+    }
+  }, [open]);
 
   const takenUnique = new Set(
     participants
@@ -306,7 +325,15 @@ export function ParticipantsDrawer({
       }}
       open={open}
     >
-      <SheetContent title="Participantes">
+      <SheetContent
+        onCloseAutoFocus={(e) => {
+          if (triggerRef.current?.isConnected) {
+            e.preventDefault();
+            triggerRef.current.focus();
+          }
+        }}
+        title="Participantes"
+      >
         <div className="-mx-1 flex flex-1 flex-col gap-4 overflow-y-auto px-1">
           <ul className="flex flex-col gap-2">
             {participants.map((p) => (
