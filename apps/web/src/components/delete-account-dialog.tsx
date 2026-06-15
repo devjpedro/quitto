@@ -1,6 +1,6 @@
 import { DELETE_CONFIRM_PHRASE } from "@quitto/shared";
 import { TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,11 @@ export function DeleteAccountDialog() {
   const del = useDeleteAccountMutation();
   const matches = phrase === DELETE_CONFIRM_PHRASE;
   const canDelete = matches && !del.isPending;
+  // The dialog is controlled (no Radix Trigger), so Radix has no element to
+  // restore focus to on close and drops it on <body> (WCAG 2.4.3). The trigger
+  // button stays mounted, so keep a ref to it and restore focus explicitly in
+  // onCloseAutoFocus.
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
@@ -39,6 +44,7 @@ export function DeleteAccountDialog() {
       <Button
         className="mt-4"
         onClick={() => setOpen(true)}
+        ref={triggerRef}
         type="button"
         variant="destructive"
       >
@@ -56,6 +62,10 @@ export function DeleteAccountDialog() {
       >
         <DialogContent
           description="Esta ação é irreversível. Seus contratos e arquivos serão apagados."
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus();
+          }}
           title="Excluir conta"
         >
           <div className="flex flex-col gap-2">
