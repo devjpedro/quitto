@@ -47,7 +47,9 @@ export function LogoMark({
       aria-hidden="true"
       focusable="false"
       height={size}
-      style={style}
+      // inline-block contraria o reset do Tailwind (svg { display: block }),
+      // pro anel fluir como o "o" final e o vertical-align valer
+      style={{ display: "inline-block", ...style }}
       viewBox={`0 0 ${RING.box} ${RING.box}`}
       width={size}
     >
