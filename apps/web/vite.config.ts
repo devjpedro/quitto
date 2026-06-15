@@ -1,13 +1,42 @@
 import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig, type PluginOption } from "vite";
+
+const analyze = process.env.ANALYZE === "1";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    ...(analyze
+      ? [
+          visualizer({
+            filename: "dist/stats.html",
+            gzipSize: true,
+            brotliSize: true,
+          }) as PluginOption,
+        ]
+      : []),
+  ],
   resolve: { alias: { "@": resolve(__dirname, "./src") } },
   server: {
     port: 3001,
     proxy: { "/api": { target: "http://localhost:3000", changeOrigin: true } },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+            return "react";
+          }
+          if (/[\\/]node_modules[\\/]@tanstack[\\/]/.test(id)) {
+            return "tanstack";
+          }
+        },
+      },
+    },
   },
 });
