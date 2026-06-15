@@ -6,7 +6,7 @@ import {
   updateInstallmentSchema,
 } from "@quitto/shared";
 import { Pencil } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import {
   type AuditEventView,
@@ -227,19 +227,21 @@ export function InstallmentDrawer({
   // sets `open=false`; without this cache we'd return null and unmount Radix's
   // Dialog synchronously, skipping its FocusScope close-restoration (a11y:
   // focus must return to the row that opened the drawer — WCAG 2.4.3).
-  const [cached, setCached] = useState(installment);
-  useEffect(() => {
-    if (installment) {
-      setCached(installment);
-    }
-  }, [installment]);
-  const current = installment ?? cached;
+  // Derive in render (no useState/useEffect): keep the latest non-null value in
+  // a ref and read it as the fallback, so there's no lagging-state window.
+  const cachedRef = useRef<Installment | null>(installment);
+  if (installment) {
+    cachedRef.current = installment;
+  }
+  const current = installment ?? cachedRef.current;
   // Element focused right before the drawer opened (the installment row). The
   // Sheet is controlled with no Radix Trigger, so Radix has no element to hand
   // focus back to on close — we capture it ourselves and restore it in
-  // onCloseAutoFocus (a11y: WCAG 2.4.3 Focus Order).
+  // onCloseAutoFocus (a11y: WCAG 2.4.3 Focus Order). useLayoutEffect runs before
+  // paint (and before Radix's passive focus-into-content effect), shrinking the
+  // race over what `document.activeElement` is when we capture it.
   const triggerRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (open) {
       triggerRef.current = document.activeElement as HTMLElement | null;
     }
