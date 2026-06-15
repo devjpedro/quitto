@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,21 @@ export function PaymentActions({
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [reason, setReason] = useState("");
 
+  // These dialogs are controlled (no Radix Trigger), so Radix has no element to
+  // restore focus to on close and drops it on <body> (WCAG 2.4.3). Keep a ref to
+  // each trigger and restore focus explicitly in onCloseAutoFocus. The dialogs
+  // are nested inside the installment drawer, which must stay open.
+  const markPaidTriggerRef = useRef<HTMLButtonElement>(null);
+  const confirmTriggerRef = useRef<HTMLButtonElement>(null);
+  const disputeTriggerRef = useRef<HTMLButtonElement>(null);
+
+  function restoreFocus(ref: React.RefObject<HTMLButtonElement | null>) {
+    return (event: Event) => {
+      event.preventDefault();
+      ref.current?.focus();
+    };
+  }
+
   async function onMarkPaid() {
     await markPaidMutation.mutateAsync();
     setMarkPaidOpen(false);
@@ -58,13 +73,21 @@ export function PaymentActions({
   return (
     <div className="flex flex-col gap-2">
       {actions.canMarkPaid ? (
-        <Button onClick={() => setMarkPaidOpen(true)} type="button">
+        <Button
+          onClick={() => setMarkPaidOpen(true)}
+          ref={markPaidTriggerRef}
+          type="button"
+        >
           Marcar como paga
         </Button>
       ) : null}
 
       {actions.canConfirm ? (
-        <Button onClick={() => setConfirmOpen(true)} type="button">
+        <Button
+          onClick={() => setConfirmOpen(true)}
+          ref={confirmTriggerRef}
+          type="button"
+        >
           Confirmar pagamento
         </Button>
       ) : null}
@@ -72,6 +95,7 @@ export function PaymentActions({
       {actions.canDispute ? (
         <Button
           onClick={() => setDisputeOpen(true)}
+          ref={disputeTriggerRef}
           type="button"
           variant="outline"
         >
@@ -82,6 +106,7 @@ export function PaymentActions({
       <Dialog onOpenChange={setMarkPaidOpen} open={markPaidOpen}>
         <DialogContent
           description="Esta ação marca a parcela como paga e não pode ser desfeita."
+          onCloseAutoFocus={restoreFocus(markPaidTriggerRef)}
           title="Marcar como paga"
         >
           <div className="flex gap-2">
@@ -107,6 +132,7 @@ export function PaymentActions({
       <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <DialogContent
           description="Esta ação marca a parcela como confirmada e paga."
+          onCloseAutoFocus={restoreFocus(confirmTriggerRef)}
           title="Confirmar pagamento"
         >
           <div className="flex gap-2">
@@ -132,6 +158,7 @@ export function PaymentActions({
       <Dialog onOpenChange={setDisputeOpen} open={disputeOpen}>
         <DialogContent
           description="Diga o motivo (opcional). O comprador poderá reenviar o comprovante."
+          onCloseAutoFocus={restoreFocus(disputeTriggerRef)}
           title="Contestar pagamento"
         >
           <div className="flex flex-col gap-1.5">
