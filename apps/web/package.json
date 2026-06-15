@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lh": "vite build && lhci autorun"
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "@lhci/cli": "^0.15.1",
     "@tailwindcss/vite": "latest",
     "@tanstack/router-devtools": "^1.167.0",
     "@testing-library/jest-dom": "^6.9.1",
