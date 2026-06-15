@@ -68,4 +68,13 @@ describe("AppSidebar", () => {
     render(<AppSidebar />);
     expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
   });
+
+  it("pins the desktop sidebar to the viewport (sticky, full height)", () => {
+    const { container } = render(<AppSidebar />);
+    const aside = container.querySelector("aside");
+    expect(aside).not.toBeNull();
+    // Guards the fixed-sidebar layout: without these the footer only shows
+    // after scrolling to the bottom of long content.
+    expect(aside).toHaveClass("sticky", "top-0", "h-screen");
+  });
 });

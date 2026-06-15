@@ -33,7 +33,7 @@ export function AppSidebar() {
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden w-56 flex-col border-border border-r bg-card sm:flex"
+        className="sticky top-0 hidden h-screen w-56 flex-col border-border border-r bg-card sm:flex"
         style={{
           fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
         }}
