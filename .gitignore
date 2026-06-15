@@ -8,5 +8,6 @@ build/
 !.env.example
 .superpowers/
 coverage/
+.lighthouseci/
 *.log
 .DS_Store
