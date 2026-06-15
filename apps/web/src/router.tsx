@@ -1,4 +1,8 @@
-import { createRoute, createRouter } from "@tanstack/react-router";
+import {
+  createRoute,
+  createRouter,
+  lazyRouteComponent,
+} from "@tanstack/react-router";
 import {
   contractQueryOptions,
   contractsQueryOptions,
@@ -6,16 +10,9 @@ import {
 import { dashboardQueryOptions } from "./hooks/use-dashboard";
 import { notificationsQueryOptions } from "./hooks/use-notifications";
 import { queryClient } from "./lib/query";
-import { AcceptInvitePage } from "./routes/accept-invite";
-import { ContractDetailPage } from "./routes/contract-detail";
-import { ContractNewPage } from "./routes/contract-new";
-import { ContractsListPage } from "./routes/contracts-list";
-import { DashboardPage } from "./routes/dashboard";
 import { LoginPage } from "./routes/login";
-import { NotificationsPage } from "./routes/notifications";
 import { protectedRoute } from "./routes/protected";
 import { rootRoute } from "./routes/root";
-import { SettingsPage } from "./routes/settings";
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -30,20 +27,29 @@ const dashboardRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/",
   loader: () => queryClient.ensureQueryData(dashboardQueryOptions),
-  component: DashboardPage,
+  component: lazyRouteComponent(
+    () => import("./routes/dashboard"),
+    "DashboardPage"
+  ),
 });
 
 const contractsListRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/contracts",
   loader: () => queryClient.ensureQueryData(contractsQueryOptions),
-  component: ContractsListPage,
+  component: lazyRouteComponent(
+    () => import("./routes/contracts-list"),
+    "ContractsListPage"
+  ),
 });
 
 const contractNewRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/contracts/new",
-  component: ContractNewPage,
+  component: lazyRouteComponent(
+    () => import("./routes/contract-new"),
+    "ContractNewPage"
+  ),
 });
 
 const contractDetailRoute = createRoute({
@@ -55,26 +61,38 @@ const contractDetailRoute = createRoute({
   }),
   loader: ({ params }) =>
     queryClient.ensureQueryData(contractQueryOptions(params.id)),
-  component: ContractDetailPage,
+  component: lazyRouteComponent(
+    () => import("./routes/contract-detail"),
+    "ContractDetailPage"
+  ),
 });
 
 const notificationsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/notifications",
   loader: () => queryClient.ensureQueryData(notificationsQueryOptions),
-  component: NotificationsPage,
+  component: lazyRouteComponent(
+    () => import("./routes/notifications"),
+    "NotificationsPage"
+  ),
 });
 
 const settingsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/settings",
-  component: SettingsPage,
+  component: lazyRouteComponent(
+    () => import("./routes/settings"),
+    "SettingsPage"
+  ),
 });
 
 const acceptInviteRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/invites/$token",
-  component: AcceptInvitePage,
+  component: lazyRouteComponent(
+    () => import("./routes/accept-invite"),
+    "AcceptInvitePage"
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
