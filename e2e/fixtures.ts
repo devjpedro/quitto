@@ -7,7 +7,7 @@ import { expect } from "@playwright/test";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const PROOF_PDF = path.join(here, "fixtures", "comprovante.pdf");
 
-const SIGNUP_TOGGLE = /Não tem conta\? Cadastre-se/i;
+const SIGNUP_TOGGLE = /Alternar para criar conta/i;
 const CREATE_ACCOUNT = /^Criar conta$/;
 
 export function randomEmail(): string {

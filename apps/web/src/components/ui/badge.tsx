@@ -9,7 +9,7 @@ const badgeVariants = cva(
     variants: {
       tone: {
         neutral: "bg-muted text-muted-foreground ring-border",
-        brand: "bg-primary/10 text-primary ring-primary/20",
+        brand: "bg-primary/10 text-primary-strong ring-primary/20",
         success: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
         warning: "bg-amber-50 text-amber-700 ring-amber-600/20",
         danger: "bg-red-50 text-red-700 ring-red-600/20",
