@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
@@ -166,16 +167,11 @@ function ParticipantItem({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isOwner = participant.isOwner;
   // The confirm dialog is opened from a DropdownMenuItem, which unmounts when
-  // the dropdown closes — no stable in-DOM trigger. The dropdown restores focus
-  // to its own trigger button as it closes, so capture the active element when
-  // the dialog opens and restore it in onCloseAutoFocus; otherwise Radix drops
-  // focus on <body> (WCAG 2.4.3 Focus Order).
-  const triggerRef = useRef<HTMLElement | null>(null);
-  useLayoutEffect(() => {
-    if (confirmOpen) {
-      triggerRef.current = document.activeElement as HTMLElement | null;
-    }
-  }, [confirmOpen]);
+  // the dropdown closes. Radix Menu hands focus back to its own trigger
+  // asynchronously, so we can't reliably capture document.activeElement. Hold a
+  // stable ref to the always-mounted trigger button and restore focus to it in
+  // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
+  const { triggerRef, restoreFocus } = useFocusRestore();
 
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs">
@@ -197,6 +193,7 @@ function ParticipantItem({
             >
               <Button
                 className="ml-auto"
+                ref={triggerRef}
                 size="icon-sm"
                 type="button"
                 variant="ghost"
@@ -250,12 +247,7 @@ function ParticipantItem({
       <Dialog onOpenChange={setConfirmOpen} open={confirmOpen}>
         <DialogContent
           description={`Remover ${participant.displayName} deste contrato? Convites pendentes serão cancelados.`}
-          onCloseAutoFocus={(e) => {
-            if (triggerRef.current?.isConnected) {
-              e.preventDefault();
-              triggerRef.current.focus();
-            }
-          }}
+          onCloseAutoFocus={restoreFocus}
           title="Remover participante"
         >
           <div className="flex gap-2">

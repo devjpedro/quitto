@@ -4,6 +4,8 @@ import { newUser, seedContract, signup } from "../fixtures";
 const ROW_TESTID = /^installment-row-/;
 const MARK_PAID = /^Marcar como paga$/;
 const DELETE_ACCOUNT = /^Excluir conta$/;
+const CONTRACT_ACTIONS = /^Ações do contrato$/;
+const DELETE_CONTRACT = /^Excluir contrato$/;
 
 // WCAG 2.4.3 (Focus Order): closing the installment drawer must return keyboard
 // focus to the row button that opened it, not drop it on <body>. Regression
@@ -131,4 +133,58 @@ test("fechar o diálogo de excluir conta devolve o foco ao gatilho", async ({
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
+});
+
+// WCAG 2.4.3 (Focus Order): the contract-actions confirm dialog is opened from a
+// Radix DropdownMenuItem. The item unmounts on close and Radix Menu restores
+// focus to its own trigger asynchronously, so capturing document.activeElement
+// synchronously is unreliable. The fix holds a stable ref to the always-mounted
+// dropdown trigger button (kebab/"Ações do contrato") and restores focus to it
+// in onCloseAutoFocus. Opening the confirm dialog via the keyboard and closing
+// with Escape must return focus to that trigger, not drop it on <body>. We never
+// confirm the deletion — just open/close.
+test("fechar o diálogo de excluir contrato devolve o foco ao gatilho do menu", async ({
+  browser,
+}) => {
+  const a = await newUser(browser);
+  try {
+    const { id } = await seedContract(a.page.request, {
+      title: "Foco do menu de ações",
+      ownerRole: "buyer",
+      requiresConfirmation: false,
+    });
+    await a.page.goto(`/contracts/${id}`);
+
+    // Open the actions dropdown via the keyboard: focus the kebab trigger and
+    // press Enter.
+    const trigger = a.page.getByRole("button", { name: CONTRACT_ACTIONS });
+    await expect(trigger).toBeVisible();
+    await trigger.focus();
+    await expect(trigger).toBeFocused();
+    await a.page.keyboard.press("Enter");
+
+    // Select the destructive item via the keyboard (first item is highlighted
+    // when the menu opens; Enter activates it).
+    const deleteItem = a.page.getByRole("menuitem", { name: DELETE_CONTRACT });
+    await expect(deleteItem).toBeVisible();
+    await a.page.keyboard.press("Enter");
+
+    // The confirm dialog (its own title "Excluir contrato") is now visible and
+    // focus moved into it. Radix aria-hides the background while the dialog is
+    // open, so the trigger leaves the a11y tree — assert focus landed inside the
+    // dialog instead of asserting on the (now hidden) trigger.
+    const confirmDialog = a.page.getByRole("dialog", { name: DELETE_CONTRACT });
+    await expect(confirmDialog).toBeVisible();
+    const focusInDialog = await confirmDialog.evaluate((el) =>
+      el.contains(document.activeElement)
+    );
+    expect(focusInDialog).toBe(true);
+
+    // Close via Escape: dialog closes and focus returns to the dropdown trigger.
+    await a.page.keyboard.press("Escape");
+    await expect(confirmDialog).toBeHidden();
+    await expect(trigger).toBeFocused();
+  } finally {
+    await a.close();
+  }
 });

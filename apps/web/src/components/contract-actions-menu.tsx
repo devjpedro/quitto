@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { LogOut, MoreVertical, Trash2 } from "lucide-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -13,6 +13,7 @@ import {
   useDeleteContractMutation,
   useLeaveContractMutation,
 } from "@/hooks/use-contract-mutations";
+import { useFocusRestore } from "@/hooks/use-focus-restore";
 
 /** Owner deletes the contract; a non-owner participant leaves it. Both confirm first. */
 export function ContractActionsMenu({
@@ -28,17 +29,11 @@ export function ContractActionsMenu({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const pending = deleteMutation.isPending || leaveMutation.isPending;
   // The confirm dialog is opened from a DropdownMenuItem, which unmounts when
-  // the dropdown closes — so there is no stable in-DOM trigger to restore focus
-  // to. The dropdown hands focus back to its own trigger (the "Ações do
-  // contrato" button) as it closes, so by the time the dialog opens that button
-  // is the active element. Capture it and restore it in onCloseAutoFocus, or
-  // Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
-  const triggerRef = useRef<HTMLElement | null>(null);
-  useLayoutEffect(() => {
-    if (confirmOpen) {
-      triggerRef.current = document.activeElement as HTMLElement | null;
-    }
-  }, [confirmOpen]);
+  // the dropdown closes. Radix Menu hands focus back to its own trigger
+  // asynchronously, so we can't reliably capture document.activeElement. Hold a
+  // stable ref to the always-mounted trigger button and restore focus to it in
+  // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
+  const { triggerRef, restoreFocus } = useFocusRestore();
 
   async function onConfirm() {
     if (isOwner) {
@@ -54,7 +49,7 @@ export function ContractActionsMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger aria-label="Ações do contrato" asChild>
-          <Button size="icon" type="button" variant="ghost">
+          <Button ref={triggerRef} size="icon" type="button" variant="ghost">
             <MoreVertical aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
@@ -82,12 +77,7 @@ export function ContractActionsMenu({
               ? "Excluir este contrato é permanente: parcelas, comprovantes e histórico serão apagados."
               : "Você deixará de ter acesso a este contrato."
           }
-          onCloseAutoFocus={(e) => {
-            if (triggerRef.current?.isConnected) {
-              e.preventDefault();
-              triggerRef.current.focus();
-            }
-          }}
+          onCloseAutoFocus={restoreFocus}
           title={isOwner ? "Excluir contrato" : "Sair do contrato"}
         >
           <div className="flex gap-2">
