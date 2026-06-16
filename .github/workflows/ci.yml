@@ -1,7 +1,14 @@
 name: CI
 on:
-  push: { branches: [main] }
+  push: { branches: [main, develop] }
   pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -17,7 +24,7 @@ jobs:
           --health-cmd pg_isready --health-interval 10s
           --health-timeout 5s --health-retries 5
       minio:
-        image: bitnami/minio:latest
+        image: bitnamilegacy/minio:latest
         env:
           MINIO_ROOT_USER: minio
           MINIO_ROOT_PASSWORD: minio12345
@@ -38,7 +45,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with: { bun-version: latest }
       - run: bun install --frozen-lockfile
-      - run: bun --filter @quitto/api run db:migrate
+      - run: bun run --filter @quitto/api db:migrate
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run test
