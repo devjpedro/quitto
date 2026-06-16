@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://quitto-api.fly.dev/api/:path*" }
+    { "source": "/api/:path*", "destination": "https://usequitto-api.fly.dev/api/:path*" }
   ]
 }

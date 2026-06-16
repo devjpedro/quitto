@@ -1,4 +1,4 @@
-app = "quitto-api"
+app = "usequitto-api"
 primary_region = "gru"
 
 [build]
