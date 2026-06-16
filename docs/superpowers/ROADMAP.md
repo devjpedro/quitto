@@ -34,6 +34,27 @@ Spec de referência: `docs/superpowers/specs/2026-06-09-quitto-design.md`.
 | **7f** | Excluir / sair de contrato | `DELETE /api/contracts/:id` (owner, cascata + purga R2 best-effort) e `DELETE /api/contracts/:id/me` (não-dono sai); menu de ações no detalhe com confirmação. | `plans/2026-06-14-fase-7f-excluir-sair-contrato.md` ✅ **concluído** (merge em `develop`; suites verdes — API 161 + web 161, typecheck/lint) |
 | **7g** | Feedback de sucesso (toasts) | Toast de sucesso nas 13 ações de escrita via `mutation.meta.successMessage` (handler global `toastSuccessFromMeta` no `MutationCache.onSuccess` em `lib/query.ts`, simétrico ao `onError`), mensagens centralizadas em `lib/feedback.ts`. Sem mudança de API. | `plans/2026-06-14-fase-7g-feedback-toasts.md` ✅ **concluído** (merge em `develop`; suite verde — web 165 testes, typecheck/lint nos 3 pacotes) |
 
+## Release / Produção
+
+**v0.1.0 — publicada em produção (2026-06-16).** Smoke test validado ponta a ponta: signup
+e-mail/senha, login Google, persistência de sessão, criar contrato, adicionar parcela, subir e
+baixar comprovante (R2 via CORS).
+
+- **Web:** https://usequitto.vercel.app (Vercel, SPA; deploy pré-buildado via CLI + Git conectado)
+- **API:** https://usequitto-api.fly.dev (Fly, região `gru`, scale-to-zero)
+- **Banco:** Neon (Postgres) · **Storage:** Cloudflare R2 (bucket privado, presigned) ·
+  **Auth:** Better Auth (e-mail/senha + Google)
+- **Topologia:** front same-origin → rewrite `/api` (vercel.json) → Fly; cookie first-party.
+- **Guias:** `guides/2026-06-16-{r2-bucket-setup,neon-setup,google-oauth-prod,vercel-deploy}.md`.
+- **Bugs corrigidos no 1º deploy:** Dockerfile não copiava `e2e/package.json` e copiava só o
+  `node_modules` raiz (bun não hoista deps do workspace) → passou a instalar+rodar no mesmo stage;
+  `vercel.json` sem fallback de SPA (reload em rota client dava 404) → catch-all `→ /index.html`.
+- **Spec/plano:** `specs/2026-06-16-preparar-producao-design.md`, `plans/2026-06-16-preparar-producao.md`.
+
+Próximos (não-MVP): **trilha CD** (`guides/2026-06-10-cd-deploy-guia-estudo.md` — auto-deploy/
+migrations/orquestração via GitHub Actions; aí desligar o auto-deploy nativo); **cron de lembretes**
+(`guides/2026-06-13-cron-fly-lembretes.md`); backlog pós-MVP.
+
 ## Fluxo de execução de cada fase
 
 1. **Escrever o plano** da fase (skill `superpowers:writing-plans`), JIT, baseado no spec + aprendizados.
