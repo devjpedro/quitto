@@ -6,6 +6,7 @@ COPY package.json bun.lock ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
+COPY e2e/package.json ./e2e/
 RUN bun install --frozen-lockfile
 
 FROM base AS release
