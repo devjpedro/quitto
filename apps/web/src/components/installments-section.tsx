@@ -53,7 +53,7 @@ export function InstallmentsSection({
       </h2>
 
       <fieldset
-        aria-label="Filtrar parcelas"
+        aria-label="Filtrar"
         className="mb-3 flex flex-wrap gap-2 border-0 p-0"
       >
         {FILTER_ORDER.map((key) => {
@@ -63,7 +63,7 @@ export function InstallmentsSection({
               aria-pressed={active}
               className={`rounded-full border px-3 py-1 text-xs transition-colors ${
                 active
-                  ? "border-primary/20 bg-primary/10 font-semibold text-primary"
+                  ? "border-primary/20 bg-primary/10 font-semibold text-primary-strong"
                   : "border-border text-muted-foreground hover:bg-muted"
               }`}
               key={key}

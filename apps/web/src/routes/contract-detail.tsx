@@ -1,19 +1,18 @@
-import { isOverdue } from "@quitto/shared";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ContractActionsMenu } from "@/components/contract-actions-menu";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { ExportMenu } from "@/components/export-menu";
 import { InstallmentDrawer } from "@/components/installment-drawer";
+import { InstallmentsSection } from "@/components/installments-section";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
-import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContractQuery } from "@/hooks/use-contracts";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { formatBRL, formatISODateBR, todayISO } from "@/lib/format";
+import { formatBRL } from "@/lib/format";
 import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 
@@ -189,41 +188,7 @@ export function ContractDetailPage() {
         </ul>
       </section>
 
-      <section>
-        <h2 className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-          Parcelas
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {installments.map((it) => {
-            const late = isOverdue(it.dueDate, it.status, todayISO());
-            return (
-              <li key={it.id}>
-                <button
-                  className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                  data-testid={`installment-row-${it.id}`}
-                  onClick={() => setOpenId(it.id)}
-                  type="button"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`absolute inset-y-0 left-0 w-1 ${late ? "bg-destructive/70" : "bg-primary/40"}`}
-                  />
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
-                    {it.sequence}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-foreground text-sm tabular-nums">
-                    {formatISODateBR(it.dueDate)}
-                  </span>
-                  <span className="shrink-0 whitespace-nowrap font-display font-semibold text-foreground text-sm tabular-nums">
-                    {formatBRL(it.amountCents)}
-                  </span>
-                  <StatusBadge overdue={late} status={it.status} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <InstallmentsSection installments={installments} onSelect={setOpenId} />
 
       <InstallmentDrawer
         capabilities={{ isPayer: data.isPayer, isApprover: data.isApprover }}
