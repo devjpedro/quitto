@@ -21,6 +21,7 @@ import {
   UserMinus,
   XCircle,
 } from "lucide-react";
+import type { InstallmentFilter } from "./installments-filter";
 
 type Tone = "success" | "warning" | "danger" | "neutral" | "brand";
 
@@ -105,3 +106,17 @@ export const PLACEHOLDER = {
   participantName: "Ex.: Maria",
   disputeReason: "Ex.: valor diferente do combinado",
 } as const;
+
+export const INSTALLMENT_FILTER_LABEL: Record<InstallmentFilter, string> = {
+  all: "Todas",
+  due: "A pagar",
+  overdue: "Atrasadas",
+  paid: "Pagas",
+};
+
+export const INSTALLMENT_FILTER_EMPTY: Record<InstallmentFilter, string> = {
+  all: "Nenhuma parcela.",
+  due: "Tudo quitado por aqui.",
+  overdue: "Nenhuma parcela atrasada.",
+  paid: "Nenhuma parcela paga ainda.",
+};
