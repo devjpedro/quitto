@@ -126,12 +126,4 @@ Nada vai pra produção sem o gate passar. O deploy de produção é **orquestra
 
 ## Licença
 
-**Proprietário — © 2026 João Pedro Souza Silva.** Código disponível publicamente apenas para
-**visualização e avaliação** (portfólio). Uso, cópia, modificação, distribuição ou deploy exigem
-autorização prévia por escrito. Veja [`LICENSE`](LICENSE).
-
----
-
-<div align="center">
-Código em inglês · produto em pt-BR.
-</div>
+Proprietário — © 2026 João Pedro Souza Silva. Todos os direitos reservados. Veja [`LICENSE`](LICENSE).
