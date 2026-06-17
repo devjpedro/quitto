@@ -51,9 +51,25 @@ baixar comprovante (R2 via CORS).
   `vercel.json` sem fallback de SPA (reload em rota client dava 404) → catch-all `→ /index.html`.
 - **Spec/plano:** `specs/2026-06-16-preparar-producao-design.md`, `plans/2026-06-16-preparar-producao.md`.
 
-Próximos (não-MVP): **trilha CD** (`guides/2026-06-10-cd-deploy-guia-estudo.md` — auto-deploy/
-migrations/orquestração via GitHub Actions; aí desligar o auto-deploy nativo); **cron de lembretes**
-(`guides/2026-06-13-cron-fly-lembretes.md`); backlog pós-MVP.
+### CI/CD (GitHub Actions — `.github/workflows/ci.yml`)
+
+**CI:** job `verify` (lint + typecheck + test + build) e job `e2e` (Playwright + axe), com Postgres
++ MinIO de serviço. Roda em push (`main`/`develop`) e PR. `concurrency` cancela runs obsoletos;
+`permissions: contents: read`. (Imagem MinIO = `bitnamilegacy/minio:latest`; migração com
+`bun run --filter`; vars `S3_*` declaradas no `env` da task `test` do Turbo pra os 16 testes de
+storage não pularem.)
+
+**CD (✅ no ar, 2026-06-16):** na `main`, gateado por `needs: [verify, e2e]` → `migrate` (Neon prod
+via `PROD_DATABASE_URL`) → `deploy-api` (Fly, `flyctl deploy --remote-only`) ‖ `deploy-web` (Vercel
+CLI prebuilt: `pull`/`build`/`deploy --prebuilt --prod`) → `smoke` (`/api/ping` + site). Segredos no
+GitHub: `FLY_API_TOKEN`, `VERCEL_TOKEN`/`ORG_ID`/`PROJECT_ID`, `PROD_DATABASE_URL`. Vercel: Root
+Directory = `apps/web`, "Ignored Build Step: Only build pre-production" (previews no Git, **produção
+pelo pipeline** — sem deploy duplo). Primeiro CD verde de primeira.
+
+Pendências menores / próximos: bumpar `actions/checkout@v4`→`v5` (Node 20 deprecado); avaliar gate de
+**aprovação manual** de produção (GitHub Environment com required reviewers — Marco 5) e documentar
+**rollback** (Fly releases / Vercel promote — Marco 6); quando adotar fluxo de PR, tirar `develop` do
+trigger de push. **Cron de lembretes** (`guides/2026-06-13-cron-fly-lembretes.md`); backlog pós-MVP.
 
 ## Fluxo de execução de cada fase
 
