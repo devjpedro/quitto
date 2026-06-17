@@ -1,6 +1,6 @@
 <div align="center">
 
-# ◷ Quitto
+# Quitto
 
 **Gestão de contratos parcelados — cada parcela no seu lugar.**
 
@@ -19,7 +19,7 @@ comprovantes e quitação, com aprovação/contestação, notificações e dashb
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
 - **Contratos** parcelados (parcelas iguais ou customizadas), com situação por parcela.
 - **Participantes & convites** com papéis dinâmicos (pagador / aprovador) e RBAC por contrato.
@@ -30,7 +30,7 @@ comprovantes e quitação, com aprovação/contestação, notificações e dashb
 - **LGPD**: exportar os próprios dados e excluir a conta (com cascata e purga de arquivos).
 - **Acessibilidade** WCAG 2.2 AA e **performance** (code-splitting, orçamento Lighthouse).
 
-## 🧱 Arquitetura
+## Arquitetura
 
 Monorepo (**Bun workspaces + Turborepo**). O front é same-origin: chama `/api/*` no próprio domínio,
 e um **reverse-proxy** (rewrite na Vercel) encaminha pro backend no Fly — mantendo o **cookie de
@@ -45,8 +45,6 @@ Navegador ──▶ usequitto.vercel.app (React SPA · Vercel)
                   └──▶ Cloudflare R2 (comprovantes · presigned)
 ```
 
-**Stack:**
-
 | Camada | Tecnologias |
 |---|---|
 | **API** | Bun · [Elysia](https://elysiajs.com) · Drizzle ORM · PostgreSQL · [Better Auth](https://better-auth.com) (Google + e-mail/senha) |
@@ -58,7 +56,7 @@ Navegador ──▶ usequitto.vercel.app (React SPA · Vercel)
 
 > Valores monetários são **inteiros em centavos**; datas em ISO com máscara pt-BR.
 
-## 📁 Estrutura
+## Estrutura
 
 ```
 apps/
@@ -67,10 +65,9 @@ apps/
 packages/
   shared/     # tipos e contratos compartilhados (enums, helpers puros)
 e2e/          # suíte Playwright (+ axe) dos fluxos críticos
-docs/         # specs, planos e guias do projeto
 ```
 
-## 🚀 Rodando localmente
+## Rodando localmente
 
 **Pré-requisitos:** [Bun](https://bun.sh) ≥ 1.2 e Docker (para Postgres + MinIO).
 
@@ -94,7 +91,7 @@ bun run dev
 
 Abra **http://localhost:3001**. O Google é opcional em dev (sem `GOOGLE_*`, sobe só com e-mail/senha).
 
-## 🔧 Variáveis de ambiente
+## Variáveis de ambiente
 
 Veja **[`.env.example`](.env.example)**. Resumo:
 
@@ -106,7 +103,7 @@ Veja **[`.env.example`](.env.example)**. Resumo:
 | `GOOGLE_CLIENT_ID` / `_SECRET` | login social (opcional em dev) |
 | `S3_ENDPOINT` / `_REGION` / `_BUCKET` / `_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | storage (R2/MinIO) |
 
-## 🧪 Testes
+## Testes
 
 ```bash
 bun run test                              # unitários/integração (API: bun test · web: Vitest)
@@ -115,7 +112,7 @@ cd e2e && bun run e2e                     # E2E Playwright (+ axe a11y) — prec
 bun run --filter @quitto/web lh           # Lighthouse local no /login
 ```
 
-## 🔁 CI/CD
+## CI/CD
 
 GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
 
@@ -124,25 +121,17 @@ push/PR ──▶ verify (lint·typecheck·test·build) + e2e (Playwright·axe) 
 push main ──────▶ migrate (Neon) ──▶ deploy-api (Fly) ∥ deploy-web (Vercel) ──▶ smoke
 ```
 
-Nada vai pra produção sem o gate passar. Deploy de produção é **orquestrado pelo pipeline**
-(o `main` migra o banco e publica API + web em paralelo, depois valida com smoke test).
+Nada vai pra produção sem o gate passar. O deploy de produção é **orquestrado pelo pipeline**: o
+`main` migra o banco e publica API + web em paralelo, depois valida com smoke test.
 
-## 🚢 Deploy
+## Licença
 
-Web na **Vercel**, API no **Fly.io**, banco no **Neon**, storage no **Cloudflare R2**. O passo a
-passo de cada provedor (e o de rollback) está em [`docs/superpowers/guides/`](docs/superpowers/guides).
-
-## 🗺️ Documentação
-
-Specs, planos e guias do projeto vivem em [`docs/superpowers/`](docs/superpowers) — incluindo o
-[ROADMAP](docs/superpowers/ROADMAP.md) com o histórico das fases.
-
-## 📄 Licença
-
-Sugestão: **MIT** (adicione um arquivo `LICENSE`).
+**Proprietário — © 2026 João Pedro Souza Silva.** Código disponível publicamente apenas para
+**visualização e avaliação** (portfólio). Uso, cópia, modificação, distribuição ou deploy exigem
+autorização prévia por escrito. Veja [`LICENSE`](LICENSE).
 
 ---
 
 <div align="center">
-Feito com cuidado — código em inglês, produto em pt-BR.
+Código em inglês · produto em pt-BR.
 </div>
