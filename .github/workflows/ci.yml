@@ -89,3 +89,55 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v4
         with: { name: playwright-report, path: e2e/playwright-report }
+  migrate:
+    needs: [verify, e2e]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - run: bun install --frozen-lockfile
+      - name: drizzle migrate (Neon prod)
+        run: bun run --filter @quitto/api db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          BETTER_AUTH_SECRET: migrate-placeholder-32-characters-minimo
+          BETTER_AUTH_URL: https://usequitto.vercel.app
+          WEB_ORIGIN: https://usequitto.vercel.app
+  deploy-api:
+    needs: migrate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: fly deploy (API)
+        run: flyctl deploy --config apps/api/fly.toml --dockerfile apps/api/Dockerfile --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  deploy-web:
+    needs: migrate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: latest }
+      - run: npm install --global vercel@latest
+      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: vercel build --prod --token="$VERCEL_TOKEN"
+      - run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+  smoke:
+    needs: [deploy-api, deploy-web]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: API health
+        run: curl --fail --silent --show-error https://usequitto-api.fly.dev/api/ping
+      - name: Web up
+        run: curl --fail --silent --show-error -o /dev/null https://usequitto.vercel.app/
