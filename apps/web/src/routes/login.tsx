@@ -135,6 +135,14 @@ export function LoginPage() {
                 value={password}
               />
             </div>
+            {mode === "signin" && (
+              <a
+                className="block text-right text-muted-foreground text-sm underline"
+                href="/forgot-password"
+              >
+                Esqueci minha senha
+              </a>
+            )}
             {error && (
               <p
                 className="text-destructive text-sm"

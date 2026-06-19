@@ -10,8 +10,10 @@ import {
 import { dashboardQueryOptions } from "./hooks/use-dashboard";
 import { notificationsQueryOptions } from "./hooks/use-notifications";
 import { queryClient } from "./lib/query";
+import { ForgotPasswordPage } from "./routes/forgot-password";
 import { LoginPage } from "./routes/login";
 import { protectedRoute } from "./routes/protected";
+import { ResetPasswordPage } from "./routes/reset-password";
 import { rootRoute } from "./routes/root";
 
 const loginRoute = createRoute({
@@ -86,6 +88,21 @@ const settingsRoute = createRoute({
   ),
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  component: ForgotPasswordPage,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reset-password",
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === "string" ? search.token : undefined,
+  }),
+  component: ResetPasswordPage,
+});
+
 const acceptInviteRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/invites/$token",
@@ -97,6 +114,8 @@ const acceptInviteRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   protectedRoute.addChildren([
     dashboardRoute,
     contractsListRoute,
