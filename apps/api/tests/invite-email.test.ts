@@ -40,6 +40,46 @@ describe("invite email", () => {
     sent.length = 0;
   });
 
+  it("reenviar regenera o token e reenvia o e-mail", async () => {
+    const cookie = await signUpCookie(uniqueEmail("owner"));
+    const contractId = await createContract(cookie);
+    const add = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ displayName: "Convidado", role: "seller" }),
+      })
+    );
+    const { id: participantId } = await add.json();
+    const guestEmail = uniqueEmail("guest");
+    const first = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({ email: guestEmail }),
+        }
+      )
+    );
+    const firstToken = (await first.json()).token as string;
+    sent.length = 0;
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite/resend`,
+        {
+          method: "POST",
+          headers: { cookie },
+        }
+      )
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.token).not.toBe(firstToken);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.to).toBe(guestEmail);
+  });
+
   it("envia e-mail com o link de aceite ao convidar", async () => {
     const cookie = await signUpCookie(uniqueEmail("owner"));
     const contractId = await createContract(cookie);

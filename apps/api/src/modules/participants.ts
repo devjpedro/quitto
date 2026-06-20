@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { PARTICIPANT_ROLE } from "@quitto/shared";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, invite, participant } from "../db/schema";
@@ -243,6 +243,63 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       body: t.Object({
         email: t.String({ format: "email", minLength: 3, maxLength: 200 }),
       }),
+      response: t.Object({ token: t.String(), expiresAt: t.String() }),
+    }
+  )
+  .post(
+    "/contracts/:id/participants/:participantId/invite/resend",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      await requireOwner(user.id, params.id);
+
+      const [pending] = await db
+        .select()
+        .from(invite)
+        .where(
+          and(
+            eq(invite.participantId, params.participantId),
+            isNull(invite.acceptedAt),
+            isNull(invite.declinedAt)
+          )
+        )
+        .orderBy(desc(invite.createdAt))
+        .limit(1);
+      if (!pending) {
+        throw new NotFoundError("Nenhum convite pendente para reenviar");
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = new Date(
+        Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
+      );
+      await db
+        .update(invite)
+        .set({ token, expiresAt })
+        .where(eq(invite.id, pending.id));
+
+      const [target] = await db
+        .select({ role: participant.role })
+        .from(participant)
+        .where(eq(participant.id, params.participantId))
+        .limit(1);
+      const [c] = await db
+        .select({ title: contract.title })
+        .from(contract)
+        .where(eq(contract.id, params.id))
+        .limit(1);
+
+      await sendInviteEmail({
+        email: pending.email,
+        token,
+        inviterName: user.name ?? "Alguém",
+        contractTitle: c?.title ?? "um contrato",
+        role: target?.role ?? "viewer",
+      });
+
+      return { token, expiresAt: expiresAt.toISOString() };
+    },
+    {
+      params: t.Object({ id: t.String(), participantId: t.String() }),
       response: t.Object({ token: t.String(), expiresAt: t.String() }),
     }
   );
