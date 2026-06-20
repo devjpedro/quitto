@@ -43,16 +43,19 @@ export function LoginPage() {
       if (err) {
         const notVerified =
           err.code === "EMAIL_NOT_VERIFIED" ||
-          err.status === 403 ||
           UNVERIFIED_EMAIL_RE.test(err.message ?? "");
         if (mode === "signin" && notVerified) {
           setError(
             "Confirme seu e-mail antes de entrar. Reenviamos o link de verificação."
           );
-          await sendVerificationEmail({
-            email,
-            callbackURL: target,
-          });
+          try {
+            await sendVerificationEmail({
+              email,
+              callbackURL: target,
+            });
+          } catch {
+            // ignore resend failure; message already shown
+          }
           return;
         }
         setError(failMessage);

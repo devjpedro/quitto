@@ -15,9 +15,11 @@ export async function sendEmail({
   html,
 }: SendEmailInput): Promise<void> {
   if (!resend) {
-    console.warn(
-      `[mailer] RESEND_API_KEY ausente — e-mail não enviado: "${subject}" -> ${to}`
-    );
+    if (env.NODE_ENV !== "test") {
+      console.warn(
+        `[mailer] RESEND_API_KEY ausente — e-mail não enviado: "${subject}" -> ${to}`
+      );
+    }
     return;
   }
   const { error } = await resend.emails.send({
