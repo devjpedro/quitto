@@ -3,13 +3,34 @@ import { PARTICIPANT_ROLE } from "@quitto/shared";
 import { and, eq, ne } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { invite, participant } from "../db/schema";
+import { contract, invite, participant } from "../db/schema";
+import { env } from "../env";
 import { getContractRole } from "../lib/contract-access";
 import { normalizeEmail } from "../lib/email";
+import { inviteEmail } from "../lib/email-templates";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { sendEmail } from "../lib/mailer";
+import { ROLE_LABEL } from "../lib/role-label";
 import { requireAuth } from "../lib/session";
 
 const INVITE_TTL_DAYS = 7;
+
+async function sendInviteEmail(args: {
+  email: string;
+  token: string;
+  inviterName: string;
+  contractTitle: string;
+  role: string;
+}): Promise<void> {
+  const acceptUrl = `${env.WEB_ORIGIN}/invites/${args.token}`;
+  const { subject, html } = inviteEmail({
+    acceptUrl,
+    inviterName: args.inviterName,
+    contractTitle: args.contractTitle,
+    roleLabel: ROLE_LABEL[args.role] ?? args.role,
+  });
+  await sendEmail({ to: args.email, subject, html });
+}
 
 /**
  * buyer/seller são papéis únicos por contrato; viewer é ilimitado.
@@ -195,6 +216,26 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         token,
         expiresAt,
       });
+
+      const [c] = await db
+        .select({ title: contract.title })
+        .from(contract)
+        .where(eq(contract.id, params.id))
+        .limit(1);
+      // Best-effort: a mail failure must not orphan the invite — the owner
+      // still gets the token (copy-link fallback) and can resend.
+      try {
+        await sendInviteEmail({
+          email: normalizeEmail(body.email),
+          token,
+          inviterName: user.name ?? "Alguém",
+          contractTitle: c?.title ?? "um contrato",
+          role: target.role,
+        });
+      } catch (err) {
+        console.warn(`[invite] falha ao enviar e-mail do convite: ${err}`);
+      }
+
       return { token, expiresAt: expiresAt.toISOString() };
     },
     {
