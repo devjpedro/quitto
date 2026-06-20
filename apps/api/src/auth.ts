@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db, schema } from "./db/client";
 import { env } from "./env";
+import { AUTH_RATE_RULES } from "./lib/auth-rate-limit";
 import { resetPasswordEmail } from "./lib/email-templates";
 import { sendEmail } from "./lib/mailer";
 
@@ -35,4 +36,9 @@ export const auth = betterAuth({
   },
   socialProviders: googleProvider,
   trustedOrigins: [env.WEB_ORIGIN],
+  rateLimit: {
+    enabled: env.NODE_ENV === "production" || env.RATE_LIMIT_ENABLED === "true",
+    storage: "memory",
+    customRules: AUTH_RATE_RULES,
+  },
 });
