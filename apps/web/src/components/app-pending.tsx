@@ -1,16 +1,26 @@
-import { LogoMark } from "@/components/logo";
+import { PageContainer } from "@/components/page-container";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Shown by the router while a beforeLoad/loader exceeds the pending threshold
-// (e.g. Fly cold start). Replaces the white screen with Quitto's brand identity.
+// (e.g. Fly cold start). A content skeleton — not a spinner — reads as "page
+// loading" and stays on-brand, matching the per-route skeletons (DashboardSkeleton).
 export function AppPending() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      {/* LogoMark only accepts size/variant/style — animate via style opacity animation */}
-      <div className="animate-pulse">
-        <LogoMark size={40} />
+    <PageContainer>
+      <Skeleton className="mb-2 h-9 w-48" />
+      <Skeleton className="mb-6 h-4 w-64" />
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
       </div>
-      <div className="h-2 w-40 animate-pulse rounded-full bg-muted" />
-      <p className="text-muted-foreground text-sm">Carregando…</p>
-    </div>
+      <Skeleton className="mb-3 h-4 w-40" />
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-xl" />
+      </div>
+    </PageContainer>
   );
 }
