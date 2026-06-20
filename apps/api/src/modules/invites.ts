@@ -1,9 +1,16 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { contract, invite, participant } from "../db/schema";
+import {
+  contract,
+  installment,
+  invite,
+  participant,
+  user as userTable,
+} from "../db/schema";
 import { normalizeEmail } from "../lib/email";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { buildInvitePreview } from "../lib/invite-preview";
 import { requireAuth } from "../lib/session";
 
 async function loadValidInvite(token: string) {
@@ -99,12 +106,36 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           )
         )
         .limit(1);
+      const [owner] = await db
+        .select({ name: userTable.name })
+        .from(userTable)
+        .where(eq(userTable.id, c.ownerId))
+        .limit(1);
+      const installments = await db
+        .select({ amountCents: installment.amountCents })
+        .from(installment)
+        .where(eq(installment.contractId, row.contractId));
+      const people = await db
+        .select({
+          displayName: participant.displayName,
+          role: participant.role,
+        })
+        .from(participant)
+        .where(eq(participant.contractId, row.contractId));
+      const preview = buildInvitePreview({
+        installments,
+        participants: people,
+      });
       return {
         contractTitle: c.title,
         role: p.role,
         email: row.email,
         emailMatches: normalizeEmail(user.email) === row.email,
         alreadyParticipant: Boolean(mine),
+        inviterName: owner?.name ?? "Alguém",
+        totalAmountCents: preview.totalAmountCents,
+        installmentsCount: preview.installmentsCount,
+        parties: preview.parties,
       };
     },
     {
@@ -115,6 +146,12 @@ export const invitesModule = new Elysia({ prefix: "/api" })
         email: t.String(),
         emailMatches: t.Boolean(),
         alreadyParticipant: t.Boolean(),
+        inviterName: t.String(),
+        totalAmountCents: t.Number(),
+        installmentsCount: t.Number(),
+        parties: t.Array(
+          t.Object({ displayName: t.String(), role: t.String() })
+        ),
       }),
     }
   )

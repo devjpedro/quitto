@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { invite } from "../src/db/schema";
-import { signUpCookie } from "./helpers/auth";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string): Promise<string> {
   const res = await app.handle(
@@ -431,6 +431,26 @@ describe("invites", () => {
     );
     expect(res.status).toBe(200);
     expect((await res.json()).length).toBe(0);
+  });
+
+  it("preview traz quem convidou, total, contagem e partes", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("owner"));
+    const inviteeEmail = uniqueEmail("guest");
+    const { token } = await setupInvite(ownerCookie, inviteeEmail);
+
+    const inviteeCookie = await signUpCookie(inviteeEmail);
+    const res = await app.handle(
+      new Request(`http://localhost/api/invites/${token}`, {
+        headers: { cookie: inviteeCookie },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(typeof body.inviterName).toBe("string");
+    expect(body.inviterName.length).toBeGreaterThan(0);
+    expect(body.installmentsCount).toBeGreaterThan(0);
+    expect(body.totalAmountCents).toBeGreaterThan(0);
+    expect(Array.isArray(body.parties)).toBe(true);
   });
 
   it("convite expirado retorna 422 ao visualizar (GET)", async () => {
