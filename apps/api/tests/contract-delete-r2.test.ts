@@ -5,13 +5,7 @@ import { db } from "../src/db/client";
 import { installment, proof } from "../src/db/schema";
 // biome-ignore lint/performance/noNamespaceImport: spyOn needs a mutable module object to intercept the handler's named `deleteObjects` import (ES named bindings are read-only)
 import * as storage from "../src/lib/storage";
-import { signUpCookie } from "./helpers/auth";
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@example.com`;
-}
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string): Promise<string> {
   const res = await app.handle(

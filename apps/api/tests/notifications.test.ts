@@ -5,13 +5,7 @@ import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
-import { signUpCookie } from "./helpers/auth";
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@e.com`;
-}
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
   const res = await app.handle(

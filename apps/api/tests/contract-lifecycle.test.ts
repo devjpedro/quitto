@@ -3,13 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { auditEvent, contract, notification } from "../src/db/schema";
-import { signUpCookie } from "./helpers/auth";
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@example.com`;
-}
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string): Promise<string> {
   const res = await app.handle(

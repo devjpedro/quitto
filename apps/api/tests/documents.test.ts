@@ -9,7 +9,7 @@ import {
   type ModelParticipant,
 } from "../src/lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../src/lib/documents/pdf";
-import { signUpCookie } from "./helpers/auth";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const contract: ModelContract = {
   title: "Aluguel",
@@ -154,12 +154,6 @@ describe("pdf renderer", () => {
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
   });
 });
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@e.com`;
-}
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
   const res = await app.handle(

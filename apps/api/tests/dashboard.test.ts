@@ -4,7 +4,7 @@ import {
   computeDashboard,
   type DashboardContractInput,
 } from "../src/lib/dashboard";
-import { signUpCookie } from "./helpers/auth";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const today = "2026-06-13";
 
@@ -155,12 +155,6 @@ describe("computeDashboard", () => {
     expect(out.completedContractsCount).toBe(1);
   });
 });
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@e.com`;
-}
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
   const res = await app.handle(

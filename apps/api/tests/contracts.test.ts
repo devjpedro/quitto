@@ -1,12 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { app } from "../src/app";
-import { signUpCookie } from "./helpers/auth";
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@example.com`;
-}
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function createContract(cookie: string) {
   return app.handle(

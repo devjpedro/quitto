@@ -3,7 +3,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { participant } from "../src/db/schema";
-import { signUpCookie } from "./helpers/auth";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const configured = Boolean(process.env.S3_ENDPOINT);
 
@@ -26,12 +26,6 @@ async function putObjectRaw(objectKey: string, contentType: string) {
       ContentType: contentType,
     })
   );
-}
-
-let seq = 0;
-function uniqueEmail(tag: string): string {
-  seq += 1;
-  return `${tag}-${Date.now()}-${seq}@e.com`;
 }
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
