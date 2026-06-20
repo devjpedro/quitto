@@ -11,10 +11,10 @@ comprovantes, quitação, aprovação/contestação, notificações e dashboard.
 
 O objetivo é deixar **cada parcela no seu lugar**: registrar um contrato, acompanhar o
 cronograma de parcelas, anexar comprovantes de pagamento e, quando há outra parte envolvida,
-aprovar ou contestar cada pagamento até a quitação. Dois cenários fundadores guiam o produto:
+aprovar ou contestar cada pagamento até a quitação. O produto atende cenários típicos como:
 
-- **Compra parcelada** — ex.: um apartamento de R$ 120.000 em 60 parcelas.
-- **Aluguel / acordo recorrente** — ex.: 12 meses de R$ 800.
+- **Compra parcelada** — um bem de valor alto dividido em muitas parcelas mensais.
+- **Aluguel ou mensalidades** — um acordo de parcelas iguais ao longo de vários meses.
 
 O sistema funciona **solo** (só o dono acompanha) ou **entre partes** (dono convida pagador
 e/ou aprovador, com controle de acesso por papel).
