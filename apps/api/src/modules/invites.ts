@@ -1,3 +1,4 @@
+import { NOTIFICATION_TYPE } from "@quitto/shared";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -11,6 +12,7 @@ import {
 import { normalizeEmail } from "../lib/email";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { buildInvitePreview } from "../lib/invite-preview";
+import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
 
 async function loadValidInvite(token: string) {
@@ -24,6 +26,9 @@ async function loadValidInvite(token: string) {
   }
   if (row.acceptedAt) {
     throw new ValidationError("Convite já utilizado");
+  }
+  if (row.declinedAt) {
+    throw new ValidationError("Convite já recusado");
   }
   if (row.expiresAt.getTime() < Date.now()) {
     throw new ValidationError("Convite expirado");
@@ -203,5 +208,41 @@ export const invitesModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ token: t.String() }),
       response: t.Object({ contractId: t.String() }),
+    }
+  )
+  .post(
+    "/invites/:token/decline",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const row = await loadValidInvite(params.token);
+      if (normalizeEmail(user.email) !== row.email) {
+        throw new ForbiddenError("Este convite é para outro e-mail");
+      }
+      const [c] = await db
+        .select({ ownerId: contract.ownerId })
+        .from(contract)
+        .where(eq(contract.id, row.contractId))
+        .limit(1);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(invite)
+          .set({ declinedAt: new Date() })
+          .where(eq(invite.id, row.id));
+        if (c) {
+          await createNotifications(tx, [
+            {
+              userId: c.ownerId,
+              type: NOTIFICATION_TYPE.inviteDeclined,
+              contractId: row.contractId,
+              metadata: { email: row.email },
+            },
+          ]);
+        }
+      });
+      return { ok: true };
+    },
+    {
+      params: t.Object({ token: t.String() }),
+      response: t.Object({ ok: t.Boolean() }),
     }
   );
