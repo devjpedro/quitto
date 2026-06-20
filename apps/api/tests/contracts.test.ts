@@ -1,28 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { app } from "../src/app";
-
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "Test",
-        email: `${tag}-${Date.now()}@example.com`,
-        password: "password123",
-      }),
-    })
-  );
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) {
-    throw new Error("sign-up did not return a set-cookie header");
-  }
-  const [cookie] = setCookie.split(";");
-  if (!cookie) {
-    throw new Error("could not parse session cookie");
-  }
-  return cookie;
-}
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function createContract(cookie: string) {
   return app.handle(
@@ -51,7 +29,7 @@ describe("POST /api/contracts", () => {
   });
 
   it("cria contrato e retorna id", async () => {
-    const cookie = await signUpCookie("create");
+    const cookie = await signUpCookie(uniqueEmail("create"));
     const res = await createContract(cookie);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -59,7 +37,7 @@ describe("POST /api/contracts", () => {
   });
 
   it("rejeita ownerRole neutral na criação (422)", async () => {
-    const cookie = await signUpCookie("neutral");
+    const cookie = await signUpCookie(uniqueEmail("neutral"));
     const res = await app.handle(
       new Request("http://localhost/api/contracts", {
         method: "POST",
@@ -83,7 +61,7 @@ describe("POST /api/contracts", () => {
 
 describe("GET /api/contracts", () => {
   it("lista apenas os contratos do usuário com progresso", async () => {
-    const cookie = await signUpCookie("list");
+    const cookie = await signUpCookie(uniqueEmail("list"));
     await createContract(cookie);
     const res = await app.handle(
       new Request("http://localhost/api/contracts", { headers: { cookie } })
@@ -99,7 +77,7 @@ describe("GET /api/contracts", () => {
 
 describe("GET /api/contracts/:id", () => {
   it("retorna o detalhe para o dono", async () => {
-    const cookie = await signUpCookie("detail");
+    const cookie = await signUpCookie(uniqueEmail("detail"));
     const created = await (await createContract(cookie)).json();
     const res = await app.handle(
       new Request(`http://localhost/api/contracts/${created.id}`, {
@@ -114,7 +92,7 @@ describe("GET /api/contracts/:id", () => {
   });
 
   it("dono aparece com seu papel (não 'owner') e isOwner=true", async () => {
-    const cookie = await signUpCookie("detail-owner");
+    const cookie = await signUpCookie(uniqueEmail("detail-owner"));
     const created = await (await createContract(cookie)).json();
     const res = await app.handle(
       new Request(`http://localhost/api/contracts/${created.id}`, {
@@ -130,9 +108,9 @@ describe("GET /api/contracts/:id", () => {
   });
 
   it("retorna 404 para quem não tem acesso", async () => {
-    const ownerCookie = await signUpCookie("own");
+    const ownerCookie = await signUpCookie(uniqueEmail("own"));
     const created = await (await createContract(ownerCookie)).json();
-    const strangerCookie = await signUpCookie("stranger");
+    const strangerCookie = await signUpCookie(uniqueEmail("stranger"));
     const res = await app.handle(
       new Request(`http://localhost/api/contracts/${created.id}`, {
         headers: { cookie: strangerCookie },
@@ -144,7 +122,7 @@ describe("GET /api/contracts/:id", () => {
 
 describe("PATCH installment", () => {
   it("o dono edita o valor de uma parcela", async () => {
-    const cookie = await signUpCookie("patch");
+    const cookie = await signUpCookie(uniqueEmail("patch"));
     const created = await (await createContract(cookie)).json();
     const detail = await (
       await app.handle(

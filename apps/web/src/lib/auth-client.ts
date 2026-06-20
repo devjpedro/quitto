@@ -4,3 +4,7 @@ import { createAuthClient } from "better-auth/react";
 export const authClient = createAuthClient({ baseURL: window.location.origin });
 
 export const { signIn, signUp, signOut } = authClient;
+export const requestPasswordReset = authClient.requestPasswordReset;
+export const resetPassword = authClient.resetPassword;
+export const changePassword = authClient.changePassword;
+export const sendVerificationEmail = authClient.sendVerificationEmail;

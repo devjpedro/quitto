@@ -9,4 +9,6 @@ export const PAGE_TITLE = {
   notifications: `${BRAND} · Notificações`,
   settings: `${BRAND} · Conta`,
   acceptInvite: `${BRAND} · Convite`,
+  forgotPassword: `${BRAND} · Esqueci minha senha`,
+  resetPassword: `${BRAND} · Redefinir senha`,
 } as const;

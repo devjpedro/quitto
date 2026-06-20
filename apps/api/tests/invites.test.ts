@@ -1,26 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { invite } from "../src/db/schema";
-
-async function signUpCookie(email: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test", email, password: "password123" }),
-    })
-  );
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) {
-    throw new Error("sign-up did not return a set-cookie header");
-  }
-  const [cookie] = setCookie.split(";");
-  if (!cookie) {
-    throw new Error("could not parse session cookie");
-  }
-  return cookie;
-}
+import { invite, notification } from "../src/db/schema";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string): Promise<string> {
   const res = await app.handle(
@@ -449,6 +433,47 @@ describe("invites", () => {
     );
     expect(res.status).toBe(200);
     expect((await res.json()).length).toBe(0);
+  });
+
+  it("preview traz quem convidou, total, contagem e partes", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("owner"));
+    const inviteeEmail = uniqueEmail("guest");
+    const { token } = await setupInvite(ownerCookie, inviteeEmail);
+
+    const inviteeCookie = await signUpCookie(inviteeEmail);
+    const res = await app.handle(
+      new Request(`http://localhost/api/invites/${token}`, {
+        headers: { cookie: inviteeCookie },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(typeof body.inviterName).toBe("string");
+    expect(body.inviterName.length).toBeGreaterThan(0);
+    expect(body.installmentsCount).toBeGreaterThan(0);
+    expect(body.totalAmountCents).toBeGreaterThan(0);
+    expect(Array.isArray(body.parties)).toBe(true);
+  });
+
+  it("aceitar notifica o dono", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("owner"));
+    const inviteeEmail = uniqueEmail("guest");
+    const { contractId, token } = await setupInvite(ownerCookie, inviteeEmail);
+    const inviteeCookie = await signUpCookie(inviteeEmail);
+    const acc = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: inviteeCookie },
+      })
+    );
+    expect(acc.status).toBe(200);
+    const notifs = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.contractId, contractId));
+    expect(
+      notifs.some((n) => n.type === NOTIFICATION_TYPE.inviteAccepted)
+    ).toBe(true);
   });
 
   it("convite expirado retorna 422 ao visualizar (GET)", async () => {

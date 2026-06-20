@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { signIn, signUp } from "@/lib/auth-client";
+import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { safeRedirect } from "@/lib/safe-redirect";
+
+const UNVERIFIED_EMAIL_RE = /verif/i;
 
 function submitLabel(mode: "signin" | "signup") {
   return mode === "signin" ? "Entrar" : "Criar conta";
@@ -39,6 +41,23 @@ export function LoginPage() {
     try {
       const { error: err } = await action;
       if (err) {
+        const notVerified =
+          err.code === "EMAIL_NOT_VERIFIED" ||
+          UNVERIFIED_EMAIL_RE.test(err.message ?? "");
+        if (mode === "signin" && notVerified) {
+          setError(
+            "Confirme seu e-mail antes de entrar. Reenviamos o link de verificação."
+          );
+          try {
+            await sendVerificationEmail({
+              email,
+              callbackURL: target,
+            });
+          } catch {
+            // ignore resend failure; message already shown
+          }
+          return;
+        }
         setError(failMessage);
         return;
       }
@@ -135,6 +154,14 @@ export function LoginPage() {
                 value={password}
               />
             </div>
+            {mode === "signin" && (
+              <a
+                className="block text-right text-muted-foreground text-sm underline"
+                href="/forgot-password"
+              >
+                Esqueci minha senha
+              </a>
+            )}
             {error && (
               <p
                 className="text-destructive text-sm"

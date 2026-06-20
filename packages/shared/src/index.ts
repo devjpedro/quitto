@@ -29,6 +29,8 @@ export {
   PARTICIPANT_ROLE,
   REMINDER_WINDOW_DAYS,
 } from "./domain";
+export type { GenerateScheduleInput, ScheduleRow } from "./schedule";
+export { addMonths, generateSchedule, splitAmount } from "./schedule";
 
 /** Frase que o usuário digita para confirmar a exclusão da conta. */
 export const DELETE_CONFIRM_PHRASE = "EXCLUIR";

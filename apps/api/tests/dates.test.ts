@@ -1,10 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import {
-  addDays,
-  addMonths,
-  formatISODateBR,
-  toISODate,
-} from "../src/lib/dates";
+import { addMonths } from "@quitto/shared";
+import { addDays, formatISODateBR, toISODate } from "../src/lib/dates";
 
 describe("addDays", () => {
   it("adds days within a month", () => {

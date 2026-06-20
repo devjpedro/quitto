@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ContractRow } from "@/components/contract-row";
+import { PageContainer } from "@/components/page-container";
 import { PendingInvitesBanner } from "@/components/pending-invites-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,7 +73,7 @@ export function ContractsListPage() {
   const { data, isPending } = useContractsQuery();
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <PageContainer>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
@@ -90,6 +91,6 @@ export function ContractsListPage() {
       <PendingInvitesBanner />
 
       <ContractsListBody data={data} isPending={isPending} />
-    </div>
+    </PageContainer>
   );
 }

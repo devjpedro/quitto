@@ -73,6 +73,8 @@ export const NOTIFICATION_TYPE = {
   installmentDueSoon: "installment_due_soon",
   installmentOverdue: "installment_overdue",
   participantLeft: "participant_left",
+  inviteAccepted: "invite_accepted",
+  inviteDeclined: "invite_declined",
 } as const;
 export type NotificationType =
   (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];

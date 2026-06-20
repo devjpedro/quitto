@@ -3,6 +3,9 @@ import {
   createRouter,
   lazyRouteComponent,
 } from "@tanstack/react-router";
+import { AppPending } from "./components/app-pending";
+import { NotFound } from "./components/not-found";
+import { RouteError } from "./components/route-error";
 import {
   contractQueryOptions,
   contractsQueryOptions,
@@ -10,9 +13,16 @@ import {
 import { dashboardQueryOptions } from "./hooks/use-dashboard";
 import { notificationsQueryOptions } from "./hooks/use-notifications";
 import { queryClient } from "./lib/query";
+import { ForgotPasswordPage } from "./routes/forgot-password";
 import { LoginPage } from "./routes/login";
 import { protectedRoute } from "./routes/protected";
+import { ResetPasswordPage } from "./routes/reset-password";
 import { rootRoute } from "./routes/root";
+
+// How long (ms) a loader must pend before showing the pending component
+const PENDING_MS = 400;
+// Minimum time (ms) the pending component stays visible once shown (avoids flash)
+const PENDING_MIN_MS = 500;
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -86,6 +96,21 @@ const settingsRoute = createRoute({
   ),
 });
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/forgot-password",
+  component: ForgotPasswordPage,
+});
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reset-password",
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === "string" ? search.token : undefined,
+  }),
+  component: ResetPasswordPage,
+});
+
 const acceptInviteRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/invites/$token",
@@ -97,6 +122,8 @@ const acceptInviteRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   protectedRoute.addChildren([
     dashboardRoute,
     contractsListRoute,
@@ -108,7 +135,14 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  defaultPendingComponent: AppPending,
+  defaultPendingMs: PENDING_MS,
+  defaultPendingMinMs: PENDING_MIN_MS,
+  defaultNotFoundComponent: NotFound,
+  defaultErrorComponent: RouteError,
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

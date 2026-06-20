@@ -1,12 +1,14 @@
 import { Download } from "lucide-react";
+import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { PageContainer } from "@/components/page-container";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { PAGE_TITLE } from "@/lib/page-title";
 
 export function SettingsPage() {
   useDocumentTitle(PAGE_TITLE.settings);
   return (
-    <div className="mx-auto max-w-2xl p-6">
+    <PageContainer width="form">
       <header className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Conta
@@ -33,12 +35,19 @@ export function SettingsPage() {
         </a>
       </section>
 
+      <section className="mb-8 rounded-xl border border-border bg-card p-5 shadow-xs">
+        <h2 className="mb-3 font-display font-semibold text-foreground tracking-tight">
+          Trocar senha
+        </h2>
+        <ChangePasswordForm />
+      </section>
+
       <section>
         <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
           Zona de perigo
         </h2>
         <DeleteAccountDialog />
       </section>
-    </div>
+    </PageContainer>
   );
 }

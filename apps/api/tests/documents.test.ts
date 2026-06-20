@@ -9,6 +9,7 @@ import {
   type ModelParticipant,
 } from "../src/lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../src/lib/documents/pdf";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const contract: ModelContract = {
   title: "Aluguel",
@@ -154,21 +155,6 @@ describe("pdf renderer", () => {
   });
 });
 
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "T",
-        email: `${tag}-${Date.now()}@e.com`,
-        password: "password123",
-      }),
-    })
-  );
-  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
-}
-
 async function createContract(cookie: string, requiresConfirmation: boolean) {
   const res = await app.handle(
     new Request("http://localhost/api/contracts", {
@@ -247,7 +233,7 @@ describe("documents endpoints", () => {
   });
 
   it("statement.csv returns the header for the caller's contract", async () => {
-    const cookie = await signUpCookie("doc-csv");
+    const cookie = await signUpCookie(uniqueEmail("doc-csv"));
     const contractId = await createContract(cookie, false);
     const res = await app.handle(
       new Request(
@@ -264,7 +250,7 @@ describe("documents endpoints", () => {
   });
 
   it("statement.pdf returns a PDF", async () => {
-    const cookie = await signUpCookie("doc-pdf");
+    const cookie = await signUpCookie(uniqueEmail("doc-pdf"));
     const contractId = await createContract(cookie, false);
     const res = await app.handle(
       new Request(
@@ -281,9 +267,9 @@ describe("documents endpoints", () => {
   });
 
   it("does not leak another user's statement (404)", async () => {
-    const owner = await signUpCookie("doc-owner");
+    const owner = await signUpCookie(uniqueEmail("doc-owner"));
     const contractId = await createContract(owner, false);
-    const other = await signUpCookie("doc-other");
+    const other = await signUpCookie(uniqueEmail("doc-other"));
     const res = await app.handle(
       new Request(
         `http://localhost/api/contracts/${contractId}/statement.csv`,
@@ -296,7 +282,7 @@ describe("documents endpoints", () => {
   });
 
   it("receipt is 409 for an unpaid installment", async () => {
-    const cookie = await signUpCookie("doc-unpaid");
+    const cookie = await signUpCookie(uniqueEmail("doc-unpaid"));
     const contractId = await createContract(cookie, false);
     const instId = await firstInstallmentId(cookie, contractId);
     const res = await app.handle(
@@ -310,7 +296,7 @@ describe("documents endpoints", () => {
   it.skipIf(!hasStorage)(
     "receipt is a PDF for a paid installment",
     async () => {
-      const cookie = await signUpCookie("doc-paid");
+      const cookie = await signUpCookie(uniqueEmail("doc-paid"));
       const contractId = await createContract(cookie, false); // sem confirmação → upload marca paga
       const instId = await firstInstallmentId(cookie, contractId);
       await uploadProof(cookie, instId);

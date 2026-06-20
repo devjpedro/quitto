@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { generateSchedule } from "../src/lib/schedule";
+import { generateSchedule } from "@quitto/shared";
 
 describe("generateSchedule", () => {
   it("creates N installments with monthly due dates and split amounts", () => {

@@ -201,6 +201,7 @@ export const invite = pgTable(
       onDelete: "set null",
     }),
     acceptedAt: timestamp("accepted_at"),
+    declinedAt: timestamp("declined_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("invite_token_idx").on(table.token)]

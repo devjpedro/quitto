@@ -1,4 +1,9 @@
-import { AUDIT_TYPE, NOTIFICATION_TYPE, todayISO } from "@quitto/shared";
+import {
+  AUDIT_TYPE,
+  generateSchedule,
+  NOTIFICATION_TYPE,
+  todayISO,
+} from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -8,7 +13,6 @@ import { getCapabilities, getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
-import { generateSchedule } from "../lib/schedule";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
 

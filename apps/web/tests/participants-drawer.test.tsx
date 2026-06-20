@@ -5,6 +5,7 @@ import { renderWithProviders } from "./test-utils";
 
 const ACOES_MARIA = /ações de maria/i;
 const INVITE_ACTION = /convidar/i;
+const RESEND_INVITE_ACTION = /reenviar convite/i;
 const EMAIL_LABEL = /^e-mail do convidado$/i;
 const ADD_EMAIL_LABEL = /e-mail do convidado \(opcional\)/i;
 const GENERATE_LINK_ACTION = /gerar link/i;
@@ -22,6 +23,10 @@ const createInvite = vi.fn().mockResolvedValue({
 });
 const removeParticipant = vi.fn().mockResolvedValue({ ok: true });
 const updateRole = vi.fn().mockResolvedValue({ id: "p1", role: "buyer" });
+const resendInvite = vi.fn().mockResolvedValue({
+  token: "tok456",
+  expiresAt: "2026-07-01T00:00:00.000Z",
+});
 vi.mock("../src/hooks/use-participant-mutations", () => ({
   useAddParticipantMutation: () => ({
     mutateAsync: addParticipant,
@@ -37,6 +42,10 @@ vi.mock("../src/hooks/use-participant-mutations", () => ({
   }),
   useUpdateParticipantRoleMutation: () => ({
     mutateAsync: updateRole,
+    isPending: false,
+  }),
+  useResendInviteMutation: () => ({
+    mutate: resendInvite,
     isPending: false,
   }),
 }));
@@ -59,6 +68,7 @@ describe("ParticipantsDrawer", () => {
     createInvite.mockClear();
     removeParticipant.mockClear();
     updateRole.mockClear();
+    resendInvite.mockClear();
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
     });
@@ -216,5 +226,25 @@ describe("ParticipantsDrawer", () => {
       />
     );
     expect(screen.queryByText("Dono")).not.toBeInTheDocument();
+  });
+
+  it("exibe 'Reenviar convite' para participante não-vinculado e chama a mutation ao clicar", async () => {
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={participants}
+      />
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: ACOES_MARIA }));
+    const resendItem = screen.getByRole("menuitem", {
+      name: RESEND_INVITE_ACTION,
+    });
+    expect(resendItem).toBeInTheDocument();
+    await userEvent.click(resendItem);
+
+    await waitFor(() => expect(resendInvite).toHaveBeenCalledOnce());
   });
 });

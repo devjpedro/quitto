@@ -3,16 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "./test-utils";
 
 const ACCEPT_BUTTON = /aceitar/i;
+const DECLINE_BUTTON = /recusar/i;
 const OTHER_EMAIL = /outro e-mail/i;
 const ALREADY_PARTICIPANT = /já participa deste contrato/i;
+const INVITED_BY = /convidou você/i;
+const BRL_1200 = /R\$\s*1\.200,00/;
 
 const useInviteQuery = vi.fn();
 const acceptMutate = vi.fn().mockResolvedValue({ contractId: "c1" });
+const declineMutate = vi.fn().mockResolvedValue(undefined);
 const navigate = vi.fn();
 vi.mock("../src/hooks/use-invite", () => ({
   useInviteQuery: () => useInviteQuery(),
   useAcceptInviteMutation: () => ({
     mutateAsync: acceptMutate,
+    isPending: false,
+  }),
+  useDeclineInviteMutation: () => ({
+    mutateAsync: declineMutate,
     isPending: false,
   }),
 }));
@@ -27,6 +35,7 @@ describe("AcceptInvitePage", () => {
   beforeEach(() => {
     useInviteQuery.mockReset();
     acceptMutate.mockClear();
+    declineMutate.mockClear();
     navigate.mockClear();
   });
 
@@ -37,6 +46,10 @@ describe("AcceptInvitePage", () => {
         role: "seller",
         email: "a@b.com",
         emailMatches: true,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [],
       },
       isPending: false,
       error: null,
@@ -62,6 +75,10 @@ describe("AcceptInvitePage", () => {
         email: "a@b.com",
         emailMatches: true,
         alreadyParticipant: true,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [],
       },
       isPending: false,
       error: null,
@@ -78,6 +95,10 @@ describe("AcceptInvitePage", () => {
         role: "seller",
         email: "outro@b.com",
         emailMatches: false,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [],
       },
       isPending: false,
       error: null,
@@ -85,5 +106,60 @@ describe("AcceptInvitePage", () => {
     renderWithProviders(<AcceptInvitePage />);
     expect(screen.getByText(OTHER_EMAIL)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: ACCEPT_BUTTON })).toBeNull();
+  });
+
+  it("exibe prévia do contrato e botão Recusar quando e-mail bate", () => {
+    useInviteQuery.mockReturnValue({
+      data: {
+        contractTitle: "Aluguel do Apê",
+        role: "buyer",
+        email: "a@b.com",
+        emailMatches: true,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [{ displayName: "João Vendedor", role: "seller" }],
+      },
+      isPending: false,
+      error: null,
+    });
+    renderWithProviders(<AcceptInvitePage />);
+
+    expect(screen.getByText(INVITED_BY)).toBeInTheDocument();
+    expect(
+      screen.getByText("Maria Silva", { exact: false })
+    ).toBeInTheDocument();
+    expect(screen.getByText(BRL_1200)).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(
+      screen.getByText("João Vendedor", { exact: false })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: DECLINE_BUTTON })
+    ).toBeInTheDocument();
+  });
+
+  it("chama a mutation de recusar e navega para /contracts", async () => {
+    useInviteQuery.mockReturnValue({
+      data: {
+        contractTitle: "Aluguel do Apê",
+        role: "buyer",
+        email: "a@b.com",
+        emailMatches: true,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [],
+      },
+      isPending: false,
+      error: null,
+    });
+    renderWithProviders(<AcceptInvitePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: DECLINE_BUTTON }));
+    await waitFor(() => expect(declineMutate).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ to: "/contracts" })
+    );
   });
 });

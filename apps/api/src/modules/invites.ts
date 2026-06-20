@@ -1,9 +1,18 @@
+import { NOTIFICATION_TYPE } from "@quitto/shared";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { contract, invite, participant } from "../db/schema";
+import {
+  contract,
+  installment,
+  invite,
+  participant,
+  user as userTable,
+} from "../db/schema";
 import { normalizeEmail } from "../lib/email";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { buildInvitePreview } from "../lib/invite-preview";
+import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
 
 async function loadValidInvite(token: string) {
@@ -17,6 +26,9 @@ async function loadValidInvite(token: string) {
   }
   if (row.acceptedAt) {
     throw new ValidationError("Convite já utilizado");
+  }
+  if (row.declinedAt) {
+    throw new ValidationError("Convite já recusado");
   }
   if (row.expiresAt.getTime() < Date.now()) {
     throw new ValidationError("Convite expirado");
@@ -99,12 +111,36 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           )
         )
         .limit(1);
+      const [owner] = await db
+        .select({ name: userTable.name })
+        .from(userTable)
+        .where(eq(userTable.id, c.ownerId))
+        .limit(1);
+      const installments = await db
+        .select({ amountCents: installment.amountCents })
+        .from(installment)
+        .where(eq(installment.contractId, row.contractId));
+      const people = await db
+        .select({
+          displayName: participant.displayName,
+          role: participant.role,
+        })
+        .from(participant)
+        .where(eq(participant.contractId, row.contractId));
+      const preview = buildInvitePreview({
+        installments,
+        participants: people,
+      });
       return {
         contractTitle: c.title,
         role: p.role,
         email: row.email,
         emailMatches: normalizeEmail(user.email) === row.email,
         alreadyParticipant: Boolean(mine),
+        inviterName: owner?.name ?? "Alguém",
+        totalAmountCents: preview.totalAmountCents,
+        installmentsCount: preview.installmentsCount,
+        parties: preview.parties,
       };
     },
     {
@@ -115,6 +151,12 @@ export const invitesModule = new Elysia({ prefix: "/api" })
         email: t.String(),
         emailMatches: t.Boolean(),
         alreadyParticipant: t.Boolean(),
+        inviterName: t.String(),
+        totalAmountCents: t.Number(),
+        installmentsCount: t.Number(),
+        parties: t.Array(
+          t.Object({ displayName: t.String(), role: t.String() })
+        ),
       }),
     }
   )
@@ -159,6 +201,21 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           .update(invite)
           .set({ acceptedByUserId: user.id, acceptedAt: new Date() })
           .where(eq(invite.id, row.id));
+        const [c2] = await tx
+          .select({ ownerId: contract.ownerId })
+          .from(contract)
+          .where(eq(contract.id, row.contractId))
+          .limit(1);
+        if (c2 && c2.ownerId !== user.id) {
+          await createNotifications(tx, [
+            {
+              userId: c2.ownerId,
+              type: NOTIFICATION_TYPE.inviteAccepted,
+              contractId: row.contractId,
+              metadata: { email: row.email },
+            },
+          ]);
+        }
         return row.contractId;
       });
       return { contractId };
@@ -166,5 +223,41 @@ export const invitesModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ token: t.String() }),
       response: t.Object({ contractId: t.String() }),
+    }
+  )
+  .post(
+    "/invites/:token/decline",
+    async ({ request, params }) => {
+      const { user } = await requireAuth(request.headers);
+      const row = await loadValidInvite(params.token);
+      if (normalizeEmail(user.email) !== row.email) {
+        throw new ForbiddenError("Este convite é para outro e-mail");
+      }
+      const [c] = await db
+        .select({ ownerId: contract.ownerId })
+        .from(contract)
+        .where(eq(contract.id, row.contractId))
+        .limit(1);
+      await db.transaction(async (tx) => {
+        await tx
+          .update(invite)
+          .set({ declinedAt: new Date() })
+          .where(eq(invite.id, row.id));
+        if (c) {
+          await createNotifications(tx, [
+            {
+              userId: c.ownerId,
+              type: NOTIFICATION_TYPE.inviteDeclined,
+              contractId: row.contractId,
+              metadata: { email: row.email },
+            },
+          ]);
+        }
+      });
+      return { ok: true };
+    },
+    {
+      params: t.Object({ token: t.String() }),
+      response: t.Object({ ok: t.Boolean() }),
     }
   );

@@ -33,6 +33,7 @@ import { useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
+  useResendInviteMutation,
   useUpdateParticipantRoleMutation,
 } from "@/hooks/use-participant-mutations";
 import { OWNER_BADGE_LABEL, ROLE_LABEL } from "@/lib/labels";
@@ -163,6 +164,7 @@ function ParticipantItem({
 }) {
   const removeMutation = useRemoveParticipantMutation(contractId);
   const updateRole = useUpdateParticipantRoleMutation(contractId);
+  const resendInvite = useResendInviteMutation(contractId, participant.id);
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isOwner = participant.isOwner;
@@ -205,6 +207,14 @@ function ParticipantItem({
               {participant.linked ? null : (
                 <DropdownMenuItem onSelect={() => setInviting(true)}>
                   Convidar
+                </DropdownMenuItem>
+              )}
+              {participant.linked ? null : (
+                <DropdownMenuItem
+                  disabled={resendInvite.isPending}
+                  onSelect={() => resendInvite.mutate()}
+                >
+                  Reenviar convite
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onSelect={() => setConfirmOpen(true)}>

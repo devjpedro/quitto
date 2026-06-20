@@ -1,5 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
+import { PageContainer } from "@/components/page-container";
+import { StatLabel } from "@/components/stat-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,16 +38,14 @@ function Stat({
       className="rounded-xl border border-border bg-card p-3.5 shadow-xs"
       data-testid={testId}
     >
-      <p className="font-medium text-[0.7rem] text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
+      <StatLabel>{label}</StatLabel>
       <p
         className={`mt-1 font-bold font-display text-lg tabular-nums ${STAT_TONE_CLASS[tone]}`}
       >
         {value}
       </p>
       {hint ? (
-        <p className="mt-0.5 text-[0.7rem] text-muted-foreground tabular-nums">
+        <p className="mt-0.5 text-muted-foreground text-xs tabular-nums">
           {hint}
         </p>
       ) : null}
@@ -120,7 +120,7 @@ function DashboardEmptyState() {
 
 function DashboardSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <PageContainer>
       <Skeleton className="mb-2 h-9 w-48" />
       <Skeleton className="mb-6 h-4 w-64" />
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -135,7 +135,7 @@ function DashboardSkeleton() {
         <Skeleton className="h-16 w-full rounded-xl" />
         <Skeleton className="h-16 w-full rounded-xl" />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -161,7 +161,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <PageContainer>
       <header className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Painel
@@ -217,6 +217,6 @@ export function DashboardPage() {
       ) : (
         <DashboardEmptyState />
       )}
-    </div>
+    </PageContainer>
   );
 }
