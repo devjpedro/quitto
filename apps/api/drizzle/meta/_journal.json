@@ -71,6 +71,13 @@
       "when": 1781449145418,
       "tag": "0009_flawless_colossus",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781963593771,
+      "tag": "0010_clean_next_avengers",
+      "breakpoints": true
     }
   ]
 }
