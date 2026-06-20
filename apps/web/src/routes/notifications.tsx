@@ -3,6 +3,7 @@ import {
   type NotificationItem,
   NotificationList,
 } from "@/components/notification-list";
+import { PageContainer } from "@/components/page-container";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
@@ -31,7 +32,7 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 sm:p-6">
+    <PageContainer width="form">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-bold font-display text-xl tracking-tight sm:text-2xl">
           Notificações
@@ -57,6 +58,6 @@ export function NotificationsPage() {
           <NotificationList items={data ?? []} onOpen={handleOpen} />
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

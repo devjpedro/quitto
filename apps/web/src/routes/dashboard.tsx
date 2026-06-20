@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
+import { PageContainer } from "@/components/page-container";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -120,7 +121,7 @@ function DashboardEmptyState() {
 
 function DashboardSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <PageContainer>
       <Skeleton className="mb-2 h-9 w-48" />
       <Skeleton className="mb-6 h-4 w-64" />
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -135,7 +136,7 @@ function DashboardSkeleton() {
         <Skeleton className="h-16 w-full rounded-xl" />
         <Skeleton className="h-16 w-full rounded-xl" />
       </div>
-    </div>
+    </PageContainer>
   );
 }
 
@@ -161,7 +162,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <PageContainer>
       <header className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Painel
@@ -217,6 +218,6 @@ export function DashboardPage() {
       ) : (
         <DashboardEmptyState />
       )}
-    </div>
+    </PageContainer>
   );
 }

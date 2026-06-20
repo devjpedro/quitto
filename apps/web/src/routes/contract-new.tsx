@@ -17,6 +17,7 @@ import {
 } from "react-hook-form";
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
+import { PageContainer } from "@/components/page-container";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -364,7 +365,7 @@ export function ContractNewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 sm:p-6">
+    <PageContainer width="form">
       <div className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Novo contrato
@@ -423,6 +424,6 @@ export function ContractNewPage() {
           </form>
         </FormProvider>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

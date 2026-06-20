@@ -5,6 +5,7 @@ import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { ExportMenu } from "@/components/export-menu";
 import { InstallmentDrawer } from "@/components/installment-drawer";
 import { InstallmentsSection } from "@/components/installments-section";
+import { PageContainer } from "@/components/page-container";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ export function ContractDetailPage() {
 
   if (isPending || !data) {
     return (
-      <div className="mx-auto max-w-3xl p-4 sm:p-6">
+      <PageContainer>
         <Skeleton className="mb-3 h-9 w-1/2" />
         <Skeleton className="mb-6 h-4 w-32" />
         <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -86,7 +87,7 @@ export function ContractDetailPage() {
         <Skeleton className="mb-6 h-2 w-full rounded-full" />
         <Skeleton className="mb-6 h-28 w-full rounded-xl" />
         <Skeleton className="h-40 w-full rounded-xl" />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -96,7 +97,7 @@ export function ContractDetailPage() {
   const selected = installments.find((it) => it.id === openId) ?? null;
 
   return (
-    <div className="mx-auto max-w-3xl p-4 sm:p-6">
+    <PageContainer>
       <header className="mb-6">
         <div className="flex items-start justify-between gap-3">
           <h1 className="min-w-0 font-bold font-display text-2xl text-foreground tracking-tight">
@@ -208,6 +209,6 @@ export function ContractDetailPage() {
           participants={participants}
         />
       ) : null}
-    </div>
+    </PageContainer>
   );
 }
