@@ -7,7 +7,10 @@ import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/700.css";
 import "./index.css";
 import { queryClient } from "./lib/query";
+import { warmUpApi } from "./lib/warm-up";
 import { router } from "./router";
+
+warmUpApi();
 
 // biome-ignore lint/style/noNonNullAssertion: #root exists in index.html
 createRoot(document.getElementById("root")!).render(

@@ -4,20 +4,6 @@ function parseISODate(iso: string): { y: number; m: number; d: number } {
   return { y, m, d };
 }
 
-function daysInMonth(year: number, month1to12: number): number {
-  return new Date(Date.UTC(year, month1to12, 0)).getUTCDate();
-}
-
-/** Adds `months` to an ISO date, clamping the day to the target month's last day. Returns ISO string. */
-export function addMonths(iso: string, months: number): string {
-  const { y, m, d } = parseISODate(iso);
-  const total = m - 1 + months;
-  const year = y + Math.floor(total / 12);
-  const month = (total % 12) + 1;
-  const day = Math.min(d, daysInMonth(year, month));
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
 /** Adds `days` to an ISO date (YYYY-MM-DD), UTC-safe. Returns ISO string. */
 export function addDays(iso: string, days: number): string {
   const { y, m, d } = parseISODate(iso);

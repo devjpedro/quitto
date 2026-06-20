@@ -1,9 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  addMonths,
   CONTRACT_OWNER_ROLES,
   type CreateContractInput,
   createContractSchema,
   OWNER_ROLE,
+  splitAmount,
 } from "@quitto/shared";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
@@ -17,6 +19,7 @@ import {
 } from "react-hook-form";
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
+import { PageContainer } from "@/components/page-container";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +43,36 @@ import { cn } from "@/lib/utils";
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
 
 type ScheduleMode = "auto" | "custom";
+interface CustomInstallment {
+  amountCents: number;
+  dueDate: string;
+}
+
+/**
+ * Derives the custom installments from the current auto schedule, so switching
+ * Automático → Personalizado keeps the work: split amounts come over whenever a
+ * total + count exist; due dates only when the 1º vencimento was filled (left
+ * blank otherwise, for the user to complete). Falls back to one empty row.
+ */
+function autoToCustomInstallments(
+  schedule: CreateContractInput["schedule"]
+): CustomInstallment[] {
+  if (
+    schedule?.mode === "auto" &&
+    schedule.totalAmountCents > 0 &&
+    schedule.installmentsCount > 0
+  ) {
+    const firstDueDate = schedule.firstDueDate;
+    return splitAmount(
+      schedule.totalAmountCents,
+      schedule.installmentsCount
+    ).map((amountCents, i) => ({
+      amountCents,
+      dueDate: firstDueDate ? addMonths(firstDueDate, i) : "",
+    }));
+  }
+  return [{ amountCents: 0, dueDate: "" }];
+}
 
 function getNestedError(
   errors: unknown,
@@ -222,7 +255,7 @@ function InstallmentRow({
   const amountAria = useErrorAria(amountName, amountErrorId);
   const dueAria = useErrorAria(dueName, dueErrorId);
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-start">
       <div className="flex-1">
         <Label htmlFor={`amt-${index}`}>Valor</Label>
         <CurrencyField id={`amt-${index}`} name={amountName} {...amountAria} />
@@ -235,7 +268,7 @@ function InstallmentRow({
       </div>
       <Button
         aria-label="Remover parcela"
-        className="self-end"
+        className="self-end sm:mt-5 sm:self-auto"
         onClick={onRemove}
         size="icon"
         type="button"
@@ -255,13 +288,24 @@ function CustomSchedule() {
   });
   return (
     <div className="flex flex-col gap-3">
-      {fields.map((field, index) => (
-        <InstallmentRow
-          index={index}
-          key={field.id}
-          onRemove={() => remove(index)}
-        />
-      ))}
+      {fields.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-xl border border-border border-dashed bg-card/50 p-8 text-center">
+          <p className="font-display font-semibold text-foreground">
+            Nenhuma parcela ainda.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Adicione a primeira parcela do cronograma.
+          </p>
+        </div>
+      ) : (
+        fields.map((field, index) => (
+          <InstallmentRow
+            index={index}
+            key={field.id}
+            onRemove={() => remove(index)}
+          />
+        ))
+      )}
       <Button
         className="self-start"
         onClick={() => append({ amountCents: 0, dueDate: "" })}
@@ -358,13 +402,16 @@ export function ContractNewPage() {
             installmentsCount: 1,
             firstDueDate: "",
           }
-        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] },
+        : {
+            mode: "custom",
+            installments: autoToCustomInstallments(form.getValues("schedule")),
+          },
       { shouldValidate: false }
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-4 sm:p-6">
+    <PageContainer width="form">
       <div className="mb-6">
         <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
           Novo contrato
@@ -423,6 +470,6 @@ export function ContractNewPage() {
           </form>
         </FormProvider>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
