@@ -6,6 +6,13 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url(),
   WEB_ORIGIN: z.string().url(),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
+  // Opt-in only: liga o rate limit fora de produção (staging/QA). Em produção já é ligado pelo NODE_ENV.
+  RATE_LIMIT_ENABLED: z.literal("true").optional(),
+  // Opt-in only: exige verificação de e-mail fora de produção (ex.: testes). Em produção já é exigido pelo NODE_ENV.
+  REQUIRE_EMAIL_VERIFICATION: z.literal("true").optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   S3_ENDPOINT: z.string().url().optional(),
@@ -13,6 +20,8 @@ const schema = z.object({
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("onboarding@resend.dev"),
 });
 
 export type Env = z.infer<typeof schema>;

@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { PAGE_TITLE } from "@/lib/page-title";
@@ -31,6 +32,13 @@ export function SettingsPage() {
           <Download aria-hidden="true" className="size-4 opacity-70" />
           Exportar meus dados
         </a>
+      </section>
+
+      <section className="mb-8 rounded-xl border border-border bg-card p-5 shadow-xs">
+        <h2 className="mb-3 font-display font-semibold text-foreground tracking-tight">
+          Trocar senha
+        </h2>
+        <ChangePasswordForm />
       </section>
 
       <section>

@@ -3,6 +3,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { participant } from "../src/db/schema";
+import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const configured = Boolean(process.env.S3_ENDPOINT);
 
@@ -25,21 +26,6 @@ async function putObjectRaw(objectKey: string, contentType: string) {
       ContentType: contentType,
     })
   );
-}
-
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "T",
-        email: `${tag}-${Date.now()}@e.com`,
-        password: "password123",
-      }),
-    })
-  );
-  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
 }
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -111,7 +97,7 @@ async function uploadProof(cookie: string, installmentId: string) {
 
 describe.if(configured)("POST presign", () => {
   it("retorna uploadUrl + objectKey para o dono", async () => {
-    const cookie = await signUpCookie("presign");
+    const cookie = await signUpCookie(uniqueEmail("presign"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await app.handle(
@@ -133,7 +119,7 @@ describe.if(configured)("POST presign", () => {
 
 describe.if(configured)("confirm upload (com confirmação)", () => {
   it("envia comprovante e vai para awaiting_confirmation", async () => {
-    const cookie = await signUpCookie("up1");
+    const cookie = await signUpCookie(uniqueEmail("up1"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await uploadProof(cookie, iId);
@@ -144,7 +130,7 @@ describe.if(configured)("confirm upload (com confirmação)", () => {
 
 describe.if(configured)("confirm upload (sem confirmação)", () => {
   it("envia comprovante e já fica paid", async () => {
-    const cookie = await signUpCookie("up2");
+    const cookie = await signUpCookie(uniqueEmail("up2"));
     const cId = await createContract(cookie, false);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await uploadProof(cookie, iId);
@@ -154,7 +140,7 @@ describe.if(configured)("confirm upload (sem confirmação)", () => {
 
 describe.if(configured)("confirm/dispute", () => {
   it("vendedor/dono confirma após o upload", async () => {
-    const cookie = await signUpCookie("cf");
+    const cookie = await signUpCookie(uniqueEmail("cf"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     await uploadProof(cookie, iId);
@@ -168,7 +154,7 @@ describe.if(configured)("confirm/dispute", () => {
   });
 
   it("rejeita confirmar uma parcela ainda pendente (transição inválida -> 422)", async () => {
-    const cookie = await signUpCookie("cf2");
+    const cookie = await signUpCookie(uniqueEmail("cf2"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await app.handle(
@@ -190,9 +176,9 @@ async function meId(cookie: string): Promise<string> {
 
 describe("autorização por capacidade (dono+comprador com vendedor vinculado)", () => {
   it("dono+comprador recebe 403 ao confirmar quando há vendedor vinculado", async () => {
-    const ownerCookie = await signUpCookie("cap-owner");
+    const ownerCookie = await signUpCookie(uniqueEmail("cap-owner"));
     const cId = await createContract(ownerCookie, true); // ownerRole: "buyer"
-    const sellerCookie = await signUpCookie("cap-seller");
+    const sellerCookie = await signUpCookie(uniqueEmail("cap-seller"));
     const sellerId = await meId(sellerCookie);
     await db.insert(participant).values({
       contractId: cId,
@@ -213,7 +199,7 @@ describe("autorização por capacidade (dono+comprador com vendedor vinculado)",
 
 describe.if(configured)("GET installment detail", () => {
   it("traz proofs com downloadUrl e a timeline de eventos", async () => {
-    const cookie = await signUpCookie("det");
+    const cookie = await signUpCookie(uniqueEmail("det"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     await uploadProof(cookie, iId);
@@ -236,7 +222,7 @@ describe.if(configured)("GET installment detail", () => {
 
 describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
   it("rejeita objeto com content-type fora da whitelist (-> 422)", async () => {
-    const cookie = await signUpCookie("mime");
+    const cookie = await signUpCookie(uniqueEmail("mime"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
     const objectKey = `proofs/${cId}/${iId}/${crypto.randomUUID()}-evil.txt`;
