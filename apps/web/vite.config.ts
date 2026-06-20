@@ -2,9 +2,11 @@ import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { defineConfig, type PluginOption } from "vite";
 
 const analyze = process.env.ANALYZE === "1";
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig({
   plugins: [
@@ -19,6 +21,17 @@ export default defineConfig({
           }) as PluginOption,
         ]
       : []),
+    ...(sentryAuthToken
+      ? [
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            authToken: sentryAuthToken,
+            // delete .map files after upload so they are never published on Vercel
+            sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+          }),
+        ]
+      : []),
   ],
   resolve: { alias: { "@": resolve(__dirname, "./src") } },
   server: {
@@ -26,6 +39,8 @@ export default defineConfig({
     proxy: { "/api": { target: "http://localhost:3000", changeOrigin: true } },
   },
   build: {
+    // generate hidden source maps only when uploading to Sentry (token present)
+    sourcemap: sentryAuthToken ? "hidden" : false,
     rollupOptions: {
       output: {
         manualChunks(id) {
