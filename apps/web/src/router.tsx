@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { AppPending } from "./components/app-pending";
 import { NotFound } from "./components/not-found";
+import { RouteError } from "./components/route-error";
 import {
   contractQueryOptions,
   contractsQueryOptions,
@@ -140,6 +141,7 @@ export const router = createRouter({
   defaultPendingMs: PENDING_MS,
   defaultPendingMinMs: PENDING_MIN_MS,
   defaultNotFoundComponent: NotFound,
+  defaultErrorComponent: RouteError,
 });
 
 declare module "@tanstack/react-router" {
