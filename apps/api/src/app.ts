@@ -1,4 +1,5 @@
 import { cors } from "@elysiajs/cors";
+import { captureException } from "@sentry/bun";
 import { Elysia, t } from "elysia";
 import { auth } from "./auth";
 import { env } from "./env";
@@ -26,6 +27,7 @@ export function buildApp() {
         set.status = error.httpStatus;
         return toErrorBody(error);
       }
+      captureException(error);
     })
     .use(cors({ origin: env.WEB_ORIGIN, credentials: true }))
     .mount(auth.handler)
