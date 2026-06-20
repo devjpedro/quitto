@@ -56,6 +56,11 @@ Navegador ──▶ usequitto.vercel.app (React SPA · Vercel)
 
 > Valores monetários são **inteiros em centavos**; datas em ISO com máscara pt-BR.
 
+## Documentação
+
+- **[Requisitos](docs/requisitos.md)** — funcionalidades e requisitos não-funcionais (a11y, segurança, performance).
+- **[Arquitetura](docs/arquitetura.md)** — topologia, modelo de dados, fluxos-chave e decisões de projeto.
+
 ## Estrutura
 
 ```

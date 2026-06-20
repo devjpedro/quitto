@@ -12,3 +12,4 @@ coverage/
 .lighthouseci/
 *.log
 .DS_Store
+.vercel
