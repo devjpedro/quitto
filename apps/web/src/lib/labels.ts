@@ -19,6 +19,8 @@ import {
   FileCheck,
   type LucideIcon,
   UserMinus,
+  UserPlus,
+  UserX,
   XCircle,
 } from "lucide-react";
 import type { InstallmentFilter } from "./installments-filter";
@@ -81,6 +83,8 @@ export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.installmentDueSoon]: "Parcela vencendo em breve",
   [NOTIFICATION_TYPE.installmentOverdue]: "Parcela vencida",
   [NOTIFICATION_TYPE.participantLeft]: "Participante saiu do contrato",
+  [NOTIFICATION_TYPE.inviteAccepted]: "Convite aceito",
+  [NOTIFICATION_TYPE.inviteDeclined]: "Convite recusado",
 };
 
 export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
@@ -91,6 +95,8 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
   [NOTIFICATION_TYPE.installmentDueSoon]: Clock,
   [NOTIFICATION_TYPE.installmentOverdue]: AlertTriangle,
   [NOTIFICATION_TYPE.participantLeft]: UserMinus,
+  [NOTIFICATION_TYPE.inviteAccepted]: UserPlus,
+  [NOTIFICATION_TYPE.inviteDeclined]: UserX,
 };
 
 export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;

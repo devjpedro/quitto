@@ -72,3 +72,21 @@ export function useCreateInviteMutation(contractId: string) {
     meta: { successMessage: FEEDBACK.inviteCreated },
   });
 }
+
+export function useResendInviteMutation(
+  contractId: string,
+  participantId: string
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.api
+          .contracts({ id: contractId })
+          .participants({ participantId })
+          .invite.resend.post()
+      ),
+    meta: { successMessage: FEEDBACK.inviteResent },
+    onSuccess: () => invalidateContractViews(qc, contractId),
+  });
+}

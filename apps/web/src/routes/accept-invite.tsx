@@ -3,9 +3,14 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { useAcceptInviteMutation, useInviteQuery } from "@/hooks/use-invite";
+import {
+  useAcceptInviteMutation,
+  useDeclineInviteMutation,
+  useInviteQuery,
+} from "@/hooks/use-invite";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/error-message";
+import { formatBRL } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 
@@ -15,6 +20,7 @@ export function AcceptInvitePage() {
   const navigate = useNavigate();
   const { data, isPending, error } = useInviteQuery(token);
   const acceptMutation = useAcceptInviteMutation(token);
+  const declineMutation = useDeclineInviteMutation(token);
 
   if (isPending) {
     return (
@@ -47,6 +53,11 @@ export function AcceptInvitePage() {
     });
   }
 
+  async function onDecline() {
+    await declineMutation.mutateAsync();
+    navigate({ to: "/contracts" });
+  }
+
   async function onSwitchAccount() {
     await authClient.signOut();
     window.location.href = `/login?redirect=${encodeURIComponent(
@@ -73,14 +84,25 @@ export function AcceptInvitePage() {
     );
   } else if (data.emailMatches) {
     action = (
-      <Button
-        className="mt-4 w-full"
-        disabled={acceptMutation.isPending}
-        onClick={onAccept}
-        type="button"
-      >
-        {acceptMutation.isPending ? "Aceitando…" : "Aceitar convite"}
-      </Button>
+      <div className="mt-4 flex flex-col gap-2">
+        <Button
+          className="w-full"
+          disabled={acceptMutation.isPending}
+          onClick={onAccept}
+          type="button"
+        >
+          {acceptMutation.isPending ? "Aceitando…" : "Aceitar convite"}
+        </Button>
+        <Button
+          className="w-full"
+          disabled={declineMutation.isPending}
+          onClick={onDecline}
+          type="button"
+          variant="outline"
+        >
+          {declineMutation.isPending ? "Recusando…" : "Recusar"}
+        </Button>
+      </div>
     );
   } else {
     action = (
@@ -108,9 +130,32 @@ export function AcceptInvitePage() {
       </h1>
       <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-xs">
         <p className="text-foreground">
-          Você foi convidado para <strong>{data.contractTitle}</strong> como{" "}
+          <strong>{data.inviterName}</strong> convidou você para{" "}
+          <strong>{data.contractTitle}</strong> como{" "}
           <strong>{ROLE_LABEL[data.role] ?? data.role}</strong>.
         </p>
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <dt className="text-muted-foreground">Total</dt>
+            <dd>{formatBRL(data.totalAmountCents)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Parcelas</dt>
+            <dd>{data.installmentsCount}</dd>
+          </div>
+        </dl>
+        {data.parties.length > 0 && (
+          <div className="mt-3 text-sm">
+            <p className="text-muted-foreground">Partes</p>
+            <ul className="mt-1 space-y-0.5">
+              {data.parties.map((party) => (
+                <li key={`${party.displayName}-${party.role}`}>
+                  {party.displayName} — {ROLE_LABEL[party.role] ?? party.role}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {action}
       </div>
     </div>

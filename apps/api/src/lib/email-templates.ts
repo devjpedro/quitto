@@ -58,3 +58,16 @@ export function verificationEmail(verifyUrl: string): {
     ),
   };
 }
+
+export function inviteEmail(args: {
+  acceptUrl: string;
+  inviterName: string;
+  contractTitle: string;
+  roleLabel: string;
+}): { subject: string; html: string } {
+  const body = `<p style="margin:0"><strong>${args.inviterName}</strong> convidou você para o contrato <strong>${args.contractTitle}</strong> como <strong>${args.roleLabel}</strong> no Quitto.</p><p style="margin:12px 0 0;color:#8a8378;font-size:14px">Acesse para aceitar. Se ainda não tem conta, é rápido criar uma com este e-mail.</p>`;
+  return {
+    subject: "Convite para um contrato no Quitto",
+    html: layout("Você foi convidado", body, "Ver convite", args.acceptUrl),
+  };
+}

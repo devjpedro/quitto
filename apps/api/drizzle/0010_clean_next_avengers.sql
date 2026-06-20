@@ -1,0 +1,1 @@
+ALTER TABLE "invite" ADD COLUMN "declined_at" timestamp;
