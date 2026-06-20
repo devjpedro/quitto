@@ -7,6 +7,7 @@ import { InstallmentDrawer } from "@/components/installment-drawer";
 import { InstallmentsSection } from "@/components/installments-section";
 import { PageContainer } from "@/components/page-container";
 import { ParticipantsDrawer } from "@/components/participants-drawer";
+import { StatLabel } from "@/components/stat-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -34,9 +35,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-3.5 shadow-xs">
-      <p className="font-medium text-[0.7rem] text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
+      <StatLabel>{label}</StatLabel>
       <p
         className={`mt-1 font-bold font-display text-lg tabular-nums ${STAT_TONE_CLASS[tone]}`}
       >
