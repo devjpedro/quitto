@@ -4,6 +4,7 @@ import {
   lazyRouteComponent,
 } from "@tanstack/react-router";
 import { AppPending } from "./components/app-pending";
+import { NotFound } from "./components/not-found";
 import {
   contractQueryOptions,
   contractsQueryOptions,
@@ -138,6 +139,7 @@ export const router = createRouter({
   defaultPendingComponent: AppPending,
   defaultPendingMs: PENDING_MS,
   defaultPendingMinMs: PENDING_MIN_MS,
+  defaultNotFoundComponent: NotFound,
 });
 
 declare module "@tanstack/react-router" {
