@@ -22,6 +22,7 @@ const schema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("onboarding@resend.dev"),
+  SENTRY_DSN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
