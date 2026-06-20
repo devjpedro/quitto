@@ -201,6 +201,21 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           .update(invite)
           .set({ acceptedByUserId: user.id, acceptedAt: new Date() })
           .where(eq(invite.id, row.id));
+        const [c2] = await tx
+          .select({ ownerId: contract.ownerId })
+          .from(contract)
+          .where(eq(contract.id, row.contractId))
+          .limit(1);
+        if (c2 && c2.ownerId !== user.id) {
+          await createNotifications(tx, [
+            {
+              userId: c2.ownerId,
+              type: NOTIFICATION_TYPE.inviteAccepted,
+              contractId: row.contractId,
+              metadata: { email: row.email },
+            },
+          ]);
+        }
         return row.contractId;
       });
       return { contractId };

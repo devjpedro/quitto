@@ -1,7 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { invite } from "../src/db/schema";
+import { invite, notification } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string): Promise<string> {
@@ -451,6 +453,27 @@ describe("invites", () => {
     expect(body.installmentsCount).toBeGreaterThan(0);
     expect(body.totalAmountCents).toBeGreaterThan(0);
     expect(Array.isArray(body.parties)).toBe(true);
+  });
+
+  it("aceitar notifica o dono", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("owner"));
+    const inviteeEmail = uniqueEmail("guest");
+    const { contractId, token } = await setupInvite(ownerCookie, inviteeEmail);
+    const inviteeCookie = await signUpCookie(inviteeEmail);
+    const acc = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: inviteeCookie },
+      })
+    );
+    expect(acc.status).toBe(200);
+    const notifs = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.contractId, contractId));
+    expect(
+      notifs.some((n) => n.type === NOTIFICATION_TYPE.inviteAccepted)
+    ).toBe(true);
   });
 
   it("convite expirado retorna 422 ao visualizar (GET)", async () => {
