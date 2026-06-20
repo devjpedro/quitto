@@ -11,6 +11,7 @@ export const FEEDBACK = {
   roleUpdated: "Papel atualizado",
   inviteCreated: "Convite gerado",
   inviteAccepted: "Convite aceito",
+  inviteDeclined: "Convite recusado",
   contractDeleted: "Contrato excluído",
   contractLeft: "Você saiu do contrato",
 } as const;

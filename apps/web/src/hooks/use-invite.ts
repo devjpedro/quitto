@@ -32,3 +32,14 @@ export function useAcceptInviteMutation(token: string) {
     },
   });
 }
+
+export function useDeclineInviteMutation(token: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.api.invites({ token }).decline.post()),
+    meta: { successMessage: FEEDBACK.inviteDeclined },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.myInvites });
+    },
+  });
+}
