@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db, schema } from "./db/client";
 import { env } from "./env";
 import { AUTH_RATE_RULES } from "./lib/auth-rate-limit";
-import { resetPasswordEmail } from "./lib/email-templates";
+import { resetPasswordEmail, verificationEmail } from "./lib/email-templates";
 import { sendEmail } from "./lib/mailer";
 
 const googleProvider =
@@ -23,6 +23,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     sendResetPassword: async ({
       user,
       url,
@@ -31,6 +32,20 @@ export const auth = betterAuth({
       url: string;
     }) => {
       const { subject, html } = resetPasswordEmail(url);
+      await sendEmail({ to: user.email, subject, html });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({
+      user,
+      url,
+    }: {
+      user: { email: string };
+      url: string;
+    }) => {
+      const { subject, html } = verificationEmail(url);
       await sendEmail({ to: user.email, subject, html });
     },
   },

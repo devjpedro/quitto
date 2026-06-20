@@ -9,6 +9,7 @@ vi.mock("@/lib/auth-client", () => ({
     social: vi.fn(),
   },
   signUp: { email: vi.fn() },
+  sendVerificationEmail: vi.fn(),
 }));
 
 import { LoginPage } from "../src/routes/login";

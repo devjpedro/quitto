@@ -28,6 +28,7 @@ describe("password reset", () => {
         body: JSON.stringify({ name: "R", email: e, password: "password123" }),
       })
     );
+    sent.length = 0; // descarta e-mail de verificação enviado no sign-up
 
     const res = await app.handle(
       new Request("http://localhost/api/auth/request-password-reset", {
