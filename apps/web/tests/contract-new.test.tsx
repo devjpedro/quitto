@@ -26,6 +26,8 @@ const FIRST_DUE = /1.* vencimento/i;
 const MODE_AUTO = /automático/i;
 const MODE_CUSTOM = /personalizado/i;
 const ADD_INSTALLMENT = /adicionar parcela/i;
+const REMOVE_INSTALLMENT = /remover parcela/i;
+const EMPTY_CUSTOM = /nenhuma parcela ainda/i;
 
 describe("ContractNewPage (wizard)", () => {
   beforeEach(() => {
@@ -113,5 +115,23 @@ describe("ContractNewPage (wizard)", () => {
     // [B2] re-clicking the already-active mode must NOT reset the value
     await userEvent.click(screen.getByRole("button", { name: MODE_AUTO }));
     expect((screen.getByLabelText(COUNT) as HTMLInputElement).value).toBe("12");
+  });
+
+  it("mostra empty state ao remover todas as parcelas do personalizado [item 3]", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "Apê");
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+    await userEvent.click(screen.getByRole("button", { name: MODE_CUSTOM }));
+
+    // o personalizado começa com 1 parcela; remove ela
+    await userEvent.click(
+      screen.getByRole("button", { name: REMOVE_INSTALLMENT })
+    );
+
+    expect(screen.getByText(EMPTY_CUSTOM)).toBeInTheDocument();
+    // o botão de adicionar continua disponível
+    expect(
+      screen.getByRole("button", { name: ADD_INSTALLMENT })
+    ).toBeInTheDocument();
   });
 });

@@ -223,7 +223,7 @@ function InstallmentRow({
   const amountAria = useErrorAria(amountName, amountErrorId);
   const dueAria = useErrorAria(dueName, dueErrorId);
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-end">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-start">
       <div className="flex-1">
         <Label htmlFor={`amt-${index}`}>Valor</Label>
         <CurrencyField id={`amt-${index}`} name={amountName} {...amountAria} />
@@ -236,7 +236,7 @@ function InstallmentRow({
       </div>
       <Button
         aria-label="Remover parcela"
-        className="self-end"
+        className="self-end sm:mt-5 sm:self-auto"
         onClick={onRemove}
         size="icon"
         type="button"
@@ -256,13 +256,24 @@ function CustomSchedule() {
   });
   return (
     <div className="flex flex-col gap-3">
-      {fields.map((field, index) => (
-        <InstallmentRow
-          index={index}
-          key={field.id}
-          onRemove={() => remove(index)}
-        />
-      ))}
+      {fields.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-xl border border-border border-dashed bg-card/50 p-8 text-center">
+          <p className="font-display font-semibold text-foreground">
+            Nenhuma parcela ainda.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Adicione a primeira parcela do cronograma.
+          </p>
+        </div>
+      ) : (
+        fields.map((field, index) => (
+          <InstallmentRow
+            index={index}
+            key={field.id}
+            onRemove={() => remove(index)}
+          />
+        ))
+      )}
       <Button
         className="self-start"
         onClick={() => append({ amountCents: 0, dueDate: "" })}
