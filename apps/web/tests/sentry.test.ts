@@ -24,14 +24,18 @@ describe("initSentry", () => {
 });
 
 describe("scrubEvent", () => {
-  it("remove headers e cookies da request (não vaza token/sessão)", () => {
+  it("remove headers, cookies e query string (não vaza token/sessão/params de auth)", () => {
     const cleaned = scrubEvent({
       request: {
         headers: { authorization: "Bearer x", cookie: "session=y" },
         cookies: { session: "y" },
+        query_string: "token=secret",
+        url: "https://app/reset-password?token=secret",
       },
     });
     expect(cleaned.request?.headers).toEqual({});
     expect(cleaned.request?.cookies).toBeUndefined();
+    expect(cleaned.request?.query_string).toBeUndefined();
+    expect(cleaned.request?.url).toBe("https://app/reset-password");
   });
 });

@@ -2,16 +2,31 @@
 import * as Sentry from "@sentry/react";
 
 interface ScrubbableEvent {
-  request?: { headers?: Record<string, string>; cookies?: unknown };
+  request?: {
+    headers?: Record<string, string>;
+    cookies?: unknown;
+    query_string?: unknown;
+    url?: string;
+  };
 }
 
-/** Removes request headers/cookies so we never ship session tokens to Sentry. */
+/**
+ * Strips request headers, cookies and the query string so we never ship session
+ * tokens (Authorization/cookie) or auth params (?token=, ?code=) to Sentry.
+ */
 export function scrubEvent<T extends ScrubbableEvent>(event: T): T {
-  if (event.request?.headers) {
-    event.request.headers = {};
+  const request = event.request;
+  if (!request) {
+    return event;
   }
-  if (event.request) {
-    event.request.cookies = undefined;
+  if (request.headers) {
+    request.headers = {};
+  }
+  request.cookies = undefined;
+  request.query_string = undefined;
+  if (typeof request.url === "string") {
+    const [path] = request.url.split("?");
+    request.url = path;
   }
   return event;
 }
