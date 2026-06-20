@@ -4,20 +4,12 @@ import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { contract, participant } from "../src/db/schema";
 import { buildUserExport, type ExportInput } from "../src/lib/account-export";
+import { signUpCookie } from "./helpers/auth";
 
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "T",
-        email: `${tag}-${Date.now()}@e.com`,
-        password: "password123",
-      }),
-    })
-  );
-  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
+let seq = 0;
+function uniqueEmail(tag: string): string {
+  seq += 1;
+  return `${tag}-${Date.now()}-${seq}@e.com`;
 }
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -113,7 +105,7 @@ describe("GET /api/me/export", () => {
   });
 
   it("returns the caller's data as a JSON attachment", async () => {
-    const cookie = await signUpCookie("exp");
+    const cookie = await signUpCookie(uniqueEmail("exp"));
     await createContract(cookie, false);
     const res = await app.handle(
       new Request("http://localhost/api/me/export", { headers: { cookie } })
@@ -127,9 +119,9 @@ describe("GET /api/me/export", () => {
   });
 
   it("exports contracts where the caller is a linked participant (not owner)", async () => {
-    const ownerCookie = await signUpCookie("exp-owner");
+    const ownerCookie = await signUpCookie(uniqueEmail("exp-owner"));
     const ownedContract = await createContract(ownerCookie, false);
-    const linkedCookie = await signUpCookie("exp-linked");
+    const linkedCookie = await signUpCookie(uniqueEmail("exp-linked"));
     const linkedId = await meId(linkedCookie);
     await db.insert(participant).values({
       contractId: ownedContract,
@@ -162,9 +154,9 @@ describe("DELETE /api/me", () => {
 
   it("deletes own contracts but preserves a third party's contract (slot unlinked)", async () => {
     // contrato de um terceiro, onde o 'mortal' participa como vendedor vinculado
-    const ownerCookie = await signUpCookie("del-owner");
+    const ownerCookie = await signUpCookie(uniqueEmail("del-owner"));
     const thirdContract = await createContract(ownerCookie, false);
-    const mortalCookie = await signUpCookie("del-mortal");
+    const mortalCookie = await signUpCookie(uniqueEmail("del-mortal"));
     const mortalId = await meId(mortalCookie);
     await db.insert(participant).values({
       contractId: thirdContract,

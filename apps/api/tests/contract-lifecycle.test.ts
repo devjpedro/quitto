@@ -3,25 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { auditEvent, contract, notification } from "../src/db/schema";
-
-async function signUp(email: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test", email, password: "password123" }),
-    })
-  );
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) {
-    throw new Error("sign-up did not return a set-cookie header");
-  }
-  const [cookie] = setCookie.split(";");
-  if (!cookie) {
-    throw new Error("could not parse session cookie");
-  }
-  return cookie;
-}
+import { signUpCookie } from "./helpers/auth";
 
 let seq = 0;
 function uniqueEmail(tag: string): string {
@@ -76,7 +58,7 @@ async function joinAsMember(
     )
   );
   const { token } = await invRes.json();
-  const memberCookie = await signUp(email);
+  const memberCookie = await signUpCookie(email);
   const acc = await app.handle(
     new Request(`http://localhost/api/invites/${token}/accept`, {
       method: "POST",
@@ -108,7 +90,7 @@ function getContract(contractId: string, cookie: string) {
 
 describe("DELETE /api/contracts/:id", () => {
   it("owner exclui o contrato (some para todos)", async () => {
-    const owner = await signUp(uniqueEmail("del-owner"));
+    const owner = await signUpCookie(uniqueEmail("del-owner"));
     const contractId = await createContract(owner);
 
     const res = await del(`/api/contracts/${contractId}`, owner);
@@ -119,7 +101,7 @@ describe("DELETE /api/contracts/:id", () => {
   });
 
   it("participante não-dono recebe 403", async () => {
-    const owner = await signUp(uniqueEmail("del-fo"));
+    const owner = await signUpCookie(uniqueEmail("del-fo"));
     const contractId = await createContract(owner);
     const member = await joinAsMember(owner, contractId);
 
@@ -130,9 +112,9 @@ describe("DELETE /api/contracts/:id", () => {
   });
 
   it("estranho recebe 404 (não vaza)", async () => {
-    const owner = await signUp(uniqueEmail("del-leak-o"));
+    const owner = await signUpCookie(uniqueEmail("del-leak-o"));
     const contractId = await createContract(owner);
-    const stranger = await signUp(uniqueEmail("del-leak-s"));
+    const stranger = await signUpCookie(uniqueEmail("del-leak-s"));
 
     expect((await del(`/api/contracts/${contractId}`, stranger)).status).toBe(
       404
@@ -140,7 +122,7 @@ describe("DELETE /api/contracts/:id", () => {
   });
 
   it("não autenticado recebe 401", async () => {
-    const owner = await signUp(uniqueEmail("del-unauth"));
+    const owner = await signUpCookie(uniqueEmail("del-unauth"));
     const contractId = await createContract(owner);
 
     expect((await del(`/api/contracts/${contractId}`)).status).toBe(401);
@@ -149,7 +131,7 @@ describe("DELETE /api/contracts/:id", () => {
 
 describe("DELETE /api/contracts/:id/me (sair)", () => {
   it("participante não-dono sai e perde o acesso", async () => {
-    const owner = await signUp(uniqueEmail("leave-o"));
+    const owner = await signUpCookie(uniqueEmail("leave-o"));
     const contractId = await createContract(owner);
     const member = await joinAsMember(owner, contractId);
 
@@ -192,7 +174,7 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
   });
 
   it("dono não pode sair (use excluir) → 403", async () => {
-    const owner = await signUp(uniqueEmail("leave-owner"));
+    const owner = await signUpCookie(uniqueEmail("leave-owner"));
     const contractId = await createContract(owner);
 
     expect((await del(`/api/contracts/${contractId}/me`, owner)).status).toBe(
@@ -201,9 +183,9 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
   });
 
   it("estranho recebe 404 (não vaza)", async () => {
-    const owner = await signUp(uniqueEmail("leave-leak-o"));
+    const owner = await signUpCookie(uniqueEmail("leave-leak-o"));
     const contractId = await createContract(owner);
-    const stranger = await signUp(uniqueEmail("leave-leak-s"));
+    const stranger = await signUpCookie(uniqueEmail("leave-leak-s"));
 
     expect(
       (await del(`/api/contracts/${contractId}/me`, stranger)).status
@@ -211,7 +193,7 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
   });
 
   it("não autenticado recebe 401", async () => {
-    const owner = await signUp(uniqueEmail("leave-unauth"));
+    const owner = await signUpCookie(uniqueEmail("leave-unauth"));
     const contractId = await createContract(owner);
 
     expect((await del(`/api/contracts/${contractId}/me`)).status).toBe(401);

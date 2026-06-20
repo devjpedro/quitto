@@ -4,6 +4,7 @@ import {
   computeDashboard,
   type DashboardContractInput,
 } from "../src/lib/dashboard";
+import { signUpCookie } from "./helpers/auth";
 
 const today = "2026-06-13";
 
@@ -155,19 +156,10 @@ describe("computeDashboard", () => {
   });
 });
 
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "T",
-        email: `${tag}-${Date.now()}@e.com`,
-        password: "password123",
-      }),
-    })
-  );
-  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
+let seq = 0;
+function uniqueEmail(tag: string): string {
+  seq += 1;
+  return `${tag}-${Date.now()}-${seq}@e.com`;
 }
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -198,7 +190,7 @@ describe("GET /api/dashboard", () => {
   });
 
   it("aggregates only the caller's contracts (buyer → a pagar)", async () => {
-    const cookie = await signUpCookie("dash-buyer");
+    const cookie = await signUpCookie(uniqueEmail("dash-buyer"));
     await createContract(cookie, false); // ownerRole buyer, 3 parcelas de 1000 = 3000
 
     const res = await app.handle(
@@ -214,9 +206,9 @@ describe("GET /api/dashboard", () => {
   });
 
   it("does not leak other users' contracts", async () => {
-    const other = await signUpCookie("dash-other");
+    const other = await signUpCookie(uniqueEmail("dash-other"));
     await createContract(other, false);
-    const mine = await signUpCookie("dash-mine");
+    const mine = await signUpCookie(uniqueEmail("dash-mine"));
 
     const res = await app.handle(
       new Request("http://localhost/api/dashboard", {

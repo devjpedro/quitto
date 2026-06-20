@@ -5,22 +5,12 @@ import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
+import { signUpCookie } from "./helpers/auth";
 
-// ── helpers copied from tests/payments.test.ts ──
-
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "T",
-        email: `${tag}-${Date.now()}@e.com`,
-        password: "password123",
-      }),
-    })
-  );
-  return (res.headers.get("set-cookie") as string).split(";")[0] as string;
+let seq = 0;
+function uniqueEmail(tag: string): string {
+  seq += 1;
+  return `${tag}-${Date.now()}-${seq}@e.com`;
 }
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -118,11 +108,11 @@ describe("gatilhos de notificação", () => {
   it.skipIf(!hasStorage)(
     "comprovante enviado (com confirmação) notifica o aprovador, não o ator",
     async () => {
-      const ownerCookie = await signUpCookie("payn-own");
+      const ownerCookie = await signUpCookie(uniqueEmail("payn-own"));
       const contractId = await createContract(ownerCookie, true); // requiresConfirmation
       const ownerId = await meId(ownerCookie);
 
-      const sellerCookie = await signUpCookie("payn-sell");
+      const sellerCookie = await signUpCookie(uniqueEmail("payn-sell"));
       const sellerId = await meId(sellerCookie);
       await db.insert(participant).values({
         contractId,
@@ -144,9 +134,9 @@ describe("gatilhos de notificação", () => {
   it.skipIf(!hasStorage)(
     "sem confirmação: comprovante vira paga e notifica a contraparte",
     async () => {
-      const ownerCookie = await signUpCookie("payn-np-own");
+      const ownerCookie = await signUpCookie(uniqueEmail("payn-np-own"));
       const contractId = await createContract(ownerCookie, false);
-      const sellerCookie = await signUpCookie("payn-np-sell");
+      const sellerCookie = await signUpCookie(uniqueEmail("payn-np-sell"));
       const sellerId = await meId(sellerCookie);
       await db.insert(participant).values({
         contractId,
@@ -163,10 +153,10 @@ describe("gatilhos de notificação", () => {
   );
 
   it.skipIf(!hasStorage)("confirmar notifica o pagador", async () => {
-    const ownerCookie = await signUpCookie("payn-cf-own");
+    const ownerCookie = await signUpCookie(uniqueEmail("payn-cf-own"));
     const contractId = await createContract(ownerCookie, true);
     const ownerId = await meId(ownerCookie);
-    const sellerCookie = await signUpCookie("payn-cf-sell");
+    const sellerCookie = await signUpCookie(uniqueEmail("payn-cf-sell"));
     const sellerId = await meId(sellerCookie);
     await db.insert(participant).values({
       contractId,
@@ -190,11 +180,11 @@ describe("gatilhos de notificação", () => {
   it.skipIf(!hasStorage)(
     "contestar notifica o pagador com o motivo no metadata",
     async () => {
-      const ownerCookie = await signUpCookie("payn-dp-own");
+      const ownerCookie = await signUpCookie(uniqueEmail("payn-dp-own"));
       const contractId = await createContract(ownerCookie, true); // requiresConfirmation
       const ownerId = await meId(ownerCookie);
 
-      const sellerCookie = await signUpCookie("payn-dp-sell");
+      const sellerCookie = await signUpCookie(uniqueEmail("payn-dp-sell"));
       const sellerId = await meId(sellerCookie);
       await db.insert(participant).values({
         contractId,
@@ -240,9 +230,9 @@ describe("endpoints de notificação", () => {
   }
 
   it("lista só as do próprio usuário e conta as não-lidas", async () => {
-    const aCookie = await signUpCookie("notif-a");
+    const aCookie = await signUpCookie(uniqueEmail("notif-a"));
     const aId = await meId(aCookie);
-    const bCookie = await signUpCookie("notif-b");
+    const bCookie = await signUpCookie(uniqueEmail("notif-b"));
     const bId = await meId(bCookie);
     const contractId = await createContract(aCookie, false);
 
@@ -270,9 +260,9 @@ describe("endpoints de notificação", () => {
   });
 
   it("marcar uma como lida zera só ela; cross-user dá 404", async () => {
-    const aCookie = await signUpCookie("notif-mr-a");
+    const aCookie = await signUpCookie(uniqueEmail("notif-mr-a"));
     const aId = await meId(aCookie);
-    const bCookie = await signUpCookie("notif-mr-b");
+    const bCookie = await signUpCookie(uniqueEmail("notif-mr-b"));
     const contractId = await createContract(aCookie, false);
     await seed(aId, contractId, null);
 
@@ -312,7 +302,7 @@ describe("endpoints de notificação", () => {
   });
 
   it("read-all zera o contador", async () => {
-    const cookie = await signUpCookie("notif-ra");
+    const cookie = await signUpCookie(uniqueEmail("notif-ra"));
     const id = await meId(cookie);
     const contractId = await createContract(cookie, false);
     await seed(id, contractId, null);
@@ -338,7 +328,7 @@ describe("endpoints de notificação", () => {
 
 describe("sweep de lembretes", () => {
   it("gera lembrete para parcela vencida e é idempotente", async () => {
-    const cookie = await signUpCookie("rem-1");
+    const cookie = await signUpCookie(uniqueEmail("rem-1"));
     const payerId = await meId(cookie);
     // contrato com primeira parcela já vencida
     const res = await app.handle(
@@ -377,7 +367,7 @@ describe("sweep de lembretes", () => {
   it.skipIf(!hasStorage)(
     "não gera lembrete para parcela em awaiting_confirmation",
     async () => {
-      const ownerCookie = await signUpCookie("rem-aw-own");
+      const ownerCookie = await signUpCookie(uniqueEmail("rem-aw-own"));
       const payerId = await meId(ownerCookie);
 
       // contrato com confirmação obrigatória e parcela vencida
@@ -399,7 +389,7 @@ describe("sweep de lembretes", () => {
       const contractId = (await res.json()).id as string;
 
       // vincula um vendedor (aprovador) ao contrato
-      const sellerCookie = await signUpCookie("rem-aw-sell");
+      const sellerCookie = await signUpCookie(uniqueEmail("rem-aw-sell"));
       const sellerId = await meId(sellerCookie);
       await db.insert(participant).values({
         contractId,

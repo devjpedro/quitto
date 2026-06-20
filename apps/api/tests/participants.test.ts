@@ -1,27 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { app } from "../src/app";
+import { signUpCookie } from "./helpers/auth";
 
-async function signUpCookie(tag: string): Promise<string> {
-  const res = await app.handle(
-    new Request("http://localhost/api/auth/sign-up/email", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: "Test",
-        email: `${tag}-${Date.now()}@example.com`,
-        password: "password123",
-      }),
-    })
-  );
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) {
-    throw new Error("sign-up did not return a set-cookie header");
-  }
-  const [cookie] = setCookie.split(";");
-  if (!cookie) {
-    throw new Error("could not parse session cookie");
-  }
-  return cookie;
+let seq = 0;
+function uniqueEmail(tag: string): string {
+  seq += 1;
+  return `${tag}-${Date.now()}-${seq}@example.com`;
 }
 
 async function createContract(cookie: string): Promise<string> {
@@ -48,7 +32,7 @@ async function createContract(cookie: string): Promise<string> {
 
 describe("POST /api/contracts/:id/participants", () => {
   it("owner adiciona participante com sucesso", async () => {
-    const owner = await signUpCookie("po-add");
+    const owner = await signUpCookie(uniqueEmail("po-add"));
     const contractId = await createContract(owner);
 
     const res = await app.handle(
@@ -64,10 +48,10 @@ describe("POST /api/contracts/:id/participants", () => {
   });
 
   it("estranho recebe 404 (não vaza existência)", async () => {
-    const owner = await signUpCookie("po-leak");
+    const owner = await signUpCookie(uniqueEmail("po-leak"));
     const contractId = await createContract(owner);
 
-    const stranger = await signUpCookie("ps-leak");
+    const stranger = await signUpCookie(uniqueEmail("ps-leak"));
     const res = await app.handle(
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
@@ -79,7 +63,7 @@ describe("POST /api/contracts/:id/participants", () => {
   });
 
   it("role inválido retorna erro de validação", async () => {
-    const owner = await signUpCookie("po-invalid");
+    const owner = await signUpCookie(uniqueEmail("po-invalid"));
     const contractId = await createContract(owner);
 
     const res = await app.handle(
@@ -93,7 +77,7 @@ describe("POST /api/contracts/:id/participants", () => {
   });
 
   it("papéis buyer/seller são únicos; viewer é ilimitado", async () => {
-    const owner = await signUpCookie("po-uniq");
+    const owner = await signUpCookie(uniqueEmail("po-uniq"));
     const contractId = await createContract(owner); // dono ocupa o slot buyer
 
     const add = (role: string, name: string) =>
@@ -119,7 +103,7 @@ describe("POST /api/contracts/:id/participants", () => {
   });
 
   it("não autenticado retorna 401", async () => {
-    const owner = await signUpCookie("po-unauth");
+    const owner = await signUpCookie(uniqueEmail("po-unauth"));
     const contractId = await createContract(owner);
 
     const res = await app.handle(
@@ -135,7 +119,7 @@ describe("POST /api/contracts/:id/participants", () => {
 
 describe("DELETE /api/contracts/:id/participants/:participantId", () => {
   it("owner remove participante com sucesso", async () => {
-    const owner = await signUpCookie("po-del");
+    const owner = await signUpCookie(uniqueEmail("po-del"));
     const contractId = await createContract(owner);
 
     const addRes = await app.handle(
@@ -160,7 +144,7 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("estranho recebe 404 ao tentar remover participante", async () => {
-    const owner = await signUpCookie("po-del-leak");
+    const owner = await signUpCookie(uniqueEmail("po-del-leak"));
     const contractId = await createContract(owner);
 
     const addRes = await app.handle(
@@ -173,7 +157,7 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
     expect(addRes.status).toBe(200);
     const { id: participantId } = await addRes.json();
 
-    const stranger = await signUpCookie("ps-del-leak");
+    const stranger = await signUpCookie(uniqueEmail("ps-del-leak"));
     const res = await app.handle(
       new Request(
         `http://localhost/api/contracts/${contractId}/participants/${participantId}`,
@@ -184,7 +168,7 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("o dono não pode ser removido (403) mesmo com papel buyer/seller", async () => {
-    const owner = await signUpCookie("po-del-owner");
+    const owner = await signUpCookie(uniqueEmail("po-del-owner"));
     const contractId = await createContract(owner);
 
     const detail = await (
@@ -210,7 +194,7 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("participante inexistente retorna 404", async () => {
-    const owner = await signUpCookie("po-del-notfound");
+    const owner = await signUpCookie(uniqueEmail("po-del-notfound"));
     const contractId = await createContract(owner);
 
     const res = await app.handle(
@@ -268,7 +252,7 @@ function patchRole(
 
 describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   it("owner altera o papel de um participante com sucesso", async () => {
-    const owner = await signUpCookie("pr-ok");
+    const owner = await signUpCookie(uniqueEmail("pr-ok"));
     const contractId = await createContract(owner);
 
     const { id: participantId } = await (
@@ -288,7 +272,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("rejeita papel já ocupado (422)", async () => {
-    const owner = await signUpCookie("pr-uniq");
+    const owner = await signUpCookie(uniqueEmail("pr-uniq"));
     const contractId = await createContract(owner);
 
     await addParticipant(contractId, owner, "seller", "Vendedor");
@@ -301,7 +285,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("o slot do dono não pode virar viewer (422)", async () => {
-    const owner = await signUpCookie("pr-owner-viewer");
+    const owner = await signUpCookie(uniqueEmail("pr-owner-viewer"));
     const contractId = await createContract(owner);
 
     const detail = await getDetail(contractId, owner);
@@ -320,7 +304,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("o dono pode trocar o próprio papel buyer→seller (200)", async () => {
-    const owner = await signUpCookie("pr-owner-swap");
+    const owner = await signUpCookie(uniqueEmail("pr-owner-swap"));
     const contractId = await createContract(owner); // dono é buyer
 
     const detail = await getDetail(contractId, owner);
@@ -345,7 +329,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("dono não pode trocar para papel já ocupado por outro participante (422)", async () => {
-    const owner = await signUpCookie("pr-owner-taken");
+    const owner = await signUpCookie(uniqueEmail("pr-owner-taken"));
     const contractId = await createContract(owner); // dono é buyer
 
     // Adiciona um participante com papel seller
@@ -370,20 +354,20 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("estranho recebe 404 (não vaza existência)", async () => {
-    const owner = await signUpCookie("pr-leak");
+    const owner = await signUpCookie(uniqueEmail("pr-leak"));
     const contractId = await createContract(owner);
 
     const { id: participantId } = await (
       await addParticipant(contractId, owner, "viewer", "Alvo")
     ).json();
 
-    const stranger = await signUpCookie("pr-leak-2");
+    const stranger = await signUpCookie(uniqueEmail("pr-leak-2"));
     const res = await patchRole(contractId, participantId, stranger, "seller");
     expect(res.status).toBe(404);
   });
 
   it("participante inexistente retorna 404", async () => {
-    const owner = await signUpCookie("pr-notfound");
+    const owner = await signUpCookie(uniqueEmail("pr-notfound"));
     const contractId = await createContract(owner);
 
     const res = await patchRole(
@@ -396,7 +380,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
   });
 
   it("papel inválido retorna 422 (rejeição do TypeBox)", async () => {
-    const owner = await signUpCookie("pr-invalid");
+    const owner = await signUpCookie(uniqueEmail("pr-invalid"));
     const contractId = await createContract(owner);
 
     const { id: participantId } = await (
@@ -414,7 +398,7 @@ describe("PATCH /api/contracts/:id/participants/:participantId", () => {
 
 describe("POST /api/contracts/:id/participants/:participantId/invite", () => {
   it("owner gera convite com token e expiração", async () => {
-    const owner = await signUpCookie("inv");
+    const owner = await signUpCookie(uniqueEmail("inv"));
     const contractId = await createContract(owner);
 
     const addRes = await app.handle(
@@ -444,7 +428,7 @@ describe("POST /api/contracts/:id/participants/:participantId/invite", () => {
   });
 
   it("estranho recebe 404 ao tentar gerar convite (não vaza existência)", async () => {
-    const owner = await signUpCookie("inv-stranger");
+    const owner = await signUpCookie(uniqueEmail("inv-stranger"));
     const contractId = await createContract(owner);
 
     const addRes = await app.handle(
@@ -457,7 +441,7 @@ describe("POST /api/contracts/:id/participants/:participantId/invite", () => {
     expect(addRes.status).toBe(200);
     const { id: participantId } = await addRes.json();
 
-    const stranger = await signUpCookie("inv-stranger-2");
+    const stranger = await signUpCookie(uniqueEmail("inv-stranger-2"));
     const res = await app.handle(
       new Request(
         `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
