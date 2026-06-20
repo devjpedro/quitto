@@ -1,9 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  addMonths,
   CONTRACT_OWNER_ROLES,
   type CreateContractInput,
   createContractSchema,
   OWNER_ROLE,
+  splitAmount,
 } from "@quitto/shared";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
@@ -41,6 +43,36 @@ import { cn } from "@/lib/utils";
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
 
 type ScheduleMode = "auto" | "custom";
+interface CustomInstallment {
+  amountCents: number;
+  dueDate: string;
+}
+
+/**
+ * Derives the custom installments from the current auto schedule, so switching
+ * Automático → Personalizado keeps the work: split amounts come over whenever a
+ * total + count exist; due dates only when the 1º vencimento was filled (left
+ * blank otherwise, for the user to complete). Falls back to one empty row.
+ */
+function autoToCustomInstallments(
+  schedule: CreateContractInput["schedule"]
+): CustomInstallment[] {
+  if (
+    schedule?.mode === "auto" &&
+    schedule.totalAmountCents > 0 &&
+    schedule.installmentsCount > 0
+  ) {
+    const firstDueDate = schedule.firstDueDate;
+    return splitAmount(
+      schedule.totalAmountCents,
+      schedule.installmentsCount
+    ).map((amountCents, i) => ({
+      amountCents,
+      dueDate: firstDueDate ? addMonths(firstDueDate, i) : "",
+    }));
+  }
+  return [{ amountCents: 0, dueDate: "" }];
+}
 
 function getNestedError(
   errors: unknown,
@@ -370,7 +402,10 @@ export function ContractNewPage() {
             installmentsCount: 1,
             firstDueDate: "",
           }
-        : { mode: "custom", installments: [{ amountCents: 0, dueDate: "" }] },
+        : {
+            mode: "custom",
+            installments: autoToCustomInstallments(form.getValues("schedule")),
+          },
       { shouldValidate: false }
     );
   }

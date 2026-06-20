@@ -117,6 +117,49 @@ describe("ContractNewPage (wizard)", () => {
     expect((screen.getByLabelText(COUNT) as HTMLInputElement).value).toBe("12");
   });
 
+  it("auto → personalizado pré-preenche as parcelas com valor e vencimento [item 2]", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "Aluguel");
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+
+    // R$ 100,00 em 2 parcelas a partir de 10/07/2026 → 2× R$ 50,00 (jul/ago)
+    await userEvent.type(screen.getByLabelText(TOTAL), "10000");
+    const count = screen.getByLabelText(COUNT);
+    await userEvent.clear(count);
+    await userEvent.type(count, "2");
+    await userEvent.type(screen.getByLabelText(FIRST_DUE), "10/07/2026");
+
+    await userEvent.click(screen.getByRole("button", { name: MODE_CUSTOM }));
+
+    const valores = screen.getAllByLabelText("Valor");
+    const vencimentos = screen.getAllByLabelText("Vencimento");
+    expect(valores).toHaveLength(2);
+    expect(valores[0]).toHaveValue("R$ 50,00");
+    expect(vencimentos[0]).toHaveValue("10/07/2026");
+    expect(vencimentos[1]).toHaveValue("10/08/2026");
+  });
+
+  it("auto → personalizado herda os valores mesmo sem 1º vencimento [item 2]", async () => {
+    renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "Aluguel");
+    await userEvent.click(screen.getByRole("button", { name: NEXT }));
+
+    // só valor + nº de parcelas (sem 1º vencimento)
+    await userEvent.type(screen.getByLabelText(TOTAL), "10000");
+    const count = screen.getByLabelText(COUNT);
+    await userEvent.clear(count);
+    await userEvent.type(count, "2");
+
+    await userEvent.click(screen.getByRole("button", { name: MODE_CUSTOM }));
+
+    const valores = screen.getAllByLabelText("Valor");
+    const vencimentos = screen.getAllByLabelText("Vencimento");
+    expect(valores).toHaveLength(2);
+    // valores herdados; vencimento fica em branco pro usuário completar
+    expect(valores[0]).toHaveValue("R$ 50,00");
+    expect(vencimentos[0]).toHaveValue("");
+  });
+
   it("mostra empty state ao remover todas as parcelas do personalizado [item 3]", async () => {
     renderWithProviders(<ContractNewPage />);
     await userEvent.type(screen.getByLabelText(TITLE), "Apê");

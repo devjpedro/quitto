@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { formatCentsBRL, splitAmount } from "../src/lib/money";
+import { splitAmount } from "@quitto/shared";
+import { formatCentsBRL } from "../src/lib/money";
 
 describe("splitAmount", () => {
   it("splits evenly when divisible", () => {
