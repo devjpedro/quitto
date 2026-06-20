@@ -10,6 +10,7 @@ export const FEEDBACK = {
   participantRemoved: "Participante removido",
   roleUpdated: "Papel atualizado",
   inviteCreated: "Convite gerado",
+  inviteResent: "Convite reenviado",
   inviteAccepted: "Convite aceito",
   inviteDeclined: "Convite recusado",
   contractDeleted: "Contrato excluído",
