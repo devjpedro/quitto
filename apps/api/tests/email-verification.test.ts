@@ -1,15 +1,33 @@
 import { describe, expect, it } from "bun:test";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { eq } from "drizzle-orm";
-import { app } from "../src/app";
-import { db } from "../src/db/client";
+import { Elysia } from "elysia";
+import { db, schema } from "../src/db/client";
 import { user } from "../src/db/schema";
+import { env } from "../src/env";
+
+const isolatedAuth = betterAuth({
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
+  basePath: "/api/auth",
+  database: drizzleAdapter(db, { provider: "pg", schema }),
+  emailAndPassword: { enabled: true, requireEmailVerification: true },
+  emailVerification: {
+    sendVerificationEmail: async () => {
+      // no-op: avoids real email dispatch during tests
+    },
+  },
+});
+
+const isolatedApp = new Elysia().mount(isolatedAuth.handler);
 
 function email(): string {
   return `verify-${Math.floor(performance.now() * 1000)}@quitto.test`;
 }
 
 function signUp(e: string) {
-  return app.handle(
+  return isolatedApp.handle(
     new Request("http://localhost/api/auth/sign-up/email", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -19,7 +37,7 @@ function signUp(e: string) {
 }
 
 function signIn(e: string) {
-  return app.handle(
+  return isolatedApp.handle(
     new Request("http://localhost/api/auth/sign-in/email", {
       method: "POST",
       headers: { "content-type": "application/json" },

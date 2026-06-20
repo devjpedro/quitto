@@ -11,6 +11,8 @@ const schema = z.object({
     .default("development"),
   // Opt-in only: liga o rate limit fora de produção (staging/QA). Em produção já é ligado pelo NODE_ENV.
   RATE_LIMIT_ENABLED: z.literal("true").optional(),
+  // Opt-in only: exige verificação de e-mail fora de produção (ex.: testes). Em produção já é exigido pelo NODE_ENV.
+  REQUIRE_EMAIL_VERIFICATION: z.literal("true").optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   S3_ENDPOINT: z.string().url().optional(),
