@@ -32,6 +32,15 @@
       "linter": {
         "rules": { "style": { "useFilenamingConvention": "off" } }
       }
+    },
+    {
+      // biome 2.5.x endureceu noMisplacedAssertion e passou a acusar asserções
+      // dentro de wrappers/callbacks de teste do API (falso-positivo — elas
+      // estão em test() e rodam no `bun test`). Relaxa só nos testes do API.
+      "includes": ["apps/api/tests/**"],
+      "linter": {
+        "rules": { "suspicious": { "noMisplacedAssertion": "off" } }
+      }
     }
   ]
 }
