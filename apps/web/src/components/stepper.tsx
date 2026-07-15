@@ -27,10 +27,10 @@ export function Stepper({
               aria-current={active ? "step" : undefined}
               aria-label={step.label}
               className={cn(
-                "flex size-7 items-center justify-center rounded-full border-2 font-bold font-display text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1 disabled:cursor-default",
-                done &&
-                  "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700",
-                active && "border-primary bg-primary text-primary-foreground",
+                "flex size-7 items-center justify-center rounded-full border-2 font-bold text-xs transition-all duration-[var(--dur-fast)] ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1 active:scale-95 disabled:cursor-default",
+                done && "border-primary bg-primary text-primary-foreground",
+                active &&
+                  "border-primary bg-primary text-primary-foreground ring-2 ring-primary/25 ring-offset-2 ring-offset-background",
                 !(done || active) &&
                   "border-border bg-background text-muted-foreground"
               )}
@@ -54,8 +54,8 @@ export function Stepper({
               <span
                 aria-hidden="true"
                 className={cn(
-                  "mx-1 h-0.5 w-6 rounded-full transition-colors",
-                  done ? "bg-emerald-600" : "bg-border"
+                  "mx-1 h-0.5 w-6 rounded-full transition-colors duration-[var(--dur-base)] ease-[var(--ease-out)]",
+                  done ? "bg-primary" : "bg-border"
                 )}
               />
             )}
