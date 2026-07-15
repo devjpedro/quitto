@@ -72,7 +72,7 @@ vi.mock("@/hooks/use-contracts", () => ({
   }),
 }));
 
-import { ContractDetailPage } from "../src/routes/contract-detail";
+import { ContractDetailPage } from "../src/features/contracts/contract-detail-page";
 
 describe("contract-detail deep-link", () => {
   beforeEach(() => {

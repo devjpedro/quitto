@@ -5,7 +5,7 @@ vi.mock("@/components/delete-account-dialog", () => ({
   DeleteAccountDialog: () => <div data-testid="delete-dialog" />,
 }));
 
-import { SettingsPage } from "../src/routes/settings";
+import { SettingsPage } from "../src/features/settings/settings-page";
 
 const EXPORT = /exportar/i;
 

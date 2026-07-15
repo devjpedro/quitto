@@ -7,7 +7,7 @@ const { requestPasswordReset } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/auth-client", () => ({ requestPasswordReset }));
 
-import { ForgotPasswordPage } from "../src/routes/forgot-password";
+import { ForgotPasswordPage } from "../src/features/auth/forgot-password-page";
 
 const BTN_ENVIAR = /enviar/i;
 const TXT_ENVIAMOS = /enviamos um link/i;

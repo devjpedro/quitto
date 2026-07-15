@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
@@ -10,6 +11,7 @@ const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig({
   plugins: [
+    tanstackStart(),
     react(),
     tailwindcss(),
     ...(analyze
