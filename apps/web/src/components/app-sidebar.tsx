@@ -46,12 +46,7 @@ export function AppSidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside
-        className="material-chrome sticky top-0 hidden h-screen w-56 flex-col border-border border-r sm:flex"
-        style={{
-          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-        }}
-      >
+      <aside className="material-chrome sticky top-0 hidden h-screen w-56 flex-col border-border border-r sm:flex">
         <div className="flex items-center justify-between border-border border-b px-5 py-4">
           <Link
             aria-label="Ir para o início"
@@ -130,9 +125,6 @@ export function AppSidebar() {
       <nav
         aria-label="Navegação principal"
         className="material-chrome fixed inset-x-0 bottom-0 z-30 flex border-border border-t sm:hidden"
-        style={{
-          fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
-        }}
       >
         {NAV.map((item) => {
           const Icon = item.icon;
