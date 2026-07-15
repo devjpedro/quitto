@@ -29,7 +29,16 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   // drawer da parcela aberto
   const detail = await getContract(page.request, id);
   await page.goto(`/contracts/${id}?installment=${detail.installments[0].id}`);
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  // O drawer abre com fade/slide-in (tw-animate-css). Sem esperar a animação
+  // terminar, o axe às vezes escaneia um frame intermediário: nesse instante,
+  // texto e fundo estão ambos com opacidade parcial em relação ao body, o que
+  // "esbate" a cor e derruba artificialmente o contraste medido — falso
+  // positivo de color-contrast que não reflete o estado final renderizado.
+  await drawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
   await scan(page);
 
   await page.goto("/notifications");
