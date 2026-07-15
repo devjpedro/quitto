@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { newUser, seedContract, signup } from "../fixtures";
+import { newUser, seedContract, signup, waitForHydrated } from "../fixtures";
 
 const ROW_TESTID = /^installment-row-/;
 const MARK_PAID = /^Marcar como paga$/;
@@ -108,6 +108,7 @@ test("fechar o diálogo de excluir conta devolve o foco ao gatilho", async ({
 }) => {
   await signup(page);
   await page.goto("/settings");
+  await waitForHydrated(page);
 
   // The trigger button shares its label with the dialog title, but only the
   // trigger is a button, so the role query resolves to it.

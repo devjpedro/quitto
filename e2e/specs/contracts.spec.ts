@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seedContract, signup } from "../fixtures";
+import { seedContract, signup, waitForHydrated } from "../fixtures";
 
 const TO_PAY_VALUE = /3\.000,00|R\$/;
 
@@ -8,6 +8,7 @@ test("criar contrato (auto) aparece na lista e reflete no dashboard", async ({
 }) => {
   await signup(page);
   await page.goto("/contracts/new");
+  await waitForHydrated(page);
 
   // Passo 1 — básico (ownerRole já é "buyer" por padrão)
   await page.locator("#title").fill("Aluguel E2E");
