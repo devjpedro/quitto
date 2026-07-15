@@ -16,7 +16,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
-import { Route as AppContractsRouteImport } from './routes/_app/contracts'
+import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
 import { Route as AppInvitesTokenRouteImport } from './routes/_app/invites.$token'
 import { Route as AppContractsNewRouteImport } from './routes/_app/contracts.new'
 import { Route as AppContractsIdRouteImport } from './routes/_app/contracts.$id'
@@ -55,9 +55,9 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
-const AppContractsRoute = AppContractsRouteImport.update({
-  id: '/contracts',
-  path: '/contracts',
+const AppContractsIndexRoute = AppContractsIndexRouteImport.update({
+  id: '/contracts/',
+  path: '/contracts/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInvitesTokenRoute = AppInvitesTokenRouteImport.update({
@@ -66,14 +66,14 @@ const AppInvitesTokenRoute = AppInvitesTokenRouteImport.update({
   getParentRoute: () => AppRoute,
 } as any)
 const AppContractsNewRoute = AppContractsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AppContractsRoute,
+  id: '/contracts/new',
+  path: '/contracts/new',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppContractsIdRoute = AppContractsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppContractsRoute,
+  id: '/contracts/$id',
+  path: '/contracts/$id',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -81,24 +81,24 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/contracts': typeof AppContractsRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
   '/contracts/$id': typeof AppContractsIdRoute
   '/contracts/new': typeof AppContractsNewRoute
   '/invites/$token': typeof AppInvitesTokenRoute
+  '/contracts/': typeof AppContractsIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/contracts': typeof AppContractsRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
   '/contracts/$id': typeof AppContractsIdRoute
   '/contracts/new': typeof AppContractsNewRoute
   '/invites/$token': typeof AppInvitesTokenRoute
+  '/contracts': typeof AppContractsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -106,13 +106,13 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/_app/contracts': typeof AppContractsRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/contracts/$id': typeof AppContractsIdRoute
   '/_app/contracts/new': typeof AppContractsNewRoute
   '/_app/invites/$token': typeof AppInvitesTokenRoute
+  '/_app/contracts/': typeof AppContractsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,37 +121,37 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/contracts'
     | '/notifications'
     | '/settings'
     | '/contracts/$id'
     | '/contracts/new'
     | '/invites/$token'
+    | '/contracts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/contracts'
     | '/notifications'
     | '/settings'
     | '/'
     | '/contracts/$id'
     | '/contracts/new'
     | '/invites/$token'
+    | '/contracts'
   id:
     | '__root__'
     | '/_app'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
-    | '/_app/contracts'
     | '/_app/notifications'
     | '/_app/settings'
     | '/_app/'
     | '/_app/contracts/$id'
     | '/_app/contracts/new'
     | '/_app/invites/$token'
+    | '/_app/contracts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -212,11 +212,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/contracts': {
-      id: '/_app/contracts'
+    '/_app/contracts/': {
+      id: '/_app/contracts/'
       path: '/contracts'
-      fullPath: '/contracts'
-      preLoaderRoute: typeof AppContractsRouteImport
+      fullPath: '/contracts/'
+      preLoaderRoute: typeof AppContractsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/invites/$token': {
@@ -228,49 +228,39 @@ declare module '@tanstack/react-router' {
     }
     '/_app/contracts/new': {
       id: '/_app/contracts/new'
-      path: '/new'
+      path: '/contracts/new'
       fullPath: '/contracts/new'
       preLoaderRoute: typeof AppContractsNewRouteImport
-      parentRoute: typeof AppContractsRoute
+      parentRoute: typeof AppRoute
     }
     '/_app/contracts/$id': {
       id: '/_app/contracts/$id'
-      path: '/$id'
+      path: '/contracts/$id'
       fullPath: '/contracts/$id'
       preLoaderRoute: typeof AppContractsIdRouteImport
-      parentRoute: typeof AppContractsRoute
+      parentRoute: typeof AppRoute
     }
   }
 }
 
-interface AppContractsRouteChildren {
-  AppContractsIdRoute: typeof AppContractsIdRoute
-  AppContractsNewRoute: typeof AppContractsNewRoute
-}
-
-const AppContractsRouteChildren: AppContractsRouteChildren = {
-  AppContractsIdRoute: AppContractsIdRoute,
-  AppContractsNewRoute: AppContractsNewRoute,
-}
-
-const AppContractsRouteWithChildren = AppContractsRoute._addFileChildren(
-  AppContractsRouteChildren,
-)
-
 interface AppRouteChildren {
-  AppContractsRoute: typeof AppContractsRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppContractsIdRoute: typeof AppContractsIdRoute
+  AppContractsNewRoute: typeof AppContractsNewRoute
   AppInvitesTokenRoute: typeof AppInvitesTokenRoute
+  AppContractsIndexRoute: typeof AppContractsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppContractsRoute: AppContractsRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppContractsIdRoute: AppContractsIdRoute,
+  AppContractsNewRoute: AppContractsNewRoute,
   AppInvitesTokenRoute: AppInvitesTokenRoute,
+  AppContractsIndexRoute: AppContractsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
