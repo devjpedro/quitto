@@ -18,7 +18,9 @@ function submitLabel(mode: "signin" | "signup") {
 export function LoginPage() {
   useDocumentTitle(PAGE_TITLE.login);
   const search = useSearch({ strict: false }) as { redirect?: string };
-  const target = safeRedirect(search.redirect, window.location.origin);
+  // window não existe no SSR; target só é usado em handlers (client), então guardamos.
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const target = safeRedirect(search.redirect, origin);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
