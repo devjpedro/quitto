@@ -1,5 +1,8 @@
+import { DIRECTION } from "@quitto/shared";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
+import type { ReactNode } from "react";
+import { Money } from "@/components/money";
 import { PageContainer } from "@/components/page-container";
 import { StatLabel } from "@/components/stat-label";
 import { Badge } from "@/components/ui/badge";
@@ -10,13 +13,13 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { formatBRL, formatISODateBR } from "@/lib/format";
 import { DIRECTION_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
+import { cn } from "@/lib/utils";
 
 type Dashboard = NonNullable<ReturnType<typeof useDashboardQuery>["data"]>;
 type Upcoming = Dashboard["upcoming"][number];
 
-const STAT_TONE_CLASS: Record<"green" | "red" | "default", string> = {
-  green: "text-emerald-700",
-  red: "text-red-700",
+const STAT_TONE_CLASS: Record<"danger" | "default", string> = {
+  danger: "text-destructive",
   default: "text-foreground",
 };
 
@@ -28,19 +31,22 @@ function Stat({
   testId,
 }: {
   label: string;
-  value: string;
-  hint?: string;
-  tone?: "green" | "red" | "default";
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: "danger" | "default";
   testId?: string;
 }) {
   return (
     <div
-      className="rounded-xl border border-border bg-card p-3.5 shadow-xs"
+      className="rounded-xl border border-border bg-card p-3.5 shadow-[var(--shadow-sm)]"
       data-testid={testId}
     >
       <StatLabel>{label}</StatLabel>
       <p
-        className={`mt-1 font-bold font-display text-lg tabular-nums ${STAT_TONE_CLASS[tone]}`}
+        className={cn(
+          "mt-1 font-bold text-lg tabular-nums",
+          STAT_TONE_CLASS[tone]
+        )}
       >
         {value}
       </p>
@@ -60,33 +66,51 @@ function UpcomingRow({
   item: Upcoming;
   onOpen: (item: Upcoming) => void;
 }) {
+  const { isOverdue } = item;
   return (
     <button
-      aria-label={`${item.contractTitle}, ${DIRECTION_LABEL[item.direction]} ${formatBRL(item.amountCents)}${item.isOverdue ? ", vencida" : ""}`}
-      className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      aria-label={`${item.contractTitle}, ${DIRECTION_LABEL[item.direction]} ${formatBRL(item.amountCents)}${isOverdue ? ", vencida" : ""}`}
+      className={cn(
+        "relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 text-left shadow-[var(--shadow-sm)] transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        isOverdue
+          ? "border-destructive/25 bg-destructive/5"
+          : "border-border bg-card"
+      )}
       onClick={() => onOpen(item)}
       type="button"
     >
+      {isOverdue ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-0 left-0 w-1 bg-destructive"
+        />
+      ) : null}
       <span
-        aria-hidden="true"
-        className={`absolute inset-y-0 left-0 w-1 ${item.isOverdue ? "bg-destructive/70" : "bg-primary/40"}`}
-      />
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
+        className={cn(
+          "flex size-7 shrink-0 items-center justify-center rounded-full font-semibold text-xs tabular-nums",
+          isOverdue
+            ? "bg-destructive/12 text-destructive"
+            : "bg-muted text-foreground"
+        )}
+      >
         {item.sequence}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display font-semibold text-foreground text-sm">
+        <span className="block truncate font-semibold text-foreground text-sm">
           {item.contractTitle}
         </span>
         <span className="mt-0.5 block text-muted-foreground text-xs tabular-nums">
-          Parcela {item.sequence} · {DIRECTION_LABEL[item.direction]} ·{" "}
-          {formatISODateBR(item.dueDate)}
+          Parcela {item.sequence} · {formatISODateBR(item.dueDate)}
         </span>
       </span>
-      {item.isOverdue ? <Badge tone="danger">vencida</Badge> : null}
-      <span className="font-display font-semibold text-foreground text-sm tabular-nums">
-        {formatBRL(item.amountCents)}
-      </span>
+      {isOverdue ? (
+        <Badge tone="danger">vencida</Badge>
+      ) : (
+        <Badge tone={item.direction === DIRECTION.receive ? "gold" : "neutral"}>
+          {DIRECTION_LABEL[item.direction]}
+        </Badge>
+      )}
+      <Money cents={item.amountCents} size="sm" />
     </button>
   );
 }
@@ -104,9 +128,7 @@ function DashboardEmptyState() {
         <FileText aria-hidden="true" className="size-6" />
       </div>
       <div>
-        <p className="font-display font-semibold text-foreground">
-          Nada por aqui ainda.
-        </p>
+        <p className="font-semibold text-foreground">Nada por aqui ainda.</p>
         <p className="mt-1 text-muted-foreground text-sm">
           Crie um contrato para começar a acompanhar seus pagamentos.
         </p>
@@ -123,8 +145,8 @@ function DashboardSkeleton() {
     <PageContainer>
       <Skeleton className="mb-2 h-9 w-48" />
       <Skeleton className="mb-6 h-4 w-64" />
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Skeleton className="h-20 w-full rounded-xl" />
+      <Skeleton className="mb-6 h-40 w-full rounded-xl" />
+      <div className="mb-8 grid grid-cols-3 gap-3">
         <Skeleton className="h-20 w-full rounded-xl" />
         <Skeleton className="h-20 w-full rounded-xl" />
         <Skeleton className="h-20 w-full rounded-xl" />
@@ -163,7 +185,7 @@ export function DashboardPage() {
   return (
     <PageContainer>
       <header className="mb-6">
-        <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
+        <h1 className="font-bold text-2xl text-foreground tracking-tight">
           Painel
         </h1>
         <p className="mt-1 text-muted-foreground text-sm">
@@ -171,21 +193,39 @@ export function DashboardPage() {
         </p>
       </header>
 
-      <section className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat
-          label="A receber"
-          tone={data.toReceiveCents > 0 ? "green" : "default"}
-          value={formatBRL(data.toReceiveCents)}
-        />
+      <section className="mb-6 rounded-xl border border-border bg-card p-6 shadow-[var(--shadow-hero)]">
+        <StatLabel className="mb-2 flex items-center gap-2">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-gold" />
+          <span>A receber</span>
+        </StatLabel>
+        <Money cents={data.toReceiveCents} size="hero" />
+        <p className="mt-2 text-muted-foreground text-sm">
+          {data.activeContractsCount}{" "}
+          {data.activeContractsCount === 1
+            ? "contrato ativo"
+            : "contratos ativos"}
+          {overdue ? (
+            <span className="text-destructive">
+              {" "}
+              · {data.overdueCount}{" "}
+              {data.overdueCount === 1 ? "vencida" : "vencidas"}
+            </span>
+          ) : null}
+        </p>
+      </section>
+
+      <section className="mb-8 grid grid-cols-3 gap-3">
         <Stat
           label="A pagar"
           testId="stat-to-pay"
-          value={formatBRL(data.toPayCents)}
+          value={<Money cents={data.toPayCents} size="md" />}
         />
         <Stat
-          hint={overdue ? formatBRL(data.overdueCents) : undefined}
+          hint={
+            overdue ? <Money cents={data.overdueCents} size="sm" /> : undefined
+          }
           label="Atrasadas"
-          tone={overdue ? "red" : "default"}
+          tone={overdue ? "danger" : "default"}
           value={String(data.overdueCount)}
         />
         <Stat
