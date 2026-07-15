@@ -80,47 +80,52 @@ export function AddParticipantForm({
   const pending = addMutation.isPending || inviteMutation.isPending;
 
   return (
-    <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="participant-name">Nome</Label>
-        <Input
-          id="participant-name"
-          placeholder={PLACEHOLDER.participantName}
-          {...form.register("displayName")}
-        />
-        {form.formState.errors.displayName ? (
-          <p className="text-destructive text-xs">
-            {form.formState.errors.displayName.message}
-          </p>
-        ) : null}
+    <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="participant-name">Nome</Label>
+          <Input
+            id="participant-name"
+            placeholder={PLACEHOLDER.participantName}
+            {...form.register("displayName")}
+          />
+          {form.formState.errors.displayName ? (
+            <p className="text-destructive text-xs" role="alert">
+              {form.formState.errors.displayName.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="participant-role">Papel</Label>
+          <Controller
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger id="participant-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABEL[r] ?? r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="participant-role">Papel</Label>
-        <Controller
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger id="participant-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRoles.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {ROLE_LABEL[r] ?? r}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="participant-email">
-          E-mail do convidado (opcional)
-        </Label>
+      {/* Solo-first (ADR-0004): registrar o contato basta; convidar por
+          e-mail é upgrade opcional pra quando a outra parte topar entrar. */}
+      <div className="flex flex-col gap-1.5 border-border border-t pt-4">
+        <p className="font-semibold text-subtle-foreground text-xs uppercase tracking-wide">
+          Convidar (opcional)
+        </p>
+        <Label htmlFor="participant-email">E-mail do convidado</Label>
         <Input
           id="participant-email"
           placeholder="pessoa@exemplo.com"
@@ -128,20 +133,30 @@ export function AddParticipantForm({
           {...form.register("email")}
         />
         {form.formState.errors.email ? (
-          <p className="text-destructive text-xs">
+          <p className="text-destructive text-xs" role="alert">
             {form.formState.errors.email.message}
           </p>
         ) : null}
         <p className="text-muted-foreground text-xs">
-          Preenchendo o e-mail, o link do convite é gerado já ao adicionar.
+          Sem e-mail, só registramos o contato — dá pra convidar depois.
+          Preenchendo, o link do convite já é gerado ao adicionar.
         </p>
       </div>
 
       <div className="flex gap-2">
-        <Button className="flex-1" disabled={pending} type="submit">
+        <Button
+          className="flex-1 active:scale-[0.97]"
+          disabled={pending}
+          type="submit"
+        >
           {pending ? "Adicionando…" : "Adicionar"}
         </Button>
-        <Button onClick={onDone} type="button" variant="outline">
+        <Button
+          className="active:scale-[0.97]"
+          onClick={onDone}
+          type="button"
+          variant="outline"
+        >
           Cancelar
         </Button>
       </div>

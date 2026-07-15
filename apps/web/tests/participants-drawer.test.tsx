@@ -7,7 +7,6 @@ const ACOES_MARIA = /ações de maria/i;
 const INVITE_ACTION = /convidar/i;
 const RESEND_INVITE_ACTION = /reenviar convite/i;
 const EMAIL_LABEL = /^e-mail do convidado$/i;
-const ADD_EMAIL_LABEL = /e-mail do convidado \(opcional\)/i;
 const GENERATE_LINK_ACTION = /gerar link/i;
 const REMOVE_ACTION = /remover/i;
 const REMOVE_CONFIRM_ACTION = /^remover$/i;
@@ -121,7 +120,7 @@ describe("ParticipantsDrawer", () => {
     fireEvent.change(screen.getByLabelText(NAME_LABEL), {
       target: { value: "João" },
     });
-    fireEvent.change(screen.getByLabelText(ADD_EMAIL_LABEL), {
+    fireEvent.change(screen.getByLabelText(EMAIL_LABEL), {
       target: { value: "joao@example.com" },
     });
     fireEvent.submit(screen.getByRole("button", { name: SUBMIT_ADD_ACTION }));

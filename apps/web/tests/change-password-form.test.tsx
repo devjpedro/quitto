@@ -81,10 +81,11 @@ describe("change password form", () => {
     const newField = screen.getByLabelText(NEW);
     expect(newField).toHaveAttribute("type", "password");
 
-    // o primeiro toggle "Mostrar senha" pertence ao campo Nova senha
+    // Ordem no DOM: Senha atual, Nova senha, Confirmar nova senha — o
+    // segundo toggle "Mostrar senha" pertence ao campo Nova senha.
     const toggles = screen.getAllByRole("button", { name: SHOW_PASSWORD });
-    expect(toggles).toHaveLength(2);
-    await userEvent.click(toggles[0] as HTMLElement);
+    expect(toggles).toHaveLength(3);
+    await userEvent.click(toggles[1] as HTMLElement);
 
     expect(newField).toHaveAttribute("type", "text");
   });
