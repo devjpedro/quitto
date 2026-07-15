@@ -47,8 +47,8 @@ function Stat({
 
 export function ContractDetailPage() {
   useDocumentTitle(PAGE_TITLE.contractDetail);
-  const { id } = useParams({ from: "/protected/contracts/$id" });
-  const { installment } = useSearch({ from: "/protected/contracts/$id" });
+  const { id } = useParams({ from: "/_app/contracts/$id" });
+  const { installment } = useSearch({ from: "/_app/contracts/$id" });
   const navigate = useNavigate();
   const { data, isPending } = useContractQuery(id);
   const [openId, setOpenId] = useState<string | null>(installment ?? null);

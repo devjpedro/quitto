@@ -1,8 +1,15 @@
 /** Timeout do check de sessão no SSR (curto: não segura a resposta no boot frio). */
 export const SESSION_SSR_TIMEOUT_MS = 1500;
 
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+}
+
 export type SessionResult =
-  | { status: "authed"; user: unknown }
+  | { status: "authed"; user: SessionUser }
   | { status: "anon" }
   | { status: "unknown" };
 
