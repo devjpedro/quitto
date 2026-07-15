@@ -1,14 +1,22 @@
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Toaster } from "sonner";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/700.css";
 import "../index.css";
+import { initSentry } from "@/lib/sentry";
 
-export const Route = createRootRoute({
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -27,6 +35,11 @@ export const Route = createRootRoute({
 });
 
 function RootDocument() {
+  // Sentry só no cliente (no-op sem DSN); evita rodar o SDK de browser no SSR.
+  useEffect(() => {
+    initSentry();
+  }, []);
+
   return (
     <html lang="pt-BR">
       <head>
@@ -34,6 +47,7 @@ function RootDocument() {
       </head>
       <body>
         <Outlet />
+        <Toaster position="top-right" richColors />
         <Scripts />
       </body>
     </html>

@@ -32,23 +32,29 @@ export function toastSuccessFromMeta(
   }
 }
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
-  },
-  queryCache: new QueryCache({
-    onError: (error) => {
-      if (shouldToast(error)) {
-        toast.error(errorMessage(error));
-      }
+/** Cria um QueryClient novo (fresh por request no SSR). */
+export function makeQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
     },
-  }),
-  mutationCache: new MutationCache({
-    onSuccess: toastSuccessFromMeta,
-    onError: (error) => {
-      if (shouldToast(error)) {
-        toast.error(errorMessage(error));
-      }
-    },
-  }),
-});
+    queryCache: new QueryCache({
+      onError: (error) => {
+        if (shouldToast(error)) {
+          toast.error(errorMessage(error));
+        }
+      },
+    }),
+    mutationCache: new MutationCache({
+      onSuccess: toastSuccessFromMeta,
+      onError: (error) => {
+        if (shouldToast(error)) {
+          toast.error(errorMessage(error));
+        }
+      },
+    }),
+  });
+}
+
+// Singleton transitório (consumidores client-side migram pro contexto no Task 6).
+export const queryClient = makeQueryClient();
