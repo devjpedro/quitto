@@ -21,7 +21,7 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   loader: () => getThemeSSR(),
-  head: () => ({
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
@@ -32,13 +32,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         name: "theme-color",
-        content: "#faf9f6",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        name: "theme-color",
-        content: "#1c1c1c",
-        media: "(prefers-color-scheme: dark)",
+        content: loaderData === "dark" ? "#1c1c1c" : "#faf9f6",
       },
       { title: "Quitto" },
     ],
