@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/700.css";
 import "../index.css";
+import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
 
 export interface RouterContext {
@@ -38,6 +39,7 @@ function RootDocument() {
   // Sentry só no cliente (no-op sem DSN); evita rodar o SDK de browser no SSR.
   useEffect(() => {
     initSentry();
+    clearChunkReloadMark(sessionStorage); // load OK → libera novo reload no próximo deploy
   }, []);
 
   return (

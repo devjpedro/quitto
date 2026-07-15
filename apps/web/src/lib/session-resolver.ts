@@ -2,10 +2,10 @@
 export const SESSION_SSR_TIMEOUT_MS = 1500;
 
 export interface SessionUser {
-  id: string;
-  name: string;
   email: string;
+  id: string;
   image: string | null;
+  name: string;
 }
 
 export type SessionResult =

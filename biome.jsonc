@@ -23,5 +23,15 @@
       "!**/*.jsonc",
       "!**/*.html"
     ]
-  }
+  },
+  "overrides": [
+    {
+      // TanStack Router file-based routes usam $ (params), . (nesting) e _ (pathless)
+      // nos nomes de arquivo — conflita com kebab-case. A convenção do framework manda aqui.
+      "includes": ["apps/web/src/routes/**"],
+      "linter": {
+        "rules": { "style": { "useFilenamingConvention": "off" } }
+      }
+    }
+  ]
 }

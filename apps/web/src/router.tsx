@@ -11,7 +11,11 @@ export function getRouter() {
     scrollRestoration: true,
     context: { queryClient },
   });
-  setupRouterSsrQueryIntegration({ router, queryClient, wrapQueryClient: true });
+  setupRouterSsrQueryIntegration({
+    router,
+    queryClient,
+    wrapQueryClient: true,
+  });
   return router;
 }
 
