@@ -40,6 +40,9 @@ function RootDocument() {
   useEffect(() => {
     initSentry();
     clearChunkReloadMark(sessionStorage); // load OK → libera novo reload no próximo deploy
+    // Marca que o cliente hidratou — E2E espera por isso antes de interagir
+    // (evita clicar num botão SSR antes do handler anexar).
+    document.documentElement.setAttribute("data-hydrated", "true");
   }, []);
 
   return (

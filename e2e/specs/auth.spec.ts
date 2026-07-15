@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { randomEmail, signup } from "../fixtures";
+import { randomEmail, signup, waitForHydrated } from "../fixtures";
 
 const LOGOUT = /Sair/i;
 const SIGNIN_SUBMIT = /^Entrar$/;
@@ -31,6 +31,7 @@ test("deep-link protegido deslogado volta ao alvo após login", async ({
   await page.waitForURL("**/login");
   await page.goto("/contracts");
   await page.waitForURL("**/login**");
+  await waitForHydrated(page);
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("password123");
   await page.getByRole("button", { name: SIGNIN_SUBMIT }).click();
@@ -43,6 +44,7 @@ test("login com senha errada mostra erro", async ({ page }) => {
   await signup(page, email);
   await page.getByRole("button", { name: LOGOUT }).click();
   await page.waitForURL("**/login");
+  await waitForHydrated(page);
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("senhaerrada");
   await page.getByRole("button", { name: SIGNIN_SUBMIT }).click();

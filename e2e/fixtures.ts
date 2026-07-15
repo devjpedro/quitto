@@ -14,18 +14,32 @@ export function randomEmail(): string {
   return `e2e-${randomUUID()}@e2e.test`;
 }
 
+/**
+ * Espera o cliente hidratar. O app marca `data-hydrated` no <html> pós-hidratação;
+ * clicar antes disso (numa página SSR) é no-op porque o handler ainda não anexou.
+ */
+export async function waitForHydrated(page: Page): Promise<void> {
+  await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+}
+
 /** Registra um usuário novo pela UI e espera cair no dashboard. Retorna o e-mail. */
 export async function signup(
   page: Page,
   email = randomEmail()
 ): Promise<string> {
   await page.goto("/login");
-  await page.getByRole("button", { name: SIGNUP_TOGGLE }).click();
+  // SSR: o botão renderiza antes da hidratação, então um clique cedo demais é
+  // no-op (handler ainda não anexado). Re-tenta o toggle até o campo surgir.
+  await expect(async () => {
+    await page.getByRole("button", { name: SIGNUP_TOGGLE }).click();
+    await expect(page.locator("#name")).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 15_000 });
   await page.locator("#name").fill("Usuário E2E");
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("password123");
   await page.getByRole("button", { name: CREATE_ACCOUNT }).click();
   await page.waitForURL("**/"); // dashboard
+  await waitForHydrated(page); // dashboard hidratado antes de qualquer clique
   return email;
 }
 

@@ -36,7 +36,15 @@ export function toastSuccessFromMeta(
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
+      queries: {
+        staleTime: 60_000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+        // Erro de dado (não-401) sobe pra ErrorBoundary → "Ops, algo deu errado"
+        // (evita tela branca com dados client-fetched). 401 fica pro gate de sessão.
+        throwOnError: (error) =>
+          !(error instanceof ApiError && error.httpStatus === 401),
+      },
     },
     queryCache: new QueryCache({
       onError: (error) => {
