@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signup } from "../fixtures";
+import { signup, waitForHydrated } from "../fixtures";
 
 test("toggle de tema persiste via cookie e aplica classe (sem flash no reload)", async ({
   page,
@@ -23,6 +23,7 @@ test("toggle de tema persiste via cookie e aplica classe (sem flash no reload)",
 
   // Reload: SSR lê o cookie e já renderiza .dark antes do 1º paint — sem flash.
   await page.reload();
+  await waitForHydrated(page);
   await expect(page.locator("html.dark")).toBeVisible();
 
   // Alternar de volta também persiste.
