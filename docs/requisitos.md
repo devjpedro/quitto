@@ -138,15 +138,30 @@ e/ou aprovador, com controle de acesso por papel).
 
 - **TDD**, migrations versionadas (Drizzle), suíte e2e (Playwright + axe) dos fluxos críticos.
 
-## 4. Fora de escopo (não-objetivos)
+## 4. Escopo — o que está fora (e o que foi promovido)
 
-Itens deliberadamente **fora** do produto atual (candidatos a versões futuras):
+> Este documento reflete o comportamento **atual**. Os itens **planejados** abaixo têm decisão
+> registrada em [`docs/adr/`](adr/) e detalhamento no plano da próxima release, mas **ainda não
+> estão implementados**.
 
-- Contratos **recorrentes** de verdade (frequência configurável, prazo indeterminado, renovação)
-  e **juros/multa** automáticos.
-- **OCR** de comprovante; **pagamento real** / integração bancária (PIX, boleto).
+**Planejado para a próxima release** (saiu de "fora de escopo"):
+
+- **Cronograma "mensal"** — lançar por valor mensal × nº de meses (contrato ainda **finito**).
+  [ADR-0003](adr/0003-modo-de-cronograma-mensal.md).
+- **PIX estático** (copia-e-cola + QR; sem integração bancária/reconciliação).
+  [ADR-0005](adr/0005-pix-estatico-sem-psp.md).
+- **Contato sem convite** e **comunicar pra fora** (recibo por página pública/token + e-mail;
+  lembrete de vencimento por **e-mail**). [ADR-0004](adr/0004-identidade-solo-first.md) ·
+  [ADR-0006](adr/0006-recibo-publico-por-token.md).
+
+**Permanece fora** (candidatos a versões futuras):
+
+- Contratos **recorrentes abertos** (prazo indeterminado, renovação) e **juros/multa** automáticos;
+  **reajuste** por índice (IGPM/IPCA).
+- **PIX dinâmico** / reconciliação via PSP; **pagamento real** / integração bancária (boleto);
+  **OCR** de comprovante.
 - **Multi-tenant** / organizações; **assinatura digital**.
-- **App mobile** nativo; notificações por push/e-mail além das transacionais existentes.
+- **App mobile** nativo; notificações por **push**.
 
 ## 5. Glossário
 
@@ -158,3 +173,8 @@ Itens deliberadamente **fora** do produto atual (candidatos a versões futuras):
 | **Espectador** | Participante que só visualiza (sem capacidade de pagar/aprovar). |
 | **Situação da parcela** | `pendente` · `aguardando confirmação` · `confirmada` · `contestada` · `paga`. |
 | **Direção** | `pagar` ou `receber` — perspectiva do usuário sobre o valor. |
+| **Uso solo / entre partes** | O produto é **solo-first**: uma pessoa mantém o registro e o app é útil sozinho; envolver a outra parte é opcional ([ADR-0004](adr/0004-identidade-solo-first.md)). |
+| **Contato** _(planejado)_ | Outra parte **registrada sem convite** (nome + papel, sem conta vinculada). Rótulo pra recibo/extrato; o dono age por ele. Pode virar convite depois. |
+| **Modo mensal** _(planejado)_ | Cronograma lançado por **valor mensal × nº de meses**; gera N parcelas iguais. Contrato segue finito ([ADR-0003](adr/0003-modo-de-cronograma-mensal.md)). |
+| **PIX estático** _(planejado)_ | Copia-e-cola (BR Code/EMV) + QR da chave do dono, com valor embutido. Sem banco, sem reconciliação ([ADR-0005](adr/0005-pix-estatico-sem-psp.md)). |
+| **Recibo público** _(planejado)_ | Página só-leitura, por token, de **um** recibo — pra compartilhar com não-usuário via e-mail ou `wa.me` ([ADR-0006](adr/0006-recibo-publico-por-token.md)). |

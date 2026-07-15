@@ -29,7 +29,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-import { AcceptInvitePage } from "../src/routes/accept-invite";
+import { AcceptInvitePage } from "../src/features/invites/accept-invite-page";
 
 describe("AcceptInvitePage", () => {
   beforeEach(() => {

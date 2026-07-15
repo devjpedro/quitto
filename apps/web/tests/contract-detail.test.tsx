@@ -12,7 +12,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-import { ContractDetailPage } from "../src/routes/contract-detail";
+import { ContractDetailPage } from "../src/features/contracts/contract-detail-page";
 
 const REMAINING_BRL = /R\$\s?74\.400,00/;
 const INSTALLMENT_BRL = /R\$\s?2\.000,00/;

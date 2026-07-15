@@ -12,7 +12,7 @@ vi.mock("@/lib/auth-client", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
-import { LoginPage } from "../src/routes/login";
+import { LoginPage } from "../src/features/auth/login-page";
 
 const SUBMIT = /^Entrar$/;
 

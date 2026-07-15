@@ -14,7 +14,7 @@ vi.mock("../src/hooks/use-contract-mutations", () => ({
   useCreateContractMutation: () => ({ mutateAsync, isPending: false }),
 }));
 
-import { ContractNewPage } from "../src/routes/contract-new";
+import { ContractNewPage } from "../src/features/contracts/contract-new-page";
 
 const NEXT = /avançar/i;
 const SUBMIT = /criar contrato/i;

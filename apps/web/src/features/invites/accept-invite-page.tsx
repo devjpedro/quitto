@@ -16,7 +16,7 @@ import { PAGE_TITLE } from "@/lib/page-title";
 
 export function AcceptInvitePage() {
   useDocumentTitle(PAGE_TITLE.acceptInvite);
-  const { token } = useParams({ from: "/protected/invites/$token" });
+  const { token } = useParams({ from: "/_app/invites/$token" });
   const navigate = useNavigate();
   const { data, isPending, error } = useInviteQuery(token);
   const acceptMutation = useAcceptInviteMutation(token);

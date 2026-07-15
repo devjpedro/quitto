@@ -53,7 +53,7 @@ vi.mock("@/hooks/use-dashboard", () => ({
   useDashboardQuery: () => mockData,
 }));
 
-import { DashboardPage } from "../src/routes/dashboard";
+import { DashboardPage } from "../src/features/dashboard/dashboard-page";
 
 describe("DashboardPage", () => {
   beforeEach(() => {
