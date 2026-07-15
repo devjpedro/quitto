@@ -13,10 +13,10 @@ describe("Logo", () => {
     expect(screen.getByText("quitt")).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("uses the teal arc for the brand variant", () => {
+  it("uses the token-driven teal arc for the brand variant (dark-aware)", () => {
     const { container } = render(<Logo variant="brand" />);
     const arc = container.querySelectorAll("circle")[1];
-    expect(arc).toHaveAttribute("stroke", "#0f766e");
+    expect(arc).toHaveAttribute("stroke", "var(--primary)");
   });
 
   it("uses the white arc for the inverted variant", () => {

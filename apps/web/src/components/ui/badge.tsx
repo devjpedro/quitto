@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-display font-semibold text-xs tracking-tight ring-1 ring-inset transition-colors",
+  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-xs tracking-tight ring-1 ring-inset transition-colors",
   {
     variants: {
       tone: {

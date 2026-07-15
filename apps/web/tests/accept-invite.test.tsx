@@ -123,13 +123,13 @@ describe("AcceptInvitePage", () => {
       isPending: false,
       error: null,
     });
-    renderWithProviders(<AcceptInvitePage />);
+    const { container } = renderWithProviders(<AcceptInvitePage />);
 
     expect(screen.getByText(INVITED_BY)).toBeInTheDocument();
     expect(
       screen.getByText("Maria Silva", { exact: false })
     ).toBeInTheDocument();
-    expect(screen.getByText(BRL_1200)).toBeInTheDocument();
+    expect(container.textContent).toMatch(BRL_1200);
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(
       screen.getByText("João Vendedor", { exact: false })

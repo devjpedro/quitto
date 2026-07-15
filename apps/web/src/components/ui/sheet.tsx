@@ -28,7 +28,7 @@ export function SheetContent({
         {...props}
       >
         <div className="flex items-center justify-between border-border/60 border-b pb-4">
-          <SheetPrimitive.Title className="font-display font-semibold text-foreground text-lg tracking-tight">
+          <SheetPrimitive.Title className="font-semibold text-foreground text-lg tracking-tight">
             {title}
           </SheetPrimitive.Title>
           <SheetPrimitive.Close

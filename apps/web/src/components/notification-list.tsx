@@ -35,20 +35,27 @@ export function NotificationList({
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-        <BellOff
+        <span
           aria-hidden="true"
-          className="size-8 text-muted-foreground/40"
-        />
-        <p className="font-display text-muted-foreground text-sm">
-          Nenhuma notificação por aqui.
-        </p>
+          className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary"
+        >
+          <BellOff aria-hidden="true" className="size-5" />
+        </span>
+        <div>
+          <p className="font-semibold text-foreground text-sm">
+            Nenhuma notificação por aqui.
+          </p>
+          <p className="mt-0.5 text-muted-foreground text-xs">
+            Avisos de pagamentos, comprovantes e convites aparecem aqui.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <ul className="divide-y divide-border">
-      {items.map((item) => {
+      {items.map((item, index) => {
         const Icon =
           NOTIFICATION_TYPE_ICON[item.type as NotificationType] ??
           NOTIFICATION_FALLBACK_ICON;
@@ -56,7 +63,11 @@ export function NotificationList({
         const message = messageFor(item);
 
         return (
-          <li className="relative" key={item.id}>
+          <li
+            className="fade-in slide-in-from-bottom-1 relative animate-in fill-mode-backwards duration-300 ease-out"
+            key={item.id}
+            style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
+          >
             <span
               aria-hidden="true"
               className={`absolute inset-y-0 left-0 w-0.5 rounded-r-full transition-colors ${
@@ -66,7 +77,7 @@ export function NotificationList({
 
             <button
               aria-label={`${message}, ${formatRelativeTimeBR(item.createdAt)}`}
-              className={`group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset ${
+              className={`group flex w-full items-start gap-3 px-4 py-3 text-left transition-all hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset active:scale-[0.994] ${
                 isUnread ? "" : "opacity-60"
               }`}
               data-testid={`notification-${item.id}`}

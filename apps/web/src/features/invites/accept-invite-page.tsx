@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Money } from "@/components/money";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -10,7 +12,6 @@ import {
 } from "@/hooks/use-invite";
 import { authClient } from "@/lib/auth-client";
 import { errorMessage } from "@/lib/error-message";
-import { formatBRL } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 
@@ -24,23 +25,23 @@ export function AcceptInvitePage() {
 
   if (isPending) {
     return (
-      <div className="mx-auto max-w-md p-6">
+      <PageContainer width="narrow">
         <Skeleton className="mb-3 h-8 w-2/3" />
         <Skeleton className="h-24 w-full rounded-xl" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-md p-6">
-        <h1 className="font-bold font-display text-foreground text-xl">
+      <PageContainer width="narrow">
+        <h1 className="font-bold text-foreground text-xl">
           Convite indisponível
         </h1>
         <p className="mt-2 text-muted-foreground text-sm">
           {errorMessage(error)}
         </p>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -124,8 +125,8 @@ export function AcceptInvitePage() {
   }
 
   return (
-    <div className="mx-auto max-w-md p-6">
-      <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
+    <PageContainer width="narrow">
+      <h1 className="font-bold text-2xl text-foreground tracking-tight">
         Convite para um contrato
       </h1>
       <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-xs">
@@ -137,11 +138,13 @@ export function AcceptInvitePage() {
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>
             <dt className="text-muted-foreground">Total</dt>
-            <dd>{formatBRL(data.totalAmountCents)}</dd>
+            <dd>
+              <Money cents={data.totalAmountCents} size="sm" />
+            </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Parcelas</dt>
-            <dd>{data.installmentsCount}</dd>
+            <dd className="tabular-nums">{data.installmentsCount}</dd>
           </div>
         </dl>
         {data.parties.length > 0 && (
@@ -158,6 +161,6 @@ export function AcceptInvitePage() {
         )}
         {action}
       </div>
-    </div>
+    </PageContainer>
   );
 }

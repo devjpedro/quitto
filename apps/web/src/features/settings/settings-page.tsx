@@ -69,7 +69,7 @@ export function SettingsPage() {
             Baixe um arquivo JSON com seus contratos, parcelas e notificações.
           </p>
           <a
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3.5 py-2 font-medium text-foreground text-sm shadow-xs transition-colors hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.97]"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3.5 py-2 font-medium text-foreground text-sm shadow-xs transition-all hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.97]"
             download
             href="/api/me/export"
           >
