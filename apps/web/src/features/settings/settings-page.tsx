@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { PageContainer } from "@/components/page-container";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { PAGE_TITLE } from "@/lib/page-title";
 
@@ -40,6 +41,16 @@ export function SettingsPage() {
           Trocar senha
         </h2>
         <ChangePasswordForm />
+      </section>
+
+      <section className="mb-8 rounded-xl border border-border bg-card p-5 shadow-xs">
+        <h2 className="mb-3 font-display font-semibold text-foreground tracking-tight">
+          Aparência
+        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-foreground text-sm">Tema</span>
+          <ThemeToggle />
+        </div>
       </section>
 
       <section>

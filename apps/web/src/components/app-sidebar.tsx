@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useMeQuery } from "@/hooks/use-me";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { signOut } from "@/lib/auth-client";
@@ -85,14 +86,17 @@ export function AppSidebar() {
           <div className="mb-1 truncate px-1 font-medium text-foreground text-sm leading-tight">
             {me?.name ?? "..."}
           </div>
-          <button
-            className="flex items-center gap-1.5 rounded-md px-1 py-1 text-muted-foreground text-xs transition-colors hover:text-destructive"
-            onClick={handleSignOut}
-            type="button"
-          >
-            <LogOut aria-hidden="true" className="size-3" />
-            Sair
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              className="flex items-center gap-1.5 rounded-md px-1 py-1 text-muted-foreground text-xs transition-colors hover:text-destructive"
+              onClick={handleSignOut}
+              type="button"
+            >
+              <LogOut aria-hidden="true" className="size-3" />
+              Sair
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
