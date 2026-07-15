@@ -17,7 +17,7 @@ export function PopoverContent({
       <PopoverPrimitive.Content
         align={align}
         className={cn(
-          "data-[state=closed]:fade-out data-[state=open]:fade-in z-50 rounded-md border border-border bg-background p-3 text-foreground shadow-md outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+          "data-[state=closed]:fade-out data-[state=open]:fade-in material-overlay z-50 rounded-md border border-border-strong p-3 text-foreground shadow-[var(--shadow-lg)] outline-none duration-[var(--dur-base)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in",
           className
         )}
         collisionPadding={collisionPadding}

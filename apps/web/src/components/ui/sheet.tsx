@@ -19,10 +19,10 @@ export function SheetContent({
 }) {
   return (
     <SheetPrimitive.Portal>
-      <SheetPrimitive.Overlay className="data-[state=closed]:fade-out data-[state=open]:fade-in fixed inset-0 z-40 bg-foreground/30 backdrop-blur-[2px] data-[state=closed]:animate-out data-[state=open]:animate-in" />
+      <SheetPrimitive.Overlay className="data-[state=closed]:fade-out data-[state=open]:fade-in fixed inset-0 z-40 bg-[var(--scrim)] duration-[var(--dur-base)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in" />
       <SheetPrimitive.Content
         className={cn(
-          "data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-5 border-border border-l bg-background p-4 shadow-2xl focus:outline-none data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=open]:duration-300 sm:p-6",
+          "data-[state=closed]:fade-out data-[state=open]:fade-in data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right material-overlay fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col gap-5 border-border-strong border-l p-4 shadow-[var(--shadow-lg)] duration-[var(--dur-slow)] ease-[var(--ease-out)] focus:outline-none data-[state=closed]:animate-out data-[state=open]:animate-in sm:p-6",
           className
         )}
         {...props}
