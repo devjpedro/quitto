@@ -19,7 +19,7 @@ export function PasswordInput({
       <button
         aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
         // size-6 (24px) atende o alvo mínimo do WCAG 2.2 AA (target-size)
-        className="absolute inset-y-0 right-1.5 my-auto flex size-6 items-center justify-center text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+        className="absolute inset-y-0 right-1.5 my-auto flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-70 transition-[opacity,transform] duration-[var(--dur-fast)] ease-[var(--ease-out)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-90"
         onClick={() => setVisible((v) => !v)}
         type="button"
       >

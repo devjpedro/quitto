@@ -31,36 +31,47 @@ export function ForgotPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm">
-        <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
-          Esqueceu a senha?
-        </h1>
-        {sent ? (
-          <p className="mt-3 text-muted-foreground text-sm">
-            Se houver uma conta com esse e-mail, enviamos um link para redefinir
-            a senha. Verifique sua caixa de entrada.
-          </p>
-        ) : (
-          <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
-            <p className="text-muted-foreground text-sm">
-              Informe seu e-mail e enviaremos um link para criar uma nova senha.
+        <header className="mb-6">
+          <h1 className="font-bold text-2xl text-foreground tracking-tight">
+            Esqueceu a senha?
+          </h1>
+        </header>
+
+        <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] sm:p-6">
+          {sent ? (
+            <p className="text-muted-foreground text-sm" role="status">
+              Se houver uma conta com esse e-mail, enviamos um link para
+              redefinir a senha. Verifique sua caixa de entrada.
             </p>
-            <div className="space-y-1">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                type="email"
-                value={email}
-              />
-            </div>
-            <Button className="w-full" disabled={loading} type="submit">
-              {loading ? "Aguarde..." : "Enviar link"}
-            </Button>
-          </form>
-        )}
+          ) : (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <p className="text-muted-foreground text-sm">
+                Informe seu e-mail e enviaremos um link para criar uma nova
+                senha.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  type="email"
+                  value={email}
+                />
+              </div>
+              <Button
+                className="w-full transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)] active:scale-[0.97]"
+                disabled={loading}
+                type="submit"
+              >
+                {loading ? "Aguarde..." : "Enviar link"}
+              </Button>
+            </form>
+          )}
+        </div>
+
         <a
-          className="mt-4 block text-center text-muted-foreground text-sm underline"
+          className="mt-6 block text-center text-muted-foreground text-sm underline underline-offset-2 hover:text-foreground"
           href="/login"
         >
           Voltar para o login

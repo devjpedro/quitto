@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { resetPassword } from "@/lib/auth-client";
@@ -35,32 +35,26 @@ export function ResetPasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm">
-        <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
-          Nova senha
-        </h1>
-        {done ? (
-          <>
-            <p className="mt-3 text-muted-foreground text-sm">
+        <header className="mb-6">
+          <h1 className="font-bold text-2xl text-foreground tracking-tight">
+            Nova senha
+          </h1>
+        </header>
+
+        <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] sm:p-6">
+          {done ? (
+            <p className="text-muted-foreground text-sm" role="status">
               Senha redefinida com sucesso.
             </p>
-            <a
-              className="mt-4 block text-center text-muted-foreground text-sm underline"
-              href="/login"
-            >
-              Ir para o login
-            </a>
-          </>
-        ) : (
-          <>
-            <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
-              <div className="space-y-1">
+          ) : (
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="space-y-1.5">
                 <Label htmlFor="new-password">Nova senha</Label>
-                <Input
+                <PasswordInput
                   id="new-password"
                   minLength={8}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  type="password"
                   value={newPassword}
                 />
               </div>
@@ -69,18 +63,23 @@ export function ResetPasswordPage() {
                   {error}
                 </p>
               )}
-              <Button className="w-full" disabled={loading} type="submit">
+              <Button
+                className="w-full transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)] active:scale-[0.97]"
+                disabled={loading}
+                type="submit"
+              >
                 {loading ? "Aguarde..." : "Redefinir senha"}
               </Button>
             </form>
-            <a
-              className="mt-4 block text-center text-muted-foreground text-sm underline"
-              href="/login"
-            >
-              Voltar para o login
-            </a>
-          </>
-        )}
+          )}
+        </div>
+
+        <a
+          className="mt-6 block text-center text-muted-foreground text-sm underline underline-offset-2 hover:text-foreground"
+          href="/login"
+        >
+          {done ? "Ir para o login" : "Voltar para o login"}
+        </a>
       </div>
     </main>
   );
