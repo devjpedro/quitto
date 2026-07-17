@@ -95,6 +95,25 @@ function ThemeIconToggle() {
   );
 }
 
+/** Rail-only: ícone de sair, mesmo estilo dos demais ícones do rodapé colapsado. */
+function SignOutIconButton() {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          aria-label="Sair"
+          className="inline-grid size-8 shrink-0 place-items-center rounded-md border border-border bg-accent text-subtle-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-95"
+          onClick={handleSignOut}
+          type="button"
+        >
+          <LogOut aria-hidden="true" className="size-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">Sair</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function notificationBadge(collapsed: boolean, unread: number) {
   if (unread <= 0) {
     return null;
@@ -234,6 +253,7 @@ export function AppSidebar({
                 {me?.name ?? "Conta"}
               </TooltipContent>
             </Tooltip>
+            <SignOutIconButton />
             <ThemeIconToggle />
           </div>
         ) : (
