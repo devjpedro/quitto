@@ -28,8 +28,12 @@ function subscribe(cb: () => void): () => void {
  * Estado colapsado da sidebar (lê `data-sidebar` do #app-shell) + setter que
  * persiste em cookie first-party e alterna o atributo no shell. Registra
  * o atalho ⌘\ / Ctrl+\ para toggle global.
+ *
+ * `initialCollapsed` (opcional) alimenta o `getServerSnapshot`: passe o valor
+ * lido no SSR (`getSidebarSSR()`) pra que o 1º render do cliente (hidratação)
+ * bata com o HTML do servidor — mesma técnica do `useTheme`, sem flash.
  */
-export function useSidebar(): {
+export function useSidebar(initialCollapsed = false): {
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
   toggle: () => void;
@@ -37,7 +41,7 @@ export function useSidebar(): {
   const collapsed = useSyncExternalStore<boolean>(
     subscribe,
     currentCollapsed,
-    () => false
+    () => initialCollapsed
   );
 
   const setCollapsed = useCallback((v: boolean) => {

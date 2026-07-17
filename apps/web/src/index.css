@@ -171,6 +171,27 @@
     );
   }
 
+  /* Shell da área logada: grid de 2 colunas (sidebar + conteúdo). A largura da
+     1ª coluna segue `data-sidebar` no #app-shell (setado no SSR e alternado
+     pelo useSidebar/toggle) — mesma largura atual do <aside> (w-56/14rem)
+     expandida, ~4rem de rail quando colapsada. Abaixo de `sm` (640px) a
+     sidebar vira bottom-nav (aside fica `hidden`), então o grid volta a
+     1 coluna única — sem trilho vazio reservado no mobile. */
+  #app-shell {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    transition: grid-template-columns var(--dur-base) var(--ease-out);
+  }
+  #app-shell[data-sidebar="collapsed"] {
+    grid-template-columns: 4rem 1fr;
+  }
+  @media (max-width: 39.9375rem) {
+    #app-shell,
+    #app-shell[data-sidebar="collapsed"] {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .brand-loader-ring {
     display: inline-flex;
     animation: brand-ring-spin 1.1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
