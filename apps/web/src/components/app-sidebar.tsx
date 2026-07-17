@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import {
   Bell,
-  ChevronsLeft,
-  ChevronsRight,
   FileText,
   LayoutDashboard,
   LogOut,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Sun,
 } from "lucide-react";
@@ -50,7 +50,7 @@ const NAV = [
   { to: "/settings", label: "Conta", icon: Settings },
 ] as const;
 
-/** Toggle chevron (« recolher / » expandir) — vive na brand row, desktop-only. */
+/** Toggle do rail (PanelLeftClose recolher / PanelLeftOpen expandir) — vive na brand row, desktop-only. */
 function SidebarToggleButton({
   collapsed,
   onToggle,
@@ -67,9 +67,9 @@ function SidebarToggleButton({
       type="button"
     >
       {collapsed ? (
-        <ChevronsRight aria-hidden="true" className="size-4" />
+        <PanelLeftOpen aria-hidden="true" className="size-4" />
       ) : (
-        <ChevronsLeft aria-hidden="true" className="size-4" />
+        <PanelLeftClose aria-hidden="true" className="size-4" />
       )}
     </button>
   );
@@ -102,7 +102,7 @@ function SignOutIconButton() {
       <TooltipTrigger asChild>
         <button
           aria-label="Sair"
-          className="inline-grid size-8 shrink-0 place-items-center rounded-md border border-border bg-accent text-subtle-foreground transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-95"
+          className="inline-grid size-8 shrink-0 place-items-center rounded-md border border-border bg-accent text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-95"
           onClick={handleSignOut}
           type="button"
         >
@@ -253,8 +253,8 @@ export function AppSidebar({
                 {me?.name ?? "Conta"}
               </TooltipContent>
             </Tooltip>
-            <SignOutIconButton />
             <ThemeIconToggle />
+            <SignOutIconButton />
           </div>
         ) : (
           <div className="mt-auto border-border border-t p-3">
