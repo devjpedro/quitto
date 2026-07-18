@@ -114,6 +114,12 @@ export function ContractDetailPage() {
           <Badge tone="neutral">{ROLE_LABEL[data.role] ?? data.role}</Badge>
           {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
           <ContractStatusBadge status={contract.status} />
+          {contract.monthlyAmountCents == null ? null : (
+            <Badge tone="neutral">
+              {formatBRL(contract.monthlyAmountCents)}/mês ·{" "}
+              {installments.length} meses
+            </Badge>
+          )}
           {overdue ? (
             <Badge tone="danger">{progress.overdueCount} em atraso</Badge>
           ) : (
