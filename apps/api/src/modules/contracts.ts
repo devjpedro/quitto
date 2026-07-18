@@ -91,6 +91,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
             totalAmountCents,
             installmentsCount: rows.length,
             requiresConfirmation: body.requiresConfirmation,
+            monthlyAmountCents:
+              body.schedule.mode === "monthly"
+                ? body.schedule.monthlyAmountCents
+                : null,
           })
           .returning({ id: contract.id });
 
@@ -227,6 +231,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           ownerRole: c.ownerRole,
           requiresConfirmation: c.requiresConfirmation,
           status: c.status,
+          monthlyAmountCents: c.monthlyAmountCents,
         },
         progress: {
           totalCents: progress.totalCents,
@@ -267,6 +272,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           ownerRole: t.String(),
           requiresConfirmation: t.Boolean(),
           status: t.String(),
+          monthlyAmountCents: t.Union([t.Integer(), t.Null()]),
         }),
         progress: t.Object({
           totalCents: t.Integer(),
