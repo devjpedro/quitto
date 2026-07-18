@@ -500,7 +500,8 @@ function ContractSummary() {
       </SectionLabel>
       {monthly && monthly.monthlyAmountCents > 0 && monthly.months > 0 ? (
         <p className="mt-1 font-medium text-primary-strong text-sm tabular-nums">
-          {formatBRL(monthly.monthlyAmountCents)}/mês · {monthly.months} meses
+          {formatBRL(monthly.monthlyAmountCents)}/mês · {monthly.months}{" "}
+          {monthly.months === 1 ? "mês" : "meses"}
         </p>
       ) : null}
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
@@ -662,7 +663,7 @@ export function ContractNewPage() {
                   hint="Gere as parcelas por um valor total, por um valor mensal, ou monte cada uma manualmente."
                   title="Cronograma de parcelas"
                 />
-                <div className="mb-5 inline-flex gap-1 rounded-lg border border-border bg-muted/40 p-1 text-sm">
+                <div className="mb-5 inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1 text-sm">
                   <ModeButton
                     active={mode === "auto"}
                     onClick={() => setMode("auto")}

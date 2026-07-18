@@ -115,9 +115,10 @@ export function ContractDetailPage() {
           {isOwner ? <Badge tone="brand">{OWNER_BADGE_LABEL}</Badge> : null}
           <ContractStatusBadge status={contract.status} />
           {contract.monthlyAmountCents == null ? null : (
-            <Badge tone="neutral">
+            <Badge className="tabular-nums" tone="neutral">
               {formatBRL(contract.monthlyAmountCents)}/mês ·{" "}
-              {installments.length} meses
+              {installments.length}{" "}
+              {installments.length === 1 ? "mês" : "meses"}
             </Badge>
           )}
           {overdue ? (
