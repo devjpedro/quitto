@@ -8,7 +8,7 @@ import {
   splitAmount,
 } from "@quitto/shared";
 import { useNavigate } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
   Controller,
@@ -19,6 +19,7 @@ import {
 } from "react-hook-form";
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
+import { Money } from "@/components/money";
 import { PageContainer } from "@/components/page-container";
 import { Stepper } from "@/components/stepper";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { capitalize, formatBRL } from "@/lib/format";
+import { capitalize, formatISODateBR } from "@/lib/format";
 import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
@@ -120,79 +121,111 @@ function useErrorAria(name: string, id: string) {
   };
 }
 
+/** Small uppercase section label, matching the app's hero-screen grouping style. */
+function SectionLabel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "font-semibold text-subtle-foreground text-xs uppercase tracking-wide",
+        className
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+/** Per-step title + short helper text, shown at the top of each wizard section. */
+function StepHeading({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="mb-5">
+      <h2 className="font-semibold text-base text-foreground">{title}</h2>
+      <p className="mt-0.5 text-muted-foreground text-sm">{hint}</p>
+    </div>
+  );
+}
+
 function StepBasic() {
   const { register, control } = useFormContext<CreateContractInput>();
   const titleAria = useErrorAria("title", "title-error");
   const ownerRoleAria = useErrorAria("ownerRole", "ownerRole-error");
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <Label htmlFor="title">Título</Label>
-        <Input
-          className="mt-1.5"
-          id="title"
-          placeholder={PLACEHOLDER.contractTitle}
-          {...titleAria}
-          {...register("title")}
-        />
-        <FieldError id="title-error" name="title" />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
+        <div>
+          <Label htmlFor="title">Título</Label>
+          <Input
+            className="mt-1.5"
+            id="title"
+            placeholder={PLACEHOLDER.contractTitle}
+            {...titleAria}
+            {...register("title")}
+          />
+          <FieldError id="title-error" name="title" />
+        </div>
+        <div>
+          <Label htmlFor="description">Descrição (opcional)</Label>
+          <Textarea
+            className="mt-1.5"
+            id="description"
+            placeholder="Detalhes do acordo"
+            rows={3}
+            {...register("description")}
+          />
+        </div>
+        <div>
+          <Label htmlFor="ownerRole">Meu papel</Label>
+          <Controller
+            control={control}
+            name="ownerRole"
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger
+                  className="mt-1.5"
+                  id="ownerRole"
+                  {...ownerRoleAria}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTRACT_OWNER_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {capitalize(ROLE_LABEL[r] ?? r)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          <FieldError id="ownerRole-error" name="ownerRole" />
+        </div>
       </div>
-      <div>
-        <Label htmlFor="description">Descrição (opcional)</Label>
-        <Textarea
-          className="mt-1.5"
-          id="description"
-          placeholder="Detalhes do acordo"
-          rows={3}
-          {...register("description")}
-        />
+
+      <div className="flex flex-col gap-3 border-border border-t pt-5">
+        <SectionLabel>Condições</SectionLabel>
+        <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-primary/40">
+          <input
+            className="size-4 accent-primary"
+            type="checkbox"
+            {...register("requiresConfirmation")}
+          />
+          <span className="font-medium text-foreground">
+            Exige confirmação da outra parte
+          </span>
+        </label>
       </div>
-      <div>
-        <Label htmlFor="ownerRole">Meu papel</Label>
-        <Controller
-          control={control}
-          name="ownerRole"
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} value={field.value}>
-              <SelectTrigger
-                className="mt-1.5"
-                id="ownerRole"
-                {...ownerRoleAria}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CONTRACT_OWNER_ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {capitalize(ROLE_LABEL[r] ?? r)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        <FieldError id="ownerRole-error" name="ownerRole" />
-      </div>
-      <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm transition-colors hover:border-primary/40">
-        <input
-          className="size-4 accent-primary"
-          type="checkbox"
-          {...register("requiresConfirmation")}
-        />
-        <span className="font-medium text-foreground">
-          Exige confirmação da outra parte
-        </span>
-      </label>
     </div>
   );
 }
 
 function AutoSchedule() {
-  const { register, watch } = useFormContext<CreateContractInput>();
-  const total = Number(watch("schedule.totalAmountCents")) || 0;
-  const count = Number(watch("schedule.installmentsCount")) || 0;
-  const per = count > 0 ? Math.floor(total / count) : 0;
-  const showPreview = count > 0 && total > 0;
+  const { register } = useFormContext<CreateContractInput>();
   const totalAria = useErrorAria("schedule.totalAmountCents", "total-error");
   const countAria = useErrorAria("schedule.installmentsCount", "count-error");
   const firstDueAria = useErrorAria("schedule.firstDueDate", "first-error");
@@ -207,36 +240,30 @@ function AutoSchedule() {
         />
         <FieldError id="total-error" name="schedule.totalAmountCents" />
       </div>
-      <div>
-        <Label htmlFor="count">Nº de parcelas</Label>
-        <Input
-          className="mt-1.5 tabular-nums"
-          id="count"
-          type="number"
-          {...countAria}
-          {...register("schedule.installmentsCount", { valueAsNumber: true })}
-        />
-        <FieldError id="count-error" name="schedule.installmentsCount" />
-      </div>
-      <div>
-        <Label htmlFor="first">1º vencimento</Label>
-        <DateField id="first" name="schedule.firstDueDate" {...firstDueAria} />
-        <FieldError id="first-error" name="schedule.firstDueDate" />
-      </div>
-      {showPreview ? (
-        <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <span
-            aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-1 bg-primary/60"
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="count">Nº de parcelas</Label>
+          <Input
+            className="mt-1.5 tabular-nums"
+            id="count"
+            type="number"
+            {...countAria}
+            {...register("schedule.installmentsCount", {
+              valueAsNumber: true,
+            })}
           />
-          <p className="font-display font-semibold text-foreground text-sm tabular-nums">
-            {count} parcelas de ~{formatBRL(per)}
-          </p>
-          <p className="mt-0.5 text-muted-foreground text-xs tabular-nums">
-            soma {formatBRL(total)}
-          </p>
+          <FieldError id="count-error" name="schedule.installmentsCount" />
         </div>
-      ) : null}
+        <div>
+          <Label htmlFor="first">1º vencimento</Label>
+          <DateField
+            id="first"
+            name="schedule.firstDueDate"
+            {...firstDueAria}
+          />
+          <FieldError id="first-error" name="schedule.firstDueDate" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -255,7 +282,13 @@ function InstallmentRow({
   const amountAria = useErrorAria(amountName, amountErrorId);
   const dueAria = useErrorAria(dueName, dueErrorId);
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-start">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3.5 shadow-[var(--shadow-sm)] transition-colors hover:border-primary/40 sm:flex-row sm:items-start">
+      <span
+        aria-hidden="true"
+        className="mt-1 hidden size-6 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-foreground text-xs tabular-nums sm:flex"
+      >
+        {index + 1}
+      </span>
       <div className="flex-1">
         <Label htmlFor={`amt-${index}`}>Valor</Label>
         <CurrencyField id={`amt-${index}`} name={amountName} {...amountAria} />
@@ -268,7 +301,7 @@ function InstallmentRow({
       </div>
       <Button
         aria-label="Remover parcela"
-        className="self-end sm:mt-5 sm:self-auto"
+        className="self-end active:scale-[0.97] sm:mt-5 sm:self-auto"
         onClick={onRemove}
         size="icon"
         type="button"
@@ -290,7 +323,7 @@ function CustomSchedule() {
     <div className="flex flex-col gap-3">
       {fields.length === 0 ? (
         <div className="flex flex-col items-center gap-1 rounded-xl border border-border border-dashed bg-card/50 p-8 text-center">
-          <p className="font-display font-semibold text-foreground">
+          <p className="font-semibold text-foreground">
             Nenhuma parcela ainda.
           </p>
           <p className="text-muted-foreground text-sm">
@@ -307,7 +340,7 @@ function CustomSchedule() {
         ))
       )}
       <Button
-        className="self-start"
+        className="self-start active:scale-[0.97]"
         onClick={() => append({ amountCents: 0, dueDate: "" })}
         type="button"
         variant="outline"
@@ -331,16 +364,100 @@ function ModeButton({
   return (
     <button
       className={cn(
-        "px-4 py-1.5 font-medium transition-colors",
+        "rounded-md px-4 py-1.5 font-medium text-sm transition-all duration-[var(--dur-fast)] ease-[var(--ease-out)] active:scale-[0.97]",
         active
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          ? "bg-primary text-primary-foreground shadow-[var(--shadow-sm)]"
+          : "text-muted-foreground hover:bg-background hover:text-foreground"
       )}
       onClick={onClick}
       type="button"
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * Reads the current schedule (either mode) into a normalized shape for the
+ * receipt-like summary — same three numbers regardless of auto vs custom.
+ */
+function useScheduleSummary(): {
+  count: number;
+  totalCents: number;
+  firstDueDate: string;
+} {
+  const { watch } = useFormContext<CreateContractInput>();
+  const schedule = watch("schedule");
+
+  if (schedule?.mode === "auto") {
+    return {
+      count: Number(schedule.installmentsCount) || 0,
+      totalCents: Number(schedule.totalAmountCents) || 0,
+      firstDueDate: schedule.firstDueDate || "",
+    };
+  }
+  if (schedule?.mode === "custom") {
+    const installments = schedule.installments ?? [];
+    return {
+      count: installments.length,
+      totalCents: installments.reduce(
+        (sum, i) => sum + (Number(i?.amountCents) || 0),
+        0
+      ),
+      firstDueDate: installments[0]?.dueDate || "",
+    };
+  }
+  return { count: 0, totalCents: 0, firstDueDate: "" };
+}
+
+/** Receipt-like recap of the contract about to be created — title, role, parcelas, 1ª data, valor. */
+function ContractSummary() {
+  const { watch } = useFormContext<CreateContractInput>();
+  const title = watch("title");
+  const ownerRole = watch("ownerRole");
+  const { count, totalCents, firstDueDate } = useScheduleSummary();
+  const hasSchedule = count > 0 && totalCents > 0;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+      <SectionLabel className="text-primary-strong">
+        Resumo antes de criar
+      </SectionLabel>
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
+        <div className="col-span-2 sm:col-span-1">
+          <dt className="text-muted-foreground text-xs">Título</dt>
+          <dd className="mt-0.5 truncate font-medium text-foreground">
+            {title || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">Meu papel</dt>
+          <dd className="mt-0.5 font-medium text-foreground">
+            {capitalize(ROLE_LABEL[ownerRole] ?? ownerRole)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">Parcelas</dt>
+          <dd className="mt-0.5 font-medium text-foreground tabular-nums">
+            {count > 0 ? count : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground text-xs">1ª data</dt>
+          <dd className="mt-0.5 font-medium text-foreground tabular-nums">
+            {firstDueDate ? formatISODateBR(firstDueDate) : "—"}
+          </dd>
+        </div>
+      </dl>
+      <div className="mt-4 flex items-center justify-between border-primary/15 border-t pt-3">
+        <span className="text-muted-foreground text-sm">Valor total</span>
+        {hasSchedule ? (
+          <Money cents={totalCents} size="md" />
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -412,39 +529,54 @@ export function ContractNewPage() {
 
   return (
     <PageContainer width="form">
-      <div className="mb-6">
-        <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
+      <header className="mb-6">
+        <h1 className="font-bold text-2xl text-foreground tracking-tight">
           Novo contrato
         </h1>
         <p className="mt-1 text-muted-foreground text-sm">
           Defina os dados básicos e o cronograma de parcelas.
         </p>
-      </div>
+      </header>
 
       <Card className="p-6 sm:p-8">
         <Stepper current={step} onStepClick={setStep} steps={STEPS} />
 
         <FormProvider {...form}>
-          <form onSubmit={onSubmit}>
+          <form
+            className="mt-6 border-border border-t pt-6"
+            onSubmit={onSubmit}
+          >
             {step === 0 ? (
               <>
+                <StepHeading
+                  hint="Título, papel e condições do acordo."
+                  title="Dados do contrato"
+                />
                 <StepBasic />
-                <div className="mt-8 flex justify-end">
-                  <Button onClick={goNext} type="button">
+                <div className="mt-8 flex justify-end border-border border-t pt-6">
+                  <Button
+                    className="w-full active:scale-[0.97] sm:w-auto"
+                    onClick={goNext}
+                    type="button"
+                  >
                     Avançar
+                    <ChevronRight aria-hidden="true" className="size-4" />
                   </Button>
                 </div>
               </>
             ) : (
               <>
-                <div className="mb-5 inline-flex overflow-hidden rounded-lg border border-border text-sm">
+                <StepHeading
+                  hint="Gere as parcelas automaticamente a partir de um valor total, ou monte cada uma manualmente."
+                  title="Cronograma de parcelas"
+                />
+                <div className="mb-5 inline-flex gap-1 rounded-lg border border-border bg-muted/40 p-1 text-sm">
                   <ModeButton
                     active={mode === "auto"}
                     onClick={() => setMode("auto")}
                   >
                     Automático
                   </ModeButton>
-                  <span aria-hidden="true" className="w-px bg-border" />
                   <ModeButton
                     active={mode === "custom"}
                     onClick={() => setMode("custom")}
@@ -453,15 +585,24 @@ export function ContractNewPage() {
                   </ModeButton>
                 </div>
                 {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
-                <div className="mt-8 flex justify-between">
+                <div className="mt-6">
+                  <ContractSummary />
+                </div>
+                <div className="mt-8 flex items-center justify-between gap-3 border-border border-t pt-6">
                   <Button
+                    className="active:scale-[0.97]"
                     onClick={() => setStep(0)}
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                   >
+                    <ChevronLeft aria-hidden="true" className="size-4" />
                     Voltar
                   </Button>
-                  <Button disabled={createMutation.isPending} type="submit">
+                  <Button
+                    className="active:scale-[0.97]"
+                    disabled={createMutation.isPending}
+                    type="submit"
+                  >
                     Criar contrato
                   </Button>
                 </div>

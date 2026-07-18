@@ -66,7 +66,7 @@ export function NotificationBell() {
         className="w-80 rounded-xl border-border p-0 shadow-lg"
       >
         <div className="flex items-center justify-between border-border border-b px-4 py-3">
-          <span className="font-display font-semibold text-foreground text-sm tracking-tight">
+          <span className="font-semibold text-foreground text-sm tracking-tight">
             Notificações
           </span>
           {count > 0 ? (

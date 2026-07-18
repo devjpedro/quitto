@@ -139,13 +139,13 @@ function InstallmentDetailView({
       <dl className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-xs">
         <div className="flex items-baseline justify-between p-4">
           <dt className="text-muted-foreground text-sm">Valor</dt>
-          <dd className="font-bold font-display text-foreground text-lg tabular-nums">
+          <dd className="font-bold text-foreground text-lg tabular-nums">
             {formatBRL(installment.amountCents)}
           </dd>
         </div>
         <div className="flex items-baseline justify-between p-4">
           <dt className="text-muted-foreground text-sm">Vencimento</dt>
-          <dd className="font-display font-semibold text-foreground tabular-nums">
+          <dd className="font-semibold text-foreground tabular-nums">
             {formatISODateBR(installment.dueDate)}
           </dd>
         </div>

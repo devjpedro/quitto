@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { FileText } from "lucide-react";
 import { ContractRow } from "@/components/contract-row";
 import { PageContainer } from "@/components/page-container";
 import { PendingInvitesBanner } from "@/components/pending-invites-banner";
@@ -27,12 +28,12 @@ function ContractsEmptyState() {
     <div className="flex flex-col items-center gap-4 rounded-xl border border-border border-dashed bg-card/50 p-12 text-center">
       <div
         aria-hidden="true"
-        className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-bold font-display text-lg text-primary"
+        className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
       >
-        ₿
+        <FileText aria-hidden="true" className="size-6" />
       </div>
       <div>
-        <p className="font-display font-semibold text-foreground">
+        <p className="font-semibold text-foreground">
           Você ainda não tem contratos.
         </p>
         <p className="mt-1 text-muted-foreground text-sm">
@@ -59,8 +60,14 @@ function ContractsListBody({
   if (data && data.length > 0) {
     return (
       <div className="flex flex-col gap-3">
-        {data.map((contract) => (
-          <ContractRow contract={contract} key={contract.id} />
+        {data.map((contract, index) => (
+          <div
+            className="fade-in slide-in-from-bottom-1 animate-in fill-mode-backwards duration-300 ease-out"
+            key={contract.id}
+            style={{ animationDelay: `${Math.min(index * 45, 320)}ms` }}
+          >
+            <ContractRow contract={contract} />
+          </div>
         ))}
       </div>
     );
@@ -76,7 +83,7 @@ export function ContractsListPage() {
     <PageContainer>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-bold font-display text-2xl text-foreground tracking-tight">
+          <h1 className="font-bold text-2xl text-foreground tracking-tight">
             Contratos
           </h1>
           <p className="mt-1 text-muted-foreground text-sm">

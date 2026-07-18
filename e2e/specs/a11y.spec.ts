@@ -29,7 +29,16 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   // drawer da parcela aberto
   const detail = await getContract(page.request, id);
   await page.goto(`/contracts/${id}?installment=${detail.installments[0].id}`);
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  // O drawer abre com fade/slide-in (tw-animate-css). Sem esperar a animação
+  // terminar, o axe às vezes escaneia um frame intermediário: nesse instante,
+  // texto e fundo estão ambos com opacidade parcial em relação ao body, o que
+  // "esbate" a cor e derruba artificialmente o contraste medido — falso
+  // positivo de color-contrast que não reflete o estado final renderizado.
+  await drawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
   await scan(page);
 
   await page.goto("/notifications");
@@ -37,5 +46,36 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await page.goto("/settings");
   await scan(page);
   await page.goto("/"); // dashboard com contrato
+  await scan(page);
+});
+
+test("dark mode não tem violações de a11y", async ({ page, context }) => {
+  await context.addCookies([
+    { name: "theme", value: "dark", url: "http://localhost:3001" },
+  ]);
+
+  await page.goto("/login");
+  await expect(page.locator("html.dark")).toBeVisible();
+  await scan(page);
+
+  await signup(page);
+  await expect(page.locator("html.dark")).toBeVisible();
+  await scan(page); // dashboard vazio
+
+  const { id } = await seedContract(page.request);
+  await page.goto(`/contracts/${id}`);
+  await scan(page);
+
+  // drawer da parcela aberto
+  const detail = await getContract(page.request, id);
+  await page.goto(`/contracts/${id}?installment=${detail.installments[0].id}`);
+  const drawer = page.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  // mesmo cuidado do bloco light: espera a animação de entrada terminar antes
+  // de escanear, senão o axe pega um frame com opacidade parcial e reporta um
+  // color-contrast falso-positivo.
+  await drawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
   await scan(page);
 });

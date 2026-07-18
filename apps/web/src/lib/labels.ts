@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { InstallmentFilter } from "./installments-filter";
 
-type Tone = "success" | "warning" | "danger" | "neutral" | "brand";
+type Tone = "success" | "warning" | "danger" | "neutral" | "brand" | "gold";
 
 export const INSTALLMENT_STATUS_LABEL: Record<InstallmentStatus, string> = {
   [INSTALLMENT_STATUS.pending]: "pendente",
@@ -35,9 +35,11 @@ export const INSTALLMENT_STATUS_LABEL: Record<InstallmentStatus, string> = {
   [INSTALLMENT_STATUS.paid]: "paga",
 };
 
+// pending/awaitingConfirmation = "a receber" (ainda em aberto) — usa o mesmo
+// acento dourado do resto do app para dinheiro em trânsito (ex.: dashboard).
 export const INSTALLMENT_STATUS_TONE: Record<InstallmentStatus, Tone> = {
-  [INSTALLMENT_STATUS.pending]: "warning",
-  [INSTALLMENT_STATUS.awaitingConfirmation]: "warning",
+  [INSTALLMENT_STATUS.pending]: "gold",
+  [INSTALLMENT_STATUS.awaitingConfirmation]: "gold",
   [INSTALLMENT_STATUS.confirmed]: "success",
   [INSTALLMENT_STATUS.disputed]: "danger",
   [INSTALLMENT_STATUS.paid]: "success",

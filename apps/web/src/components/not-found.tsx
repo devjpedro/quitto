@@ -6,7 +6,7 @@ export function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
       <LogoMark />
-      <p className="font-display font-semibold text-foreground text-xl">
+      <p className="font-semibold text-foreground text-xl">
         Página não encontrada
       </p>
       <p className="text-muted-foreground text-sm">

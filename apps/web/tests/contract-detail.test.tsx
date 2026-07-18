@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-router", () => ({
 import { ContractDetailPage } from "../src/features/contracts/contract-detail-page";
 
 const REMAINING_BRL = /R\$\s?74\.400,00/;
-const INSTALLMENT_BRL = /R\$\s?2\.000,00/;
+const INSTALLMENT_BRL = /R\$\s?2\.000,00/g;
 const MANAGE_BUTTON = /gerenciar/i;
 
 const detail = {
@@ -70,12 +70,15 @@ describe("ContractDetailPage", () => {
 
   it("renders stats and installments from the query data", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
-    renderWithProviders(<ContractDetailPage />);
+    const { container } = renderWithProviders(<ContractDetailPage />);
     expect(screen.getByText("Apê do irmão")).toBeInTheDocument();
-    expect(screen.getByText(REMAINING_BRL)).toBeInTheDocument();
-    expect(screen.getAllByText(INSTALLMENT_BRL).length).toBeGreaterThanOrEqual(
-      2
-    );
+    // Money quebra o valor em spans (moeda/inteiro/centavos), então o texto
+    // completo só existe no textContent concatenado do container — não em um
+    // único nó via getByText.
+    expect(container.textContent).toMatch(REMAINING_BRL);
+    expect(
+      container.textContent?.match(INSTALLMENT_BRL)?.length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("mostra o botão Gerenciar para o dono", () => {

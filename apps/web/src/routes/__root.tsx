@@ -12,13 +12,16 @@ import "@fontsource/space-grotesk/700.css";
 import "../index.css";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { getThemeSSR } from "@/lib/theme-ssr";
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  head: () => ({
+  loader: () => getThemeSSR(),
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
@@ -27,7 +30,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         content:
           "Quitto — gerencie contratos parcelados, comprovantes e quitação em um só lugar.",
       },
-      { name: "theme-color", content: "#0f766e" },
+      {
+        name: "theme-color",
+        content: loaderData === "dark" ? "#1c1c1c" : "#faf9f6",
+      },
       { title: "Quitto" },
     ],
     links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
@@ -36,6 +42,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootDocument() {
+  const theme = Route.useLoaderData();
+
   // Sentry só no cliente (no-op sem DSN); evita rodar o SDK de browser no SSR.
   useEffect(() => {
     initSentry();
@@ -46,8 +54,15 @@ function RootDocument() {
   }, []);
 
   return (
-    <html lang="pt-BR">
+    <html
+      className={theme === "dark" ? "dark" : undefined}
+      lang="pt-BR"
+      suppressHydrationWarning
+    >
       <head>
+        {/* anti-FOUC: roda antes do paint na 1ª visita (sem cookie) */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: script estático controlado */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

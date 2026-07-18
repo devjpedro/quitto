@@ -34,7 +34,7 @@ export function NotificationsPage() {
   return (
     <PageContainer width="form">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-bold font-display text-xl tracking-tight sm:text-2xl">
+        <h1 className="font-bold text-xl tracking-tight sm:text-2xl">
           Notificações
         </h1>
         {!isPending && (data?.length ?? 0) > 0 ? (

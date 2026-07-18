@@ -1,7 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { changePassword } from "@/lib/auth-client";
 
@@ -39,37 +38,40 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <form className="space-y-3" onSubmit={handleSubmit}>
-      <div className="space-y-1">
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="current-password">Senha atual</Label>
-        <Input
+        <PasswordInput
           id="current-password"
           onChange={(e) => setCurrentPassword(e.target.value)}
           required
-          type="password"
           value={currentPassword}
         />
       </div>
-      <div className="space-y-1">
-        <Label htmlFor="new-password">Nova senha</Label>
-        <PasswordInput
-          id="new-password"
-          minLength={8}
-          onChange={(e) => setNewPassword(e.target.value)}
-          required
-          value={newPassword}
-        />
+
+      <div className="grid gap-4 border-border border-t pt-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-password">Nova senha</Label>
+          <PasswordInput
+            id="new-password"
+            minLength={8}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            value={newPassword}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+          <PasswordInput
+            id="confirm-password"
+            minLength={8}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            value={confirmPassword}
+          />
+        </div>
       </div>
-      <div className="space-y-1">
-        <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-        <PasswordInput
-          id="confirm-password"
-          minLength={8}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          value={confirmPassword}
-        />
-      </div>
+
       {feedback && (
         <p
           className={
@@ -82,9 +84,16 @@ export function ChangePasswordForm() {
           {feedback.message}
         </p>
       )}
-      <Button disabled={loading} type="submit">
-        {loading ? "Aguarde..." : "Trocar senha"}
-      </Button>
+
+      <div className="flex justify-end">
+        <Button
+          className="w-full transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)] active:scale-[0.97] sm:w-auto"
+          disabled={loading}
+          type="submit"
+        >
+          {loading ? "Aguarde..." : "Trocar senha"}
+        </Button>
+      </div>
     </form>
   );
 }

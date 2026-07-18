@@ -6,7 +6,7 @@ import { errorMessage } from "@/lib/error-message";
 export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 p-6 text-center">
-      <p className="font-display font-semibold text-foreground text-lg">
+      <p className="font-semibold text-foreground text-lg">
         Ops, algo deu errado
       </p>
       <p className="text-muted-foreground text-sm">{errorMessage(error)}</p>

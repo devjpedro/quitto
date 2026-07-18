@@ -31,7 +31,7 @@ export function DeleteAccountDialog() {
           <TriangleAlert aria-hidden="true" className="size-5" />
         </span>
         <div className="flex flex-1 flex-col gap-1">
-          <h3 className="font-display font-semibold text-foreground text-sm tracking-tight">
+          <h3 className="font-semibold text-foreground text-sm tracking-tight">
             Excluir conta
           </h3>
           <p className="text-muted-foreground text-sm leading-relaxed">
@@ -42,7 +42,7 @@ export function DeleteAccountDialog() {
       </div>
 
       <Button
-        className="mt-4"
+        className="mt-4 active:scale-[0.97]"
         onClick={() => setOpen(true)}
         ref={triggerRef}
         type="button"
@@ -68,7 +68,7 @@ export function DeleteAccountDialog() {
           }}
           title="Excluir conta"
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="confirm-phrase">
               Digite&nbsp;
               <span className="font-semibold text-destructive tracking-wide">
@@ -77,6 +77,11 @@ export function DeleteAccountDialog() {
               &nbsp;para confirmar
             </Label>
             <Input
+              aria-describedby={
+                phrase.length > 0 && !matches
+                  ? "confirm-phrase-hint"
+                  : undefined
+              }
               aria-invalid={phrase.length > 0 && !matches}
               autoComplete="off"
               id="confirm-phrase"
@@ -84,6 +89,15 @@ export function DeleteAccountDialog() {
               spellCheck={false}
               value={phrase}
             />
+            {phrase.length > 0 && !matches ? (
+              <p
+                className="text-destructive text-xs"
+                id="confirm-phrase-hint"
+                role="alert"
+              >
+                A frase não confere.
+              </p>
+            ) : null}
           </div>
 
           {del.isError ? (
@@ -94,7 +108,7 @@ export function DeleteAccountDialog() {
 
           <div className="flex gap-2">
             <Button
-              className="flex-1"
+              className="flex-1 active:scale-[0.97]"
               disabled={!canDelete}
               onClick={() => del.mutate()}
               type="button"
@@ -103,6 +117,7 @@ export function DeleteAccountDialog() {
               {del.isPending ? "Excluindo…" : "Excluir definitivamente"}
             </Button>
             <Button
+              className="active:scale-[0.97]"
               onClick={() => setOpen(false)}
               type="button"
               variant="outline"
