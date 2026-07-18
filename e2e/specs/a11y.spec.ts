@@ -1,6 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { getContract, seedContract, signup } from "../fixtures";
+import {
+  getContract,
+  seedContract,
+  signup,
+  waitForHydrated,
+} from "../fixtures";
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
@@ -49,6 +54,36 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await scan(page);
 });
 
+test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
+  page,
+}) => {
+  await signup(page);
+
+  // passo mensal do wizard
+  await page.goto("/contracts/new");
+  await waitForHydrated(page);
+  await page.locator("#title").fill("Mensal A11y");
+  await page.getByRole("button", { name: "Avançar" }).click();
+  await page.getByRole("button", { name: "Mensal" }).click();
+  await page.locator("#monthly-amount").fill("800,00");
+  await page.locator("#months").fill("12");
+  await page.locator("#monthly-first").fill("10/09/2026");
+  await scan(page);
+
+  // detalhe com o selo da intenção
+  const { id } = await seedContract(page.request, {
+    title: "Mensal A11y Detalhe",
+    schedule: {
+      mode: "monthly",
+      monthlyAmountCents: 80_000,
+      months: 12,
+      firstDueDate: "2026-09-10",
+    },
+  });
+  await page.goto(`/contracts/${id}`);
+  await scan(page);
+});
+
 test("dark mode não tem violações de a11y", async ({ page, context }) => {
   await context.addCookies([
     { name: "theme", value: "dark", url: "http://localhost:3001" },
@@ -77,5 +112,18 @@ test("dark mode não tem violações de a11y", async ({ page, context }) => {
   await drawer.evaluate((el) =>
     Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
   );
+  await scan(page);
+
+  const monthly = await seedContract(page.request, {
+    title: "Mensal Dark",
+    schedule: {
+      mode: "monthly",
+      monthlyAmountCents: 80_000,
+      months: 12,
+      firstDueDate: "2026-09-10",
+    },
+  });
+  await page.goto(`/contracts/${monthly.id}`);
+  await expect(page.locator("html.dark")).toBeVisible();
   await scan(page);
 });
