@@ -1,7 +1,9 @@
 import {
   AUDIT_TYPE,
+  generateMonthlySchedule,
   generateSchedule,
   NOTIFICATION_TYPE,
+  type ScheduleRow,
   todayISO,
 } from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -34,12 +36,19 @@ const ScheduleCustom = t.Object({
   ),
 });
 
+const ScheduleMonthly = t.Object({
+  mode: t.Literal("monthly"),
+  monthlyAmountCents: t.Integer({ minimum: 1 }),
+  months: t.Integer({ minimum: 1, maximum: 600 }),
+  firstDueDate: t.String({ format: "date" }),
+});
+
 const CreateContractBody = t.Object({
   title: t.String({ minLength: 1, maxLength: 200 }),
   description: t.Optional(t.String({ maxLength: 2000 })),
   ownerRole: t.Union([t.Literal("buyer"), t.Literal("seller")]),
   requiresConfirmation: t.Boolean(),
-  schedule: t.Union([ScheduleAuto, ScheduleCustom]),
+  schedule: t.Union([ScheduleAuto, ScheduleCustom, ScheduleMonthly]),
 });
 
 export const contractsModule = new Elysia({ prefix: "/api" })
@@ -48,18 +57,26 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     async ({ request, body }) => {
       const { user } = await requireAuth(request.headers);
 
-      const rows =
-        body.schedule.mode === "auto"
-          ? generateSchedule({
-              totalAmountCents: body.schedule.totalAmountCents,
-              installmentsCount: body.schedule.installmentsCount,
-              firstDueDate: body.schedule.firstDueDate,
-            })
-          : body.schedule.installments.map((it, i) => ({
-              sequence: i + 1,
-              amountCents: it.amountCents,
-              dueDate: it.dueDate,
-            }));
+      let rows: ScheduleRow[];
+      if (body.schedule.mode === "auto") {
+        rows = generateSchedule({
+          totalAmountCents: body.schedule.totalAmountCents,
+          installmentsCount: body.schedule.installmentsCount,
+          firstDueDate: body.schedule.firstDueDate,
+        });
+      } else if (body.schedule.mode === "monthly") {
+        rows = generateMonthlySchedule({
+          monthlyAmountCents: body.schedule.monthlyAmountCents,
+          months: body.schedule.months,
+          firstDueDate: body.schedule.firstDueDate,
+        });
+      } else {
+        rows = body.schedule.installments.map((it, i) => ({
+          sequence: i + 1,
+          amountCents: it.amountCents,
+          dueDate: it.dueDate,
+        }));
+      }
 
       const totalAmountCents = rows.reduce((acc, r) => acc + r.amountCents, 0);
 

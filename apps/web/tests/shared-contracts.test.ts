@@ -57,6 +57,51 @@ describe("createContractSchema", () => {
     }).success;
     expect(r).toBe(false);
   });
+
+  it("accepts a valid monthly contract", () => {
+    const r = createContractSchema.safeParse({
+      title: "Aluguel",
+      ownerRole: "seller",
+      requiresConfirmation: false,
+      schedule: {
+        mode: "monthly",
+        monthlyAmountCents: 80_000,
+        months: 12,
+        firstDueDate: "2026-07-10",
+      },
+    }).success;
+    expect(r).toBe(true);
+  });
+
+  it("rejects monthly with months above 600", () => {
+    const r = createContractSchema.safeParse({
+      title: "X",
+      ownerRole: "buyer",
+      requiresConfirmation: false,
+      schedule: {
+        mode: "monthly",
+        monthlyAmountCents: 1,
+        months: 601,
+        firstDueDate: "2026-07-10",
+      },
+    }).success;
+    expect(r).toBe(false);
+  });
+
+  it("rejects monthly with monthlyAmountCents below 1", () => {
+    const r = createContractSchema.safeParse({
+      title: "X",
+      ownerRole: "buyer",
+      requiresConfirmation: false,
+      schedule: {
+        mode: "monthly",
+        monthlyAmountCents: 0,
+        months: 12,
+        firstDueDate: "2026-07-10",
+      },
+    }).success;
+    expect(r).toBe(false);
+  });
 });
 
 describe("updateInstallmentSchema", () => {

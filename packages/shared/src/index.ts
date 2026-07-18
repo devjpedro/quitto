@@ -101,6 +101,13 @@ const scheduleCustomSchema = z.object({
     .max(600, "Máximo 600 parcelas"),
 });
 
+const scheduleMonthlySchema = z.object({
+  mode: z.literal("monthly"),
+  monthlyAmountCents: z.number().int().min(1, "Informe um valor"),
+  months: z.number().int().min(1, "Mínimo 1 mês").max(600, "Máximo 600 meses"),
+  firstDueDate: isoDate,
+});
+
 export const createContractSchema = z.object({
   title: z.string().min(1, "Informe um título").max(200, "Título muito longo"),
   description: z.string().max(2000, "Descrição muito longa").optional(),
@@ -109,6 +116,7 @@ export const createContractSchema = z.object({
   schedule: z.discriminatedUnion("mode", [
     scheduleAutoSchema,
     scheduleCustomSchema,
+    scheduleMonthlySchema,
   ]),
 });
 
