@@ -29,8 +29,17 @@ export {
   PARTICIPANT_ROLE,
   REMINDER_WINDOW_DAYS,
 } from "./domain";
-export type { GenerateScheduleInput, ScheduleRow } from "./schedule";
-export { addMonths, generateSchedule, splitAmount } from "./schedule";
+export type {
+  GenerateMonthlyScheduleInput,
+  GenerateScheduleInput,
+  ScheduleRow,
+} from "./schedule";
+export {
+  addMonths,
+  generateMonthlySchedule,
+  generateSchedule,
+  splitAmount,
+} from "./schedule";
 
 /** Frase que o usuário digita para confirmar a exclusão da conta. */
 export const DELETE_CONFIRM_PHRASE = "EXCLUIR";
@@ -92,6 +101,13 @@ const scheduleCustomSchema = z.object({
     .max(600, "Máximo 600 parcelas"),
 });
 
+const scheduleMonthlySchema = z.object({
+  mode: z.literal("monthly"),
+  monthlyAmountCents: z.number().int().min(1, "Informe um valor"),
+  months: z.number().int().min(1, "Mínimo 1 mês").max(600, "Máximo 600 meses"),
+  firstDueDate: isoDate,
+});
+
 export const createContractSchema = z.object({
   title: z.string().min(1, "Informe um título").max(200, "Título muito longo"),
   description: z.string().max(2000, "Descrição muito longa").optional(),
@@ -100,6 +116,7 @@ export const createContractSchema = z.object({
   schedule: z.discriminatedUnion("mode", [
     scheduleAutoSchema,
     scheduleCustomSchema,
+    scheduleMonthlySchema,
   ]),
 });
 

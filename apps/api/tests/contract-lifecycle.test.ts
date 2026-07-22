@@ -193,3 +193,44 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
     expect((await del(`/api/contracts/${contractId}/me`)).status).toBe(401);
   });
 });
+
+describe("monthly schedule", () => {
+  it("cria contrato mensal com N parcelas iguais e guarda a intenção", async () => {
+    const cookie = await signUpCookie(uniqueEmail("monthly"));
+    const createRes = await app.handle(
+      new Request("http://localhost/api/contracts", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          title: "Aluguel mensal",
+          ownerRole: "seller",
+          requiresConfirmation: false,
+          schedule: {
+            mode: "monthly",
+            monthlyAmountCents: 80_000,
+            months: 12,
+            firstDueDate: "2026-07-10",
+          },
+        }),
+      })
+    );
+    expect(createRes.status).toBe(200);
+    const { id } = (await createRes.json()) as { id: string };
+
+    const detailRes = await app.handle(
+      new Request(`http://localhost/api/contracts/${id}`, {
+        headers: { cookie },
+      })
+    );
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json();
+    expect(detail.contract.monthlyAmountCents).toBe(80_000);
+    expect(detail.installments).toHaveLength(12);
+    expect(
+      detail.installments.every(
+        (it: { amountCents: number }) => it.amountCents === 80_000
+      )
+    ).toBe(true);
+    expect(detail.progress.totalCents).toBe(960_000);
+  });
+});

@@ -57,7 +57,9 @@ interface SeedSchedule {
   firstDueDate?: string;
   installments?: { amountCents: number; dueDate: string }[];
   installmentsCount?: number;
-  mode: "auto" | "custom";
+  mode: "auto" | "custom" | "monthly";
+  monthlyAmountCents?: number;
+  months?: number;
   totalAmountCents?: number;
 }
 

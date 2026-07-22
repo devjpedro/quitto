@@ -36,14 +36,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { capitalize, formatISODateBR } from "@/lib/format";
+import { capitalize, formatBRL, formatISODateBR } from "@/lib/format";
 import { PLACEHOLDER, ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 
 const STEPS = [{ label: "Básico" }, { label: "Parcelas" }];
 
-type ScheduleMode = "auto" | "custom";
+type ScheduleMode = "auto" | "custom" | "monthly";
 interface CustomInstallment {
   amountCents: number;
   dueDate: string;
@@ -268,6 +268,57 @@ function AutoSchedule() {
   );
 }
 
+function MonthlySchedule() {
+  const { register } = useFormContext<CreateContractInput>();
+  const amountAria = useErrorAria(
+    "schedule.monthlyAmountCents",
+    "monthly-amount-error"
+  );
+  const monthsAria = useErrorAria("schedule.months", "months-error");
+  const firstDueAria = useErrorAria(
+    "schedule.firstDueDate",
+    "monthly-first-error"
+  );
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <Label htmlFor="monthly-amount">Valor mensal</Label>
+        <CurrencyField
+          id="monthly-amount"
+          name="schedule.monthlyAmountCents"
+          {...amountAria}
+        />
+        <FieldError
+          id="monthly-amount-error"
+          name="schedule.monthlyAmountCents"
+        />
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="months">Número de meses</Label>
+          <Input
+            className="mt-1.5 tabular-nums"
+            id="months"
+            type="number"
+            {...monthsAria}
+            {...register("schedule.months", { valueAsNumber: true })}
+          />
+          <FieldError id="months-error" name="schedule.months" />
+        </div>
+        <div>
+          <Label htmlFor="monthly-first">1º vencimento</Label>
+          <DateField
+            id="monthly-first"
+            name="schedule.firstDueDate"
+            {...firstDueAria}
+          />
+          <FieldError id="monthly-first-error" name="schedule.firstDueDate" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InstallmentRow({
   index,
   onRemove,
@@ -377,6 +428,17 @@ function ModeButton({
   );
 }
 
+/** Renders the schedule-editing UI for the active mode. */
+function ScheduleModeFields({ mode }: { mode: ScheduleMode }) {
+  if (mode === "auto") {
+    return <AutoSchedule />;
+  }
+  if (mode === "monthly") {
+    return <MonthlySchedule />;
+  }
+  return <CustomSchedule />;
+}
+
 /**
  * Reads the current schedule (either mode) into a normalized shape for the
  * receipt-like summary — same three numbers regardless of auto vs custom.
@@ -385,6 +447,7 @@ function useScheduleSummary(): {
   count: number;
   totalCents: number;
   firstDueDate: string;
+  monthly: { monthlyAmountCents: number; months: number } | null;
 } {
   const { watch } = useFormContext<CreateContractInput>();
   const schedule = watch("schedule");
@@ -394,6 +457,17 @@ function useScheduleSummary(): {
       count: Number(schedule.installmentsCount) || 0,
       totalCents: Number(schedule.totalAmountCents) || 0,
       firstDueDate: schedule.firstDueDate || "",
+      monthly: null,
+    };
+  }
+  if (schedule?.mode === "monthly") {
+    const months = Number(schedule.months) || 0;
+    const monthlyAmountCents = Number(schedule.monthlyAmountCents) || 0;
+    return {
+      count: months,
+      totalCents: monthlyAmountCents * months,
+      firstDueDate: schedule.firstDueDate || "",
+      monthly: { monthlyAmountCents, months },
     };
   }
   if (schedule?.mode === "custom") {
@@ -405,9 +479,10 @@ function useScheduleSummary(): {
         0
       ),
       firstDueDate: installments[0]?.dueDate || "",
+      monthly: null,
     };
   }
-  return { count: 0, totalCents: 0, firstDueDate: "" };
+  return { count: 0, totalCents: 0, firstDueDate: "", monthly: null };
 }
 
 /** Receipt-like recap of the contract about to be created — title, role, parcelas, 1ª data, valor. */
@@ -415,7 +490,7 @@ function ContractSummary() {
   const { watch } = useFormContext<CreateContractInput>();
   const title = watch("title");
   const ownerRole = watch("ownerRole");
-  const { count, totalCents, firstDueDate } = useScheduleSummary();
+  const { count, totalCents, firstDueDate, monthly } = useScheduleSummary();
   const hasSchedule = count > 0 && totalCents > 0;
 
   return (
@@ -423,6 +498,12 @@ function ContractSummary() {
       <SectionLabel className="text-primary-strong">
         Resumo antes de criar
       </SectionLabel>
+      {monthly && monthly.monthlyAmountCents > 0 && monthly.months > 0 ? (
+        <p className="mt-1 font-medium text-primary-strong text-sm tabular-nums">
+          {formatBRL(monthly.monthlyAmountCents)}/mês · {monthly.months}{" "}
+          {monthly.months === 1 ? "mês" : "meses"}
+        </p>
+      ) : null}
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
         <div className="col-span-2 sm:col-span-1">
           <dt className="text-muted-foreground text-xs">Título</dt>
@@ -507,24 +588,36 @@ export function ContractNewPage() {
 
   function setMode(next: ScheduleMode) {
     if (next === mode) {
-      return; // [B2] re-clicking the active mode must not reset
+      return; // re-clicar o modo ativo não reseta
     }
     setModeState(next);
-    form.setValue(
-      "schedule",
-      next === "auto"
-        ? {
-            mode: "auto",
-            totalAmountCents: 0,
-            installmentsCount: 1,
-            firstDueDate: "",
-          }
-        : {
-            mode: "custom",
-            installments: autoToCustomInstallments(form.getValues("schedule")),
-          },
-      { shouldValidate: false }
-    );
+    if (next === "auto") {
+      form.setValue(
+        "schedule",
+        {
+          mode: "auto",
+          totalAmountCents: 0,
+          installmentsCount: 1,
+          firstDueDate: "",
+        },
+        { shouldValidate: false }
+      );
+    } else if (next === "monthly") {
+      form.setValue(
+        "schedule",
+        { mode: "monthly", monthlyAmountCents: 0, months: 1, firstDueDate: "" },
+        { shouldValidate: false }
+      );
+    } else {
+      form.setValue(
+        "schedule",
+        {
+          mode: "custom",
+          installments: autoToCustomInstallments(form.getValues("schedule")),
+        },
+        { shouldValidate: false }
+      );
+    }
   }
 
   return (
@@ -567,10 +660,10 @@ export function ContractNewPage() {
             ) : (
               <>
                 <StepHeading
-                  hint="Gere as parcelas automaticamente a partir de um valor total, ou monte cada uma manualmente."
+                  hint="Gere as parcelas por um valor total, por um valor mensal, ou monte cada uma manualmente."
                   title="Cronograma de parcelas"
                 />
-                <div className="mb-5 inline-flex gap-1 rounded-lg border border-border bg-muted/40 p-1 text-sm">
+                <div className="mb-5 inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1 text-sm">
                   <ModeButton
                     active={mode === "auto"}
                     onClick={() => setMode("auto")}
@@ -583,8 +676,14 @@ export function ContractNewPage() {
                   >
                     Personalizado
                   </ModeButton>
+                  <ModeButton
+                    active={mode === "monthly"}
+                    onClick={() => setMode("monthly")}
+                  >
+                    Mensal
+                  </ModeButton>
                 </div>
-                {mode === "auto" ? <AutoSchedule /> : <CustomSchedule />}
+                <ScheduleModeFields mode={mode} />
                 <div className="mt-6">
                   <ContractSummary />
                 </div>

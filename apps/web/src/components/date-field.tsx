@@ -55,7 +55,7 @@ function DateInput({
       <Popover onOpenChange={setOpen} open={open}>
         <PopoverTrigger
           aria-label="Escolher data no calendário"
-          className="absolute inset-y-0 right-2 my-auto flex h-5 w-5 cursor-pointer items-center justify-center text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+          className="absolute inset-y-0 right-2 my-auto flex h-6 w-6 cursor-pointer items-center justify-center text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
           type="button"
         >
           <CalendarIcon className="size-4" />

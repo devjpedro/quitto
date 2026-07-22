@@ -96,6 +96,7 @@ export const contract = pgTable("contract", {
   ownerRole: ownerRoleEnum("owner_role").notNull(),
   totalAmountCents: integer("total_amount_cents").notNull(),
   installmentsCount: integer("installments_count").notNull(),
+  monthlyAmountCents: integer("monthly_amount_cents"),
   requiresConfirmation: boolean("requires_confirmation")
     .notNull()
     .default(false),
