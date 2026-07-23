@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { eq } from "drizzle-orm";
 import { app } from "../src/app";
+import { db } from "../src/db/client";
+import { installment } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const CRC_SUFFIX_RE = /6304[0-9A-F]{4}$/;
@@ -97,5 +100,33 @@ describe("GET /installments/:id → pix (gate)", () => {
     const detail = await getInstallment(cookie, inst);
     expect(detail.pix.copiaECola).toContain("override@example.com");
     expect(detail.pix.copiaECola).not.toContain("perfil@example.com");
+  });
+
+  it("seller + chave no perfil + parcela paga → pix null", async () => {
+    const cookie = await signUpCookie(uniqueEmail("pixpaid"));
+    await setProfilePix(cookie, "joao@example.com");
+    const id = await createContract(cookie, "seller");
+    const inst = await firstInstallmentId(cookie, id);
+    expect((await getInstallment(cookie, inst)).pix).not.toBeNull();
+
+    await db
+      .update(installment)
+      .set({ status: "paid" })
+      .where(eq(installment.id, inst));
+    expect((await getInstallment(cookie, inst)).pix).toBeNull();
+  });
+
+  it("seller + chave no perfil + parcela confirmada → pix null", async () => {
+    const cookie = await signUpCookie(uniqueEmail("pixconfirmed"));
+    await setProfilePix(cookie, "joao@example.com");
+    const id = await createContract(cookie, "seller");
+    const inst = await firstInstallmentId(cookie, id);
+    expect((await getInstallment(cookie, inst)).pix).not.toBeNull();
+
+    await db
+      .update(installment)
+      .set({ status: "confirmed" })
+      .where(eq(installment.id, inst));
+    expect((await getInstallment(cookie, inst)).pix).toBeNull();
   });
 });
