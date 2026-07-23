@@ -99,3 +99,71 @@ export function isValidPixKey(raw: string): boolean {
     return false;
   }
 }
+
+const DIACRITICS_RE = /[̀-ͯ]/g;
+const NON_ALLOWED_CHARS_RE = /[^A-Z0-9 ]/g;
+const EXTRA_SPACES_RE = /\s+/g;
+
+/** TLV: ID(2) + LEN(2, zero-pad) + VALUE. Assume valores ASCII (chave/nome/cidade normalizados). */
+function tlv(id: string, value: string): string {
+  return `${id}${value.length.toString().padStart(2, "0")}${value}`;
+}
+
+/** CRC16-CCITT (poly 0x1021, init 0xFFFF), 4 hex maiúsculos. */
+function crc16(payload: string): string {
+  let crc = 0xff_ff;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc =
+        (crc & 0x80_00) === 0
+          ? (crc << 1) & 0xff_ff
+          : ((crc << 1) ^ 0x10_21) & 0xff_ff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+
+/** amountCents → string decimal com ponto e 2 casas: 100 → "1.00", 25050 → "250.50". */
+function formatPixAmount(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+/** Maiúsculo, sem acento, só [A-Z0-9 ], colapsa espaços, ≤25; fallback "RECEBEDOR". */
+export function normalizeMerchantName(name: string): string {
+  const ascii = name
+    .normalize("NFD")
+    .replace(DIACRITICS_RE, "")
+    .toUpperCase()
+    .replace(NON_ALLOWED_CHARS_RE, " ")
+    .replace(EXTRA_SPACES_RE, " ")
+    .trim()
+    .slice(0, 25)
+    .trim();
+  return ascii.length > 0 ? ascii : "RECEBEDOR";
+}
+
+/** Monta a copia-e-cola (BR Code EMV estático) com valor embutido. */
+export function buildPixBrCode(input: {
+  key: string;
+  amountCents: number;
+  merchantName: string;
+  merchantCity: string;
+  txid?: string;
+}): string {
+  const { key, amountCents, merchantName, merchantCity, txid = "***" } = input;
+  const merchantAccount = tlv("00", "br.gov.bcb.pix") + tlv("01", key);
+  const additionalData = tlv("05", txid);
+  const body =
+    tlv("00", "01") +
+    tlv("26", merchantAccount) +
+    tlv("52", "0000") +
+    tlv("53", "986") +
+    tlv("54", formatPixAmount(amountCents)) +
+    tlv("58", "BR") +
+    tlv("59", merchantName.slice(0, 25)) +
+    tlv("60", merchantCity.slice(0, 15)) +
+    tlv("62", additionalData) +
+    "6304";
+  return body + crc16(body);
+}

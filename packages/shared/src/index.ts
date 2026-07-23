@@ -31,7 +31,12 @@ export {
   REMINDER_WINDOW_DAYS,
 } from "./domain";
 export type { PixKeyType } from "./pix";
-export { isValidPixKey, parsePixKey } from "./pix";
+export {
+  buildPixBrCode,
+  isValidPixKey,
+  normalizeMerchantName,
+  parsePixKey,
+} from "./pix";
 export type {
   GenerateMonthlyScheduleInput,
   GenerateScheduleInput,
