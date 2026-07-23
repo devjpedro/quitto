@@ -6,6 +6,7 @@ export interface SessionUser {
   id: string;
   image: string | null;
   name: string;
+  pixKey: string | null;
 }
 
 export type SessionResult =
