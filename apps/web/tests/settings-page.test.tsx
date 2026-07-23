@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/components/delete-account-dialog", () => ({
   DeleteAccountDialog: () => <div data-testid="delete-dialog" />,
 }));
+vi.mock("@/components/pix-key-form", () => ({
+  PixKeyForm: () => <div data-testid="pix-key-form" />,
+}));
 vi.mock("@/hooks/use-me", () => ({
   useMeQuery: () => ({
     data: { id: "u1", name: "Maria", email: "maria@example.com" },

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { PageContainer } from "@/components/page-container";
+import { PixKeyForm } from "@/components/pix-key-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useMeQuery } from "@/hooks/use-me";
@@ -51,6 +52,10 @@ export function SettingsPage() {
               {me?.email ?? ""}
             </p>
           </div>
+        </SettingsSection>
+
+        <SettingsSection title="Recebimento (PIX)">
+          <PixKeyForm />
         </SettingsSection>
 
         <SettingsSection title="Segurança">
