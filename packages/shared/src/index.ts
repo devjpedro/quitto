@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
+import { isValidPixKey } from "./pix";
 
 // biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
 export { APP_TIME_ZONE, isoDateInTimeZone, todayISO } from "./date";
@@ -29,6 +30,8 @@ export {
   PARTICIPANT_ROLE,
   REMINDER_WINDOW_DAYS,
 } from "./domain";
+export type { PixKeyType } from "./pix";
+export { isValidPixKey, parsePixKey } from "./pix";
 export type {
   GenerateMonthlyScheduleInput,
   GenerateScheduleInput,
@@ -131,6 +134,23 @@ export const updateInstallmentSchema = z
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
+
+/** Chave PIX válida (formato). Normalização final acontece no servidor. */
+export const pixKeySchema = z
+  .string()
+  .trim()
+  .min(1, "Informe uma chave PIX")
+  .refine(isValidPixKey, "Chave PIX inválida");
+
+/** Body de atualização de chave: string válida OU vazio/null (limpa). */
+export const pixKeyUpdateSchema = z.object({
+  pixKey: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || isValidPixKey(v), "Chave PIX inválida")
+    .nullable(),
+});
+export type PixKeyUpdateInput = z.infer<typeof pixKeyUpdateSchema>;
 
 // ── Participants & invites ───────────────────────────────────────────────────
 
