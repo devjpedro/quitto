@@ -32,4 +32,9 @@ describe("SettingsPage", () => {
     expect(screen.getByText("Maria")).toBeInTheDocument();
     expect(screen.getByText("maria@example.com")).toBeInTheDocument();
   });
+
+  it("renders the PixKeyForm", () => {
+    render(<SettingsPage />);
+    expect(screen.getByTestId("pix-key-form")).toBeInTheDocument();
+  });
 });

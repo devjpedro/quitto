@@ -352,16 +352,21 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           .limit(1);
         const resolvedKey = c.pixKey ?? owner?.pixKey ?? null;
         if (resolvedKey) {
-          const { type } = parsePixKey(resolvedKey);
-          pix = {
-            copiaECola: buildPixBrCode({
-              key: resolvedKey,
-              amountCents: inst.amountCents,
-              merchantName: normalizeMerchantName(owner?.name ?? ""),
-              merchantCity: "BRASIL",
-            }),
-            keyType: type,
-          };
+          try {
+            const { type } = parsePixKey(resolvedKey);
+            pix = {
+              copiaECola: buildPixBrCode({
+                key: resolvedKey,
+                amountCents: inst.amountCents,
+                merchantName: normalizeMerchantName(owner?.name ?? ""),
+                merchantCity: "BRASIL",
+              }),
+              keyType: type,
+            };
+          } catch {
+            // chave armazenada inesperadamente inválida não deve derrubar o detalhe da parcela
+            pix = null;
+          }
         }
       }
 

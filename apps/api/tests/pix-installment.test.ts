@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { installment } from "../src/db/schema";
+import { installment, user as userTable } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const CRC_SUFFIX_RE = /6304[0-9A-F]{4}$/;
@@ -128,5 +128,29 @@ describe("GET /installments/:id → pix (gate)", () => {
       .set({ status: "confirmed" })
       .where(eq(installment.id, inst));
     expect((await getInstallment(cookie, inst)).pix).toBeNull();
+  });
+
+  it("chave armazenada malformada → pix null, sem 500 (guarda de robustez)", async () => {
+    const email = uniqueEmail("pixmalformed");
+    const cookie = await signUpCookie(email);
+    await setProfilePix(cookie, "joao@example.com");
+    const id = await createContract(cookie, "seller");
+    const inst = await firstInstallmentId(cookie, id);
+
+    // força uma chave inesperadamente inválida direto no banco (bypassa a
+    // validação de escrita) para provar que o GET não derruba o detalhe.
+    await db
+      .update(userTable)
+      .set({ pixKey: "###GARBAGE###" })
+      .where(eq(userTable.email, email));
+
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${inst}`, {
+        headers: { cookie },
+      })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.pix).toBeNull();
   });
 });
