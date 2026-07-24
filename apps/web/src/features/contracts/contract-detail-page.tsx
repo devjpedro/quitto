@@ -1,4 +1,4 @@
-import { isPaidStatus } from "@quitto/shared";
+import { isPaidStatus, OWNER_ROLE } from "@quitto/shared";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { ContractActionsMenu } from "@/components/contract-actions-menu";
@@ -244,7 +244,10 @@ export function ContractDetailPage() {
         />
       ) : null}
 
-      {isOwner ? (
+      {/* PIX só faz sentido quando o dono é quem RECEBE (vendedor): a chave
+          gerada é a dele e o QR só aparece nas parcelas de contrato seller.
+          Pra dono comprador, o campo seria uma chave que nunca é usada. */}
+      {isOwner && contract.ownerRole === OWNER_ROLE.seller ? (
         <section className="mt-6 rounded-xl border border-border bg-card p-5 shadow-xs">
           <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
             Recebimento (PIX)

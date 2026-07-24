@@ -17,6 +17,7 @@ import { ContractDetailPage } from "../src/features/contracts/contract-detail-pa
 const REMAINING_BRL = /R\$\s?74\.400,00/;
 const INSTALLMENT_BRL = /R\$\s?2\.000,00/g;
 const MANAGE_BUTTON = /gerenciar/i;
+const PIX_SECTION = /recebimento \(pix\)/i;
 
 const detail = {
   role: "buyer",
@@ -157,5 +158,28 @@ describe("ContractDetailPage", () => {
     expect(screen.getAllByText("comprador").length).toBeGreaterThanOrEqual(1);
     // "Dono" aparece no header e na lista de participantes; basta existir >=2
     expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("esconde a seção PIX quando o dono é comprador (não recebe)", () => {
+    // fixture base tem contract.ownerRole = "buyer" + isOwner
+    useContractQuery.mockReturnValue({ data: detail, isPending: false });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.queryByRole("heading", { name: PIX_SECTION })
+    ).not.toBeInTheDocument();
+  });
+
+  it("mostra a seção PIX quando o dono é vendedor (recebe)", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: { ...detail.contract, ownerRole: "seller", pixKey: null },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.getByRole("heading", { name: PIX_SECTION })
+    ).toBeInTheDocument();
   });
 });
