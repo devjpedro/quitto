@@ -1,5 +1,5 @@
 import { isValidPixKey } from "@quitto/shared";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,24 +18,44 @@ export function ContractPixKeyForm({
     kind: "ok" | "error";
     message: string;
   } | null>(null);
+  // Trava síncrona de reentrada: o `disabled={isPending}` do react-query só
+  // vale no próximo render, então uma rajada de Enter (auto-repeat) submete
+  // várias vezes antes de desabilitar. O ref bloqueia no mesmo tick.
+  const busy = useRef(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (busy.current) {
+      return;
+    }
     setFeedback(null);
     const trimmed = value.trim();
     if (!isValidPixKey(trimmed)) {
       setFeedback({ kind: "error", message: "Chave PIX inválida." });
       return;
     }
-    await update.mutateAsync(trimmed);
-    setFeedback({ kind: "ok", message: "Override salvo." });
+    busy.current = true;
+    try {
+      await update.mutateAsync(trimmed);
+      setFeedback({ kind: "ok", message: "Override salvo." });
+    } finally {
+      busy.current = false;
+    }
   }
 
   async function handleRemove() {
+    if (busy.current) {
+      return;
+    }
     setFeedback(null);
-    await update.mutateAsync(null);
-    setValue("");
-    setFeedback({ kind: "ok", message: "Override removido." });
+    busy.current = true;
+    try {
+      await update.mutateAsync(null);
+      setValue("");
+      setFeedback({ kind: "ok", message: "Override removido." });
+    } finally {
+      busy.current = false;
+    }
   }
 
   return (
