@@ -15,6 +15,7 @@ import {
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
 import { PaymentActions } from "@/components/payment-actions";
+import { PixBlock } from "@/components/pix-block";
 import { ProofList, type ProofView } from "@/components/proof-list";
 import { ProofUpload } from "@/components/proof-upload";
 import { ReceiptLink } from "@/components/receipt-link";
@@ -118,6 +119,7 @@ function InstallmentDetailView({
   installment,
   isOwner,
   onEdit,
+  pix,
   proofs,
   requiresConfirmation,
   status,
@@ -128,6 +130,7 @@ function InstallmentDetailView({
   installment: Installment;
   isOwner: boolean;
   onEdit: () => void;
+  pix: { copiaECola: string; keyType: string } | null;
   proofs: ProofView[];
   requiresConfirmation: boolean;
   status: string;
@@ -173,6 +176,8 @@ function InstallmentDetailView({
           <ProofUpload contractId={contractId} installmentId={installment.id} />
         </section>
       ) : null}
+
+      {pix ? <PixBlock pix={pix} /> : null}
 
       <PaymentActions
         capabilities={capabilities}
@@ -258,6 +263,7 @@ export function InstallmentDrawer({
   const status = detail?.status ?? current.status;
   const proofs = detail?.proofs ?? [];
   const events = detail?.events ?? [];
+  const pix = detail?.pix ?? null;
 
   return (
     <Sheet
@@ -301,6 +307,7 @@ export function InstallmentDrawer({
             installment={current}
             isOwner={isOwner}
             onEdit={() => setEditing(true)}
+            pix={pix}
             proofs={proofs}
             requiresConfirmation={requiresConfirmation}
             status={status}

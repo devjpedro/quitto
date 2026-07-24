@@ -33,6 +33,9 @@ vi.mock("@/components/participants-drawer", () => ({
 vi.mock("@/components/contract-actions-menu", () => ({
   ContractActionsMenu: () => null,
 }));
+vi.mock("@/components/contract-pix-key-form", () => ({
+  ContractPixKeyForm: () => null,
+}));
 
 vi.mock("@/hooks/use-contracts", () => ({
   useContractQuery: () => ({

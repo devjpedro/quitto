@@ -18,6 +18,7 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  pixKey: text("pix_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -97,6 +98,7 @@ export const contract = pgTable("contract", {
   totalAmountCents: integer("total_amount_cents").notNull(),
   installmentsCount: integer("installments_count").notNull(),
   monthlyAmountCents: integer("monthly_amount_cents"),
+  pixKey: text("pix_key"),
   requiresConfirmation: boolean("requires_confirmation")
     .notNull()
     .default(false),

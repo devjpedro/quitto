@@ -1,4 +1,11 @@
-import { NOTIFICATION_TYPE } from "@quitto/shared";
+import {
+  buildPixBrCode,
+  isPaidStatus,
+  NOTIFICATION_TYPE,
+  normalizeMerchantName,
+  OWNER_ROLE,
+  parsePixKey,
+} from "@quitto/shared";
 import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -302,7 +309,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
     "/installments/:installmentId",
     async ({ request, params }) => {
       const { user } = await requireAuth(request.headers);
-      const { inst } = await loadInstallmentForUser(
+      const { inst, contract: c } = await loadInstallmentForUser(
         user.id,
         params.installmentId
       ); // 404 se sem acesso
@@ -336,6 +343,33 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         }))
       );
 
+      let pix: { copiaECola: string; keyType: string } | null = null;
+      if (c.ownerRole === OWNER_ROLE.seller && !isPaidStatus(inst.status)) {
+        const [owner] = await db
+          .select({ name: userTable.name, pixKey: userTable.pixKey })
+          .from(userTable)
+          .where(eq(userTable.id, c.ownerId))
+          .limit(1);
+        const resolvedKey = c.pixKey ?? owner?.pixKey ?? null;
+        if (resolvedKey) {
+          try {
+            const { type } = parsePixKey(resolvedKey);
+            pix = {
+              copiaECola: buildPixBrCode({
+                key: resolvedKey,
+                amountCents: inst.amountCents,
+                merchantName: normalizeMerchantName(owner?.name ?? ""),
+                merchantCity: "BRASIL",
+              }),
+              keyType: type,
+            };
+          } catch {
+            // chave armazenada inesperadamente inválida não deve derrubar o detalhe da parcela
+            pix = null;
+          }
+        }
+      }
+
       return {
         id: inst.id,
         sequence: inst.sequence,
@@ -351,6 +385,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           metadata: e.metadata as Record<string, unknown> | null,
           createdAt: e.createdAt.toISOString(),
         })),
+        pix,
       };
     },
     {
@@ -381,6 +416,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
             createdAt: t.String(),
           })
         ),
+        pix: t.Union([
+          t.Object({ copiaECola: t.String(), keyType: t.String() }),
+          t.Null(),
+        ]),
       }),
     }
   );

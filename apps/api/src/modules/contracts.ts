@@ -3,6 +3,7 @@ import {
   generateMonthlySchedule,
   generateSchedule,
   NOTIFICATION_TYPE,
+  parsePixKey,
   type ScheduleRow,
   todayISO,
 } from "@quitto/shared";
@@ -13,7 +14,7 @@ import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getCapabilities, getContractRole } from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
-import { ForbiddenError, NotFoundError } from "../lib/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
@@ -232,6 +233,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           requiresConfirmation: c.requiresConfirmation,
           status: c.status,
           monthlyAmountCents: c.monthlyAmountCents,
+          pixKey: c.pixKey,
         },
         progress: {
           totalCents: progress.totalCents,
@@ -273,6 +275,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           requiresConfirmation: t.Boolean(),
           status: t.String(),
           monthlyAmountCents: t.Union([t.Integer(), t.Null()]),
+          pixKey: t.Union([t.String(), t.Null()]),
         }),
         progress: t.Object({
           totalCents: t.Integer(),
@@ -300,6 +303,34 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           })
         ),
       }),
+    }
+  )
+  .patch(
+    "/contracts/:id",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      const { isOwner } = await getContractRole(user.id, params.id);
+      if (!isOwner) {
+        throw new ForbiddenError("Apenas o dono edita a chave PIX");
+      }
+      let pixKey: string | null = null;
+      if (body.pixKey && body.pixKey.trim() !== "") {
+        try {
+          pixKey = parsePixKey(body.pixKey).value;
+        } catch (e) {
+          throw new ValidationError((e as Error).message);
+        }
+      }
+      await db
+        .update(contract)
+        .set({ pixKey })
+        .where(eq(contract.id, params.id));
+      return { pixKey };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
+      response: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
     }
   )
   .patch(

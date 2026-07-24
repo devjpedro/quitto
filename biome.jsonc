@@ -41,6 +41,20 @@
       "linter": {
         "rules": { "suspicious": { "noMisplacedAssertion": "off" } }
       }
+    },
+    {
+      // CRC16-CCITT (checksum do BR Code / PIX estático) é definido em termos
+      // de deslocamento e XOR de bits — não há forma idiomática de expressar
+      // o algoritmo sem operadores bitwise. O teste reimplementa o mesmo
+      // algoritmo de forma independente para validar o CRC, então também
+      // precisa da exceção.
+      "includes": [
+        "packages/shared/src/pix.ts",
+        "packages/shared/tests/pix.test.ts"
+      ],
+      "linter": {
+        "rules": { "suspicious": { "noBitwiseOperators": "off" } }
+      }
     }
   ]
 }
