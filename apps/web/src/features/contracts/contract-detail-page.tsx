@@ -48,6 +48,63 @@ function Stat({
   );
 }
 
+function ContractPixSection({
+  contractId,
+  currentPixKey,
+  isOwner,
+  ownerRole,
+  recebedor,
+}: {
+  contractId: string;
+  currentPixKey: string | null;
+  isOwner: boolean;
+  ownerRole: string;
+  recebedor: { name: string | null; hasKey: boolean } | null;
+}) {
+  if (!isOwner) {
+    return null;
+  }
+  if (ownerRole === OWNER_ROLE.seller) {
+    return (
+      <section className="mt-6 rounded-xl border border-border bg-card p-5 shadow-xs">
+        <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          Recebimento (PIX)
+        </h2>
+        <ContractPixKeyForm
+          contractId={contractId}
+          currentPixKey={currentPixKey}
+        />
+      </section>
+    );
+  }
+  if (ownerRole !== OWNER_ROLE.buyer || !recebedor) {
+    return null;
+  }
+  return (
+    <section className="mt-6 rounded-xl border border-border bg-card p-5 shadow-xs">
+      {recebedor.hasKey ? (
+        <p className="text-muted-foreground text-sm">
+          Pagando para{" "}
+          <span className="font-medium text-foreground">
+            {recebedor.name ?? "a contraparte"}
+          </span>{" "}
+          — o PIX aparece na parcela.
+        </p>
+      ) : (
+        <>
+          <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+            Chave PIX de quem você paga
+          </h2>
+          <ContractPixKeyForm
+            contractId={contractId}
+            currentPixKey={currentPixKey}
+          />
+        </>
+      )}
+    </section>
+  );
+}
+
 export function ContractDetailPage() {
   useDocumentTitle(PAGE_TITLE.contractDetail);
   const { id } = useParams({ from: "/_app/contracts/$id" });
@@ -244,20 +301,13 @@ export function ContractDetailPage() {
         />
       ) : null}
 
-      {/* PIX só faz sentido quando o dono é quem RECEBE (vendedor): a chave
-          gerada é a dele e o QR só aparece nas parcelas de contrato seller.
-          Pra dono comprador, o campo seria uma chave que nunca é usada. */}
-      {isOwner && contract.ownerRole === OWNER_ROLE.seller ? (
-        <section className="mt-6 rounded-xl border border-border bg-card p-5 shadow-xs">
-          <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
-            Recebimento (PIX)
-          </h2>
-          <ContractPixKeyForm
-            contractId={contract.id}
-            currentPixKey={contract.pixKey}
-          />
-        </section>
-      ) : null}
+      <ContractPixSection
+        contractId={contract.id}
+        currentPixKey={contract.pixKey}
+        isOwner={isOwner}
+        ownerRole={contract.ownerRole}
+        recebedor={contract.recebedor}
+      />
     </PageContainer>
   );
 }

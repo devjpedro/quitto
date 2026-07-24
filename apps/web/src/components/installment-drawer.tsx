@@ -130,7 +130,7 @@ function InstallmentDetailView({
   installment: Installment;
   isOwner: boolean;
   onEdit: () => void;
-  pix: { copiaECola: string; keyType: string } | null;
+  pix: { copiaECola: string; keyType: string; payToName: string } | null;
   proofs: ProofView[];
   requiresConfirmation: boolean;
   status: string;

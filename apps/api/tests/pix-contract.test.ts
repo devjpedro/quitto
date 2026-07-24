@@ -34,6 +34,26 @@ function patchPix(cookie: string, id: string, pixKey: string | null) {
 }
 
 describe("PATCH /api/contracts/:id (override PIX)", () => {
+  it("GET expõe o recebedor e informa que ele tem chave", async () => {
+    const cookie = await signUpCookie(uniqueEmail("g2-cdetail"));
+    await app.handle(
+      new Request("http://localhost/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ pixKey: "dono@example.com" }),
+      })
+    );
+    const id = await createContract(cookie);
+    const res = await app.handle(
+      new Request(`http://localhost/api/contracts/${id}`, {
+        headers: { cookie },
+      })
+    );
+    const body = await res.json();
+    expect(body.contract.recebedor).not.toBeNull();
+    expect(body.contract.recebedor.hasKey).toBe(true);
+  });
+
   it("dono salva override; GET devolve", async () => {
     const cookie = await signUpCookie(uniqueEmail("cpix"));
     const id = await createContract(cookie);

@@ -12,7 +12,11 @@ import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { getCapabilities, getContractRole } from "../lib/contract-access";
+import {
+  getCapabilities,
+  getContractRole,
+  resolveRecebedor,
+} from "../lib/contract-access";
 import { computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
@@ -219,6 +223,15 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .where(eq(participant.contractId, params.id));
       const today = todayISO();
       const progress = computeProgress(items, today);
+      const recebedorInfo = await resolveRecebedor(c);
+      const recebedorResolvedKey = c.pixKey ?? recebedorInfo.profileKey ?? null;
+      const recebedor =
+        recebedorInfo.displayName === null && recebedorResolvedKey === null
+          ? null
+          : {
+              name: recebedorInfo.displayName,
+              hasKey: recebedorResolvedKey !== null,
+            };
 
       return {
         role: access.role,
@@ -234,6 +247,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           status: c.status,
           monthlyAmountCents: c.monthlyAmountCents,
           pixKey: c.pixKey,
+          recebedor,
         },
         progress: {
           totalCents: progress.totalCents,
@@ -276,6 +290,13 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           status: t.String(),
           monthlyAmountCents: t.Union([t.Integer(), t.Null()]),
           pixKey: t.Union([t.String(), t.Null()]),
+          recebedor: t.Union([
+            t.Object({
+              name: t.Union([t.String(), t.Null()]),
+              hasKey: t.Boolean(),
+            }),
+            t.Null(),
+          ]),
         }),
         progress: t.Object({
           totalCents: t.Integer(),

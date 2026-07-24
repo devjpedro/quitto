@@ -5,9 +5,21 @@ import { PixBlock } from "../src/components/pix-block";
 const COPIAR_NAME = /copiar/i;
 const QR_CODE_PIX_NAME = /qr code pix/i;
 
-const pix = { copiaECola: "000201...6304ABCD", keyType: "email" };
+const pix = {
+  copiaECola: "000201...6304ABCD",
+  keyType: "email",
+  payToName: "Maria Vendedora",
+};
+const PAY_TO_MARIA = /pagar para maria vendedora/i;
 
 describe("PixBlock", () => {
+  it("mostra para quem é o pagamento", () => {
+    render(<PixBlock pix={pix} />);
+    expect(screen.getByText("Maria Vendedora").closest("p")).toHaveTextContent(
+      PAY_TO_MARIA
+    );
+  });
+
   it("renderiza QR (svg), a copia-e-cola e o botão copiar", () => {
     const { container } = render(<PixBlock pix={pix} />);
     expect(container.querySelector("svg")).toBeInTheDocument();

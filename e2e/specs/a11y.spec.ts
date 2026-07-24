@@ -1,17 +1,48 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { type Browser, expect, type Page, test } from "@playwright/test";
 import {
   getContract,
+  newUser,
   seedContract,
+  seedInvite,
   signup,
   waitForHydrated,
 } from "../fixtures";
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
+const ACCEPT_INVITE = /aceitar convite/i;
 
 async function scan(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   expect(results.violations).toEqual([]);
+}
+
+async function openBuyerReceiverPix(browser: Browser, buyer: Page) {
+  const seller = await newUser(browser);
+  await seller.page.request.patch("/api/me", {
+    data: { pixKey: "vendedor-a11y@example.com" },
+  });
+  const { id } = await seedContract(buyer.request, {
+    ownerRole: "buyer",
+    title: "PIX recebedor A11y",
+  });
+  const { token } = await seedInvite(buyer.request, id, {
+    displayName: "Vendedor A11y",
+    role: "seller",
+    email: seller.email,
+  });
+  await seller.page.goto(`/invites/${token}`);
+  await waitForHydrated(seller.page);
+  await seller.page.getByRole("button", { name: ACCEPT_INVITE }).click();
+  await seller.page.waitForURL(`**/contracts/${id}`);
+  const detail = await getContract(buyer.request, id);
+  await buyer.goto(`/contracts/${id}?installment=${detail.installments[0].id}`);
+  const drawer = buyer.getByRole("dialog");
+  await expect(drawer).toBeVisible();
+  await drawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
+  return seller;
 }
 
 test("login não tem violações de a11y", async ({ page }) => {
@@ -19,7 +50,10 @@ test("login não tem violações de a11y", async ({ page }) => {
   await scan(page);
 });
 
-test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
+test("rotas autenticadas não têm violações de a11y", async ({
+  browser,
+  page,
+}) => {
   await signup(page);
   await scan(page); // dashboard vazio
 
@@ -71,6 +105,13 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
     Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
   );
   await scan(page);
+
+  const receiver = await openBuyerReceiverPix(browser, page);
+  try {
+    await scan(page);
+  } finally {
+    await receiver.close();
+  }
 });
 
 test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
@@ -103,7 +144,11 @@ test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
   await scan(page);
 });
 
-test("dark mode não tem violações de a11y", async ({ page, context }) => {
+test("dark mode não tem violações de a11y", async ({
+  browser,
+  page,
+  context,
+}) => {
   await context.addCookies([
     { name: "theme", value: "dark", url: "http://localhost:3001" },
   ]);
@@ -163,4 +208,12 @@ test("dark mode não tem violações de a11y", async ({ page, context }) => {
     Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
   );
   await scan(page);
+
+  const receiver = await openBuyerReceiverPix(browser, page);
+  try {
+    await expect(page.locator("html.dark")).toBeVisible();
+    await scan(page);
+  } finally {
+    await receiver.close();
+  }
 });
