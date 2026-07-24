@@ -52,6 +52,25 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await scan(page);
   await page.goto("/"); // dashboard com contrato
   await scan(page);
+
+  // PixBlock (QR + copia-e-cola) só renderiza com contrato seller + chave
+  // resolvida; os scans acima usam contrato buyer sem chave, então o bloco
+  // nunca aparece neles. Define a chave via API (rápido) e abre a gaveta.
+  await page.request.patch("/api/me", { data: { pixKey: "joao@example.com" } });
+  const pixContract = await seedContract(page.request, {
+    ownerRole: "seller",
+    title: "PIX A11y",
+  });
+  const pixDetail = await getContract(page.request, pixContract.id);
+  await page.goto(
+    `/contracts/${pixContract.id}?installment=${pixDetail.installments[0].id}`
+  );
+  const pixDrawer = page.getByRole("dialog");
+  await expect(pixDrawer).toBeVisible();
+  await pixDrawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
+  await scan(page);
 });
 
 test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
@@ -125,5 +144,23 @@ test("dark mode não tem violações de a11y", async ({ page, context }) => {
   });
   await page.goto(`/contracts/${monthly.id}`);
   await expect(page.locator("html.dark")).toBeVisible();
+  await scan(page);
+
+  // PixBlock (QR + copia-e-cola) em dark: contrato seller + chave via API.
+  await page.request.patch("/api/me", { data: { pixKey: "joao@example.com" } });
+  const pixContract = await seedContract(page.request, {
+    ownerRole: "seller",
+    title: "PIX A11y Dark",
+  });
+  const pixDetail = await getContract(page.request, pixContract.id);
+  await page.goto(
+    `/contracts/${pixContract.id}?installment=${pixDetail.installments[0].id}`
+  );
+  const pixDrawer = page.getByRole("dialog");
+  await expect(pixDrawer).toBeVisible();
+  await expect(page.locator("html.dark")).toBeVisible();
+  await pixDrawer.evaluate((el) =>
+    Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished))
+  );
   await scan(page);
 });
