@@ -54,3 +54,13 @@ export function useLeaveContractMutation(contractId: string) {
     onSuccess: () => invalidateContractViews(qc),
   });
 }
+
+/** PATCH /api/contracts/:id — salva (string) ou limpa (null) o override de chave PIX do contrato. */
+export function useUpdateContractPixKeyMutation(contractId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pixKey: string | null) =>
+      unwrap(api.api.contracts({ id: contractId }).patch({ pixKey })),
+    onSuccess: () => invalidateContractViews(qc, contractId),
+  });
+}

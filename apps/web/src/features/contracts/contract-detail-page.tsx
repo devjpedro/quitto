@@ -2,6 +2,7 @@ import { isPaidStatus } from "@quitto/shared";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 import { ContractActionsMenu } from "@/components/contract-actions-menu";
+import { ContractPixKeyForm } from "@/components/contract-pix-key-form";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
 import { ExportMenu } from "@/components/export-menu";
 import { InstallmentDrawer } from "@/components/installment-drawer";
@@ -241,6 +242,18 @@ export function ContractDetailPage() {
           open={managing}
           participants={participants}
         />
+      ) : null}
+
+      {isOwner ? (
+        <section className="mt-6 rounded-xl border border-border bg-card p-5 shadow-xs">
+          <h2 className="mb-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+            Recebimento (PIX)
+          </h2>
+          <ContractPixKeyForm
+            contractId={contract.id}
+            currentPixKey={contract.pixKey}
+          />
+        </section>
       ) : null}
     </PageContainer>
   );
