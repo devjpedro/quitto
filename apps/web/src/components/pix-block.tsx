@@ -10,7 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 export function PixBlock({
   pix,
 }: {
-  pix: { copiaECola: string; keyType: string };
+  pix: { copiaECola: string; keyType: string; payToName: string };
 }) {
   const svg = useMemo(
     () => renderSVG(pix.copiaECola, { border: 2 }),
@@ -22,6 +22,12 @@ export function PixBlock({
       <h3 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         Pague com PIX
       </h3>
+      {pix.payToName ? (
+        <p className="text-muted-foreground text-sm">
+          Pagar para{" "}
+          <span className="font-medium text-foreground">{pix.payToName}</span>
+        </p>
+      ) : null}
       <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-xs">
         <div
           aria-label="QR Code PIX"

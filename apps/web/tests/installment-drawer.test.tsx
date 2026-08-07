@@ -21,7 +21,11 @@ const baseDetail = {
   status: "pending",
   proofs: [],
   events: [],
-  pix: null as { copiaECola: string; keyType: string } | null,
+  pix: null as {
+    copiaECola: string;
+    keyType: string;
+    payToName: string;
+  } | null,
 };
 // Mutable so individual tests can opt into a `pix` payload without leaking it
 // into the other cases (see beforeEach reset below).
@@ -120,7 +124,11 @@ describe("InstallmentDrawer", () => {
   it("mostra o bloco PIX quando detail.pix vem preenchido", () => {
     detail = {
       ...baseDetail,
-      pix: { copiaECola: "000201...6304ABCD", keyType: "email" },
+      pix: {
+        copiaECola: "000201...6304ABCD",
+        keyType: "email",
+        payToName: "Maria Vendedora",
+      },
     };
     renderWithProviders(
       <InstallmentDrawer

@@ -18,6 +18,9 @@ const REMAINING_BRL = /R\$\s?74\.400,00/;
 const INSTALLMENT_BRL = /R\$\s?2\.000,00/g;
 const MANAGE_BUTTON = /gerenciar/i;
 const PIX_SECTION = /recebimento \(pix\)/i;
+const PAYING_TO = /pagando para/i;
+const MARIA_SELLER = /maria vendedora/i;
+const PAYEE_PIX_KEY = /chave pix de quem você paga/i;
 
 const detail = {
   role: "buyer",
@@ -31,6 +34,8 @@ const detail = {
     ownerRole: "buyer",
     requiresConfirmation: true,
     status: "active",
+    pixKey: null,
+    recebedor: null,
   },
   progress: {
     totalCents: 12_000_000,
@@ -160,13 +165,54 @@ describe("ContractDetailPage", () => {
     expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("esconde a seção PIX quando o dono é comprador (não recebe)", () => {
-    // fixture base tem contract.ownerRole = "buyer" + isOwner
+  it("não mostra seção PIX ao dono comprador sem recebedor", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
     renderWithProviders(<ContractDetailPage />);
     expect(
       screen.queryByRole("heading", { name: PIX_SECTION })
     ).not.toBeInTheDocument();
+  });
+
+  it("dono comprador com recebedor e chave vê informação read-only", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: {
+          ...detail.contract,
+          ownerRole: "buyer",
+          recebedor: { name: "Maria Vendedora", hasKey: true },
+        },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText(PAYING_TO)).toBeInTheDocument();
+    expect(screen.getByText(MARIA_SELLER)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: PAYEE_PIX_KEY,
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it("dono comprador sem chave resolvível pode informar a chave", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: {
+          ...detail.contract,
+          ownerRole: "buyer",
+          recebedor: { name: "Contato", hasKey: false },
+        },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.getByRole("heading", {
+        name: PAYEE_PIX_KEY,
+      })
+    ).toBeInTheDocument();
   });
 
   it("mostra a seção PIX quando o dono é vendedor (recebe)", () => {
