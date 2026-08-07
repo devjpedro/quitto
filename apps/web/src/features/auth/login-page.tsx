@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-error-message";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { safeRedirect } from "@/lib/safe-redirect";
 
@@ -36,10 +37,6 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const failMessage =
-      mode === "signin"
-        ? "Não foi possível entrar. Verifique os dados e tente novamente."
-        : "Não foi possível criar a conta. Verifique os dados e tente novamente.";
     const action =
       mode === "signin"
         ? signIn.email({ email, password, callbackURL: target })
@@ -64,12 +61,12 @@ export function LoginPage() {
           }
           return;
         }
-        setError(failMessage);
+        setError(authErrorMessage(err, mode));
         return;
       }
       window.location.href = target;
     } catch {
-      setError(failMessage);
+      setError(authErrorMessage(undefined, mode));
     } finally {
       setLoading(false);
     }
