@@ -52,3 +52,21 @@ export function computeProgress(
     percent: totalCents === 0 ? 0 : Math.round((paidCents / totalCents) * 100),
   };
 }
+
+/**
+ * Menor `dueDate` entre as parcelas não pagas — a "próxima a vencer".
+ * `null` quando todas estão quitadas (ou não há parcela).
+ * Datas ISO (YYYY-MM-DD) comparam lexicograficamente, então `<` basta.
+ */
+export function computeNextDueDate(items: InstallmentLike[]): string | null {
+  let next: string | null = null;
+  for (const item of items) {
+    if (isPaidStatus(item.status)) {
+      continue;
+    }
+    if (next === null || item.dueDate < next) {
+      next = item.dueDate;
+    }
+  }
+  return next;
+}
