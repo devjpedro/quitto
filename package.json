@@ -12,10 +12,10 @@
     "test": "turbo run test"
   },
   "devDependencies": {
-    "@biomejs/biome": "latest",
-    "lefthook": "latest",
-    "turbo": "latest",
-    "typescript": "latest",
-    "ultracite": "latest"
+    "@biomejs/biome": "2.4.16",
+    "lefthook": "2.1.9",
+    "turbo": "2.9.17",
+    "typescript": "6.0.3",
+    "ultracite": "7.8.2"
   }
 }
