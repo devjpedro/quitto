@@ -147,9 +147,22 @@ export function CommandPalette({
 
   const isDark = theme === "dark";
 
+  // O cmdk só reelege o "primeiro item" quando a BUSCA muda: itens que montam
+  // depois entram sem seleção e o Enter fica inerte. Com `enabled: open` o
+  // `GET /contracts` só sai na abertura, então digitar rápido cai exatamente
+  // nessa janela. Re-montar o Command uma única vez, quando a lista chega, faz
+  // o cmdk reaplicar a busca atual já com os itens no DOM. O texto digitado é
+  // estado nosso (`query`), então sobrevive; o `autoFocus` devolve o cursor.
+  const listKey = data === undefined ? "aguardando-contratos" : "com-contratos";
+
   const content = (
-    <Command filter={commandFilter} label="Buscar">
+    <Command filter={commandFilter} key={listKey} label="Buscar">
+      {/* `autoFocus` não é enfeite: sem ele o Radix foca o 1º tabbable do
+          content — o "Fechar" do cabeçalho — e tudo que o usuário digita logo
+          depois do ⌘K se perde. Com ele o campo já está focado quando o
+          FocusScope monta, o Radix vê o foco dentro do escopo e não mexe. */}
       <CommandInput
+        autoFocus
         onValueChange={setQuery}
         placeholder="Buscar contratos, páginas e ações…"
         value={query}
