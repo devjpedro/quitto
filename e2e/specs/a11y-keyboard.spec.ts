@@ -85,7 +85,15 @@ test("fechar o diálogo de pagamento devolve o foco ao gatilho", async ({
       name: MARK_PAID,
     });
     await expect(confirmDialog).toBeVisible();
-    await expect(trigger).not.toBeFocused();
+    // O gatilho e o botão de confirmar dividem o mesmo nome acessível, e o Radix
+    // aria-esconde o fundo enquanto o diálogo está aberto — então `trigger`
+    // re-resolve para o botão DE DENTRO do diálogo aqui, e `not.toBeFocused()`
+    // passava só porque o foco estava no "Fechar" do cabeçalho. Asserta por
+    // escopo, como os outros testes deste arquivo já fazem.
+    const focusInConfirm = await confirmDialog.evaluate((el) =>
+      el.contains(document.activeElement)
+    );
+    expect(focusInConfirm).toBe(true);
 
     // Close via Escape: dialog closes, drawer stays, focus returns to trigger.
     await a.page.keyboard.press("Escape");
@@ -188,4 +196,38 @@ test("fechar o diálogo de excluir contrato devolve o foco ao gatilho do menu", 
   } finally {
     await a.close();
   }
+});
+
+// WCAG 3.2.1 / 2.4.3: o Radix foca o PRIMEIRO tabbable do content ao montar.
+// Enquanto o "Fechar" do cabeçalho era o primeiro tabbable, todo diálogo cujo
+// conteúdo começa por campo de texto abria com o foco no X — e o que o usuário
+// digitasse logo em seguida se perdia. A paleta ⌘K foi só onde doeu primeiro.
+// Este teste prova a classe num diálogo QUE NÃO É a paleta: o "Excluir conta"
+// abre com o cursor no campo da frase de confirmação.
+//
+// Digita pelo teclado de propósito: `fill()` foca o campo antes de escrever e
+// mascararia o defeito por completo (foi o que o lgpd.spec fez passar verde).
+test("o diálogo de excluir conta abre com o cursor no campo da frase", async ({
+  page,
+}) => {
+  await signup(page);
+  await page.goto("/settings");
+  await waitForHydrated(page);
+
+  await page.getByRole("button", { name: DELETE_ACCOUNT }).click();
+  const dialog = page.getByRole("dialog", { name: DELETE_ACCOUNT });
+  await expect(dialog).toBeVisible();
+
+  // O campo da frase é o primeiro tabbable DENTRO do `{children}` — é nele que
+  // o foco tem de cair, não no "Fechar" do cabeçalho.
+  const field = page.locator("#confirm-phrase");
+  await expect(field).toBeFocused();
+
+  // Sem `fill()`: digita como um humano digitaria e confere que o texto entrou
+  // no campo em vez de se perder num botão focado.
+  await page.keyboard.type("EXCLUIR");
+  await expect(field).toHaveValue("EXCLUIR");
+  await expect(
+    page.getByRole("button", { name: "Excluir definitivamente" })
+  ).toBeEnabled();
 });

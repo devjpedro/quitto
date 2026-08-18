@@ -157,10 +157,17 @@ export function CommandPalette({
 
   const content = (
     <Command filter={commandFilter} key={listKey} label="Buscar">
-      {/* `autoFocus` não é enfeite: sem ele o Radix foca o 1º tabbable do
-          content — o "Fechar" do cabeçalho — e tudo que o usuário digita logo
-          depois do ⌘K se perde. Com ele o campo já está focado quando o
-          FocusScope monta, o Radix vê o foco dentro do escopo e não mexe. */}
+      {/* `autoFocus` NÃO é mais para vencer o Radix na montagem: com o "Fechar"
+          movido para depois do `{children}` (dialog.tsx/sheet.tsx), o primeiro
+          tabbable do content já é este campo e o Radix foca nele sozinho.
+          O que ainda o sustenta é o remount do `key={listKey}` abaixo: quando a
+          lista chega, este input é destruído e recriado, o foco cai fora do
+          escopo e o FocusScope do Radix o estaciona no container do diálogo —
+          não de volta no campo. Sem `autoFocus` o cursor se perde exatamente
+          nessa janela, que é onde os dois testes de digitação da paleta batem.
+          Verificado por falsificação: removido, `command-palette.spec.ts:46` e
+          `:90` ficam vermelhos; com o Fechar reordenado mas sem o remount, o
+          foco de montagem cai no campo sozinho. */}
       <CommandInput
         autoFocus
         onValueChange={setQuery}
