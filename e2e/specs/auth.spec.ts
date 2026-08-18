@@ -3,7 +3,13 @@ import { randomEmail, signup, waitForHydrated } from "../fixtures";
 
 const LOGOUT = /Sair/i;
 const SIGNIN_SUBMIT = /^Entrar$/;
-const SIGNIN_FAIL = /Não foi possível entrar/i;
+/**
+ * Senha errada devolve `INVALID_EMAIL_OR_PASSWORD`, que a UI traduz para esta
+ * copy — a mesma de conta inexistente, de propósito (evita enumeração de
+ * usuários). O genérico "Não foi possível entrar" ficou só para código
+ * desconhecido / falha de rede. Ver `lib/auth-error-message.ts`.
+ */
+const SIGNIN_FAIL = /E-mail ou senha incorretos/i;
 const LOGIN_URL = /\/login/;
 
 test("signup leva ao dashboard", async ({ page }) => {
@@ -48,5 +54,5 @@ test("login com senha errada mostra erro", async ({ page }) => {
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("senhaerrada");
   await page.getByRole("button", { name: SIGNIN_SUBMIT }).click();
-  await expect(page.getByText(SIGNIN_FAIL)).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText(SIGNIN_FAIL);
 });
