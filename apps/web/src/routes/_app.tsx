@@ -8,7 +8,9 @@ import { useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { AppSidebar } from "@/components/app-sidebar";
 import { BrandLoader } from "@/components/brand-loader";
+import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
+import { useCommandPalette } from "@/hooks/use-command-palette";
 import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { ApiError } from "@/lib/api-client";
@@ -46,10 +48,13 @@ function AppLayout() {
     data: me.data,
   });
 
-  // Chamado UMA ÚNICA VEZ aqui: o AppLayout é o dono do listener ⌘\/Ctrl+\.
-  // Passa o valor do SSR pro getServerSnapshot bater com o HTML do servidor
-  // (sem flash) — AppSidebar só recebe `collapsed`/`onToggle` como props.
+  // Os dois hooks abaixo são chamados UMA ÚNICA VEZ aqui: o AppLayout é o dono
+  // dos atalhos globais (⌘\/Ctrl+\ da sidebar e ⌘K/Ctrl+K da paleta). Chamar
+  // qualquer um deles de novo registraria um 2º listener e o toggle se anularia.
+  // O `useSidebar` recebe o valor do SSR pro getServerSnapshot bater com o HTML
+  // do servidor (sem flash) — AppSidebar só recebe props.
   const { collapsed, toggle } = useSidebar(sidebarSSR === "collapsed");
+  const { open: searchOpen, setOpen: setSearchOpen } = useCommandPalette();
 
   useEffect(() => {
     if (decision.kind === "redirect") {
@@ -74,7 +79,12 @@ function AppLayout() {
       >
         Pular para o conteúdo
       </a>
-      <AppSidebar collapsed={collapsed} onToggle={toggle} />
+      <AppSidebar
+        collapsed={collapsed}
+        onOpenSearch={() => setSearchOpen(true)}
+        onToggle={toggle}
+      />
+      <CommandPalette onOpenChange={setSearchOpen} open={searchOpen} />
       <main className="pb-16 sm:pb-0" id="conteudo" tabIndex={-1}>
         <ErrorBoundary FallbackComponent={ErrorFallback} resetKeys={[me.data]}>
           <Outlet />
