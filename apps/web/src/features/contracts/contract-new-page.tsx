@@ -7,7 +7,7 @@ import {
   OWNER_ROLE,
   splitAmount,
 } from "@quitto/shared";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
@@ -545,6 +545,7 @@ function ContractSummary() {
 export function ContractNewPage() {
   useDocumentTitle(PAGE_TITLE.contractNew);
   const navigate = useNavigate();
+  const { title: titleFromSearch } = useSearch({ from: "/_app/contracts/new" });
   const createMutation = useCreateContractMutation();
   const [step, setStep] = useState(0);
 
@@ -552,7 +553,7 @@ export function ContractNewPage() {
     resolver: zodResolver(createContractSchema),
     mode: "onTouched",
     defaultValues: {
-      title: "",
+      title: titleFromSearch ?? "",
       ownerRole: OWNER_ROLE.buyer,
       requiresConfirmation: false,
       schedule: {

@@ -5,8 +5,10 @@ import { PLACEHOLDER } from "../src/lib/labels";
 import { renderWithProviders } from "./test-utils";
 
 const navigate = vi.fn();
+let search: { title?: string } = {};
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
+  useSearch: () => search,
 }));
 
 const mutateAsync = vi.fn();
@@ -34,6 +36,7 @@ describe("ContractNewPage (wizard)", () => {
     navigate.mockReset();
     mutateAsync.mockReset();
     mutateAsync.mockResolvedValue({ id: "new-id" });
+    search = {};
   });
 
   it("usa um placeholder de título genérico", () => {
@@ -42,6 +45,12 @@ describe("ContractNewPage (wizard)", () => {
       "placeholder",
       PLACEHOLDER.contractTitle
     );
+  });
+
+  it("pré-preenche o título com o ?title= da URL", () => {
+    search = { title: "aluguel do apê" };
+    renderWithProviders(<ContractNewPage />);
+    expect(screen.getByLabelText(TITLE)).toHaveValue("aluguel do apê");
   });
 
   it("blocks advancing from step 1 when title is empty", async () => {
