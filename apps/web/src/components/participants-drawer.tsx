@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useFocusRestore } from "@/hooks/use-focus-restore";
+import { useFocusOnOpen, useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
@@ -178,6 +178,8 @@ function ParticipantItem({
   // stable ref to the always-mounted trigger button and restore focus to it in
   // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
   const { triggerRef, restoreFocus } = useFocusRestore();
+  // Foco de abertura no Cancelar, não no Remover (ver useFocusOnOpen).
+  const { focusRef, focusOnOpen } = useFocusOnOpen();
 
   return (
     <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3.5 shadow-[var(--shadow-sm)] transition-colors hover:border-primary/40">
@@ -262,6 +264,7 @@ function ParticipantItem({
         <DialogContent
           description={`Remover ${participant.displayName} deste contrato? Convites pendentes serão cancelados.`}
           onCloseAutoFocus={restoreFocus}
+          onOpenAutoFocus={focusOnOpen}
           title="Remover participante"
         >
           <div className="flex gap-2">
@@ -280,6 +283,7 @@ function ParticipantItem({
             <Button
               className="active:scale-[0.97]"
               onClick={() => setConfirmOpen(false)}
+              ref={focusRef}
               type="button"
               variant="outline"
             >

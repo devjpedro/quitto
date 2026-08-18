@@ -28,3 +28,41 @@ export function useFocusRestore<T extends HTMLElement = HTMLButtonElement>(): {
   }
   return { triggerRef, restoreFocus };
 }
+
+/**
+ * ARIA APG (alertdialog): um diálogo de confirmação abre com o foco na opção
+ * MENOS destrutiva. Nos nossos diálogos de confirmação o botão destrutivo vem
+ * primeiro no DOM, então o autofocus padrão do Radix — o primeiro tabbable do
+ * content — cairia justamente nele, e um Enter solto logo depois de abrir
+ * executaria a ação irreversível. Isso só ficou alcançável quando o "Fechar"
+ * saiu do começo da ordem de tab (ver `dialog.tsx`).
+ *
+ * `autoFocus` no botão NÃO resolve aqui: estes diálogos abrem de DENTRO de
+ * outro escopo de foco do Radix (a gaveta da parcela, o DropdownMenu de ações),
+ * e a armadilha do escopo de fora devolve o foco para si antes de o escopo de
+ * dentro pausá-la — o `autoFocus` do React roda na fase de layout, cedo demais.
+ * O `onOpenAutoFocus` roda dentro do fluxo do próprio Radix, já com o escopo de
+ * fora pausado.
+ *
+ * Como o `restoreFocus` acima, só chama `preventDefault()` quando tem alvo vivo:
+ * um `preventDefault()` sem alvo deixaria o foco no <body> e quebraria a
+ * armadilha de foco inteira.
+ *
+ * Usage:
+ *   const { focusRef, focusOnOpen } = useFocusOnOpen();
+ *   <DialogContent onOpenAutoFocus={focusOnOpen} ... />
+ *     <Button ref={focusRef} variant="outline">Cancelar</Button>
+ */
+export function useFocusOnOpen<T extends HTMLElement = HTMLButtonElement>(): {
+  focusOnOpen: (event: Event) => void;
+  focusRef: RefObject<T | null>;
+} {
+  const focusRef = useRef<T | null>(null);
+  function focusOnOpen(event: Event) {
+    if (focusRef.current?.isConnected) {
+      event.preventDefault();
+      focusRef.current.focus();
+    }
+  }
+  return { focusOnOpen, focusRef };
+}
