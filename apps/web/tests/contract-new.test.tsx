@@ -53,6 +53,33 @@ describe("ContractNewPage (wizard)", () => {
     expect(screen.getByLabelText(TITLE)).toHaveValue("aluguel do apê");
   });
 
+  it("reaplica o ?title= quando a paleta navega para a rota já montada", async () => {
+    // O react-hook-form lê `defaultValues` só na montagem: navegar de
+    // /contracts/new para /contracts/new?title=X não remonta o wizard.
+    search = { title: "aluguel do apê" };
+    const { rerender } = renderWithProviders(<ContractNewPage />);
+    expect(screen.getByLabelText(TITLE)).toHaveValue("aluguel do apê");
+
+    search = { title: "empréstimo do carro" };
+    rerender(<ContractNewPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(TITLE)).toHaveValue("empréstimo do carro")
+    );
+  });
+
+  it("não sobrescreve o título que o usuário já digitou", async () => {
+    const { rerender } = renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "meu acordo");
+
+    search = { title: "empréstimo do carro" };
+    rerender(<ContractNewPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(TITLE)).toHaveValue("meu acordo")
+    );
+  });
+
   it("blocks advancing from step 1 when title is empty", async () => {
     renderWithProviders(<ContractNewPage />);
     await userEvent.click(screen.getByRole("button", { name: NEXT }));

@@ -9,7 +9,7 @@ import {
 } from "@quitto/shared";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   Controller,
   FormProvider,
@@ -564,6 +564,16 @@ export function ContractNewPage() {
       },
     },
   });
+
+  // A paleta ⌘K pode navegar pra esta rota estando nela: o wizard não remonta,
+  // então o `defaultValues` não reaplica. Só sobrescreve enquanto o usuário
+  // não digitou — sem o guard, um `?title=` novo apagaria o que ele escreveu.
+  const isTitleDirty = form.formState.dirtyFields.title;
+  useEffect(() => {
+    if (titleFromSearch && !isTitleDirty) {
+      form.setValue("title", titleFromSearch);
+    }
+  }, [titleFromSearch, isTitleDirty, form]);
 
   const [mode, setModeState] = useState<ScheduleMode>("auto");
 
