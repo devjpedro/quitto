@@ -1,15 +1,25 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { queryKeys } from "@/lib/query-keys";
 
 const navigate = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-const contractsQuery = vi.fn();
+// A paleta consome `contractsQueryOptions`, e o que precisa ser observado é a
+// `queryFn` — é ela que dispara o `GET /api/contracts`. Mockar o hook esconderia
+// exatamente a pergunta desta suíte: a paleta busca com a paleta fechada?
+// A promessa nunca resolve: a `queryFn` aqui é ponto de observação, não fonte
+// de dados; quem entrega dados é o cache semeado em `renderPalette`.
+const contractsQueryFn = vi.fn(() => new Promise<never>(() => undefined));
 vi.mock("@/hooks/use-contracts", () => ({
-  useContractsQuery: () => contractsQuery(),
+  contractsQueryOptions: {
+    queryKey: queryKeys.contracts,
+    queryFn: () => contractsQueryFn(),
+  },
 }));
 
 // O better-auth abre um client de rede na importação; no jsdom basta o signOut.
@@ -55,9 +65,27 @@ function setViewport(width: number) {
   (window as unknown as { innerWidth: number }).innerWidth = width;
 }
 
-function renderPalette(contracts: Contrato[] | undefined) {
-  contractsQuery.mockReturnValue({ data: contracts });
-  return render(<CommandPalette onOpenChange={() => undefined} open={true} />);
+/**
+ * Monta a paleta sobre um QueryClient de verdade. `contracts` semeia a MESMA
+ * queryKey que a lista de contratos usa — é assim que a paleta reaproveita o
+ * que já foi buscado em vez de disparar um GET próprio. `undefined` deixa o
+ * cache frio, que é o cenário em que um fetch indevido aparece.
+ */
+function renderPalette(
+  contracts: Contrato[] | undefined,
+  { open = true }: { open?: boolean } = {}
+) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  if (contracts !== undefined) {
+    client.setQueryData(queryKeys.contracts, contracts);
+  }
+  return render(
+    <QueryClientProvider client={client}>
+      <CommandPalette onOpenChange={() => undefined} open={open} />
+    </QueryClientProvider>
+  );
 }
 
 /** Títulos dos grupos renderizados — "Contratos" também é o rótulo de um item de "Ir para". */
@@ -76,12 +104,29 @@ describe("CommandPalette", () => {
   beforeEach(() => {
     navigate.mockReset();
     signOut.mockReset();
-    contractsQuery.mockReset();
+    contractsQueryFn.mockClear();
     setViewport(DESKTOP_WIDTH);
   });
 
   afterEach(() => {
     setViewport(DESKTOP_WIDTH);
+  });
+
+  it("não busca contratos enquanto está fechada", () => {
+    // A paleta monta em toda rota do `_app`: buscar aqui seria um
+    // `GET /api/contracts` por página, sempre que o cache estivesse frio.
+    renderPalette(undefined, { open: false });
+    expect(contractsQueryFn).not.toHaveBeenCalled();
+  });
+
+  it("busca contratos quando abre com o cache frio", () => {
+    renderPalette(undefined, { open: true });
+    expect(contractsQueryFn).toHaveBeenCalled();
+  });
+
+  it("lista os contratos que já estavam no cache da mesma queryKey", () => {
+    renderPalette([ALUGUEL]);
+    expect(screen.getByText("Aluguel do apê")).toBeVisible();
   });
 
   it("mostra Ir para e Ações mesmo sem contratos carregados", () => {

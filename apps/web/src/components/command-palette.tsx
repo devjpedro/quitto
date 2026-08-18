@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Bell,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useContractsQuery } from "@/hooks/use-contracts";
+import { contractsQueryOptions } from "@/hooks/use-contracts";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { useTheme } from "@/hooks/use-theme";
 import { signOut } from "@/lib/auth-client";
@@ -110,7 +111,11 @@ export function CommandPalette({
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const isDesktop = useIsDesktop();
-  const { data } = useContractsQuery();
+  // fetch-on-first-open: a paleta monta em TODA rota do `_app`, então buscar
+  // aqui de forma incondicional seria um `GET /api/contracts` por página.
+  // Mesma queryKey e mesmo cache do `useContractsQuery` — a paleta reaproveita
+  // o que a lista de contratos já buscou, só não dispara nada sozinha fechada.
+  const { data } = useQuery({ ...contractsQueryOptions, enabled: open });
 
   // Query pendente ou em erro entra como lista vazia: os grupos "Ir para" e
   // "Ações" respondem sozinhos e a paleta nunca fica inerte.
