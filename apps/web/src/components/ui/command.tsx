@@ -30,7 +30,10 @@ export function CommandList({
 }: ComponentProps<typeof CommandPrimitive.List>) {
   return (
     <CommandPrimitive.List
-      className={cn("max-h-[min(24rem,60vh)] overflow-y-auto p-2", className)}
+      className={cn(
+        "scrollbar-thin max-h-[min(24rem,60vh)] overflow-y-auto overscroll-contain p-2",
+        className
+      )}
       {...props}
     />
   );
