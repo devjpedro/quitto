@@ -25,6 +25,11 @@ const OWNER_NAME_UNACCENTED = "usuario";
  *   elemento antes de escrever e passaria verde com o foco no lugar errado.
  */
 async function openPaletteByShortcut(page: Page): Promise<Locator> {
+  // sem isso o atalho pode sair antes de o `_app` registrar o listener (o
+  // `data-hydrated` do __root chega primeiro) e o ⌘K se perde.
+  await page
+    .locator("html[data-shortcuts-ready]")
+    .waitFor({ state: "attached" });
   await page.keyboard.press("ControlOrMeta+k");
   const palette = page.getByRole("dialog");
   await expect(palette.getByRole("combobox")).toBeFocused();

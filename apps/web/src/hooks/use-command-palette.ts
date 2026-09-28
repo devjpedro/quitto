@@ -21,7 +21,14 @@ export function useCommandPalette(): {
       }
     }
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    // O `data-hydrated` do __root não basta para o E2E: o `_app` hidrata
+    // depois (chunk da rota) ou nem montou ainda (navegação vinda do /login).
+    // Este marca o instante exato em que o atalho passa a responder.
+    document.documentElement.setAttribute("data-shortcuts-ready", "true");
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.documentElement.removeAttribute("data-shortcuts-ready");
+    };
   }, [toggle]);
 
   return { open, setOpen };
