@@ -144,5 +144,7 @@ jobs:
     steps:
       - name: API health
         run: curl --fail --silent --show-error https://usequitto-api.fly.dev/api/ping
-      - name: Web up
-        run: curl --fail --silent --show-error -o /dev/null https://usequitto.vercel.app/
+      # /login é público e renderizado no SSR (a função da Vercel responde de
+      # verdade); `/` anônimo é só um 307 e passaria mesmo com o front quebrado.
+      - name: Web up (SSR)
+        run: curl --fail --silent --show-error -o /dev/null https://usequitto.vercel.app/login
