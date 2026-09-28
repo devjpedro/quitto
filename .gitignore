@@ -9,6 +9,10 @@ build/
 .superpowers/
 docs/superpowers/
 coverage/
+# O Playwright escreve aqui quando roda de fora de e2e/ (e2e/.gitignore
+# só cobre o de dentro).
+test-results/
+playwright-report/
 .lighthouseci/
 *.log
 .DS_Store

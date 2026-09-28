@@ -14,7 +14,8 @@ const badgeVariants = cva(
         success: "bg-success/12 text-success-foreground ring-success/25",
         warning:
           "bg-amber-500/15 text-amber-600 ring-amber-500/25 dark:text-amber-400",
-        danger: "bg-destructive/12 text-destructive ring-destructive/25",
+        danger:
+          "bg-destructive/12 text-destructive-foreground ring-destructive/25",
       },
     },
     defaultVariants: { tone: "neutral" },

@@ -17,7 +17,7 @@ import {
   getContractRole,
   resolveRecebedor,
 } from "../lib/contract-access";
-import { computeProgress } from "../lib/contract-progress";
+import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
@@ -163,6 +163,25 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .select()
         .from(installment)
         .where(inArray(installment.contractId, ids));
+
+      const people = await db
+        .select({
+          contractId: participant.contractId,
+          displayName: participant.displayName,
+        })
+        .from(participant)
+        .where(inArray(participant.contractId, ids));
+
+      const namesByContract = new Map<string, string[]>();
+      for (const person of people) {
+        const current = namesByContract.get(person.contractId);
+        if (current) {
+          current.push(person.displayName);
+        } else {
+          namesByContract.set(person.contractId, [person.displayName]);
+        }
+      }
+
       const today = todayISO();
 
       return rows.map((c) => {
@@ -173,6 +192,8 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         return {
           id: c.id,
           title: c.title,
+          description: c.description,
+          participantNames: namesByContract.get(c.id) ?? [],
           ownerRole: c.ownerRole,
           status: c.status,
           totalCents: progress.totalCents,
@@ -180,6 +201,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           percent: progress.percent,
           overdueCount: progress.overdueCount,
           installmentsCount: c.installmentsCount,
+          nextDueDate: computeNextDueDate(contractInstallments),
         };
       });
     },
@@ -188,6 +210,8 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         t.Object({
           id: t.String(),
           title: t.String(),
+          description: t.Union([t.String(), t.Null()]),
+          participantNames: t.Array(t.String()),
           ownerRole: t.String(),
           status: t.String(),
           totalCents: t.Integer(),
@@ -195,6 +219,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           percent: t.Integer(),
           overdueCount: t.Integer(),
           installmentsCount: t.Integer(),
+          nextDueDate: t.Union([t.String(), t.Null()]),
         })
       ),
     }

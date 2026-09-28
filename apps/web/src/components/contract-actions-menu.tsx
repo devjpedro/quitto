@@ -13,7 +13,7 @@ import {
   useDeleteContractMutation,
   useLeaveContractMutation,
 } from "@/hooks/use-contract-mutations";
-import { useFocusRestore } from "@/hooks/use-focus-restore";
+import { useFocusOnOpen, useFocusRestore } from "@/hooks/use-focus-restore";
 
 /** Owner deletes the contract; a non-owner participant leaves it. Both confirm first. */
 export function ContractActionsMenu({
@@ -34,6 +34,8 @@ export function ContractActionsMenu({
   // stable ref to the always-mounted trigger button and restore focus to it in
   // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
   const { triggerRef, restoreFocus } = useFocusRestore();
+  // Foco de abertura no Cancelar, não no destrutivo (ver useFocusOnOpen).
+  const { focusRef, focusOnOpen } = useFocusOnOpen();
 
   async function onConfirm() {
     if (isOwner) {
@@ -78,6 +80,7 @@ export function ContractActionsMenu({
               : "Você deixará de ter acesso a este contrato."
           }
           onCloseAutoFocus={restoreFocus}
+          onOpenAutoFocus={focusOnOpen}
           title={isOwner ? "Excluir contrato" : "Sair do contrato"}
         >
           <div className="flex gap-2">
@@ -92,6 +95,7 @@ export function ContractActionsMenu({
             </Button>
             <Button
               onClick={() => setConfirmOpen(false)}
+              ref={focusRef}
               type="button"
               variant="outline"
             >

@@ -7,12 +7,15 @@ import {
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   Settings,
   Sun,
 } from "lucide-react";
+import { Fragment } from "react";
 import { Logo, LogoMark } from "@/components/logo";
 import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { CommandShortcut } from "@/components/ui/command";
 import {
   Tooltip,
   TooltipContent,
@@ -140,14 +143,78 @@ const NAV_LINK_BASE =
   "group relative flex items-center rounded-lg border border-transparent text-muted-foreground text-sm transition-colors duration-150 before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-primary before:opacity-0 before:transition-opacity hover:border-border hover:bg-accent hover:text-foreground [&.active]:border-border-strong [&.active]:bg-card [&.active]:font-semibold [&.active]:text-primary-strong [&.active]:shadow-xs [&.active]:before:opacity-100";
 const NAV_ICON_CLASS =
   "size-4 shrink-0 opacity-60 transition-opacity group-hover:opacity-80 [.active_&]:text-primary [.active_&]:opacity-100";
+/** Layout de um alvo da bottom-nav. Compartilhado pelos 4 links e pelo botão de busca — é
+ * aqui que mora o `min-h-[44px]` do alvo de toque (WCAG 2.2 AA). */
+const MOBILE_TAB_BASE =
+  "relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors";
+
+/**
+ * Gatilho da paleta ⌘K: na expandida um campo falso com a dica do atalho; no rail, a lupa
+ * com tooltip, nas mesmas classes dos ícones de navegação.
+ */
+function SidebarSearchButton({
+  collapsed,
+  onOpenSearch,
+}: {
+  collapsed: boolean;
+  onOpenSearch: () => void;
+}) {
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            aria-keyshortcuts="Meta+K Control+K"
+            aria-label="Buscar"
+            className={cn(NAV_LINK_BASE, "size-10 justify-center")}
+            onClick={onOpenSearch}
+            type="button"
+          >
+            <Search aria-hidden="true" className={NAV_ICON_CLASS} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Buscar</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <button
+      aria-keyshortcuts="Meta+K Control+K"
+      className="flex w-full items-center gap-3 rounded-lg border border-border bg-secondary px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      onClick={onOpenSearch}
+      type="button"
+    >
+      <Search aria-hidden="true" className="size-4 shrink-0 opacity-60" />
+      <span>Buscar…</span>
+      {/* Mesmo chip de atalho que a paleta usa. `aria-hidden` porque o atalho já vai no
+          `aria-keyshortcuts` — no nome acessível o ⌘ vira ruído no leitor de tela. */}
+      <CommandShortcut aria-hidden="true">⌘K</CommandShortcut>
+    </button>
+  );
+}
+
+/** 5º alvo da bottom-nav. É `<button>`: abre a paleta em vez de navegar — sem `activeProps`, sem `aria-current`. */
+function MobileSearchTab({ onOpenSearch }: { onOpenSearch: () => void }) {
+  return (
+    <button className={MOBILE_TAB_BASE} onClick={onOpenSearch} type="button">
+      <Search aria-hidden="true" className="size-5 shrink-0" />
+      <span className="mt-0.5 text-[10px] leading-none">Buscar</span>
+    </button>
+  );
+}
 
 export function AppSidebar({
   collapsed = false,
+  onOpenSearch = () => {
+    // no-op default: só usado quando o consumidor não controla a paleta
+  },
   onToggle = () => {
     // no-op default: só usado quando o consumidor não controla o toggle
   },
 }: {
   collapsed?: boolean;
+  onOpenSearch?: () => void;
   onToggle?: () => void;
 }) {
   const { data: me } = useMeQuery();
@@ -186,6 +253,18 @@ export function AppSidebar({
             <NotificationBell />
             <SidebarToggleButton collapsed={collapsed} onToggle={onToggle} />
           </div>
+        </div>
+
+        <div
+          className={cn(
+            "flex flex-col p-3 pb-0",
+            collapsed && "items-center px-2"
+          )}
+        >
+          <SidebarSearchButton
+            collapsed={collapsed}
+            onOpenSearch={onOpenSearch}
+          />
         </div>
 
         <nav
@@ -297,25 +376,32 @@ export function AppSidebar({
         {NAV.map((item) => {
           const Icon = item.icon;
           return (
-            <Link
-              activeProps={{ className: "active", "aria-current": "page" }}
-              className="relative flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 py-2 text-muted-foreground transition-colors before:absolute before:inset-x-8 before:top-0 before:h-0.5 before:rounded-full before:bg-primary before:opacity-0 before:transition-opacity [&.active]:text-primary-strong [&.active]:before:opacity-100"
-              key={item.to}
-              to={item.to}
-            >
-              <Icon aria-hidden="true" className="size-5 shrink-0" />
-              {item.to === "/notifications" && unread > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-2 left-1/2 ml-2 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1 font-semibold text-[10px] text-primary-foreground leading-none ring-1 ring-background"
-                >
-                  {formatUnreadCount(unread)}
-                </span>
+            <Fragment key={item.to}>
+              {item.to === "/notifications" ? (
+                <MobileSearchTab onOpenSearch={onOpenSearch} />
               ) : null}
-              <span className="mt-0.5 text-[10px] leading-none">
-                {item.label}
-              </span>
-            </Link>
+              <Link
+                activeProps={{ className: "active", "aria-current": "page" }}
+                className={cn(
+                  MOBILE_TAB_BASE,
+                  "before:absolute before:inset-x-8 before:top-0 before:h-0.5 before:rounded-full before:bg-primary before:opacity-0 before:transition-opacity [&.active]:text-primary-strong [&.active]:before:opacity-100"
+                )}
+                to={item.to}
+              >
+                <Icon aria-hidden="true" className="size-5 shrink-0" />
+                {item.to === "/notifications" && unread > 0 ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-2 left-1/2 ml-2 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary px-1 font-semibold text-[10px] text-primary-foreground leading-none ring-1 ring-background"
+                  >
+                    {formatUnreadCount(unread)}
+                  </span>
+                ) : null}
+                <span className="mt-0.5 text-[10px] leading-none">
+                  {item.label}
+                </span>
+              </Link>
+            </Fragment>
           );
         })}
       </nav>

@@ -27,18 +27,25 @@ export function SheetContent({
         )}
         {...props}
       >
-        <div className="flex items-center justify-between border-border/60 border-b pb-4">
+        {/* `pr-6` reserva os 24px que o Fechar ocupava na linha do cabeçalho
+            (28px do botão − 4px de recuo), então o título quebra no mesmo ponto
+            de antes em vez de correr por baixo do X. */}
+        <div className="border-border/60 border-b pr-6 pb-4">
           <SheetPrimitive.Title className="font-semibold text-foreground text-lg tracking-tight">
             {title}
           </SheetPrimitive.Title>
-          <SheetPrimitive.Close
-            aria-label="Fechar"
-            className="-mr-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <X className="size-5" />
-          </SheetPrimitive.Close>
         </div>
         {children}
+        {/* Mesmo motivo do `dialog.tsx`: o Fechar depois do `{children}` sai do
+            começo da ordem de tab, então o Radix foca o primeiro campo do
+            conteúdo em vez do X. `absolute` devolve o botão ao canto de antes
+            (top/right = padding − mr-1, nos dois breakpoints do `p-4 sm:p-6`). */}
+        <SheetPrimitive.Close
+          aria-label="Fechar"
+          className="absolute top-4 right-3 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:top-6 sm:right-5"
+        >
+          <X className="size-5" />
+        </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPrimitive.Portal>
   );

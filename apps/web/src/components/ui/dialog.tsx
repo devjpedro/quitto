@@ -26,25 +26,33 @@ export function DialogContent({
         )}
         {...props}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <DialogPrimitive.Title className="font-semibold text-foreground text-lg tracking-tight">
-              {title}
-            </DialogPrimitive.Title>
-            {description ? (
-              <DialogPrimitive.Description className="text-muted-foreground text-sm">
-                {description}
-              </DialogPrimitive.Description>
-            ) : null}
-          </div>
-          <DialogPrimitive.Close
-            aria-label="Fechar"
-            className="-mr-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <X className="size-5" />
-          </DialogPrimitive.Close>
+        {/* `pr-10` reserva os 40px que o Fechar ocupava no cabeçalho (28px do
+            botão + 16px de gap − 4px de recuo), então o título quebra de linha
+            no mesmo ponto de antes em vez de correr por baixo do X. */}
+        <div className="flex flex-col gap-1 pr-10">
+          <DialogPrimitive.Title className="font-semibold text-foreground text-lg tracking-tight">
+            {title}
+          </DialogPrimitive.Title>
+          {description ? (
+            <DialogPrimitive.Description className="text-muted-foreground text-sm">
+              {description}
+            </DialogPrimitive.Description>
+          ) : null}
         </div>
         {children}
+        {/* O Fechar vem DEPOIS do `{children}` de propósito. O Radix foca o
+            primeiro tabbable do content ao montar: com o Fechar no cabeçalho,
+            todo diálogo que começa por campo de texto abria com o foco no X e
+            perdia o que o usuário digitasse em seguida. Fora da ordem de tab, a
+            leitura vira Título → conteúdo → Fechar. O `absolute` recoloca o
+            botão no canto onde ele já estava (top-6/right-5 = p-6 − mr-1), então
+            nada muda visualmente. */}
+        <DialogPrimitive.Close
+          aria-label="Fechar"
+          className="absolute top-6 right-5 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          <X className="size-5" />
+        </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
