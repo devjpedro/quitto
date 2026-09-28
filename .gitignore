@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.output/
 build/
 .turbo/
 *.tsbuildinfo
@@ -17,3 +18,4 @@ playwright-report/
 *.log
 .DS_Store
 .vercel
+.env*
