@@ -62,6 +62,8 @@ export const AUDIT_TYPE = {
   paymentDisputed: "payment_disputed",
   installmentPaid: "installment_paid",
   participantLeft: "participant_left",
+  receiptShareCreated: "receipt_share_created",
+  receiptShareRevoked: "receipt_share_revoked",
 } as const;
 export type AuditType = (typeof AUDIT_TYPE)[keyof typeof AUDIT_TYPE];
 
