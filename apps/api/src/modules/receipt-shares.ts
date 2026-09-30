@@ -38,6 +38,8 @@ const shareView = (s: { token: string; createdAt: Date }) => ({
   createdAt: s.createdAt.toISOString(),
 });
 
+const shareSchema = t.Object({ token: t.String(), createdAt: t.String() });
+
 const params = t.Object({ installmentId: t.String() });
 
 export const receiptSharesModule = new Elysia({ prefix: "/api" })
@@ -47,10 +49,14 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
       const { user } = await requireAuth(request.headers);
       await loadOwnedInstallment(user.id, params.installmentId);
       const active = await findActiveShare(params.installmentId);
-      // Elysia serializaria `null` como corpo vazio; devolvemos JSON `null` explícito.
-      return active ? shareView(active) : Response.json(null);
+      if (active) {
+        return shareView(active);
+      }
+      // Elysia serializa `null` como corpo vazio; enviamos o JSON `null` literal
+      // e mantemos o tipo (Eden) como `null` via o schema de resposta.
+      return Response.json(null) as unknown as null;
     },
-    { params }
+    { params, response: t.Union([shareSchema, t.Null()]) }
   )
   .post(
     "/installments/:installmentId/receipt-share",
