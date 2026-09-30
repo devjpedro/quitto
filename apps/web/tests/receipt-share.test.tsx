@@ -6,6 +6,10 @@ import { renderWithProviders } from "./test-utils";
 const state: { data: { token: string; createdAt: string } | null } = {
   data: null,
 };
+const toastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: { error: (m: string) => toastError(m), success: vi.fn() },
+}));
 const createAsync = vi.fn();
 const revokeAsync = vi.fn();
 vi.mock("../src/hooks/use-receipt-share", () => ({
@@ -47,9 +51,11 @@ const base = {
 describe("ReceiptShare", () => {
   beforeEach(() => {
     state.data = null;
-    createAsync.mockReset().mockResolvedValue({
-      token: "tok",
-      createdAt: "2026-09-29T12:00:00.000Z",
+    toastError.mockReset();
+    createAsync.mockReset().mockImplementation(() => {
+      // Espelha o cache da query: a criação grava o share em state.data.
+      state.data = { token: "tok", createdAt: "2026-09-29T12:00:00.000Z" };
+      return Promise.resolve(state.data);
     });
     revokeAsync.mockReset().mockResolvedValue(null);
   });
@@ -99,5 +105,51 @@ describe("ReceiptShare", () => {
       within(dialog).getByRole("button", { name: REVOGAR })
     );
     await waitFor(() => expect(revokeAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it("link revogado em outro lugar: o menu deixa de oferecer o link", async () => {
+    state.data = { token: "tok", createdAt: "2026-09-29T12:00:00.000Z" };
+    const { rerender } = renderWithProviders(<ReceiptShare {...base} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: COMPARTILHAR_RECIBO })
+    );
+    await screen.findByRole("menuitem", { name: COPIAR_LINK });
+    state.data = null;
+    rerender(<ReceiptShare {...base} />);
+    await waitFor(() =>
+      expect(screen.queryByRole("menuitem", { name: COPIAR_LINK })).toBeNull()
+    );
+    expect(screen.queryByText(LINK_P_BLICO_ATIVO)).toBeNull();
+  });
+
+  it("falha ao copiar: mostra toast de erro sem rejeição solta", async () => {
+    state.data = { token: "tok", createdAt: "2026-09-29T12:00:00.000Z" };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    renderWithProviders(<ReceiptShare {...base} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: COMPARTILHAR_RECIBO })
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: COPIAR_LINK })
+    );
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Não foi possível copiar o link")
+    );
+  });
+
+  it("falha ao revogar: mantém o diálogo aberto", async () => {
+    state.data = { token: "tok", createdAt: "2026-09-29T12:00:00.000Z" };
+    revokeAsync.mockRejectedValue(new Error("boom"));
+    renderWithProviders(<ReceiptShare {...base} />);
+    await userEvent.click(screen.getByRole("button", { name: REVOGAR_LINK }));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: REVOGAR })
+    );
+    await waitFor(() => expect(revokeAsync).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("dialog")).toBeVisible();
   });
 });

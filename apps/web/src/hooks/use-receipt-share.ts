@@ -20,8 +20,12 @@ export function useCreateReceiptShareMutation(installmentId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => unwrap(share(installmentId).post()),
-    onSuccess: (data) =>
-      qc.setQueryData(queryKeys.receiptShare(installmentId), data),
+    onSuccess: async (data) => {
+      const queryKey = queryKeys.receiptShare(installmentId);
+      // Evita que um GET em voo sobrescreva o share recém-criado com null.
+      await qc.cancelQueries({ queryKey });
+      qc.setQueryData(queryKey, data);
+    },
   });
 }
 

@@ -201,6 +201,7 @@ function InstallmentDetailView({
         installmentId={installment.id}
         installmentsCount={installmentsCount}
         isOwner={isOwner}
+        key={installment.id}
         sequence={installment.sequence}
         status={status as InstallmentStatus}
         title={contractTitle}
