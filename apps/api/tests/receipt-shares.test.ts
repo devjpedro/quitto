@@ -10,6 +10,7 @@ import {
 } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 
 async function createPaidInstallment(cookie: string) {
@@ -209,5 +210,91 @@ describe("receipt-share (dono)", () => {
     const types = rows.map((r) => r.type);
     expect(types.filter((t) => t === "receipt_share_created")).toHaveLength(1);
     expect(types.filter((t) => t === "receipt_share_revoked")).toHaveLength(1);
+  });
+});
+
+function publicReq(path: string) {
+  return app.handle(
+    new Request(`http://localhost/api/public/receipts/${path}`)
+  );
+}
+
+describe("recibo público", () => {
+  it("devolve só as chaves permitidas, sem cache e noindex", async () => {
+    const cookie = await signUpCookie(uniqueEmail("rs-pub"));
+    const { installmentId } = await createPaidInstallment(cookie);
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+
+    const res = await publicReq(token);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex");
+    const body = await res.json();
+    expect(Object.keys(body).sort()).toEqual(
+      [
+        "amountCents",
+        "contractTitle",
+        "installmentsCount",
+        "paidAt",
+        "payerName",
+        "receiverName",
+        "sequence",
+      ].sort()
+    );
+    expect(body.contractTitle).toBe("Aluguel & cia");
+    expect(body.sequence).toBe(1);
+    expect(body.installmentsCount).toBe(3);
+    expect(body.paidAt).toMatch(ISO_DATE_RE);
+  });
+
+  it("PDF público responde 200 com %PDF", async () => {
+    const cookie = await signUpCookie(uniqueEmail("rs-pdf"));
+    const { installmentId } = await createPaidInstallment(cookie);
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+    const res = await publicReq(`${token}/receipt.pdf`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("x-robots-tag")).toBe("noindex");
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("%PDF");
+  });
+
+  it("token inexistente, revogado ou parcela não-paga → 404 (JSON e PDF)", async () => {
+    const missing = await publicReq("nao-existe");
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("cache-control")).toBe("no-store");
+    expect(missing.headers.get("x-robots-tag")).toBe("noindex");
+    const missingPdf = await publicReq("nao-existe/receipt.pdf");
+    expect(missingPdf.status).toBe(404);
+    expect(missingPdf.headers.get("cache-control")).toBe("no-store");
+    expect(missingPdf.headers.get("x-robots-tag")).toBe("noindex");
+
+    const cookie = await signUpCookie(uniqueEmail("rs-404"));
+    const { installmentId } = await createPaidInstallment(cookie);
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+
+    await db
+      .update(installment)
+      .set({ status: "pending", paidAt: null })
+      .where(eq(installment.id, installmentId));
+    expect((await publicReq(token)).status).toBe(404);
+    expect((await publicReq(`${token}/receipt.pdf`)).status).toBe(404);
+
+    // volta a paga → o MESMO token funciona de novo
+    await db
+      .update(installment)
+      .set({ status: "paid", paidAt: new Date() })
+      .where(eq(installment.id, installmentId));
+    expect((await publicReq(token)).status).toBe(200);
+
+    await shareReq("DELETE", installmentId, cookie);
+    expect((await publicReq(token)).status).toBe(404);
   });
 });

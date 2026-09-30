@@ -5,9 +5,16 @@ import { db } from "../db/client";
 import { installment, receiptShare } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
+import { renderReceiptPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
-import { findActiveShare, newShareToken } from "../lib/receipt-share";
+import {
+  findActiveShare,
+  newShareToken,
+  resolvePublicReceipt,
+  toPublicReceipt,
+} from "../lib/receipt-share";
 import { requireAuth } from "../lib/session";
+import { pdfResponse, slug } from "./documents";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -41,6 +48,20 @@ const shareView = (s: { token: string; createdAt: Date }) => ({
 const shareSchema = t.Object({ token: t.String(), createdAt: t.String() });
 
 const params = t.Object({ installmentId: t.String() });
+
+const PUBLIC_HEADERS = {
+  "cache-control": "no-store",
+  "x-robots-tag": "noindex",
+} as const;
+
+/** Resolve o recibo público; nos 404 também aplica os cabeçalhos públicos. */
+async function resolveOrNoStore(
+  token: string,
+  set: { headers: Record<string, string | number | undefined> }
+) {
+  Object.assign(set.headers, PUBLIC_HEADERS);
+  return await resolvePublicReceipt(token);
+}
 
 export const receiptSharesModule = new Elysia({ prefix: "/api" })
   .get(
@@ -136,4 +157,27 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
       return new Response(null, { status: 204 });
     },
     { params }
+  )
+  .get(
+    "/public/receipts/:token",
+    async ({ params, set }) => {
+      const model = await resolveOrNoStore(params.token, set);
+      return toPublicReceipt(model);
+    },
+    { params: t.Object({ token: t.String() }) }
+  )
+  .get(
+    "/public/receipts/:token/receipt.pdf",
+    async ({ params, set }) => {
+      const model = await resolveOrNoStore(params.token, set);
+      const res = pdfResponse(
+        await renderReceiptPdf(model),
+        `recibo-${slug(model.contractTitle)}-parcela-${model.sequence}.pdf`
+      );
+      for (const [k, v] of Object.entries(PUBLIC_HEADERS)) {
+        res.headers.set(k, v);
+      }
+      return res;
+    },
+    { params: t.Object({ token: t.String() }) }
   );
