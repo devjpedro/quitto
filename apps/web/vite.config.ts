@@ -8,7 +8,11 @@ import { nitro } from "nitro/vite";
 import { defineConfig, type PluginOption } from "vite";
 
 const analyze = process.env.ANALYZE === "1";
-const onVercel = Boolean(process.env.VERCEL);
+// No `vercel build` rodando dentro do GitHub Actions, a autodetecção do Nitro
+// (std-env) enxerga "GitHub Actions" antes de "Vercel" e cai no preset genérico
+// (.output/). O deploy-web força NITRO_PRESET=vercel — esse é o sinal explícito.
+const onVercel =
+  Boolean(process.env.VERCEL) || process.env.NITRO_PRESET === "vercel";
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig(({ command }) => ({
