@@ -285,7 +285,9 @@ export function ContractDetailPage() {
       <InstallmentDrawer
         capabilities={{ isPayer: data.isPayer, isApprover: data.isApprover }}
         contractId={contract.id}
+        contractTitle={contract.title}
         installment={selected}
+        installmentsCount={totalCount}
         isOwner={data.isOwner}
         onClose={closeInstallment}
         open={openId !== null}

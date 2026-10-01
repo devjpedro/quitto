@@ -1,6 +1,8 @@
 /** Mensagens de sucesso (pt-BR) disparadas via mutation.meta.successMessage. */
 export const FEEDBACK = {
   proofSubmitted: "Comprovante enviado",
+  receiptLinkCopied: "Link copiado",
+  receiptShareRevoked: "Link revogado",
   paymentConfirmed: "Pagamento confirmado",
   paymentDisputed: "Pagamento contestado",
   installmentPaid: "Parcela marcada como paga",

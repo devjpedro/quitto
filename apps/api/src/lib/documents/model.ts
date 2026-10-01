@@ -100,3 +100,21 @@ export function buildReceiptModel(
     paidAt: installment.paidAt ?? "",
   };
 }
+
+export interface DbInstallment {
+  amountCents: number;
+  dueDate: string;
+  paidAt: Date | null;
+  sequence: number;
+  status: string;
+}
+
+export function toModelInstallment(it: DbInstallment): ModelInstallment {
+  return {
+    sequence: it.sequence,
+    amountCents: it.amountCents,
+    dueDate: it.dueDate,
+    status: it.status as InstallmentStatus,
+    paidAt: it.paidAt ? it.paidAt.toISOString().slice(0, 10) : null,
+  };
+}

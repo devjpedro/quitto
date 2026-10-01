@@ -157,6 +157,19 @@ export const pixKeyUpdateSchema = z.object({
 });
 export type PixKeyUpdateInput = z.infer<typeof pixKeyUpdateSchema>;
 
+// ── Receipts ─────────────────────────────────────────────────────────────────
+
+/** Recibo exposto na página pública (ADR-0006): lista FECHADA de campos. */
+export interface PublicReceipt {
+  amountCents: number;
+  contractTitle: string;
+  installmentsCount: number;
+  paidAt: string;
+  payerName: string | null;
+  receiverName: string | null;
+  sequence: number;
+}
+
 // ── Participants & invites ───────────────────────────────────────────────────
 
 /** Papéis que o dono pode atribuir a um participante (owner não é convidável). */

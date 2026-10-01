@@ -75,6 +75,8 @@ export const AUDIT_TYPE_LABEL: Record<string, string> = {
   [AUDIT_TYPE.paymentDisputed]: "Pagamento contestado",
   [AUDIT_TYPE.installmentPaid]: "Parcela paga",
   [AUDIT_TYPE.participantLeft]: "Participante saiu",
+  [AUDIT_TYPE.receiptShareCreated]: "Link público do recibo criado",
+  [AUDIT_TYPE.receiptShareRevoked]: "Link público do recibo revogado",
 };
 
 export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {

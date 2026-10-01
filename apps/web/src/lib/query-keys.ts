@@ -9,4 +9,6 @@ export const queryKeys = {
   myInvites: ["my-invites"] as const,
   notifications: ["notifications"] as const,
   notificationsUnread: ["notifications", "unread-count"] as const,
+  receiptShare: (installmentId: string) =>
+    ["receipt-share", installmentId] as const,
 };

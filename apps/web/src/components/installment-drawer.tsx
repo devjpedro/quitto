@@ -19,6 +19,7 @@ import { PixBlock } from "@/components/pix-block";
 import { ProofList, type ProofView } from "@/components/proof-list";
 import { ProofUpload } from "@/components/proof-upload";
 import { ReceiptLink } from "@/components/receipt-link";
+import { ReceiptShare } from "@/components/receipt-share";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -115,8 +116,10 @@ function InstallmentEditForm({
 function InstallmentDetailView({
   capabilities,
   contractId,
+  contractTitle,
   events,
   installment,
+  installmentsCount,
   isOwner,
   onEdit,
   pix,
@@ -126,8 +129,10 @@ function InstallmentDetailView({
 }: {
   capabilities: Capabilities;
   contractId: string;
+  contractTitle: string;
   events: AuditEventView[];
   installment: Installment;
+  installmentsCount: number;
   isOwner: boolean;
   onEdit: () => void;
   pix: { copiaECola: string; keyType: string; payToName: string } | null;
@@ -192,6 +197,16 @@ function InstallmentDetailView({
         status={status as InstallmentStatus}
       />
 
+      <ReceiptShare
+        installmentId={installment.id}
+        installmentsCount={installmentsCount}
+        isOwner={isOwner}
+        key={installment.id}
+        sequence={installment.sequence}
+        status={status as InstallmentStatus}
+        title={contractTitle}
+      />
+
       <section className="flex flex-col gap-2">
         <h3 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
           Comprovantes
@@ -212,7 +227,9 @@ function InstallmentDetailView({
 export function InstallmentDrawer({
   capabilities,
   contractId,
+  contractTitle,
   installment,
+  installmentsCount,
   isOwner,
   onClose,
   open,
@@ -220,7 +237,9 @@ export function InstallmentDrawer({
 }: {
   capabilities: Capabilities;
   contractId: string;
+  contractTitle: string;
   installment: Installment | null;
+  installmentsCount: number;
   isOwner: boolean;
   onClose: () => void;
   open: boolean;
@@ -303,8 +322,10 @@ export function InstallmentDrawer({
           <InstallmentDetailView
             capabilities={capabilities}
             contractId={contractId}
+            contractTitle={contractTitle}
             events={events}
             installment={current}
+            installmentsCount={installmentsCount}
             isOwner={isOwner}
             onEdit={() => setEditing(true)}
             pix={pix}

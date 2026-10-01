@@ -5,13 +5,18 @@ import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { buildStatementCsv } from "../lib/documents/csv";
-import { buildReceiptModel, buildStatementModel } from "../lib/documents/model";
+import {
+  buildReceiptModel,
+  buildStatementModel,
+  type DbInstallment,
+  toModelInstallment,
+} from "../lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
 /** ASCII slug for a safe Content-Disposition filename. */
-function slug(value: string): string {
+export function slug(value: string): string {
   return (
     value
       .normalize("NFKD")
@@ -44,29 +49,11 @@ async function loadContractFor(userId: string, contractId: string) {
   return { c, items, people };
 }
 
-interface DbInstallment {
-  amountCents: number;
-  dueDate: string;
-  paidAt: Date | null;
-  sequence: number;
-  status: string;
-}
-
-function toModelInstallment(it: DbInstallment) {
-  return {
-    sequence: it.sequence,
-    amountCents: it.amountCents,
-    dueDate: it.dueDate,
-    status: it.status as InstallmentStatus,
-    paidAt: it.paidAt ? it.paidAt.toISOString().slice(0, 10) : null,
-  };
-}
-
 function modelInstallments(items: DbInstallment[]) {
   return items.map(toModelInstallment);
 }
 
-function pdfResponse(bytes: Uint8Array, filename: string): Response {
+export function pdfResponse(bytes: Uint8Array, filename: string): Response {
   return new Response(bytes as BodyInit, {
     headers: {
       "content-type": "application/pdf",

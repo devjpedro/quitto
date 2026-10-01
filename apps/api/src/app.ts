@@ -13,6 +13,7 @@ import { meModule } from "./modules/me";
 import { notificationsModule } from "./modules/notifications";
 import { participantsModule } from "./modules/participants";
 import { paymentsModule } from "./modules/payments";
+import { receiptSharesModule } from "./modules/receipt-shares";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
   "/ping",
@@ -36,6 +37,7 @@ export function buildApp() {
     .use(contractsModule)
     .use(paymentsModule)
     .use(documentsModule)
+    .use(receiptSharesModule)
     .use(participantsModule)
     .use(invitesModule)
     .use(notificationsModule)

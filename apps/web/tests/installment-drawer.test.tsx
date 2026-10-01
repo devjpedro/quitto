@@ -64,7 +64,9 @@ describe("InstallmentDrawer", () => {
       <InstallmentDrawer
         capabilities={{ isPayer: true, isApprover: true }}
         contractId="c1"
+        contractTitle="Aluguel"
         installment={installment}
+        installmentsCount={12}
         isOwner
         onClose={noop}
         open
@@ -82,7 +84,9 @@ describe("InstallmentDrawer", () => {
       <InstallmentDrawer
         capabilities={{ isPayer: false, isApprover: false }}
         contractId="c1"
+        contractTitle="Aluguel"
         installment={installment}
+        installmentsCount={12}
         isOwner={false}
         onClose={noop}
         open
@@ -102,7 +106,9 @@ describe("InstallmentDrawer", () => {
       <InstallmentDrawer
         capabilities={{ isPayer: true, isApprover: true }}
         contractId="c1"
+        contractTitle="Aluguel"
         installment={installment}
+        installmentsCount={12}
         isOwner
         onClose={noop}
         open
@@ -134,7 +140,9 @@ describe("InstallmentDrawer", () => {
       <InstallmentDrawer
         capabilities={{ isPayer: true, isApprover: false }}
         contractId="c1"
+        contractTitle="Aluguel"
         installment={installment}
+        installmentsCount={12}
         isOwner
         onClose={noop}
         open
