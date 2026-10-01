@@ -74,6 +74,8 @@ export const NOTIFICATION_TYPE = {
   installmentPaid: "installment_paid",
   installmentDueSoon: "installment_due_soon",
   installmentOverdue: "installment_overdue",
+  installmentDueSoonReceivable: "installment_due_soon_receivable",
+  installmentOverdueReceivable: "installment_overdue_receivable",
   participantLeft: "participant_left",
   inviteAccepted: "invite_accepted",
   inviteDeclined: "invite_declined",

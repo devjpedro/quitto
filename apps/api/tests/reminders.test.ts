@@ -9,6 +9,7 @@ const base = (
   contractId: "c1",
   dueDate: "2026-07-10",
   payerUserId: "u1",
+  receiverUserId: null,
   status: INSTALLMENT_STATUS.pending,
   ...over,
 });
@@ -24,7 +25,7 @@ describe("computeReminders (today=2026-07-10)", () => {
         contractId: "c1",
         installmentId: "i1",
         type: "installment_due_soon",
-        dedupeKey: "reminder:installment_due_soon:i1",
+        dedupeKey: "reminder:installment_due_soon:i1:u1",
       },
     ]);
   });
@@ -42,7 +43,7 @@ describe("computeReminders (today=2026-07-10)", () => {
   it("flags past due as overdue", () => {
     const out = computeReminders([base({ dueDate: "2026-07-09" })], today);
     expect(out[0]?.type).toBe("installment_overdue");
-    expect(out[0]?.dedupeKey).toBe("reminder:installment_overdue:i1");
+    expect(out[0]?.dedupeKey).toBe("reminder:installment_overdue:i1:u1");
   });
 
   it("skips installments without a linked payer", () => {
@@ -87,5 +88,55 @@ describe("computeReminders (today=2026-07-10)", () => {
     );
     expect(out).toHaveLength(1);
     expect(out[0]?.type).toBe("installment_overdue");
+  });
+
+  it("dono-vendedor recebe o lembrete 'a receber' junto do pagador", () => {
+    const out = computeReminders(
+      [base({ dueDate: "2026-07-09", receiverUserId: "owner" })],
+      today
+    );
+    expect(out.map((r) => [r.userId, r.type, r.dedupeKey])).toEqual([
+      ["u1", "installment_overdue", "reminder:installment_overdue:i1:u1"],
+      [
+        "owner",
+        "installment_overdue_receivable",
+        "reminder:installment_overdue_receivable:i1:owner",
+      ],
+    ]);
+  });
+
+  it("dono-vendedor sem pagador vinculado recebe só o 'a receber'", () => {
+    const out = computeReminders(
+      [base({ payerUserId: null, receiverUserId: "owner" })],
+      today
+    );
+    expect(out.map((r) => [r.userId, r.type])).toEqual([
+      ["owner", "installment_due_soon_receivable"],
+    ]);
+  });
+
+  it("dono-vendedor que herdou o lado pagador recebe só o 'a receber'", () => {
+    const out = computeReminders(
+      [base({ payerUserId: "owner", receiverUserId: "owner" })],
+      today
+    );
+    expect(out.map((r) => [r.userId, r.type])).toEqual([
+      ["owner", "installment_due_soon_receivable"],
+    ]);
+  });
+
+  it("exclusões (paga / aguardando confirmação) valem também pro recebedor", () => {
+    const out = computeReminders(
+      [
+        base({ status: INSTALLMENT_STATUS.paid, receiverUserId: "owner" }),
+        base({
+          installmentId: "i2",
+          status: INSTALLMENT_STATUS.awaitingConfirmation,
+          receiverUserId: "owner",
+        }),
+      ],
+      today
+    );
+    expect(out).toEqual([]);
   });
 });

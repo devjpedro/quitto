@@ -14,7 +14,11 @@ export async function runReminderSweep(): Promise<number> {
   const today = todayISO();
 
   const activeContracts = await db
-    .select({ id: contract.id, ownerId: contract.ownerId })
+    .select({
+      id: contract.id,
+      ownerId: contract.ownerId,
+      ownerRole: contract.ownerRole,
+    })
     .from(contract)
     .where(eq(contract.status, CONTRACT_STATUS.active));
   if (activeContracts.length === 0) {
@@ -42,6 +46,13 @@ export async function runReminderSweep(): Promise<number> {
     payerByContract.set(c.id, set.values().next().value ?? null);
   }
 
+  const receiverByContract = new Map(
+    activeContracts.map((c) => [
+      c.id,
+      c.ownerRole === "seller" ? c.ownerId : null,
+    ])
+  );
+
   const openInstallments = await db
     .select({
       id: installment.id,
@@ -63,6 +74,7 @@ export async function runReminderSweep(): Promise<number> {
     dueDate: i.dueDate,
     status: i.status,
     payerUserId: payerByContract.get(i.contractId) ?? null,
+    receiverUserId: receiverByContract.get(i.contractId) ?? null,
   }));
 
   const reminders = computeReminders(inputs, today);

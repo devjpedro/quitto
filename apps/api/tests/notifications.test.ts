@@ -358,6 +358,37 @@ describe("sweep de lembretes", () => {
     expect(rows[0]?.type).toBe("installment_overdue");
   });
 
+  it("dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
+    const ownerId = await meId(ownerCookie);
+    const res = await app.handle(
+      new Request("http://localhost/api/contracts", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: ownerCookie },
+        body: JSON.stringify({
+          title: "Venda",
+          ownerRole: "seller",
+          requiresConfirmation: false,
+          schedule: {
+            mode: "auto",
+            totalAmountCents: 3000,
+            installmentsCount: 3,
+            firstDueDate: "2026-07-10",
+          },
+        }),
+      })
+    );
+    const contractId = (await res.json()).id as string;
+
+    await runReminderSweep();
+
+    const rows = await notifsFor(ownerId, contractId);
+    const types = rows.map((r) => r.type);
+    expect(types).toContain("installment_overdue_receivable");
+    expect(types).not.toContain("installment_overdue");
+    expect(types).not.toContain("installment_due_soon");
+  });
+
   it.skipIf(!hasStorage)(
     "não gera lembrete para parcela em awaiting_confirmation",
     async () => {
