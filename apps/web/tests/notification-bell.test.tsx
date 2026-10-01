@@ -26,6 +26,7 @@ vi.mock("@/hooks/use-notifications", () => ({
     ],
   }),
   useMarkReadMutation: () => ({ mutate: markRead }),
+  usePrefetchNotifications: () => vi.fn(),
   useMarkAllReadMutation: () => ({ mutate: markAll }),
 }));
 
