@@ -41,4 +41,33 @@ describe("parseEnv", () => {
     });
     expect(env.GOOGLE_CLIENT_ID).toBeUndefined();
   });
+
+  describe("lembretes por e-mail", () => {
+    const base = {
+      DATABASE_URL: "postgres://u:p@localhost:5432/db",
+      BETTER_AUTH_SECRET: "x".repeat(32),
+      BETTER_AUTH_URL: "http://localhost:3000",
+      WEB_ORIGIN: "http://localhost:3001",
+    };
+
+    it("CRON_SECRET exige 32+ caracteres", () => {
+      expect(() =>
+        parseEnv({ ...base, CRON_SECRET: "x".repeat(31) })
+      ).toThrow();
+      expect(
+        parseEnv({ ...base, CRON_SECRET: "x".repeat(32) }).CRON_SECRET
+      ).toBe("x".repeat(32));
+    });
+
+    it("EMAIL_REMINDERS_ENABLED só aceita 'true'", () => {
+      expect(
+        parseEnv({ ...base, EMAIL_REMINDERS_ENABLED: "true" })
+          .EMAIL_REMINDERS_ENABLED
+      ).toBe("true");
+      expect(() =>
+        parseEnv({ ...base, EMAIL_REMINDERS_ENABLED: "yes" })
+      ).toThrow();
+      expect(parseEnv(base).EMAIL_REMINDERS_ENABLED).toBeUndefined();
+    });
+  });
 });

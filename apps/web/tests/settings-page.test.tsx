@@ -7,9 +7,22 @@ vi.mock("@/components/delete-account-dialog", () => ({
 vi.mock("@/components/pix-key-form", () => ({
   PixKeyForm: () => <div data-testid="pix-key-form" />,
 }));
+const meData = vi.hoisted(() => ({
+  value: {
+    id: "u1",
+    name: "Maria",
+    email: "maria@example.com",
+    emailRemindersAvailable: false,
+    emailRemindersOptIn: false,
+  },
+}));
 vi.mock("@/hooks/use-me", () => ({
-  useMeQuery: () => ({
-    data: { id: "u1", name: "Maria", email: "maria@example.com" },
+  useMeQuery: () => ({ data: meData.value }),
+}));
+vi.mock("@/hooks/use-email-reminders", () => ({
+  useUpdateEmailRemindersMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
   }),
 }));
 
@@ -36,5 +49,24 @@ describe("SettingsPage", () => {
   it("renders the PixKeyForm", () => {
     render(<SettingsPage />);
     expect(screen.getByTestId("pix-key-form")).toBeInTheDocument();
+  });
+
+  it("hides the email reminders section when the global switch is off", () => {
+    meData.value.emailRemindersAvailable = false;
+    render(<SettingsPage />);
+    expect(
+      screen.queryByRole("heading", { name: "Lembretes por e-mail" })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+  });
+
+  it("shows the email reminders section when the global switch is on", () => {
+    meData.value.emailRemindersAvailable = true;
+    render(<SettingsPage />);
+    expect(
+      screen.getByRole("heading", { name: "Lembretes por e-mail" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+    meData.value.emailRemindersAvailable = false;
   });
 });

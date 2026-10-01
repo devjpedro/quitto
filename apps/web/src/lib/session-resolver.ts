@@ -3,6 +3,8 @@ export const SESSION_SSR_TIMEOUT_MS = 1500;
 
 export interface SessionUser {
   email: string;
+  emailRemindersAvailable: boolean;
+  emailRemindersOptIn: boolean;
   id: string;
   image: string | null;
   name: string;
