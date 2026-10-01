@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "email_reminders_opt_in" boolean DEFAULT false NOT NULL;
