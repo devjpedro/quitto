@@ -21,8 +21,15 @@ export const unreadCountQueryOptions = queryOptions({
   refetchInterval: UNREAD_POLL_MS,
 });
 
-export function useNotificationsQuery() {
-  return useQuery(notificationsQueryOptions);
+export function useNotificationsQuery({ enabled = true } = {}) {
+  return useQuery({ ...notificationsQueryOptions, enabled });
+}
+
+export function usePrefetchNotifications() {
+  const qc = useQueryClient();
+  return () => {
+    qc.prefetchQuery(notificationsQueryOptions);
+  };
 }
 
 export function useUnreadCountQuery() {

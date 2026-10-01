@@ -15,11 +15,18 @@ import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { ApiError } from "@/lib/api-client";
 import { decideClientGate } from "@/lib/app-guard";
+import { parseSidebarCookie } from "@/lib/sidebar";
 import { getSidebarSSR } from "@/lib/sidebar-ssr";
 import { getSessionSSR } from "@/lib/ssr-session";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
+    // Só no SSR. No cliente a sessão já está no cache (useMeQuery) e o gate do
+    // AppLayout cuida do 401 → /login; chamar a server function aqui custava
+    // um round-trip browser → Vercel → API a cada hover (preload) e clique.
+    if (typeof document !== "undefined") {
+      return;
+    }
     const session = await getSessionSSR();
     if (session.status === "anon") {
       throw redirect({ to: "/login", search: { redirect: location.href } });
@@ -31,8 +38,12 @@ export const Route = createFileRoute("/_app")({
     // unknown (cold) → segue; o cliente resolve com o loader
   },
   // estado da sidebar lido no SSR (cookie) — o shell já renderiza a largura
-  // certa no 1º paint, mesma técnica do tema (getThemeSSR/__root.tsx).
-  loader: () => getSidebarSSR(),
+  // certa no 1º paint, mesma técnica do tema (getThemeSSR/__root.tsx). No
+  // cliente lê o cookie direto (sem server function por preload).
+  loader: () =>
+    typeof document === "undefined"
+      ? getSidebarSSR()
+      : parseSidebarCookie(document.cookie),
   component: AppLayout,
 });
 

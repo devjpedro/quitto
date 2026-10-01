@@ -10,6 +10,7 @@ import {
   useMarkAllReadMutation,
   useMarkReadMutation,
   useNotificationsQuery,
+  usePrefetchNotifications,
   useUnreadCountQuery,
 } from "@/hooks/use-notifications";
 import { formatUnreadCount } from "@/lib/format";
@@ -21,11 +22,14 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const { data: counter } = useUnreadCountQuery();
-  const { data: items } = useNotificationsQuery();
+  // a lista só é buscada quando o popover abre (o contador já vem do polling)
+  const { data: items } = useNotificationsQuery({ enabled: open });
   const markRead = useMarkReadMutation();
   const markAll = useMarkAllReadMutation();
   const count = counter?.count ?? 0;
   const recent = (items ?? []).slice(0, POPOVER_LIMIT);
+  // intenção de abrir → aquece a lista pra o popover não abrir vazio
+  const prefetch = usePrefetchNotifications();
 
   function handleOpen(item: NotificationItem) {
     setOpen(false);
@@ -49,6 +53,8 @@ export function NotificationBell() {
       <PopoverTrigger
         aria-label={`Notificações${count > 0 ? `, ${count} não lidas` : ""}`}
         className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:scale-95 data-[state=open]:bg-muted data-[state=open]:text-foreground"
+        onFocus={prefetch}
+        onPointerEnter={prefetch}
       >
         <Bell aria-hidden="true" className="size-4" />
         {count > 0 ? (

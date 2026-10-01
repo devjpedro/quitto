@@ -27,6 +27,9 @@ export default defineConfig(({ command }) => ({
     ...(command === "build"
       ? [
           nitro({
+            // Função SSR/server functions na mesma região da API (Fly gru): o
+            // default (iad1) fazia cada chamada cruzar BR → EUA → BR duas vezes.
+            vercel: { functions: { regions: ["gru1"] } },
             routeRules: onVercel
               ? { "/api/**": { proxy: "https://usequitto-api.fly.dev/api/**" } }
               : {},
