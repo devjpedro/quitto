@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import type { ReactNode } from "react";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { EmailRemindersToggle } from "@/components/email-reminders-toggle";
 import { PageContainer } from "@/components/page-container";
 import { PixKeyForm } from "@/components/pix-key-form";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,6 +58,12 @@ export function SettingsPage() {
         <SettingsSection title="Recebimento (PIX)">
           <PixKeyForm />
         </SettingsSection>
+
+        {me?.emailRemindersAvailable ? (
+          <SettingsSection title="Lembretes por e-mail">
+            <EmailRemindersToggle checked={me.emailRemindersOptIn} />
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection title="Segurança">
           <ChangePasswordForm />

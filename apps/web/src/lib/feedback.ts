@@ -17,4 +17,6 @@ export const FEEDBACK = {
   inviteDeclined: "Convite recusado",
   contractDeleted: "Contrato excluído",
   contractLeft: "Você saiu do contrato",
+  emailRemindersOn: "Lembretes por e-mail ativados",
+  emailRemindersOff: "Lembretes por e-mail desativados",
 } as const;
