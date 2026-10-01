@@ -10,6 +10,21 @@ export function formatBRL(cents: number): string {
   return BRL.format(cents / 100).replace(/[\u00a0\u202f]/g, " ");
 }
 
+/** Quebra "R$ 2.000,00" em partes p/ tratamento editorial (inteiro grande, resto recuado). */
+export function formatBRLParts(cents: number): {
+  currency: string;
+  integer: string;
+  decimal: string;
+} {
+  const s = formatBRL(cents); // "R$ 2.000,00"
+  const m = s.match(BRL_PARTS_RE);
+  if (!(m?.[1] && m?.[2])) {
+    return { currency: "R$", integer: s, decimal: "" };
+  }
+  // biome-ignore lint/style/noNonNullAssertion: regex matched so groups are safe
+  return { currency: m[1]!.trim(), integer: m[2]!, decimal: m[3]! };
+}
+
 /** Parses a BR currency string (with or without "R$") into integer cents, or null if invalid. */
 export function parseBRLToCents(input: string): number | null {
   const cleaned = input.replace(/[R$\s.]/g, "").replace(",", ".");
@@ -99,6 +114,8 @@ export function maskBRDate(value: string): string {
   const parts = [d.slice(0, 2), d.slice(2, 4), d.slice(4, 8)].filter(Boolean);
   return parts.join("/");
 }
+
+const BRL_PARTS_RE = /^(\D+?)\s*([\d.]+)(,\d{2})$/;
 
 const RTF = new Intl.RelativeTimeFormat("pt-BR", { numeric: "always" });
 const REL_THRESHOLDS: {

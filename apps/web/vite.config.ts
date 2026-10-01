@@ -1,15 +1,34 @@
 import { resolve } from "node:path";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
+import { nitro } from "nitro/vite";
 import { defineConfig, type PluginOption } from "vite";
 
 const analyze = process.env.ANALYZE === "1";
+const onVercel = Boolean(process.env.VERCEL);
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
+    tanstackStart(),
+    // Nitro empacota o servidor do Start pro alvo de deploy (na Vercel detecta
+    // o preset sozinho e gera o Build Output API). Só no build: no `vite dev`
+    // o servidor do Nitro atende /api antes do `server.proxy` abaixo. O proxy
+    // de /api/* mora aqui porque o output do Nitro substitui as rotas do
+    // vercel.json — e só no build da Vercel, pra um build local nunca falar
+    // com a API de produção.
+    ...(command === "build"
+      ? [
+          nitro({
+            routeRules: onVercel
+              ? { "/api/**": { proxy: "https://usequitto-api.fly.dev/api/**" } }
+              : {},
+          }),
+        ]
+      : []),
     react(),
     tailwindcss(),
     ...(analyze
@@ -28,7 +47,12 @@ export default defineConfig({
             project: process.env.SENTRY_PROJECT,
             authToken: sentryAuthToken,
             // delete .map files after upload so they are never published on Vercel
-            sourcemaps: { filesToDeleteAfterUpload: ["./dist/**/*.map"] },
+            sourcemaps: {
+              filesToDeleteAfterUpload: [
+                "./.output/**/*.map",
+                "./.vercel/output/**/*.map",
+              ],
+            },
           }),
         ]
       : []),
@@ -54,4 +78,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

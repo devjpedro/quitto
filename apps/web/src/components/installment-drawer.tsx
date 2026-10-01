@@ -15,9 +15,11 @@ import {
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
 import { PaymentActions } from "@/components/payment-actions";
+import { PixBlock } from "@/components/pix-block";
 import { ProofList, type ProofView } from "@/components/proof-list";
 import { ProofUpload } from "@/components/proof-upload";
 import { ReceiptLink } from "@/components/receipt-link";
+import { ReceiptShare } from "@/components/receipt-share";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -114,20 +116,26 @@ function InstallmentEditForm({
 function InstallmentDetailView({
   capabilities,
   contractId,
+  contractTitle,
   events,
   installment,
+  installmentsCount,
   isOwner,
   onEdit,
+  pix,
   proofs,
   requiresConfirmation,
   status,
 }: {
   capabilities: Capabilities;
   contractId: string;
+  contractTitle: string;
   events: AuditEventView[];
   installment: Installment;
+  installmentsCount: number;
   isOwner: boolean;
   onEdit: () => void;
+  pix: { copiaECola: string; keyType: string; payToName: string } | null;
   proofs: ProofView[];
   requiresConfirmation: boolean;
   status: string;
@@ -139,13 +147,13 @@ function InstallmentDetailView({
       <dl className="divide-y divide-border/60 rounded-xl border border-border bg-card shadow-xs">
         <div className="flex items-baseline justify-between p-4">
           <dt className="text-muted-foreground text-sm">Valor</dt>
-          <dd className="font-bold font-display text-foreground text-lg tabular-nums">
+          <dd className="font-bold text-foreground text-lg tabular-nums">
             {formatBRL(installment.amountCents)}
           </dd>
         </div>
         <div className="flex items-baseline justify-between p-4">
           <dt className="text-muted-foreground text-sm">Vencimento</dt>
-          <dd className="font-display font-semibold text-foreground tabular-nums">
+          <dd className="font-semibold text-foreground tabular-nums">
             {formatISODateBR(installment.dueDate)}
           </dd>
         </div>
@@ -174,6 +182,8 @@ function InstallmentDetailView({
         </section>
       ) : null}
 
+      {pix ? <PixBlock pix={pix} /> : null}
+
       <PaymentActions
         capabilities={capabilities}
         contractId={contractId}
@@ -185,6 +195,16 @@ function InstallmentDetailView({
       <ReceiptLink
         installmentId={installment.id}
         status={status as InstallmentStatus}
+      />
+
+      <ReceiptShare
+        installmentId={installment.id}
+        installmentsCount={installmentsCount}
+        isOwner={isOwner}
+        key={installment.id}
+        sequence={installment.sequence}
+        status={status as InstallmentStatus}
+        title={contractTitle}
       />
 
       <section className="flex flex-col gap-2">
@@ -207,7 +227,9 @@ function InstallmentDetailView({
 export function InstallmentDrawer({
   capabilities,
   contractId,
+  contractTitle,
   installment,
+  installmentsCount,
   isOwner,
   onClose,
   open,
@@ -215,7 +237,9 @@ export function InstallmentDrawer({
 }: {
   capabilities: Capabilities;
   contractId: string;
+  contractTitle: string;
   installment: Installment | null;
+  installmentsCount: number;
   isOwner: boolean;
   onClose: () => void;
   open: boolean;
@@ -258,6 +282,7 @@ export function InstallmentDrawer({
   const status = detail?.status ?? current.status;
   const proofs = detail?.proofs ?? [];
   const events = detail?.events ?? [];
+  const pix = detail?.pix ?? null;
 
   return (
     <Sheet
@@ -297,10 +322,13 @@ export function InstallmentDrawer({
           <InstallmentDetailView
             capabilities={capabilities}
             contractId={contractId}
+            contractTitle={contractTitle}
             events={events}
             installment={current}
+            installmentsCount={installmentsCount}
             isOwner={isOwner}
             onEdit={() => setEditing(true)}
+            pix={pix}
             proofs={proofs}
             requiresConfirmation={requiresConfirmation}
             status={status}

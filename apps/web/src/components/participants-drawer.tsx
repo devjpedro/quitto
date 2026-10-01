@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useFocusRestore } from "@/hooks/use-focus-restore";
+import { useFocusOnOpen, useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,
   useRemoveParticipantMutation,
@@ -142,11 +142,15 @@ function InvitePanel({
         {...form.register("email")}
       />
       {form.formState.errors.email ? (
-        <p className="text-destructive text-xs">
+        <p className="text-destructive text-xs" role="alert">
           {form.formState.errors.email.message}
         </p>
       ) : null}
-      <Button disabled={createInvite.isPending} type="submit">
+      <Button
+        className="active:scale-[0.97]"
+        disabled={createInvite.isPending}
+        type="submit"
+      >
         {createInvite.isPending ? "Gerando…" : "Gerar link"}
       </Button>
     </form>
@@ -174,9 +178,11 @@ function ParticipantItem({
   // stable ref to the always-mounted trigger button and restore focus to it in
   // onCloseAutoFocus, or Radix drops focus on <body> (WCAG 2.4.3 Focus Order).
   const { triggerRef, restoreFocus } = useFocusRestore();
+  // Foco de abertura no Cancelar, não no Remover (ver useFocusOnOpen).
+  const { focusRef, focusOnOpen } = useFocusOnOpen();
 
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-xs">
+    <li className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3.5 shadow-[var(--shadow-sm)] transition-colors hover:border-primary/40">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           aria-hidden="true"
@@ -258,11 +264,12 @@ function ParticipantItem({
         <DialogContent
           description={`Remover ${participant.displayName} deste contrato? Convites pendentes serão cancelados.`}
           onCloseAutoFocus={restoreFocus}
+          onOpenAutoFocus={focusOnOpen}
           title="Remover participante"
         >
           <div className="flex gap-2">
             <Button
-              className="flex-1"
+              className="flex-1 active:scale-[0.97]"
               disabled={removeMutation.isPending}
               onClick={async () => {
                 await removeMutation.mutateAsync(participant.id);
@@ -274,7 +281,9 @@ function ParticipantItem({
               {removeMutation.isPending ? "Removendo…" : "Remover"}
             </Button>
             <Button
+              className="active:scale-[0.97]"
               onClick={() => setConfirmOpen(false)}
+              ref={focusRef}
               type="button"
               variant="outline"
             >
@@ -344,6 +353,9 @@ export function ParticipantsDrawer({
         }}
         title="Participantes"
       >
+        <p className="text-muted-foreground text-sm">
+          Adicione, remova ou troque o papel de quem participa deste contrato.
+        </p>
         <div className="-mx-1 flex flex-1 flex-col gap-4 overflow-y-auto px-1">
           <ul className="flex flex-col gap-2">
             {participants.map((p) => (
@@ -367,6 +379,7 @@ export function ParticipantsDrawer({
             />
           ) : (
             <Button
+              className="active:scale-[0.97]"
               onClick={() => {
                 setNewLinkToken(null);
                 setAdding(true);

@@ -13,6 +13,7 @@ import { ContractRow } from "../src/components/contract-row";
 const TOTAL = /R\$\s?120\.000,00/;
 const OVERDUE = /2 atrasadas/i;
 const EM_DIA = /em dia/i;
+const PAID = /R\$\s?45\.600,00/;
 
 const item = {
   id: "c1",
@@ -28,9 +29,12 @@ const item = {
 
 describe("ContractRow", () => {
   it("shows title, formatted paid/total and overdue badge", () => {
-    render(<ContractRow contract={item} />);
+    const { container } = render(<ContractRow contract={item} />);
     expect(screen.getByText("Apê do irmão")).toBeInTheDocument();
-    expect(screen.getByText(TOTAL)).toBeInTheDocument();
+    // total é renderizado via <Money>, que quebra o valor em spans (símbolo/
+    // inteiro/centavos) — casa pelo texto concatenado do container.
+    expect(container.textContent).toMatch(TOTAL);
+    expect(screen.getByText(PAID)).toBeInTheDocument();
     expect(screen.getByText(OVERDUE)).toBeInTheDocument();
     expect(screen.getByText("ativo")).toBeInTheDocument();
   });

@@ -15,6 +15,9 @@ export const inviteQueryOptions = (token: string) =>
   queryOptions({
     queryKey: queryKeys.invite(token),
     queryFn: () => unwrap(api.api.invites({ token }).get()),
+    // A própria página trata o erro (convite indisponível/expirado → "Convite
+    // indisponível"); não deixa subir pro throwOnError global da ErrorBoundary.
+    throwOnError: false,
   });
 
 export function useInviteQuery(token: string) {

@@ -42,9 +42,9 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
       caption_label: "font-medium text-sm capitalize",
       nav: "absolute top-0 flex w-full items-center justify-between",
       button_previous:
-        "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
+        "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-[var(--dur-base)] ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
       button_next:
-        "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
+        "inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors duration-[var(--dur-base)] ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
       month_grid: "w-full border-collapse",
       weekdays: "flex",
       weekday:
@@ -52,7 +52,7 @@ export function Calendar({ className, classNames, ...props }: CalendarProps) {
       week: "mt-1 flex",
       day: "size-9 p-0 text-center text-sm",
       day_button:
-        "inline-flex size-9 items-center justify-center rounded-md font-normal transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex size-9 items-center justify-center rounded-md font-normal transition-colors duration-[var(--dur-base)] ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       selected:
         "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground",
       today: "[&>button]:font-semibold [&>button]:text-primary",

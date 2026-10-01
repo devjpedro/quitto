@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/client";
-import { contract, participant } from "../db/schema";
+import { contract, participant, user as userTable } from "../db/schema";
 import { NotFoundError } from "./errors";
 
 export type ParticipantSlot = "buyer" | "seller" | "viewer";
@@ -17,6 +17,55 @@ export interface Capabilities extends ContractAccess {
   isApprover: boolean;
   /** Pode pagar/anexar comprovante/marcar paga. */
   isPayer: boolean;
+}
+
+/** Resolve quem recebe o dinheiro no contrato e sua chave de perfil. */
+export async function resolveRecebedor(c: {
+  id: string;
+  ownerId: string;
+  ownerRole: string;
+}): Promise<{ displayName: string | null; profileKey: string | null }> {
+  if (c.ownerRole === "seller") {
+    const [owner] = await db
+      .select({ name: userTable.name, pixKey: userTable.pixKey })
+      .from(userTable)
+      .where(eq(userTable.id, c.ownerId))
+      .limit(1);
+    return {
+      displayName: owner?.name ?? null,
+      profileKey: owner?.pixKey ?? null,
+    };
+  }
+
+  const sellers = await db
+    .select({
+      displayName: participant.displayName,
+      linkedUserId: participant.linkedUserId,
+    })
+    .from(participant)
+    .where(
+      and(eq(participant.contractId, c.id), eq(participant.role, "seller"))
+    );
+  if (sellers.length !== 1) {
+    return { displayName: null, profileKey: null };
+  }
+  const seller = sellers[0];
+  if (!seller) {
+    return { displayName: null, profileKey: null };
+  }
+  if (!seller.linkedUserId) {
+    return { displayName: seller.displayName, profileKey: null };
+  }
+
+  const [linked] = await db
+    .select({ pixKey: userTable.pixKey })
+    .from(userTable)
+    .where(eq(userTable.id, seller.linkedUserId))
+    .limit(1);
+  return {
+    displayName: seller.displayName,
+    profileKey: linked?.pixKey ?? null,
+  };
 }
 
 /**

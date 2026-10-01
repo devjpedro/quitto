@@ -1,7 +1,10 @@
 import {
   AUDIT_TYPE,
+  generateMonthlySchedule,
   generateSchedule,
   NOTIFICATION_TYPE,
+  parsePixKey,
+  type ScheduleRow,
   todayISO,
 } from "@quitto/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
@@ -9,9 +12,13 @@ import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { getCapabilities, getContractRole } from "../lib/contract-access";
-import { computeProgress } from "../lib/contract-progress";
-import { ForbiddenError, NotFoundError } from "../lib/errors";
+import {
+  getCapabilities,
+  getContractRole,
+  resolveRecebedor,
+} from "../lib/contract-access";
+import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
+import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
@@ -34,12 +41,19 @@ const ScheduleCustom = t.Object({
   ),
 });
 
+const ScheduleMonthly = t.Object({
+  mode: t.Literal("monthly"),
+  monthlyAmountCents: t.Integer({ minimum: 1 }),
+  months: t.Integer({ minimum: 1, maximum: 600 }),
+  firstDueDate: t.String({ format: "date" }),
+});
+
 const CreateContractBody = t.Object({
   title: t.String({ minLength: 1, maxLength: 200 }),
   description: t.Optional(t.String({ maxLength: 2000 })),
   ownerRole: t.Union([t.Literal("buyer"), t.Literal("seller")]),
   requiresConfirmation: t.Boolean(),
-  schedule: t.Union([ScheduleAuto, ScheduleCustom]),
+  schedule: t.Union([ScheduleAuto, ScheduleCustom, ScheduleMonthly]),
 });
 
 export const contractsModule = new Elysia({ prefix: "/api" })
@@ -48,18 +62,26 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     async ({ request, body }) => {
       const { user } = await requireAuth(request.headers);
 
-      const rows =
-        body.schedule.mode === "auto"
-          ? generateSchedule({
-              totalAmountCents: body.schedule.totalAmountCents,
-              installmentsCount: body.schedule.installmentsCount,
-              firstDueDate: body.schedule.firstDueDate,
-            })
-          : body.schedule.installments.map((it, i) => ({
-              sequence: i + 1,
-              amountCents: it.amountCents,
-              dueDate: it.dueDate,
-            }));
+      let rows: ScheduleRow[];
+      if (body.schedule.mode === "auto") {
+        rows = generateSchedule({
+          totalAmountCents: body.schedule.totalAmountCents,
+          installmentsCount: body.schedule.installmentsCount,
+          firstDueDate: body.schedule.firstDueDate,
+        });
+      } else if (body.schedule.mode === "monthly") {
+        rows = generateMonthlySchedule({
+          monthlyAmountCents: body.schedule.monthlyAmountCents,
+          months: body.schedule.months,
+          firstDueDate: body.schedule.firstDueDate,
+        });
+      } else {
+        rows = body.schedule.installments.map((it, i) => ({
+          sequence: i + 1,
+          amountCents: it.amountCents,
+          dueDate: it.dueDate,
+        }));
+      }
 
       const totalAmountCents = rows.reduce((acc, r) => acc + r.amountCents, 0);
 
@@ -74,6 +96,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
             totalAmountCents,
             installmentsCount: rows.length,
             requiresConfirmation: body.requiresConfirmation,
+            monthlyAmountCents:
+              body.schedule.mode === "monthly"
+                ? body.schedule.monthlyAmountCents
+                : null,
           })
           .returning({ id: contract.id });
 
@@ -137,6 +163,25 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .select()
         .from(installment)
         .where(inArray(installment.contractId, ids));
+
+      const people = await db
+        .select({
+          contractId: participant.contractId,
+          displayName: participant.displayName,
+        })
+        .from(participant)
+        .where(inArray(participant.contractId, ids));
+
+      const namesByContract = new Map<string, string[]>();
+      for (const person of people) {
+        const current = namesByContract.get(person.contractId);
+        if (current) {
+          current.push(person.displayName);
+        } else {
+          namesByContract.set(person.contractId, [person.displayName]);
+        }
+      }
+
       const today = todayISO();
 
       return rows.map((c) => {
@@ -147,6 +192,8 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         return {
           id: c.id,
           title: c.title,
+          description: c.description,
+          participantNames: namesByContract.get(c.id) ?? [],
           ownerRole: c.ownerRole,
           status: c.status,
           totalCents: progress.totalCents,
@@ -154,6 +201,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           percent: progress.percent,
           overdueCount: progress.overdueCount,
           installmentsCount: c.installmentsCount,
+          nextDueDate: computeNextDueDate(contractInstallments),
         };
       });
     },
@@ -162,6 +210,8 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         t.Object({
           id: t.String(),
           title: t.String(),
+          description: t.Union([t.String(), t.Null()]),
+          participantNames: t.Array(t.String()),
           ownerRole: t.String(),
           status: t.String(),
           totalCents: t.Integer(),
@@ -169,6 +219,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           percent: t.Integer(),
           overdueCount: t.Integer(),
           installmentsCount: t.Integer(),
+          nextDueDate: t.Union([t.String(), t.Null()]),
         })
       ),
     }
@@ -197,6 +248,15 @@ export const contractsModule = new Elysia({ prefix: "/api" })
         .where(eq(participant.contractId, params.id));
       const today = todayISO();
       const progress = computeProgress(items, today);
+      const recebedorInfo = await resolveRecebedor(c);
+      const recebedorResolvedKey = c.pixKey ?? recebedorInfo.profileKey ?? null;
+      const recebedor =
+        recebedorInfo.displayName === null && recebedorResolvedKey === null
+          ? null
+          : {
+              name: recebedorInfo.displayName,
+              hasKey: recebedorResolvedKey !== null,
+            };
 
       return {
         role: access.role,
@@ -210,6 +270,9 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           ownerRole: c.ownerRole,
           requiresConfirmation: c.requiresConfirmation,
           status: c.status,
+          monthlyAmountCents: c.monthlyAmountCents,
+          pixKey: c.pixKey,
+          recebedor,
         },
         progress: {
           totalCents: progress.totalCents,
@@ -250,6 +313,15 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           ownerRole: t.String(),
           requiresConfirmation: t.Boolean(),
           status: t.String(),
+          monthlyAmountCents: t.Union([t.Integer(), t.Null()]),
+          pixKey: t.Union([t.String(), t.Null()]),
+          recebedor: t.Union([
+            t.Object({
+              name: t.Union([t.String(), t.Null()]),
+              hasKey: t.Boolean(),
+            }),
+            t.Null(),
+          ]),
         }),
         progress: t.Object({
           totalCents: t.Integer(),
@@ -277,6 +349,34 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           })
         ),
       }),
+    }
+  )
+  .patch(
+    "/contracts/:id",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      const { isOwner } = await getContractRole(user.id, params.id);
+      if (!isOwner) {
+        throw new ForbiddenError("Apenas o dono edita a chave PIX");
+      }
+      let pixKey: string | null = null;
+      if (body.pixKey && body.pixKey.trim() !== "") {
+        try {
+          pixKey = parsePixKey(body.pixKey).value;
+        } catch (e) {
+          throw new ValidationError((e as Error).message);
+        }
+      }
+      await db
+        .update(contract)
+        .set({ pixKey })
+        .where(eq(contract.id, params.id));
+      return { pixKey };
+    },
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
+      response: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
     }
   )
   .patch(

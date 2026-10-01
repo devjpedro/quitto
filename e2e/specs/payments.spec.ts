@@ -87,7 +87,13 @@ test("vendedor contesta com motivo; comprador reenvia", async ({ browser }) => {
 
     await b.page.goto(`/contracts/${id}?installment=${installmentId}`);
     await b.page.getByRole("button", { name: "Contestar" }).click();
-    await b.page.locator("#dispute-reason").fill("Comprovante ilegível");
+    // O diálogo abre com o cursor no campo do motivo. `fill()` foca o campo
+    // sozinho antes de escrever, então mascarava qualquer regressão de foco
+    // aqui — digitar pelo teclado é o que o usuário faz de verdade.
+    const reason = b.page.locator("#dispute-reason");
+    await expect(reason).toBeFocused();
+    await b.page.keyboard.type("Comprovante ilegível");
+    await expect(reason).toHaveValue("Comprovante ilegível");
     await b.page.getByRole("button", { name: "Enviar contestação" }).click();
     await expect(
       drawer(b.page).getByText("contestada", { exact: true })

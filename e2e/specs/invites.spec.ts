@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { newUser, randomEmail, seedContract, seedInvite } from "../fixtures";
+import {
+  newUser,
+  randomEmail,
+  seedContract,
+  seedInvite,
+  waitForHydrated,
+} from "../fixtures";
 
 const ACCEPT_INVITE = /Aceitar convite/i;
 const WRONG_EMAIL = /Este convite é para outro e-mail/i;
@@ -19,6 +25,7 @@ test("convidado com e-mail certo aceita e vê o contrato", async ({
       email: b.email,
     });
     await b.page.goto(`/invites/${token}`);
+    await waitForHydrated(b.page);
     await expect(
       b.page.getByRole("heading", { name: "Convite para um contrato" })
     ).toBeVisible();
@@ -43,6 +50,7 @@ test("convite para outro e-mail não pode ser aceito", async ({ browser }) => {
       email: randomEmail(),
     });
     await b.page.goto(`/invites/${token}`);
+    await waitForHydrated(b.page);
     await expect(b.page.getByText(WRONG_EMAIL)).toBeVisible();
     await expect(
       b.page.getByRole("button", { name: ACCEPT_INVITE })
@@ -83,9 +91,11 @@ test("convite já aceito fica indisponível", async ({ browser }) => {
       email: b.email,
     });
     await b.page.goto(`/invites/${token}`);
+    await waitForHydrated(b.page);
     await b.page.getByRole("button", { name: ACCEPT_INVITE }).click();
     await b.page.waitForURL(`**/contracts/${id}`);
-    await b.page.goto(`/invites/${token}`); // reabrir o mesmo token
+    await b.page.goto(`/invites/${token}`);
+    await waitForHydrated(b.page); // reabrir o mesmo token
     await expect(
       b.page.getByRole("heading", { name: "Convite indisponível" })
     ).toBeVisible();

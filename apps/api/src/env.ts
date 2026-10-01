@@ -22,6 +22,10 @@ const schema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("onboarding@resend.dev"),
+  // Endpoint interno do cron (GitHub Actions → Fly). Sem ele o endpoint responde 404.
+  CRON_SECRET: z.string().min(32).optional(),
+  // Trava global do e-mail de lembrete: só liga com domínio verificado no Resend.
+  EMAIL_REMINDERS_ENABLED: z.literal("true").optional(),
   SENTRY_DSN: z.string().optional(),
 });
 

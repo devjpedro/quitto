@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seedContract, signup } from "../fixtures";
+import { seedContract, signup, waitForHydrated } from "../fixtures";
 
 const LOGIN_URL = /\/login/;
 
@@ -7,6 +7,7 @@ test("exportar meus dados baixa o JSON", async ({ page }) => {
   await signup(page);
   await seedContract(page.request, { title: "Para exportar" }); // usuário com 1 contrato
   await page.goto("/settings");
+  await waitForHydrated(page);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("link", { name: "Exportar meus dados" }).click();
   const download = await downloadPromise;
@@ -16,6 +17,7 @@ test("exportar meus dados baixa o JSON", async ({ page }) => {
 test("excluir conta exige a frase e leva ao login", async ({ page }) => {
   await signup(page);
   await page.goto("/settings");
+  await waitForHydrated(page);
   await page.getByRole("button", { name: "Excluir conta" }).click();
   const confirmBtn = page.getByRole("button", {
     name: "Excluir definitivamente",

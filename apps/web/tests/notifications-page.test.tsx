@@ -26,7 +26,7 @@ vi.mock("@/hooks/use-notifications", () => ({
   useMarkAllReadMutation: () => ({ mutate: markAll }),
 }));
 
-import { NotificationsPage } from "../src/routes/notifications";
+import { NotificationsPage } from "../src/features/notifications/notifications-page";
 
 const MARK_ALL = /marcar todas como lidas/i;
 const PAGAMENTO_CONFIRMADO = /pagamento confirmado/i;

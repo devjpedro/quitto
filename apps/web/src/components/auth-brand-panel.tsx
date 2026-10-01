@@ -31,7 +31,7 @@ export function AuthBrandPanel({ mode }: { mode: AuthMode }) {
       <Logo size={20} variant="inverted" />
 
       <div className="mt-auto min-w-0">
-        <h2 className="max-w-[14ch] text-balance font-bold font-display text-2xl leading-[1.12] tracking-tight md:max-w-none md:text-4xl md:leading-[1.08]">
+        <h2 className="max-w-[14ch] text-balance font-bold text-2xl leading-[1.12] tracking-tight md:max-w-none md:text-4xl md:leading-[1.08]">
           {copy.headline}
         </h2>
         <p className="mt-3 max-w-xs text-primary-foreground/80 text-sm md:mt-4 md:max-w-sm">

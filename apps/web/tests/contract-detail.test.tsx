@@ -12,11 +12,15 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-import { ContractDetailPage } from "../src/routes/contract-detail";
+import { ContractDetailPage } from "../src/features/contracts/contract-detail-page";
 
 const REMAINING_BRL = /R\$\s?74\.400,00/;
-const INSTALLMENT_BRL = /R\$\s?2\.000,00/;
+const INSTALLMENT_BRL = /R\$\s?2\.000,00/g;
 const MANAGE_BUTTON = /gerenciar/i;
+const PIX_SECTION = /recebimento \(pix\)/i;
+const PAYING_TO = /pagando para/i;
+const MARIA_SELLER = /maria vendedora/i;
+const PAYEE_PIX_KEY = /chave pix de quem você paga/i;
 
 const detail = {
   role: "buyer",
@@ -30,6 +34,8 @@ const detail = {
     ownerRole: "buyer",
     requiresConfirmation: true,
     status: "active",
+    pixKey: null,
+    recebedor: null,
   },
   progress: {
     totalCents: 12_000_000,
@@ -70,12 +76,15 @@ describe("ContractDetailPage", () => {
 
   it("renders stats and installments from the query data", () => {
     useContractQuery.mockReturnValue({ data: detail, isPending: false });
-    renderWithProviders(<ContractDetailPage />);
+    const { container } = renderWithProviders(<ContractDetailPage />);
     expect(screen.getByText("Apê do irmão")).toBeInTheDocument();
-    expect(screen.getByText(REMAINING_BRL)).toBeInTheDocument();
-    expect(screen.getAllByText(INSTALLMENT_BRL).length).toBeGreaterThanOrEqual(
-      2
-    );
+    // Money quebra o valor em spans (moeda/inteiro/centavos), então o texto
+    // completo só existe no textContent concatenado do container — não em um
+    // único nó via getByText.
+    expect(container.textContent).toMatch(REMAINING_BRL);
+    expect(
+      container.textContent?.match(INSTALLMENT_BRL)?.length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it("mostra o botão Gerenciar para o dono", () => {
@@ -154,5 +163,69 @@ describe("ContractDetailPage", () => {
     expect(screen.getAllByText("comprador").length).toBeGreaterThanOrEqual(1);
     // "Dono" aparece no header e na lista de participantes; basta existir >=2
     expect(screen.getAllByText("Dono").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("não mostra seção PIX ao dono comprador sem recebedor", () => {
+    useContractQuery.mockReturnValue({ data: detail, isPending: false });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.queryByRole("heading", { name: PIX_SECTION })
+    ).not.toBeInTheDocument();
+  });
+
+  it("dono comprador com recebedor e chave vê informação read-only", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: {
+          ...detail.contract,
+          ownerRole: "buyer",
+          recebedor: { name: "Maria Vendedora", hasKey: true },
+        },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(screen.getByText(PAYING_TO)).toBeInTheDocument();
+    expect(screen.getByText(MARIA_SELLER)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", {
+        name: PAYEE_PIX_KEY,
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it("dono comprador sem chave resolvível pode informar a chave", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: {
+          ...detail.contract,
+          ownerRole: "buyer",
+          recebedor: { name: "Contato", hasKey: false },
+        },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.getByRole("heading", {
+        name: PAYEE_PIX_KEY,
+      })
+    ).toBeInTheDocument();
+  });
+
+  it("mostra a seção PIX quando o dono é vendedor (recebe)", () => {
+    useContractQuery.mockReturnValue({
+      data: {
+        ...detail,
+        contract: { ...detail.contract, ownerRole: "seller", pixKey: null },
+      },
+      isPending: false,
+    });
+    renderWithProviders(<ContractDetailPage />);
+    expect(
+      screen.getByRole("heading", { name: PIX_SECTION })
+    ).toBeInTheDocument();
   });
 });

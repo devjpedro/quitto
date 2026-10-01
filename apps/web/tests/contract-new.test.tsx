@@ -5,8 +5,10 @@ import { PLACEHOLDER } from "../src/lib/labels";
 import { renderWithProviders } from "./test-utils";
 
 const navigate = vi.fn();
+let search: { title?: string } = {};
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
+  useSearch: () => search,
 }));
 
 const mutateAsync = vi.fn();
@@ -14,7 +16,7 @@ vi.mock("../src/hooks/use-contract-mutations", () => ({
   useCreateContractMutation: () => ({ mutateAsync, isPending: false }),
 }));
 
-import { ContractNewPage } from "../src/routes/contract-new";
+import { ContractNewPage } from "../src/features/contracts/contract-new-page";
 
 const NEXT = /avançar/i;
 const SUBMIT = /criar contrato/i;
@@ -34,6 +36,7 @@ describe("ContractNewPage (wizard)", () => {
     navigate.mockReset();
     mutateAsync.mockReset();
     mutateAsync.mockResolvedValue({ id: "new-id" });
+    search = {};
   });
 
   it("usa um placeholder de título genérico", () => {
@@ -41,6 +44,39 @@ describe("ContractNewPage (wizard)", () => {
     expect(screen.getByLabelText(TITLE)).toHaveAttribute(
       "placeholder",
       PLACEHOLDER.contractTitle
+    );
+  });
+
+  it("pré-preenche o título com o ?title= da URL", () => {
+    search = { title: "aluguel do apê" };
+    renderWithProviders(<ContractNewPage />);
+    expect(screen.getByLabelText(TITLE)).toHaveValue("aluguel do apê");
+  });
+
+  it("reaplica o ?title= quando a paleta navega para a rota já montada", async () => {
+    // O react-hook-form lê `defaultValues` só na montagem: navegar de
+    // /contracts/new para /contracts/new?title=X não remonta o wizard.
+    search = { title: "aluguel do apê" };
+    const { rerender } = renderWithProviders(<ContractNewPage />);
+    expect(screen.getByLabelText(TITLE)).toHaveValue("aluguel do apê");
+
+    search = { title: "empréstimo do carro" };
+    rerender(<ContractNewPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(TITLE)).toHaveValue("empréstimo do carro")
+    );
+  });
+
+  it("não sobrescreve o título que o usuário já digitou", async () => {
+    const { rerender } = renderWithProviders(<ContractNewPage />);
+    await userEvent.type(screen.getByLabelText(TITLE), "meu acordo");
+
+    search = { title: "empréstimo do carro" };
+    rerender(<ContractNewPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText(TITLE)).toHaveValue("meu acordo")
     );
   });
 

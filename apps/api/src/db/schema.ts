@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -9,6 +10,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -18,6 +20,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  pixKey: text("pix_key"),
+  emailRemindersOptIn: boolean("email_reminders_opt_in")
+    .notNull()
+    .default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -96,6 +102,8 @@ export const contract = pgTable("contract", {
   ownerRole: ownerRoleEnum("owner_role").notNull(),
   totalAmountCents: integer("total_amount_cents").notNull(),
   installmentsCount: integer("installments_count").notNull(),
+  monthlyAmountCents: integer("monthly_amount_cents"),
+  pixKey: text("pix_key"),
   requiresConfirmation: boolean("requires_confirmation")
     .notNull()
     .default(false),
@@ -232,5 +240,30 @@ export const notification = pgTable(
       table.createdAt
     ),
     unique("notification_dedupe_key_key").on(table.dedupeKey),
+  ]
+);
+
+/**
+ * Link público de UM recibo (ADR-0006). Um ativo por parcela (índice parcial);
+ * revogar = `revokedAt`. Sem expiração no v1.
+ */
+export const receiptShare = pgTable(
+  "receipt_share",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    installmentId: uuid("installment_id")
+      .notNull()
+      .references(() => installment.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => [
+    uniqueIndex("receipt_share_active_installment_uq")
+      .on(table.installmentId)
+      .where(sql`${table.revokedAt} is null`),
   ]
 );

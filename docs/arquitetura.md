@@ -243,9 +243,13 @@ float. Evita erros de arredondamento; a formatação BRL divide por 100 na borda
 `new Date(iso)` (que parseia como UTC e desloca o dia). Fuso de referência:
 `APP_TIME_ZONE = "America/Sao_Paulo"`.
 
-**(c) SPA, não SSR.** O diagnóstico da "tela branca" foi **cold start** do Fly, não arquitetura.
-Manter SPA simplifica o deploy e o cookie first-party (via rewrite); o custo (cold start) é
-tratado na borda (§9d).
+**(c) SPA, não SSR.** ⚠️ **Superseda por [ADR-0001](adr/0001-migrar-front-para-tanstack-start-ssr.md)
+(decidido; migração pendente).** Esta decisão atribuía a "tela branca" a **cold start** — diagnóstico
+**incorreto**. A causa raiz é **falta de entrada pública** (a rota `/` é o dashboard, sob rota
+autenticada; o anônimo vê o skeleton do dashboard até o `/api/me` dar 401). O front migrará para
+**TanStack Start (SSR)** com landing pública no apex (SSG, sem API) e app com dados no cliente; o
+backend Elysia no Fly permanece. Topologia de domínio/cookie em
+[ADR-0002](adr/0002-topologia-de-dominio-e-cookie-first-party.md).
 
 **(d) Scale-to-zero + cold start gracioso.** `fly.toml`: `min_machines_running = 0`,
 `auto_stop_machines = "stop"`, `auto_start_machines = true` (região `gru`). Cold start medido

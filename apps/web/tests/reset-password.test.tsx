@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => ({ token: "tok-123" }),
 }));
 
-import { ResetPasswordPage } from "../src/routes/reset-password";
+import { ResetPasswordPage } from "../src/features/auth/reset-password-page";
 
 const BTN_REDEFINIR = /redefinir/i;
 

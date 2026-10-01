@@ -1,0 +1,1 @@
+ALTER TABLE "contract" ADD COLUMN "monthly_amount_cents" integer;

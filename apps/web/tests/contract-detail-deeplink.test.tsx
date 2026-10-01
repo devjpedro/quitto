@@ -33,6 +33,9 @@ vi.mock("@/components/participants-drawer", () => ({
 vi.mock("@/components/contract-actions-menu", () => ({
   ContractActionsMenu: () => null,
 }));
+vi.mock("@/components/contract-pix-key-form", () => ({
+  ContractPixKeyForm: () => null,
+}));
 
 vi.mock("@/hooks/use-contracts", () => ({
   useContractQuery: () => ({
@@ -72,7 +75,7 @@ vi.mock("@/hooks/use-contracts", () => ({
   }),
 }));
 
-import { ContractDetailPage } from "../src/routes/contract-detail";
+import { ContractDetailPage } from "../src/features/contracts/contract-detail-page";
 
 describe("contract-detail deep-link", () => {
   beforeEach(() => {

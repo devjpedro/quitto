@@ -11,4 +11,5 @@ export const PAGE_TITLE = {
   acceptInvite: `${BRAND} · Convite`,
   forgotPassword: `${BRAND} · Esqueci minha senha`,
   resetPassword: `${BRAND} · Redefinir senha`,
+  publicReceipt: `${BRAND} · Recibo`,
 } as const;

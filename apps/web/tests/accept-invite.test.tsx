@@ -29,7 +29,7 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-import { AcceptInvitePage } from "../src/routes/accept-invite";
+import { AcceptInvitePage } from "../src/features/invites/accept-invite-page";
 
 describe("AcceptInvitePage", () => {
   beforeEach(() => {
@@ -123,13 +123,13 @@ describe("AcceptInvitePage", () => {
       isPending: false,
       error: null,
     });
-    renderWithProviders(<AcceptInvitePage />);
+    const { container } = renderWithProviders(<AcceptInvitePage />);
 
     expect(screen.getByText(INVITED_BY)).toBeInTheDocument();
     expect(
       screen.getByText("Maria Silva", { exact: false })
     ).toBeInTheDocument();
-    expect(screen.getByText(BRL_1200)).toBeInTheDocument();
+    expect(container.textContent).toMatch(BRL_1200);
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(
       screen.getByText("João Vendedor", { exact: false })

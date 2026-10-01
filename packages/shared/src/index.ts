@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
+import { isValidPixKey } from "./pix";
 
 // biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
 export { APP_TIME_ZONE, isoDateInTimeZone, todayISO } from "./date";
@@ -24,13 +25,30 @@ export {
   isPaidStatus,
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPES,
+  OVERDUE_LOOKBACK_DAYS,
   OWNER_ROLE,
   OWNER_ROLES,
   PARTICIPANT_ROLE,
   REMINDER_WINDOW_DAYS,
 } from "./domain";
-export type { GenerateScheduleInput, ScheduleRow } from "./schedule";
-export { addMonths, generateSchedule, splitAmount } from "./schedule";
+export type { PixKeyType } from "./pix";
+export {
+  buildPixBrCode,
+  isValidPixKey,
+  normalizeMerchantName,
+  parsePixKey,
+} from "./pix";
+export type {
+  GenerateMonthlyScheduleInput,
+  GenerateScheduleInput,
+  ScheduleRow,
+} from "./schedule";
+export {
+  addMonths,
+  generateMonthlySchedule,
+  generateSchedule,
+  splitAmount,
+} from "./schedule";
 
 /** Frase que o usuário digita para confirmar a exclusão da conta. */
 export const DELETE_CONFIRM_PHRASE = "EXCLUIR";
@@ -92,6 +110,13 @@ const scheduleCustomSchema = z.object({
     .max(600, "Máximo 600 parcelas"),
 });
 
+const scheduleMonthlySchema = z.object({
+  mode: z.literal("monthly"),
+  monthlyAmountCents: z.number().int().min(1, "Informe um valor"),
+  months: z.number().int().min(1, "Mínimo 1 mês").max(600, "Máximo 600 meses"),
+  firstDueDate: isoDate,
+});
+
 export const createContractSchema = z.object({
   title: z.string().min(1, "Informe um título").max(200, "Título muito longo"),
   description: z.string().max(2000, "Descrição muito longa").optional(),
@@ -100,6 +125,7 @@ export const createContractSchema = z.object({
   schedule: z.discriminatedUnion("mode", [
     scheduleAutoSchema,
     scheduleCustomSchema,
+    scheduleMonthlySchema,
   ]),
 });
 
@@ -114,6 +140,36 @@ export const updateInstallmentSchema = z
 
 export type CreateContractInput = z.infer<typeof createContractSchema>;
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
+
+/** Chave PIX válida (formato). Normalização final acontece no servidor. */
+export const pixKeySchema = z
+  .string()
+  .trim()
+  .min(1, "Informe uma chave PIX")
+  .refine(isValidPixKey, "Chave PIX inválida");
+
+/** Body de atualização de chave: string válida OU vazio/null (limpa). */
+export const pixKeyUpdateSchema = z.object({
+  pixKey: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || isValidPixKey(v), "Chave PIX inválida")
+    .nullable(),
+});
+export type PixKeyUpdateInput = z.infer<typeof pixKeyUpdateSchema>;
+
+// ── Receipts ─────────────────────────────────────────────────────────────────
+
+/** Recibo exposto na página pública (ADR-0006): lista FECHADA de campos. */
+export interface PublicReceipt {
+  amountCents: number;
+  contractTitle: string;
+  installmentsCount: number;
+  paidAt: string;
+  payerName: string | null;
+  receiverName: string | null;
+  sequence: number;
+}
 
 // ── Participants & invites ───────────────────────────────────────────────────
 

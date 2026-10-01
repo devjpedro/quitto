@@ -13,8 +13,14 @@ const RING = {
   rotation: 125,
 } as const;
 
+// brand: token-driven pra adaptar ao dark (arco segue --primary, track é o
+// mesmo teal em baixa opacidade). inverted: anel branco fixo sobre o painel de
+// marca (bg-brand-panel) — não precisa reagir a tema, já é sempre escuro/teal.
 const RING_COLORS: Record<LogoVariant, { track: string; arc: string }> = {
-  brand: { track: "#cfe8e2", arc: "#0f766e" },
+  brand: {
+    track: "color-mix(in oklab, var(--primary) 22%, transparent)",
+    arc: "var(--primary)",
+  },
   inverted: { track: "rgba(255,255,255,0.35)", arc: "#ffffff" },
 };
 

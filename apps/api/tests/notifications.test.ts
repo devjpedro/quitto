@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { NOTIFICATION_TYPE, todayISO } from "@quitto/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
+import { addDays } from "../src/lib/dates";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -335,7 +336,9 @@ describe("sweep de lembretes", () => {
           requiresConfirmation: false,
           schedule: {
             mode: "custom",
-            installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+            installments: [
+              { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+            ],
           },
         }),
       })
@@ -358,6 +361,37 @@ describe("sweep de lembretes", () => {
     expect(rows[0]?.type).toBe("installment_overdue");
   });
 
+  it("dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
+    const ownerId = await meId(ownerCookie);
+    const res = await app.handle(
+      new Request("http://localhost/api/contracts", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: ownerCookie },
+        body: JSON.stringify({
+          title: "Venda",
+          ownerRole: "seller",
+          requiresConfirmation: false,
+          schedule: {
+            mode: "auto",
+            totalAmountCents: 3000,
+            installmentsCount: 3,
+            firstDueDate: addDays(todayISO(), -2),
+          },
+        }),
+      })
+    );
+    const contractId = (await res.json()).id as string;
+
+    await runReminderSweep();
+
+    const rows = await notifsFor(ownerId, contractId);
+    const types = rows.map((r) => r.type);
+    expect(types).toContain("installment_overdue_receivable");
+    expect(types).not.toContain("installment_overdue");
+    expect(types).not.toContain("installment_due_soon");
+  });
+
   it.skipIf(!hasStorage)(
     "não gera lembrete para parcela em awaiting_confirmation",
     async () => {
@@ -375,7 +409,9 @@ describe("sweep de lembretes", () => {
             requiresConfirmation: true,
             schedule: {
               mode: "custom",
-              installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+              installments: [
+                { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+              ],
             },
           }),
         })

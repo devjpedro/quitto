@@ -13,7 +13,7 @@ export function DropdownMenuContent({
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         className={cn(
-          "data-[state=closed]:fade-out data-[state=open]:fade-in z-50 min-w-[10rem] overflow-hidden rounded-md border border-border bg-background p-1 text-foreground shadow-md data-[state=closed]:animate-out data-[state=open]:animate-in",
+          "data-[state=closed]:fade-out data-[state=open]:fade-in material-overlay z-50 min-w-[10rem] overflow-hidden rounded-md border border-border-strong p-1 text-foreground shadow-[var(--shadow-lg)] duration-[var(--dur-base)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in",
           className
         )}
         sideOffset={4}

@@ -53,3 +53,20 @@ export function generateSchedule(input: GenerateScheduleInput): ScheduleRow[] {
     dueDate: addMonths(input.firstDueDate, i),
   }));
 }
+
+export interface GenerateMonthlyScheduleInput {
+  firstDueDate: string;
+  monthlyAmountCents: number;
+  months: number;
+}
+
+/** Builds N equal installments of exactly `monthlyAmountCents` with monthly due dates. */
+export function generateMonthlySchedule(
+  input: GenerateMonthlyScheduleInput
+): ScheduleRow[] {
+  return generateSchedule({
+    totalAmountCents: input.monthlyAmountCents * input.months,
+    installmentsCount: input.months,
+    firstDueDate: input.firstDueDate,
+  });
+}

@@ -62,6 +62,8 @@ export const AUDIT_TYPE = {
   paymentDisputed: "payment_disputed",
   installmentPaid: "installment_paid",
   participantLeft: "participant_left",
+  receiptShareCreated: "receipt_share_created",
+  receiptShareRevoked: "receipt_share_revoked",
 } as const;
 export type AuditType = (typeof AUDIT_TYPE)[keyof typeof AUDIT_TYPE];
 
@@ -72,6 +74,8 @@ export const NOTIFICATION_TYPE = {
   installmentPaid: "installment_paid",
   installmentDueSoon: "installment_due_soon",
   installmentOverdue: "installment_overdue",
+  installmentDueSoonReceivable: "installment_due_soon_receivable",
+  installmentOverdueReceivable: "installment_overdue_receivable",
   participantLeft: "participant_left",
   inviteAccepted: "invite_accepted",
   inviteDeclined: "invite_declined",
@@ -85,6 +89,9 @@ export const NOTIFICATION_TYPES = Object.values(NOTIFICATION_TYPE) as [
 
 /** Quantos dias antes do vencimento o lembrete "due_soon" dispara. */
 export const REMINDER_WINDOW_DAYS = 3;
+
+/** Até quantos dias após o vencimento o lembrete "overdue" ainda dispara. */
+export const OVERDUE_LOOKBACK_DAYS = 7;
 
 const PAID_STATUSES: ReadonlySet<string> = new Set([
   INSTALLMENT_STATUS.paid,

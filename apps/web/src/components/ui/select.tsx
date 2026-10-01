@@ -37,7 +37,7 @@ export function SelectContent({
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={cn(
-          "data-[state=closed]:fade-out data-[state=open]:fade-in z-50 overflow-hidden rounded-md border border-border bg-background text-foreground shadow-md data-[state=closed]:animate-out data-[state=open]:animate-in",
+          "data-[state=closed]:fade-out data-[state=open]:fade-in material-overlay z-50 overflow-hidden rounded-md border border-border-strong text-foreground shadow-[var(--shadow-lg)] duration-[var(--dur-base)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in",
           className
         )}
         position="popper"

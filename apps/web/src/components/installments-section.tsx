@@ -1,7 +1,8 @@
-import { isOverdue } from "@quitto/shared";
+import { isOverdue, isPaidStatus } from "@quitto/shared";
 import { useState } from "react";
+import { Money } from "@/components/money";
 import { StatusBadge } from "@/components/status-badge";
-import { formatBRL, formatISODateBR, todayISO } from "@/lib/format";
+import { formatISODateBR, todayISO } from "@/lib/format";
 import {
   countByFilter,
   filterInstallments,
@@ -11,9 +12,14 @@ import {
   INSTALLMENT_FILTER_EMPTY,
   INSTALLMENT_FILTER_LABEL,
 } from "@/lib/labels";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
 const FILTER_ORDER: InstallmentFilter[] = ["all", "due", "overdue", "paid"];
+const SEQ_TONE_CLASS: Record<"open" | "paid", string> = {
+  paid: "bg-success/12 text-success-foreground",
+  open: "bg-muted text-foreground",
+};
 
 interface Installment {
   amountCents: number;
@@ -89,27 +95,41 @@ export function InstallmentsSection({
         <ul className="flex flex-col gap-2">
           {shown.map((it) => {
             const late = isOverdue(it.dueDate, it.status, today);
+            const paid = isPaidStatus(it.status);
+            const seqToneClass = late
+              ? "bg-destructive/12 text-destructive"
+              : SEQ_TONE_CLASS[paid ? "paid" : "open"];
             return (
               <li key={it.id}>
                 <button
-                  className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 text-left shadow-xs transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className={cn(
+                    "relative flex w-full cursor-pointer items-center gap-3 overflow-hidden rounded-xl border p-3 text-left shadow-[var(--shadow-sm)] transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    late
+                      ? "border-destructive/25 bg-destructive/5"
+                      : "border-border bg-card"
+                  )}
                   data-testid={`installment-row-${it.id}`}
                   onClick={() => onSelect(it.id)}
                   type="button"
                 >
+                  {late ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-0 left-0 w-1 bg-destructive"
+                    />
+                  ) : null}
                   <span
-                    aria-hidden="true"
-                    className={`absolute inset-y-0 left-0 w-1 ${late ? "bg-destructive/70" : "bg-primary/40"}`}
-                  />
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-display font-semibold text-foreground text-xs tabular-nums">
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-full font-semibold text-xs tabular-nums",
+                      seqToneClass
+                    )}
+                  >
                     {it.sequence}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-foreground text-sm tabular-nums">
                     {formatISODateBR(it.dueDate)}
                   </span>
-                  <span className="shrink-0 whitespace-nowrap font-display font-semibold text-foreground text-sm tabular-nums">
-                    {formatBRL(it.amountCents)}
-                  </span>
+                  <Money cents={it.amountCents} size="sm" />
                   <StatusBadge overdue={late} status={it.status} />
                 </button>
               </li>

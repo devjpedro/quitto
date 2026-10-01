@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
+import { Money } from "@/components/money";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatBRL } from "@/lib/format";
@@ -28,7 +29,7 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
 
   return (
     <Link
-      className="group relative flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-6"
+      className="group relative flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:scale-[0.994] sm:flex-row sm:items-center sm:gap-6"
       data-testid={`contract-row-${contract.id}`}
       params={{ id: contract.id }}
       search={{ installment: undefined }}
@@ -41,7 +42,7 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate font-bold font-display text-base text-foreground transition-colors group-hover:text-primary">
+          <span className="truncate font-bold text-base text-foreground transition-colors group-hover:text-primary">
             {contract.title}
           </span>
           <Badge tone="brand">
@@ -53,22 +54,22 @@ export function ContractRow({ contract }: { contract: ContractListItem }) {
           <span className="font-medium text-foreground/80">
             {formatBRL(contract.paidCents)}
           </span>{" "}
-          / {formatBRL(contract.totalCents)} · {contract.installmentsCount}{" "}
-          parcelas
+          pago · {contract.installmentsCount} parcelas
         </p>
       </div>
 
       <div className="w-full sm:w-44">
         <Progress aria-label="Progresso de quitação" value={contract.percent} />
         <p className="mt-1.5 text-muted-foreground text-xs tabular-nums">
-          <span className="font-display font-semibold text-foreground">
+          <span className="font-semibold text-foreground">
             {contract.percent}%
           </span>{" "}
           quitado
         </p>
       </div>
 
-      <div>
+      <div className="flex flex-row items-center gap-3 sm:flex-col sm:items-end sm:gap-1.5">
+        <Money cents={contract.totalCents} size="sm" />
         {overdue ? (
           <Badge tone="danger">{contract.overdueCount} atrasadas</Badge>
         ) : (

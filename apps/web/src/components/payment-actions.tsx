@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useFocusOnOpen } from "@/hooks/use-focus-restore";
 import {
   useConfirmPaymentMutation,
   useDisputePaymentMutation,
@@ -41,6 +42,12 @@ export function PaymentActions({
   const markPaidTriggerRef = useRef<HTMLButtonElement>(null);
   const confirmTriggerRef = useRef<HTMLButtonElement>(null);
   const disputeTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Foco de abertura no Cancelar, não na ação irreversível, nos dois diálogos
+  // que são só botões (ver useFocusOnOpen). O de contestar não entra: lá o
+  // primeiro tabbable já é o campo do motivo, que é onde o foco deve cair.
+  const markPaidCancel = useFocusOnOpen();
+  const confirmCancel = useFocusOnOpen();
 
   function restoreFocus(ref: React.RefObject<HTMLButtonElement | null>) {
     return (event: Event) => {
@@ -107,6 +114,7 @@ export function PaymentActions({
         <DialogContent
           description="Esta ação marca a parcela como paga e não pode ser desfeita."
           onCloseAutoFocus={restoreFocus(markPaidTriggerRef)}
+          onOpenAutoFocus={markPaidCancel.focusOnOpen}
           title="Marcar como paga"
         >
           <div className="flex gap-2">
@@ -120,6 +128,7 @@ export function PaymentActions({
             </Button>
             <Button
               onClick={() => setMarkPaidOpen(false)}
+              ref={markPaidCancel.focusRef}
               type="button"
               variant="outline"
             >
@@ -133,6 +142,7 @@ export function PaymentActions({
         <DialogContent
           description="Esta ação marca a parcela como confirmada e paga."
           onCloseAutoFocus={restoreFocus(confirmTriggerRef)}
+          onOpenAutoFocus={confirmCancel.focusOnOpen}
           title="Confirmar pagamento"
         >
           <div className="flex gap-2">
@@ -146,6 +156,7 @@ export function PaymentActions({
             </Button>
             <Button
               onClick={() => setConfirmOpen(false)}
+              ref={confirmCancel.focusRef}
               type="button"
               variant="outline"
             >

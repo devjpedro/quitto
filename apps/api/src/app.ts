@@ -2,17 +2,20 @@ import { cors } from "@elysiajs/cors";
 import { captureException } from "@sentry/bun";
 import { Elysia, t } from "elysia";
 import { auth } from "./auth";
+import { runReminderSweep } from "./cron/reminders";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { accountModule } from "./modules/account";
 import { contractsModule } from "./modules/contracts";
 import { dashboardModule } from "./modules/dashboard";
 import { documentsModule } from "./modules/documents";
+import { internalCronModule } from "./modules/internal-cron";
 import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
 import { notificationsModule } from "./modules/notifications";
 import { participantsModule } from "./modules/participants";
 import { paymentsModule } from "./modules/payments";
+import { receiptSharesModule } from "./modules/receipt-shares";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
   "/ping",
@@ -36,11 +39,18 @@ export function buildApp() {
     .use(contractsModule)
     .use(paymentsModule)
     .use(documentsModule)
+    .use(receiptSharesModule)
     .use(participantsModule)
     .use(invitesModule)
     .use(notificationsModule)
     .use(dashboardModule)
-    .use(accountModule);
+    .use(accountModule)
+    .use(
+      internalCronModule({
+        secret: env.CRON_SECRET,
+        run: () => runReminderSweep(),
+      })
+    );
 }
 
 export const app = buildApp();

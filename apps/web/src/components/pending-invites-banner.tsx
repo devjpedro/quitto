@@ -1,4 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useMyInvitesQuery } from "@/hooks/use-my-invites";
 import { ROLE_LABEL } from "@/lib/labels";
 
@@ -13,27 +16,27 @@ export function PendingInvitesBanner() {
 
   return (
     <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <p className="font-display font-semibold text-foreground text-sm">
+      <p className="flex items-center gap-2 font-semibold text-foreground text-sm">
+        <Mail aria-hidden="true" className="size-4 text-primary" />
         Você tem {invites.length} convite
         {invites.length > 1 ? "s" : ""} pendente
         {invites.length > 1 ? "s" : ""}
       </p>
-      <ul className="mt-2 flex flex-col gap-2">
+      <ul className="mt-3 flex flex-col gap-2">
         {invites.map((inv) => (
-          <li className="flex items-center gap-2 text-sm" key={inv.token}>
-            <span className="font-medium text-foreground">
+          <li
+            className="flex items-center gap-3 rounded-lg border border-transparent bg-card p-2.5 shadow-xs transition-colors hover:border-primary/40"
+            key={inv.token}
+          >
+            <span className="min-w-0 flex-1 truncate font-medium text-foreground text-sm">
               {inv.contractTitle}
             </span>
-            <span className="text-muted-foreground text-xs">
-              {ROLE_LABEL[inv.role] ?? inv.role}
-            </span>
-            <Link
-              className="ml-auto text-primary text-sm underline"
-              params={{ token: inv.token }}
-              to="/invites/$token"
-            >
-              Ver convite
-            </Link>
+            <Badge tone="brand">{ROLE_LABEL[inv.role] ?? inv.role}</Badge>
+            <Button asChild size="sm" variant="outline">
+              <Link params={{ token: inv.token }} to="/invites/$token">
+                Ver convite
+              </Link>
+            </Button>
           </li>
         ))}
       </ul>
