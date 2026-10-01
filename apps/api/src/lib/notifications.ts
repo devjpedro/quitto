@@ -123,6 +123,42 @@ export async function createNotifications(
     .onConflictDoNothing();
 }
 
+export interface InsertedNotification {
+  contractId: string;
+  installmentId: string | null;
+  type: string;
+  userId: string;
+}
+
+/** Como createNotifications, mas devolve só as linhas de fato inseridas (dedupe já filtrado). */
+export async function insertNotificationsReturning(
+  exec: Exec,
+  inputs: NotificationInput[]
+): Promise<InsertedNotification[]> {
+  if (inputs.length === 0) {
+    return [];
+  }
+  return await exec
+    .insert(notification)
+    .values(
+      inputs.map((i) => ({
+        userId: i.userId,
+        type: i.type,
+        contractId: i.contractId,
+        installmentId: i.installmentId ?? null,
+        metadata: i.metadata ?? null,
+        dedupeKey: i.dedupeKey ?? null,
+      }))
+    )
+    .onConflictDoNothing()
+    .returning({
+      userId: notification.userId,
+      type: notification.type,
+      contractId: notification.contractId,
+      installmentId: notification.installmentId,
+    });
+}
+
 /** Convenience: resolve recipients for a target and build event notifications. */
 export async function notifyTarget(
   exec: Exec,
