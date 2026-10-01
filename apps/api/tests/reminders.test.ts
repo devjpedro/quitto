@@ -139,4 +139,23 @@ describe("computeReminders (today=2026-07-10)", () => {
     );
     expect(out).toEqual([]);
   });
+
+  it("vencida há 7 dias ainda gera lembrete (pagador e recebedor)", () => {
+    const out = computeReminders(
+      [base({ dueDate: "2026-07-03", receiverUserId: "owner" })],
+      today
+    );
+    expect(out.map((r) => r.type)).toEqual([
+      "installment_overdue",
+      "installment_overdue_receivable",
+    ]);
+  });
+
+  it("vencida há 8 dias não gera lembrete (pagador e recebedor)", () => {
+    const out = computeReminders(
+      [base({ dueDate: "2026-07-02", receiverUserId: "owner" })],
+      today
+    );
+    expect(out).toEqual([]);
+  });
 });

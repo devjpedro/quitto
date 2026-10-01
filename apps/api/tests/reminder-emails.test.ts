@@ -1,9 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { todayISO } from "@quitto/shared";
 import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
-import { user } from "../src/db/schema";
+import { notification, user } from "../src/db/schema";
+import { addDays } from "../src/lib/dates";
 import type { SendEmailInput } from "../src/lib/mailer";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
@@ -22,7 +24,7 @@ async function userWithOverdueContract(tag: string, optIn: boolean) {
           mode: "auto",
           totalAmountCents: 3000,
           installmentsCount: 2,
-          firstDueDate: "2026-07-10",
+          firstDueDate: addDays(todayISO(), -2),
         },
       }),
     })
@@ -75,11 +77,11 @@ describe("e-mail de lembrete na varredura", () => {
     expect(r.sent.filter((s) => s.to === email)).toHaveLength(0);
   });
 
-  it("falha de envio pra um usuário não impede o outro", async () => {
+  it("falha de envio pra um usuário não impede o outro nem as notificações in-app", async () => {
     const a = await userWithOverdueContract("rem-fail-a", true);
     const b = await userWithOverdueContract("rem-fail-b", true);
     const delivered: string[] = [];
-    await runReminderSweep({
+    const result = await runReminderSweep({
       emailEnabled: true,
       webOrigin,
       send: (i) => {
@@ -90,6 +92,31 @@ describe("e-mail de lembrete na varredura", () => {
         return Promise.resolve();
       },
     });
+    expect(result.emailsSent).toBeGreaterThanOrEqual(1);
     expect(delivered).toContain(b);
+    const [rowA] = await db.select().from(user).where(eq(user.email, a));
+    const notifsA = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.userId, rowA?.id as string));
+    expect(notifsA.length).toBeGreaterThan(0);
+  });
+
+  it("send lançando de forma síncrona pra todos → varredura resolve, notificações persistidas", async () => {
+    const a = await userWithOverdueContract("rem-throw", true);
+    const result = await runReminderSweep({
+      emailEnabled: true,
+      webOrigin,
+      send: () => {
+        throw new Error("sync boom");
+      },
+    });
+    expect(result.emailsSent).toBe(0);
+    const [rowA] = await db.select().from(user).where(eq(user.email, a));
+    const notifsA = await db
+      .select()
+      .from(notification)
+      .where(eq(notification.userId, rowA?.id as string));
+    expect(notifsA.length).toBeGreaterThan(0);
   });
 });

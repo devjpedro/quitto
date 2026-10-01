@@ -20,13 +20,18 @@ export function EmailRemindersToggle({ checked }: { checked: boolean }) {
       <button
         aria-checked={checked}
         aria-describedby={descId}
+        aria-disabled={mutation.isPending}
         aria-labelledby={labelId}
         className={cn(
-          "relative inline-flex h-11 w-16 shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+          "relative inline-flex h-11 w-16 shrink-0 cursor-pointer items-center rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-50",
           checked ? "bg-primary" : "bg-muted"
         )}
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate(!checked)}
+        onClick={() => {
+          if (mutation.isPending) {
+            return;
+          }
+          mutation.mutate(!checked);
+        }}
         role="switch"
         type="button"
       >

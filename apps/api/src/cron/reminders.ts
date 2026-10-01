@@ -1,8 +1,10 @@
 import { CONTRACT_STATUS, INSTALLMENT_STATUS, todayISO } from "@quitto/shared";
+import { captureException } from "@sentry/bun";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { env } from "../env";
+import { emailRemindersEnabled } from "../lib/email-reminders";
 import { type SendEmailInput, sendEmail } from "../lib/mailer";
 import {
   insertNotificationsReturning,
@@ -30,8 +32,7 @@ export interface SweepResult {
 export async function runReminderSweep(
   deps: SweepDeps = {}
 ): Promise<SweepResult> {
-  const emailEnabled =
-    deps.emailEnabled ?? env.EMAIL_REMINDERS_ENABLED === "true";
+  const emailEnabled = deps.emailEnabled ?? emailRemindersEnabled();
   const today = todayISO();
 
   const activeContracts = await db
@@ -100,16 +101,23 @@ export async function runReminderSweep(
 
   const reminders = computeReminders(inputs, today);
   const inserted = await insertNotificationsReturning(db, reminders);
-  const emailsSent = emailEnabled
-    ? await sendReminderEmails(inserted, {
+  let emailsSent = 0;
+  if (emailEnabled) {
+    // A fase de e-mail nunca derruba a varredura: as notificações in-app já foram inseridas.
+    try {
+      emailsSent = await sendReminderEmails(inserted, {
         send: deps.send ?? sendEmail,
         webOrigin: deps.webOrigin ?? env.WEB_ORIGIN,
-      })
-    : 0;
+      });
+    } catch (error) {
+      console.error("[cron:reminders] falha na fase de e-mail", error);
+      captureException(error);
+    }
+  }
   return { reminders: reminders.length, emailsSent };
 }
 
-// Executado diretamente (Fly scheduled Machine / `bun run cron:reminders`).
+// Executado diretamente (`bun run cron:reminders`). Em produção o disparo é o GitHub Actions → POST /api/internal/cron/reminders (D2).
 if (import.meta.main) {
   const { reminders, emailsSent } = await runReminderSweep();
   console.log(`[cron:reminders] ${reminders} lembretes, ${emailsSent} e-mails`);

@@ -90,6 +90,9 @@ export const NOTIFICATION_TYPES = Object.values(NOTIFICATION_TYPE) as [
 /** Quantos dias antes do vencimento o lembrete "due_soon" dispara. */
 export const REMINDER_WINDOW_DAYS = 3;
 
+/** Até quantos dias após o vencimento o lembrete "overdue" ainda dispara. */
+export const OVERDUE_LOOKBACK_DAYS = 7;
+
 const PAID_STATUSES: ReadonlySet<string> = new Set([
   INSTALLMENT_STATUS.paid,
   INSTALLMENT_STATUS.confirmed,

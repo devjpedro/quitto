@@ -2,6 +2,7 @@ import {
   INSTALLMENT_STATUS,
   isPaidStatus,
   NOTIFICATION_TYPE,
+  OVERDUE_LOOKBACK_DAYS,
   REMINDER_WINDOW_DAYS,
 } from "@quitto/shared";
 import { addDays } from "./dates";
@@ -32,7 +33,7 @@ export interface ReminderNotification {
 
 /**
  * Pure: maps open installments to the reminder notifications to create today.
- * `due_soon` for [today, today+REMINDER_WINDOW_DAYS]; `overdue` for past due.
+ * `due_soon` for [today, today+REMINDER_WINDOW_DAYS]; `overdue` for past due up to OVERDUE_LOOKBACK_DAYS back.
  * Payer gets the "a pagar" framing; the seller-owner gets "a receber". When the
  * seller-owner is also the resolved payer (no linked buyer), only "a receber".
  */
@@ -41,6 +42,7 @@ export function computeReminders(
   todayISO: string
 ): ReminderNotification[] {
   const windowEnd = addDays(todayISO, REMINDER_WINDOW_DAYS);
+  const overdueSince = addDays(todayISO, -OVERDUE_LOOKBACK_DAYS);
   const out: ReminderNotification[] = [];
   const push = (it: ReminderInput, userId: string, type: ReminderType) =>
     out.push({
@@ -61,6 +63,9 @@ export function computeReminders(
     }
     let overdue: boolean;
     if (it.dueDate < todayISO) {
+      if (it.dueDate < overdueSince) {
+        continue;
+      }
       overdue = true;
     } else if (it.dueDate <= windowEnd) {
       overdue = false;

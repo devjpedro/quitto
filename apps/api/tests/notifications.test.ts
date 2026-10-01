@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { NOTIFICATION_TYPE, todayISO } from "@quitto/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { app } from "../src/app";
 import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
+import { addDays } from "../src/lib/dates";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -335,7 +336,9 @@ describe("sweep de lembretes", () => {
           requiresConfirmation: false,
           schedule: {
             mode: "custom",
-            installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+            installments: [
+              { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+            ],
           },
         }),
       })
@@ -373,7 +376,7 @@ describe("sweep de lembretes", () => {
             mode: "auto",
             totalAmountCents: 3000,
             installmentsCount: 3,
-            firstDueDate: "2026-07-10",
+            firstDueDate: addDays(todayISO(), -2),
           },
         }),
       })
@@ -406,7 +409,9 @@ describe("sweep de lembretes", () => {
             requiresConfirmation: true,
             schedule: {
               mode: "custom",
-              installments: [{ amountCents: 1000, dueDate: "2020-01-01" }],
+              installments: [
+                { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+              ],
             },
           }),
         })

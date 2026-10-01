@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { user as userTable } from "../db/schema";
-import { env } from "../env";
+import { emailRemindersEnabled } from "../lib/email-reminders";
 import { ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
@@ -27,7 +27,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         image: user.image ?? null,
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
-        emailRemindersAvailable: env.EMAIL_REMINDERS_ENABLED === "true",
+        emailRemindersAvailable: emailRemindersEnabled(),
       };
     },
     {
