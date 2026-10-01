@@ -107,4 +107,27 @@ describe("reminderDigestEmail", () => {
     expect(html).toContain("R$ 1.250,00");
     expect(html).not.toContain("Se você não solicitou");
   });
+
+  it("escapa URLs em atributos href", () => {
+    const bad = 'https://app.test/x"><script>';
+    const { html } = reminderDigestEmail({
+      name: "Ana",
+      items: [{ ...item, contractUrl: bad }],
+      homeUrl: bad,
+      settingsUrl: bad,
+    });
+    expect(html).not.toContain('"><script>');
+    expect(html).toContain("https://app.test/x&quot;&gt;&lt;script&gt;");
+  });
+
+  it("normaliza quebras de linha no assunto", () => {
+    const { subject } = reminderDigestEmail({
+      name: "Ana",
+      items: [{ ...item, contractTitle: "Aluguel\r\nBcc: x@y.z" }],
+      ...urls,
+    });
+    expect(subject).toBe(
+      "Lembrete: parcela 3 de Aluguel Bcc: x@y.z vence em 04/10/2026"
+    );
+  });
 });

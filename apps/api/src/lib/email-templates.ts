@@ -33,7 +33,7 @@ function layout(
             <h1 style="font-size:20px;margin:0 0 12px">${heading}</h1>
             ${bodyHtml}
             <p style="margin:24px 0">
-              <a href="${ctaUrl}" style="background:${ACCENT};color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">${ctaLabel}</a>
+              <a href="${escapeHtml(ctaUrl)}" style="background:${ACCENT};color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">${ctaLabel}</a>
             </p>
             <p style="font-size:12px;color:#8a8378;margin:24px 0 0">${footerHtml}</p>
           </td></tr>
@@ -110,9 +110,10 @@ export function reminderDigestEmail(args: {
   settingsUrl: string;
 }): { subject: string; html: string } {
   const [first] = args.items;
+  const subjectTitle = first?.contractTitle.replace(/\s+/g, " ").trim();
   const subject =
     args.items.length === 1 && first
-      ? `Lembrete: parcela ${first.sequence} de ${first.contractTitle} ${
+      ? `Lembrete: parcela ${first.sequence} de ${subjectTitle} ${
           first.overdue
             ? "está vencida"
             : `vence em ${formatISODateBR(first.dueDate)}`
@@ -121,11 +122,11 @@ export function reminderDigestEmail(args: {
   const rows = args.items
     .map(
       (i) =>
-        `<li style="margin:0 0 8px"><a href="${i.contractUrl}" style="color:${ACCENT}">${escapeHtml(i.contractTitle)}</a> · parcela ${i.sequence} · ${formatCentsBRL(i.amountCents)} · ${itemWhen(i)} <span style="color:#8a8378">(${i.direction === "pay" ? "a pagar" : "a receber"})</span></li>`
+        `<li style="margin:0 0 8px"><a href="${escapeHtml(i.contractUrl)}" style="color:${ACCENT}">${escapeHtml(i.contractTitle)}</a> · parcela ${i.sequence} · ${formatCentsBRL(i.amountCents)} · ${itemWhen(i)} <span style="color:#8a8378">(${i.direction === "pay" ? "a pagar" : "a receber"})</span></li>`
     )
     .join("");
   const body = `<p style="margin:0 0 12px">Olá, ${escapeHtml(args.name)}. Estas parcelas pedem sua atenção:</p><ul style="margin:0;padding-left:18px">${rows}</ul>`;
-  const footer = `Você recebe estes e-mails porque ativou lembretes por e-mail. <a href="${args.settingsUrl}" style="color:#8a8378">Desativar</a>`;
+  const footer = `Você recebe estes e-mails porque ativou lembretes por e-mail. <a href="${escapeHtml(args.settingsUrl)}" style="color:#8a8378">Desativar</a>`;
   return {
     subject,
     html: layout(
