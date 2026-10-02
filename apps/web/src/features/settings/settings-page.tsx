@@ -6,6 +6,7 @@ import { EmailRemindersToggle } from "@/components/email-reminders-toggle";
 import { PageContainer } from "@/components/page-container";
 import { PixKeyForm } from "@/components/pix-key-form";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useMeQuery } from "@/hooks/use-me";
 import { PAGE_TITLE } from "@/lib/page-title";
@@ -56,7 +57,8 @@ export function SettingsPage() {
         </SettingsSection>
 
         <SettingsSection title="Recebimento (PIX)">
-          <PixKeyForm />
+          {/* The form seeds its input from /me once, so wait for it. */}
+          {me ? <PixKeyForm /> : <Skeleton className="h-44 w-full" />}
         </SettingsSection>
 
         {me?.emailRemindersAvailable ? (
