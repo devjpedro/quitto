@@ -1,9 +1,4 @@
-import {
-  DEFAULT_LOCALE,
-  isLocale,
-  type Locale,
-  parsePixKey,
-} from "@quitto/shared";
+import { isLocale, type Locale, parsePixKey } from "@quitto/shared";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -12,8 +7,10 @@ import { emailRemindersEnabled } from "../lib/email-reminders";
 import { ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
-// Mirrors LOCALES from @quitto/shared; the test suite checks unknown values get a 422.
+// The union mirrors LOCALES from @quitto/shared.
 const localeSchema = t.Union([t.Literal("pt-BR"), t.Literal("en-US")]);
+// null = the user never chose a language. Only reads return it; PATCH never sets it back.
+const accountLocaleSchema = t.Union([localeSchema, t.Null()]);
 
 export const meModule = new Elysia({ prefix: "/api" })
   .get(
@@ -36,7 +33,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         image: user.image ?? null,
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
-        locale: isLocale(row?.locale) ? row.locale : DEFAULT_LOCALE,
+        locale: isLocale(row?.locale) ? row.locale : null,
         emailRemindersAvailable: emailRemindersEnabled(),
       };
     },
@@ -48,7 +45,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         image: t.Union([t.String(), t.Null()]),
         pixKey: t.Union([t.String(), t.Null()]),
         emailRemindersOptIn: t.Boolean(),
-        locale: localeSchema,
+        locale: accountLocaleSchema,
         emailRemindersAvailable: t.Boolean(),
       }),
     }
@@ -93,7 +90,7 @@ export const meModule = new Elysia({ prefix: "/api" })
       return {
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
-        locale: isLocale(row?.locale) ? row.locale : DEFAULT_LOCALE,
+        locale: isLocale(row?.locale) ? row.locale : null,
       };
     },
     {
@@ -105,7 +102,7 @@ export const meModule = new Elysia({ prefix: "/api" })
       response: t.Object({
         pixKey: t.Union([t.String(), t.Null()]),
         emailRemindersOptIn: t.Boolean(),
-        locale: localeSchema,
+        locale: accountLocaleSchema,
       }),
     }
   );

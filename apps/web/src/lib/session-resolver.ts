@@ -13,7 +13,8 @@ export interface SessionIdentity {
 export interface SessionUser extends SessionIdentity {
   emailRemindersAvailable: boolean;
   emailRemindersOptIn: boolean;
-  locale: Locale;
+  /** null = the user never chose a language (the browser decides until they do). */
+  locale: Locale | null;
   pixKey: string | null;
 }
 

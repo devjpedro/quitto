@@ -50,14 +50,14 @@ describe("opt-in de lembrete por e-mail", () => {
     expect(await r1.json()).toEqual({
       pixKey: "joao@example.com",
       emailRemindersOptIn: true,
-      locale: "pt-BR",
+      locale: null,
     });
 
     const r2 = await patch(cookie, { pixKey: null });
     expect(await r2.json()).toEqual({
       pixKey: null,
       emailRemindersOptIn: true,
-      locale: "pt-BR",
+      locale: null,
     });
     expect((await (await get(cookie)).json()).emailRemindersOptIn).toBe(true);
   });
@@ -75,9 +75,9 @@ describe("idioma da conta", () => {
       })
     );
 
-  it("default é pt-BR", async () => {
+  it("default é null (não escolhido)", async () => {
     const cookie = await signUpCookie(uniqueEmail("me-loc"));
-    expect((await (await get(cookie)).json()).locale).toBe("pt-BR");
+    expect((await (await get(cookie)).json()).locale).toBeNull();
   });
 
   it("PATCH grava en-US sem mexer no resto", async () => {
