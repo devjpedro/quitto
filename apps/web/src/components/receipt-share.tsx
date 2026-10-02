@@ -7,14 +7,14 @@ import {
 import { Copy, Link2, Mail, MessageCircle, Share2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/legacy-ui/button";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/legacy-ui/dropdown-menu";
 import { useFocusOnOpen, useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateReceiptShareMutation,

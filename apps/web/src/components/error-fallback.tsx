@@ -1,5 +1,5 @@
 import type { FallbackProps } from "react-error-boundary";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/legacy-ui/button";
 import { errorMessage } from "@/lib/error-message";
 
 /** Route-level error boundary fallback. Friendly message + retry (resets the boundary). */

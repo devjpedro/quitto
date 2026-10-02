@@ -1,10 +1,10 @@
 import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { AuthBrandPanel } from "@/components/auth-brand-panel";
+import { Button } from "@/components/legacy-ui/button";
+import { Input } from "@/components/legacy-ui/input";
+import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-error-message";

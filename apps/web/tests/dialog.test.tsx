@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Dialog, DialogContent } from "../src/components/ui/dialog";
+import { Dialog, DialogContent } from "../src/components/legacy-ui/dialog";
 
 const CLOSE_LABEL = /fechar/i;
 

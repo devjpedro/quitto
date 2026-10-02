@@ -12,16 +12,16 @@ import {
   Sun,
 } from "lucide-react";
 import { Fragment } from "react";
-import { Logo, LogoMark } from "@/components/logo";
-import { NotificationBell } from "@/components/notification-bell";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { CommandShortcut } from "@/components/ui/command";
+import { CommandShortcut } from "@/components/legacy-ui/command";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/legacy-ui/tooltip";
+import { Logo, LogoMark } from "@/components/logo";
+import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useMeQuery } from "@/hooks/use-me";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { useTheme } from "@/hooks/use-theme";

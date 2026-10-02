@@ -1,10 +1,10 @@
 import { DELETE_CONFIRM_PHRASE } from "@quitto/shared";
 import { TriangleAlert } from "lucide-react";
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/legacy-ui/button";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
+import { Input } from "@/components/legacy-ui/input";
+import { Label } from "@/components/legacy-ui/label";
 import { useDeleteAccountMutation } from "@/hooks/use-account";
 
 /**

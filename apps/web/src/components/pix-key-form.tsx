@@ -1,8 +1,8 @@
 import { isValidPixKey } from "@quitto/shared";
 import { type FormEvent, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/legacy-ui/button";
+import { Input } from "@/components/legacy-ui/input";
+import { Label } from "@/components/legacy-ui/label";
 import { useMeQuery } from "@/hooks/use-me";
 import { useUpdatePixKeyMutation } from "@/hooks/use-pix";
 

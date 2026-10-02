@@ -1,5 +1,5 @@
 import { Controller, useFormContext } from "react-hook-form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/legacy-ui/input";
 import { formatBRL } from "@/lib/format";
 
 const NON_DIGIT = /\D/g;

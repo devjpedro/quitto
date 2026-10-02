@@ -1,7 +1,7 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BrandLoader } from "@/components/brand-loader";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/legacy-ui/button";
 import { reloadOnceForChunkError } from "@/lib/chunk-reload";
 import { errorMessage } from "@/lib/error-message";
 

@@ -1,14 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import { LogOut, MoreVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/legacy-ui/button";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/legacy-ui/dropdown-menu";
 import {
   useDeleteContractMutation,
   useLeaveContractMutation,

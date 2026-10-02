@@ -1,5 +1,5 @@
 import { isPaidStatus } from "@quitto/shared";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/legacy-ui/badge";
 import {
   INSTALLMENT_STATUS_LABEL,
   INSTALLMENT_STATUS_TONE,

@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { ContractStatusBadge } from "@/components/contract-status-badge";
+import { Badge } from "@/components/legacy-ui/badge";
+import { Progress } from "@/components/legacy-ui/progress";
 import { Money } from "@/components/money";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { formatBRL } from "@/lib/format";
 
 interface ContractListItem {

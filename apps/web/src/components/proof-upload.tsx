@@ -1,6 +1,6 @@
 import { Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/legacy-ui/button";
 import { useSubmitProofMutation } from "@/hooks/use-payment-mutations";
 import { PROOF_ALLOWED_MIME, validateProofFile } from "@/lib/proof";
 

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/legacy-ui/button";
 import { LogoMark } from "@/components/logo";
-import { Button } from "@/components/ui/button";
 
 export function NotFound() {
   return (

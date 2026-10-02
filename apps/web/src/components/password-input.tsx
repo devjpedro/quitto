@@ -1,6 +1,6 @@
 import { Eye, EyeOff } from "lucide-react";
 import { type ComponentProps, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/legacy-ui/input";
 import { cn } from "@/lib/utils";
 
 /** Password field with a show/hide toggle. Mirrors the DateField calendar-toggle pattern. */

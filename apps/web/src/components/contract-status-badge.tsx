@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/legacy-ui/badge";
 import { CONTRACT_STATUS_LABEL, CONTRACT_STATUS_TONE } from "@/lib/labels";
 
 /** Renders the contract status (active/completed/cancelled) as a pt-BR badge. */

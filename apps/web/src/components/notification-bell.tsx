@@ -5,7 +5,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/legacy-ui/popover";
 import {
   useMarkAllReadMutation,
   useMarkReadMutation,

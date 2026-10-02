@@ -1,8 +1,8 @@
 import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { Button } from "@/components/legacy-ui/button";
+import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { resetPassword } from "@/lib/auth-client";
 import { PAGE_TITLE } from "@/lib/page-title";

@@ -1,9 +1,9 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Button } from "@/components/legacy-ui/button";
+import { Skeleton } from "@/components/legacy-ui/skeleton";
 import { Money } from "@/components/money";
 import { PageContainer } from "@/components/page-container";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   useAcceptInviteMutation,

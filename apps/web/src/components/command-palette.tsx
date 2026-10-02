@@ -17,9 +17,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+} from "@/components/legacy-ui/command";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
+import { Sheet, SheetContent } from "@/components/legacy-ui/sheet";
 import { contractsQueryOptions } from "@/hooks/use-contracts";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { useTheme } from "@/hooks/use-theme";

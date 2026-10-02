@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from "react";
+import { Button } from "@/components/legacy-ui/button";
+import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { changePassword } from "@/lib/auth-client";
 
 export function ChangePasswordForm() {

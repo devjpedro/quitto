@@ -10,25 +10,25 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { AddParticipantForm } from "@/components/add-participant-form";
 import { CopyButton } from "@/components/copy-button";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Badge } from "@/components/legacy-ui/badge";
+import { Button } from "@/components/legacy-ui/button";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/legacy-ui/dropdown-menu";
+import { Input } from "@/components/legacy-ui/input";
+import { Label } from "@/components/legacy-ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+} from "@/components/legacy-ui/select";
+import { Sheet, SheetContent } from "@/components/legacy-ui/sheet";
 import { useFocusOnOpen, useFocusRestore } from "@/hooks/use-focus-restore";
 import {
   useCreateInviteMutation,

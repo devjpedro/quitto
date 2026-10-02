@@ -4,7 +4,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/legacy-ui/dropdown-menu";
 
 interface ExportMenuProps {
   contractId: string;
