@@ -10,7 +10,7 @@ export interface MoneyParts {
 
 export type DatePreset = "short" | "medium" | "long";
 
-const SPACE_RE = / /g; // non-breaking space → regular space
+const SPACE_RE = /[  ]/g; // non-breaking space (U+00A0) and narrow no-break space (U+202F) → regular space
 const DAY_MS = 86_400_000;
 
 const moneyFormatters = new Map<Locale, Intl.NumberFormat>();

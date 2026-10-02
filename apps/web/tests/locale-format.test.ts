@@ -7,6 +7,8 @@ import {
   moneyParts,
 } from "@/lib/locale-format";
 
+const NBSP_RE = /[  ]/;
+
 describe("formatMoney", () => {
   it("formats BRL in both locales", () => {
     expect(formatMoney(125_000, "pt-BR")).toBe("R$ 1.250,00");
@@ -16,6 +18,13 @@ describe("formatMoney", () => {
   it("handles zero and negatives", () => {
     expect(formatMoney(0, "pt-BR")).toBe("R$ 0,00");
     expect(formatMoney(-50_000, "pt-BR")).toBe("-R$ 500,00");
+  });
+
+  it("normalizes non-breaking spaces to regular spaces", () => {
+    const result = formatMoney(125_000, "pt-BR");
+    // Ensure no U+00A0 (non-breaking space) or U+202F (narrow no-break space) remain
+    expect(result).not.toMatch(NBSP_RE);
+    expect(result).toBe("R$ 1.250,00");
   });
 });
 
