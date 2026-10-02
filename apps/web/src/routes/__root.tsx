@@ -7,8 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
-import "@fontsource/space-grotesk/500.css";
-import "@fontsource/space-grotesk/700.css";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "@fontsource-variable/bricolage-grotesque";
 import "../index.css";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
@@ -36,7 +37,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         name: "theme-color",
-        content: loaderData === "dark" ? "#1c1c1c" : "#faf9f6",
+        content: loaderData === "dark" ? "#1A1B18" : "#F1F0EB",
       },
       { title: "Quitto" },
     ],
