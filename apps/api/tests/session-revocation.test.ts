@@ -5,17 +5,16 @@ import { db } from "../src/db/client";
 import { session, user } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
-describe("cookie cache da sessão", () => {
-  it("o sign-in entrega o cookie session_data junto com o session_token", async () => {
-    const cookie = await signUpCookie(uniqueEmail("cache"));
+describe("revogação da sessão", () => {
+  it("o sign-in não entrega cookie session_data (sem cookie cache)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("revoke"));
     expect(cookie).toContain("session_token=");
-    expect(cookie).toContain("session_data=");
+    expect(cookie).not.toContain("session_data=");
   });
 
-  it("a API enxerga a revogação da sessão na hora, mesmo com o cookie session_data válido", async () => {
-    const email = uniqueEmail("cache2");
+  it("apagar a linha da sessão no banco derruba o acesso na hora (401)", async () => {
+    const email = uniqueEmail("revoke2");
     const cookie = await signUpCookie(email);
-    expect(cookie).toContain("session_data=");
 
     const me = () =>
       app.handle(
@@ -23,7 +22,6 @@ describe("cookie cache da sessão", () => {
       );
     expect((await me()).status).toBe(200);
 
-    // Revoke server-side: the signed session_data cookie is still within its 5 min maxAge.
     const [row] = await db
       .select({ id: user.id })
       .from(user)

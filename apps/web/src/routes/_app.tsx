@@ -11,6 +11,10 @@ import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useIdentity } from "@/hooks/use-identity";
+import {
+  clearIdentityCookie,
+  usePersistIdentityCookie,
+} from "@/hooks/use-identity-cookie";
 import { useLocaleSync } from "@/hooks/use-locale-sync";
 import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
 import { useUnreadCountQuery } from "@/hooks/use-notifications";
@@ -51,9 +55,11 @@ function AppLayout() {
   const sessionLost = isSessionLost(me.error);
 
   useLocaleSync(me.data?.locale);
+  usePersistIdentityCookie(me.data);
 
   useEffect(() => {
     if (sessionLost) {
+      clearIdentityCookie();
       navigate({ to: "/login", search: { redirect: undefined } });
     }
   }, [sessionLost, navigate]);

@@ -42,6 +42,6 @@ export async function signUpCookie(email: string): Promise<string> {
   if (!session) {
     throw new Error("sign-in did not return a session_token cookie");
   }
-  // Send every auth cookie back (session_token + session_data cache), like a browser.
+  // Send every auth cookie back, like a browser.
   return cookies.join("; ");
 }

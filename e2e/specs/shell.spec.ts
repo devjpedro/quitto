@@ -2,15 +2,11 @@ import { expect, test } from "@playwright/test";
 import { openAccountMenu, signup, waitForHydrated } from "../fixtures";
 
 const PT_BR_HTML = /<html[^>]*lang="pt-BR"/;
+const IDENTITY_COOKIE = "quitto_identity";
 
-test("o shell aparece com o nome do usuário mesmo com a API lenta (cookie cache no SSR)", async ({
+test("o shell aparece na hora mesmo com a API lenta (sem bloquear no cliente)", async ({
   page,
 }, testInfo) => {
-  // biome-ignore lint/suspicious/noSkippedTests: runtime precondition, not a disabled test
-  test.skip(
-    !process.env.BETTER_AUTH_SECRET,
-    "precisa do BETTER_AUTH_SECRET no SSR do web"
-  );
   await signup(page);
   // From now on every browser→API call takes 4s: only the SSR can make the shell appear fast.
   await page.route("**/api/**", async (route) => {
@@ -35,47 +31,48 @@ test("o shell aparece com o nome do usuário mesmo com a API lenta (cookie cache
   expect(Date.now() - started).toBeLessThan(3500);
 });
 
-test("o SSR monta o shell só com o cookie cache, sem perguntar à API", async ({
+test("o SSR mostra o nome a partir do cookie de identidade, sem perguntar à API", async ({
   page,
   context,
   request,
 }) => {
-  // biome-ignore lint/suspicious/noSkippedTests: runtime precondition, not a disabled test
-  test.skip(
-    !process.env.BETTER_AUTH_SECRET,
-    "precisa do BETTER_AUTH_SECRET no SSR do web"
-  );
   await signup(page);
+  // One more navigation so /me loads and the client writes the identity cookie.
+  await page.goto("/contracts");
+  await waitForHydrated(page);
+  await expect
+    .poll(() =>
+      context.cookies().then((cs) => cs.some((c) => c.name === IDENTITY_COOKIE))
+    )
+    .toBe(true);
   const cookies = await context.cookies();
-  const sessionData = cookies.filter((c) => c.name.includes("session_data"));
+  const identity = cookies.find((c) => c.name === IDENTITY_COOKIE);
   const sessionToken = cookies.find((c) => c.name.endsWith("session_token"));
-  expect(sessionData.length).toBeGreaterThan(0);
   expect(sessionToken).toBeDefined();
 
-  // The token is bogus, so /api/me would answer 401. better-auth's
-  // getCookieCache only verifies the HMAC of session_data (it never compares
-  // it with the token), so only the cache can still identify the user here.
-  // The request fixture is a clean client: it talks to the web SSR directly,
-  // so the Playwright browser never intervenes.
+  // The token is bogus, so /api/me would answer 401: only the identity cookie
+  // can still name the user here. The request fixture is a clean client that
+  // talks to the web SSR directly, so the Playwright browser never intervenes.
   const bogusToken = `${sessionToken?.name}=bogus`;
-  const withCache = [
-    ...sessionData.map((c) => `${c.name}=${c.value}`),
-    bogusToken,
-    "locale=pt-BR",
-  ].join("; ");
 
-  // Control: no cache, only the bogus token. The SSR falls back to /api/me,
-  // gets 401 and redirects. This is what makes the next assertion meaningful.
-  const withoutCache = await request.get("/contracts", {
+  // Control: only the bogus token. The SSR falls back to /api/me, gets 401
+  // and redirects. This is what makes the next assertion meaningful.
+  const withoutIdentity = await request.get("/contracts", {
     headers: { cookie: `${bogusToken}; locale=pt-BR` },
     maxRedirects: 0,
   });
-  expect(withoutCache.status()).toBeGreaterThanOrEqual(300);
-  expect(withoutCache.status()).toBeLessThan(400);
-  expect(withoutCache.headers().location).toContain("/login");
+  expect(withoutIdentity.status()).toBeGreaterThanOrEqual(300);
+  expect(withoutIdentity.status()).toBeLessThan(400);
+  expect(withoutIdentity.headers().location).toContain("/login");
 
   const res = await request.get("/contracts", {
-    headers: { cookie: withCache },
+    headers: {
+      cookie: [
+        `${IDENTITY_COOKIE}=${identity?.value}`,
+        bogusToken,
+        "locale=pt-BR",
+      ].join("; "),
+    },
     maxRedirects: 0,
   });
   expect(res.status()).toBe(200);

@@ -35,24 +35,25 @@ export function toIdentity(user: SessionIdentity): SessionIdentity {
 /**
  * Pure SSR session decision:
  * - no session cookie (by name) → anon, no network
- * - valid signed cookie cache → authed, no network
+ * - valid identity hint → authed, no network
  * - else /api/me with timeout: 200 → authed, 401 → anon, timeout/5xx/error → unknown
  *
- * The cookie cache only tells the SSR who the user is (shell identity). It is
- * never an authorization decision: the API ignores it and checks the database.
+ * readIdentityHint returns a cosmetic identity hint the client wrote; never
+ * authorization. It only tells the SSR which name to show in the shell: the
+ * API validates the session against the database on every request.
  */
 export async function resolveSessionSSR(deps: {
   fetchMe: () => Promise<Response>;
   hasSessionCookie: boolean;
-  readCachedIdentity: () => Promise<SessionIdentity | null>;
+  readIdentityHint: () => Promise<SessionIdentity | null>;
   timeoutMs: number;
 }): Promise<SessionResult> {
   if (!deps.hasSessionCookie) {
     return { status: "anon" };
   }
-  const cached = await deps.readCachedIdentity().catch(() => null);
-  if (cached) {
-    return { status: "authed", identity: cached, me: null };
+  const hint = await deps.readIdentityHint().catch(() => null);
+  if (hint) {
+    return { status: "authed", identity: hint, me: null };
   }
   const timeout = new Promise<"timeout">((resolve) => {
     setTimeout(() => resolve("timeout"), deps.timeoutMs);

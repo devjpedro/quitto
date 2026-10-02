@@ -11,9 +11,9 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
-    // A fresh account is pt-BR. Without this the browser sends Accept-Language
-    // en-US, the first SSR after signup renders en-US and only flips to pt-BR
-    // after hydration + /me + a reload, racing with whatever the test does next.
+    // A fresh account has no language chosen (null), so the browser's
+    // Accept-Language decides the UI. Chromium defaults to en-US, and the specs
+    // assert pt-BR copy: pin the browser to pt-BR so every page renders it.
     locale: "pt-BR",
     trace: "on-first-retry",
   },

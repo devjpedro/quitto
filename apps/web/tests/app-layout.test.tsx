@@ -1,6 +1,11 @@
 import { screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
+import {
+  parseIdentityCookie,
+  serializeIdentityCookie,
+} from "@/lib/identity-cookie";
 import { queryKeys } from "@/lib/query-keys";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
@@ -49,6 +54,7 @@ const seeded = { id: "u1", name: "Maria", email: "m@e.com", image: null };
 beforeEach(() => {
   navigate.mockReset();
   meGet.mockReset();
+  clearIdentityCookie();
 });
 
 describe("_app layout", () => {
@@ -81,5 +87,47 @@ describe("_app layout", () => {
         search: { redirect: undefined },
       })
     );
+  });
+
+  it("stores the identity cookie once /me loads", async () => {
+    meGet.mockResolvedValue({
+      data: {
+        ...seeded,
+        name: "Maria Souza",
+        pixKey: null,
+        emailRemindersOptIn: false,
+        emailRemindersAvailable: false,
+        locale: "pt-BR",
+      },
+      error: null,
+    });
+    renderWithProviders(<AppLayout />);
+
+    await waitFor(() =>
+      expect(parseIdentityCookie(document.cookie)).toEqual({
+        ...seeded,
+        name: "Maria Souza",
+      })
+    );
+  });
+
+  it("clears the identity cookie before sending a lost session to login", async () => {
+    // biome-ignore lint/suspicious/noDocumentCookie: jsdom test setup, a hint left by an earlier visit
+    document.cookie = serializeIdentityCookie(seeded, { secure: false });
+    let cookieAtNavigation: string | undefined;
+    navigate.mockImplementation(() => {
+      cookieAtNavigation = document.cookie;
+    });
+    meGet.mockResolvedValue({
+      data: null,
+      error: {
+        status: 401,
+        value: { error: { code: "UNAUTHORIZED", message: "x" } },
+      },
+    });
+    renderWithProviders(<AppLayout />);
+
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    expect(parseIdentityCookie(cookieAtNavigation)).toBeNull();
   });
 });

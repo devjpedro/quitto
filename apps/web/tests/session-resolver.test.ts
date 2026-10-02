@@ -20,7 +20,7 @@ const meBody = {
 
 const deps = (over: Partial<Parameters<typeof resolveSessionSSR>[0]> = {}) => ({
   hasSessionCookie: true,
-  readCachedIdentity: vi.fn(async () => null),
+  readIdentityHint: vi.fn(async () => null),
   fetchMe: vi.fn(async () => Response.json(meBody)),
   timeoutMs: 50,
   ...over,
@@ -30,12 +30,12 @@ describe("resolveSessionSSR", () => {
   it("sem cookie de sessão é anônimo e não toca a rede (cookies de tema/idioma não contam)", async () => {
     const d = deps({ hasSessionCookie: false });
     expect(await resolveSessionSSR(d)).toEqual({ status: "anon" });
-    expect(d.readCachedIdentity).not.toHaveBeenCalled();
+    expect(d.readIdentityHint).not.toHaveBeenCalled();
     expect(d.fetchMe).not.toHaveBeenCalled();
   });
 
-  it("cookie cache válido: autenticado sem chamar a API", async () => {
-    const d = deps({ readCachedIdentity: vi.fn(async () => identity) });
+  it("cookie de identidade válido: autenticado sem chamar a API", async () => {
+    const d = deps({ readIdentityHint: vi.fn(async () => identity) });
     expect(await resolveSessionSSR(d)).toEqual({
       status: "authed",
       identity,
@@ -44,12 +44,12 @@ describe("resolveSessionSSR", () => {
     expect(d.fetchMe).not.toHaveBeenCalled();
   });
 
-  it("sem cache: 200 do /api/me autentica com o payload completo", async () => {
+  it("sem identidade: 200 do /api/me autentica com o payload completo", async () => {
     const result = await resolveSessionSSR(deps());
     expect(result).toEqual({ status: "authed", identity, me: meBody });
   });
 
-  it("sem cache: 401 é anônimo", async () => {
+  it("sem identidade: 401 é anônimo", async () => {
     const d = deps({
       fetchMe: vi.fn(async () => new Response(null, { status: 401 })),
     });
@@ -80,11 +80,9 @@ describe("resolveSessionSSR", () => {
     ).toEqual({ status: "unknown" });
   });
 
-  it("falha ao ler o cache não derruba: cai pro /api/me", async () => {
+  it("falha ao ler a identidade não derruba: cai pro /api/me", async () => {
     const d = deps({
-      readCachedIdentity: vi.fn(() =>
-        Promise.reject(new Error("bad signature"))
-      ),
+      readIdentityHint: vi.fn(() => Promise.reject(new Error("bad cookie"))),
     });
     expect((await resolveSessionSSR(d)).status).toBe("authed");
   });

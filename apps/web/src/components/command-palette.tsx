@@ -22,8 +22,8 @@ import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
 import { Sheet, SheetContent } from "@/components/legacy-ui/sheet";
 import { contractsQueryOptions } from "@/hooks/use-contracts";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
+import { useSignOut } from "@/hooks/use-sign-out";
 import { useTheme } from "@/hooks/use-theme";
-import { signOut } from "@/lib/auth-client";
 import { commandFilter, sortByUrgency } from "@/lib/search";
 
 const EMPTY_STATE_LIMIT = 5;
@@ -95,11 +95,6 @@ function contractKeywords(contract: SearchableContract): string[] {
   ].filter(Boolean);
 }
 
-async function handleSignOut() {
-  await signOut();
-  window.location.href = "/login";
-}
-
 export function CommandPalette({
   open,
   onOpenChange,
@@ -110,6 +105,7 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const signOut = useSignOut();
   const isDesktop = useIsDesktop();
   // fetch-on-first-open: a paleta monta em TODA rota do `_app`, então buscar
   // aqui de forma incondicional seria um `GET /api/contracts` por página.
@@ -274,7 +270,7 @@ export function CommandPalette({
           </CommandItem>
           <CommandItem
             keywords={SIGN_OUT_KEYWORDS}
-            onSelect={() => run(handleSignOut)}
+            onSelect={() => run(signOut)}
             value="acao-sair"
           >
             <LogOut aria-hidden="true" className="size-4 shrink-0 opacity-60" />

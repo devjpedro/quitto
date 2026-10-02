@@ -1,5 +1,10 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  parseIdentityCookie,
+  serializeIdentityCookie,
+} from "@/lib/identity-cookie";
 import { renderWithProviders } from "./test-utils";
 
 const ACCEPT_BUTTON = /aceitar/i;
@@ -27,6 +32,12 @@ vi.mock("../src/hooks/use-invite", () => ({
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ token: "tok1" }),
   useNavigate: () => navigate,
+}));
+const { authSignOut } = vi.hoisted(() => ({
+  authSignOut: vi.fn(async () => undefined),
+}));
+vi.mock("@/lib/auth-client", () => ({
+  authClient: { signOut: authSignOut },
 }));
 
 import { AcceptInvitePage } from "../src/features/invites/accept-invite-page";
@@ -106,6 +117,49 @@ describe("AcceptInvitePage", () => {
     renderWithProviders(<AcceptInvitePage />);
     expect(screen.getByText(OTHER_EMAIL)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: ACCEPT_BUTTON })).toBeNull();
+  });
+
+  it("trocar de conta apaga o cookie de identidade antes de ir pro login", async () => {
+    useInviteQuery.mockReturnValue({
+      data: {
+        contractTitle: "Apê",
+        role: "seller",
+        email: "outro@b.com",
+        emailMatches: false,
+        inviterName: "Maria Silva",
+        totalAmountCents: 120_000,
+        installmentsCount: 12,
+        parties: [],
+      },
+      isPending: false,
+      error: null,
+    });
+    // biome-ignore lint/suspicious/noDocumentCookie: jsdom test setup, the hint of the account being left
+    document.cookie = serializeIdentityCookie(
+      { id: "u1", name: "Maria", email: "m@e.com", image: null },
+      { secure: false }
+    );
+    const seen: { href?: string; cookie?: string } = {};
+    vi.stubGlobal("location", {
+      protocol: "http:",
+      set href(value: string) {
+        seen.href = value;
+        seen.cookie = document.cookie;
+      },
+    });
+    try {
+      renderWithProviders(<AcceptInvitePage />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Entrar com outra conta" })
+      );
+      await waitFor(() =>
+        expect(seen.href).toBe("/login?redirect=%2Finvites%2Ftok1")
+      );
+      expect(authSignOut).toHaveBeenCalledTimes(1);
+      expect(parseIdentityCookie(seen.cookie)).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("exibe prévia do contrato e botão Recusar quando e-mail bate", () => {

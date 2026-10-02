@@ -6,6 +6,7 @@ import { Money } from "@/components/money";
 import { PageContainer } from "@/components/page-container";
 import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
 import {
   useAcceptInviteMutation,
   useDeclineInviteMutation,
@@ -63,6 +64,7 @@ export function AcceptInvitePage() {
 
   async function onSwitchAccount() {
     await authClient.signOut();
+    clearIdentityCookie();
     window.location.href = `/login?redirect=${encodeURIComponent(
       `/invites/${token}`
     )}`;
