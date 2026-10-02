@@ -26,6 +26,8 @@ export const user = pgTable("user", {
     .default(false),
   // null = the user never chose a language; the browser decides until they do.
   locale: text("locale"),
+  // Set when the user dismisses the "Comece por aqui" checklist on the home.
+  onboardingDismissedAt: timestamp("onboarding_dismissed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
