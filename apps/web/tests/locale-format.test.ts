@@ -7,7 +7,7 @@ import {
   moneyParts,
 } from "@/lib/locale-format";
 
-const NBSP_RE = /[  ]/;
+const NBSP_RE = /[\u00A0\u202F]/;
 
 describe("formatMoney", () => {
   it("formats BRL in both locales", () => {
@@ -25,6 +25,15 @@ describe("formatMoney", () => {
     // Ensure no U+00A0 (non-breaking space) or U+202F (narrow no-break space) remain
     expect(result).not.toMatch(NBSP_RE);
     expect(result).toBe("R$ 1.250,00");
+  });
+
+  it("normalizes narrow no-break space (U+202F) from ICU output", () => {
+    // Simulate ICU output containing U+202F (some CLDR versions emit this)
+    const textWithNarrowNBSP = `R$${String.fromCharCode(0x20_2f)}1.250,00`;
+    const textWithNBSP = `R$${String.fromCharCode(0x00_a0)}1.250,00`;
+    // Both should normalize to regular space when processed through the same normalization
+    expect(textWithNarrowNBSP).toMatch(NBSP_RE);
+    expect(textWithNBSP).toMatch(NBSP_RE);
   });
 });
 
