@@ -9,7 +9,7 @@
     "build:analyze": "ANALYZE=1 vite build",
     "preview": "vite preview",
     "lint": "biome check .",
-    "i18n:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide",
+    "i18n:compile": "bun scripts/compile-i18n.ts",
     "typecheck": "bun run i18n:compile && tsc --noEmit",
     "test": "vitest run",
     "lh": "vite build && lhci autorun"
