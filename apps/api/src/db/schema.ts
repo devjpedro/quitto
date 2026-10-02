@@ -24,6 +24,7 @@ export const user = pgTable("user", {
   emailRemindersOptIn: boolean("email_reminders_opt_in")
     .notNull()
     .default(false),
+  locale: text("locale").notNull().default("pt-BR"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

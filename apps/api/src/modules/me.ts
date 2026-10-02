@@ -1,4 +1,9 @@
-import { parsePixKey } from "@quitto/shared";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  type Locale,
+  parsePixKey,
+} from "@quitto/shared";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -6,6 +11,9 @@ import { user as userTable } from "../db/schema";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
+
+// Mirrors LOCALES from @quitto/shared; the test suite checks unknown values get a 422.
+const localeSchema = t.Union([t.Literal("pt-BR"), t.Literal("en-US")]);
 
 export const meModule = new Elysia({ prefix: "/api" })
   .get(
@@ -16,6 +24,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         .select({
           pixKey: userTable.pixKey,
           emailRemindersOptIn: userTable.emailRemindersOptIn,
+          locale: userTable.locale,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
@@ -27,6 +36,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         image: user.image ?? null,
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
+        locale: isLocale(row?.locale) ? row.locale : DEFAULT_LOCALE,
         emailRemindersAvailable: emailRemindersEnabled(),
       };
     },
@@ -38,6 +48,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         image: t.Union([t.String(), t.Null()]),
         pixKey: t.Union([t.String(), t.Null()]),
         emailRemindersOptIn: t.Boolean(),
+        locale: localeSchema,
         emailRemindersAvailable: t.Boolean(),
       }),
     }
@@ -46,8 +57,11 @@ export const meModule = new Elysia({ prefix: "/api" })
     "/me",
     async ({ request, body }) => {
       const { user } = await requireAuth(request.headers);
-      const patch: { pixKey?: string | null; emailRemindersOptIn?: boolean } =
-        {};
+      const patch: {
+        pixKey?: string | null;
+        emailRemindersOptIn?: boolean;
+        locale?: Locale;
+      } = {};
       if (body.pixKey !== undefined) {
         patch.pixKey = null;
         if (body.pixKey && body.pixKey.trim() !== "") {
@@ -61,6 +75,9 @@ export const meModule = new Elysia({ prefix: "/api" })
       if (body.emailRemindersOptIn !== undefined) {
         patch.emailRemindersOptIn = body.emailRemindersOptIn;
       }
+      if (body.locale !== undefined) {
+        patch.locale = body.locale;
+      }
       if (Object.keys(patch).length > 0) {
         await db.update(userTable).set(patch).where(eq(userTable.id, user.id));
       }
@@ -68,6 +85,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         .select({
           pixKey: userTable.pixKey,
           emailRemindersOptIn: userTable.emailRemindersOptIn,
+          locale: userTable.locale,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
@@ -75,16 +93,19 @@ export const meModule = new Elysia({ prefix: "/api" })
       return {
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
+        locale: isLocale(row?.locale) ? row.locale : DEFAULT_LOCALE,
       };
     },
     {
       body: t.Object({
         pixKey: t.Optional(t.Union([t.String(), t.Null()])),
         emailRemindersOptIn: t.Optional(t.Boolean()),
+        locale: t.Optional(localeSchema),
       }),
       response: t.Object({
         pixKey: t.Union([t.String(), t.Null()]),
         emailRemindersOptIn: t.Boolean(),
+        locale: localeSchema,
       }),
     }
   );

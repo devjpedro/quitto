@@ -20,6 +20,12 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   basePath: "/api/auth",
+  // Signed copy of the session in a cookie (5 min). Lets the web SSR know who
+  // the user is without waking the API (Fly scales to zero). Revocation lags
+  // by at most maxAge.
+  session: {
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
+  },
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: {
     enabled: true,

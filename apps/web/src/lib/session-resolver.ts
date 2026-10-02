@@ -1,3 +1,5 @@
+import type { Locale } from "@quitto/shared";
+
 /** Timeout do check de sessão no SSR (curto: não segura a resposta no boot frio). */
 export const SESSION_SSR_TIMEOUT_MS = 1500;
 
@@ -7,6 +9,7 @@ export interface SessionUser {
   emailRemindersOptIn: boolean;
   id: string;
   image: string | null;
+  locale: Locale;
   name: string;
   pixKey: string | null;
 }

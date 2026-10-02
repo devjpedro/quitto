@@ -34,13 +34,14 @@ export async function signUpCookie(email: string): Promise<string> {
       body: JSON.stringify({ email, password: "password123" }),
     })
   );
-  const setCookie = res.headers.get("set-cookie");
-  if (!setCookie) {
-    throw new Error("sign-in did not return a set-cookie header");
+  const cookies = res.headers
+    .getSetCookie()
+    .map((c) => c.split(";")[0])
+    .filter((c): c is string => Boolean(c));
+  const session = cookies.find((c) => c.includes("session_token="));
+  if (!session) {
+    throw new Error("sign-in did not return a session_token cookie");
   }
-  const [cookie] = setCookie.split(";");
-  if (!cookie) {
-    throw new Error("could not parse session cookie");
-  }
-  return cookie;
+  // Send every auth cookie back (session_token + session_data cache), like a browser.
+  return cookies.join("; ");
 }

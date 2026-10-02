@@ -50,13 +50,51 @@ describe("opt-in de lembrete por e-mail", () => {
     expect(await r1.json()).toEqual({
       pixKey: "joao@example.com",
       emailRemindersOptIn: true,
+      locale: "pt-BR",
     });
 
     const r2 = await patch(cookie, { pixKey: null });
     expect(await r2.json()).toEqual({
       pixKey: null,
       emailRemindersOptIn: true,
+      locale: "pt-BR",
     });
     expect((await (await get(cookie)).json()).emailRemindersOptIn).toBe(true);
+  });
+});
+
+describe("idioma da conta", () => {
+  const get = (cookie: string) =>
+    app.handle(new Request("http://localhost/api/me", { headers: { cookie } }));
+  const patch = (cookie: string, body: unknown) =>
+    app.handle(
+      new Request("http://localhost/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify(body),
+      })
+    );
+
+  it("default é pt-BR", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-loc"));
+    expect((await (await get(cookie)).json()).locale).toBe("pt-BR");
+  });
+
+  it("PATCH grava en-US sem mexer no resto", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-loc2"));
+    await patch(cookie, { pixKey: "joao@example.com" });
+    const res = await patch(cookie, { locale: "en-US" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      pixKey: "joao@example.com",
+      emailRemindersOptIn: false,
+      locale: "en-US",
+    });
+    expect((await (await get(cookie)).json()).locale).toBe("en-US");
+  });
+
+  it("rejeita idioma fora da lista", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-loc3"));
+    expect((await patch(cookie, { locale: "fr" })).status).toBe(422);
   });
 });
