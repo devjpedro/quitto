@@ -21,6 +21,12 @@ describe("formatMoney", () => {
     expect(formatMoney(-50_000, "pt-BR")).toBe("-R$ 500,00");
   });
 
+  it("never renders a negative zero", () => {
+    // e.g. negating a zero balance gives -0, which Intl prints as "-R$ 0,00".
+    expect(formatMoney(-0, "pt-BR")).toBe("R$ 0,00");
+    expect(formatMoney(-0, "en-US")).toBe("R$0.00");
+  });
+
   it("normalizes non-breaking spaces to regular spaces", () => {
     const result = formatMoney(125_000, "pt-BR");
     // Ensure no U+00A0 (non-breaking space) or U+202F (narrow no-break space) remain
@@ -64,6 +70,14 @@ describe("moneyParts", () => {
     expect(moneyParts(-900, "pt-BR")).toMatchObject({
       sign: "-",
       integer: "9",
+      fraction: "00",
+    });
+  });
+
+  it("drops the sign of a negative zero", () => {
+    expect(moneyParts(-0, "pt-BR").sign).toBe("");
+    expect(moneyParts(-0, "pt-BR")).toMatchObject({
+      integer: "0",
       fraction: "00",
     });
   });

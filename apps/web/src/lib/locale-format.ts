@@ -31,9 +31,15 @@ function moneyFormatter(locale: Locale): Intl.NumberFormat {
   return formatter;
 }
 
+/** -0 → +0, so zero never renders as "-R$ 0,00" (-0 === 0 is true). */
+function toReais(cents: number): number {
+  const value = cents === 0 ? 0 : cents;
+  return value / 100;
+}
+
 /** Integer cents → localized BRL string (amounts are always reais). */
 export function formatMoney(cents: number, locale: Locale): string {
-  return normalizeSpaces(moneyFormatter(locale).format(cents / 100));
+  return normalizeSpaces(moneyFormatter(locale).format(toReais(cents)));
 }
 
 /** Splits a BRL amount so the integer can be rendered larger than the rest. */
@@ -45,7 +51,7 @@ export function moneyParts(cents: number, locale: Locale): MoneyParts {
     decimal: "",
     fraction: "",
   };
-  for (const part of moneyFormatter(locale).formatToParts(cents / 100)) {
+  for (const part of moneyFormatter(locale).formatToParts(toReais(cents))) {
     if (part.type === "minusSign") {
       parts.sign = "-";
     } else if (part.type === "currency") {
