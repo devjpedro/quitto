@@ -21,5 +21,6 @@
   "account_theme_dark": "Tema escuro",
   "account_theme_light": "Tema claro",
   "account_language": "Idioma",
-  "account_sign_out": "Sair"
+  "account_sign_out": "Sair",
+  "account_language_error": "Não foi possível mudar o idioma. Tente de novo."
 }
