@@ -5,5 +5,21 @@
   "section_slow": "Connecting to the server…",
   "section_error": "We couldn't load this section.",
   "section_retry": "Try again",
-  "sheet_close": "Close"
+  "sheet_close": "Close",
+  "nav_primary": "Main navigation",
+  "nav_now": "Now",
+  "nav_contracts": "Contracts",
+  "nav_new_contract": "New contract",
+  "nav_notifications": "Notifications",
+  "nav_notifications_unread": "Notifications, {count} unread",
+  "nav_section_wallet": "Wallet",
+  "nav_section_account": "Account",
+  "search_open": "Search…",
+  "search_open_short": "Search",
+  "account_menu": "Account",
+  "account_settings": "Settings",
+  "account_theme_dark": "Dark theme",
+  "account_theme_light": "Light theme",
+  "account_language": "Language",
+  "account_sign_out": "Sign out"
 }

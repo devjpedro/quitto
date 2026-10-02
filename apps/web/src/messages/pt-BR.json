@@ -5,5 +5,21 @@
   "section_slow": "Conectando ao servidor…",
   "section_error": "Não foi possível carregar esta parte.",
   "section_retry": "Tentar de novo",
-  "sheet_close": "Fechar"
+  "sheet_close": "Fechar",
+  "nav_primary": "Navegação principal",
+  "nav_now": "Agora",
+  "nav_contracts": "Contratos",
+  "nav_new_contract": "Novo contrato",
+  "nav_notifications": "Notificações",
+  "nav_notifications_unread": "Notificações, {count} não lidas",
+  "nav_section_wallet": "Carteira",
+  "nav_section_account": "Conta",
+  "search_open": "Buscar…",
+  "search_open_short": "Buscar",
+  "account_menu": "Conta",
+  "account_settings": "Ajustes",
+  "account_theme_dark": "Tema escuro",
+  "account_theme_light": "Tema claro",
+  "account_language": "Idioma",
+  "account_sign_out": "Sair"
 }
