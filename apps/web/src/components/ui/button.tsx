@@ -12,7 +12,8 @@ export const buttonVariants = cva(
         secondary:
           "border border-line bg-surface text-ink hover:bg-surface-sunken",
         ghost: "text-ink hover:bg-surface-sunken",
-        onBrand: "bg-surface text-ink hover:bg-surface/90",
+        onBrand:
+          "bg-surface text-ink hover:bg-surface/90 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface",
         danger: "bg-danger text-ink-inverse hover:bg-danger/90",
       },
       size: {

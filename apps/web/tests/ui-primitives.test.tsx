@@ -29,14 +29,35 @@ describe("Button", () => {
     render(<Button>Ok</Button>);
     expect(screen.getByRole("button")).toHaveAttribute("type", "button");
   });
+
+  it("onBrand swaps the focus ring so it stays visible on the brand surface", () => {
+    render(<Button variant="onBrand">Entrar</Button>);
+    const button = screen.getByRole("button", { name: "Entrar" });
+    expect(button).toHaveClass(
+      "focus-visible:ring-highlight",
+      "focus-visible:ring-offset-brand-surface"
+    );
+    expect(button).not.toHaveClass("focus-visible:ring-brand");
+    expect(button).not.toHaveClass("focus-visible:ring-offset-surface");
+  });
 });
 
 describe("IconButton", () => {
   it("exposes its label as the accessible name and shows a badge count", () => {
-    render(<IconButton badge={3} icon={Lightning} label="Notificações" />);
-    const button = screen.getByRole("button", { name: "Notificações" });
+    render(
+      <IconButton
+        badge={3}
+        icon={Lightning}
+        label="Notificações, 3 não lidas"
+      />
+    );
+    const button = screen.getByRole("button", {
+      name: "Notificações, 3 não lidas",
+    });
     expect(button).toBeVisible();
     expect(button).toHaveTextContent("3");
+    // the badge is decorative: the count reaches assistive tech through the label
+    expect(screen.getByText("3")).toHaveAttribute("aria-hidden", "true");
   });
 });
 

@@ -15,6 +15,10 @@ export function IconButton({
   asChild?: boolean;
   badge?: number;
   icon: Icon;
+  /**
+   * Accessible name. It overrides the button content, so when `badge` is set
+   * the label must already carry the count (e.g. "Notificações, 3 não lidas").
+   */
   label: string;
 }) {
   const Comp = asChild ? Slot.Root : "button";
@@ -22,7 +26,10 @@ export function IconButton({
     <>
       <IconComponent aria-hidden="true" size={20} />
       {badge && badge > 0 ? (
-        <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-danger px-1 font-medium text-[10px] text-ink-inverse tabular-nums leading-4">
+        <span
+          aria-hidden="true"
+          className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-danger px-1 font-medium text-[10px] text-ink-inverse tabular-nums leading-4"
+        >
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}

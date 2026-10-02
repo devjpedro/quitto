@@ -32,7 +32,7 @@ export function Money({
       <span className="sr-only">{full}</span>
       <span aria-hidden="true">
         {parts.sign}
-        <span className="mr-0.5 align-top font-sans text-[0.45em] text-current/60 tracking-normal">
+        <span className="mr-0.5 align-top font-sans text-[0.45em] tracking-normal">
           {parts.currency}
         </span>
         {parts.integer}
