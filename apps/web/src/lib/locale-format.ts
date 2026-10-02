@@ -13,6 +13,11 @@ export type DatePreset = "short" | "medium" | "long";
 const SPACE_RE = /[\u00A0\u202F]/g; // non-breaking space (U+00A0) and narrow no-break space (U+202F) → regular space
 const DAY_MS = 86_400_000;
 
+/** Replaces NBSP (U+00A0) and narrow NBSP (U+202F) from ICU output with plain spaces. */
+export function normalizeSpaces(text: string): string {
+  return text.replace(SPACE_RE, " ");
+}
+
 const moneyFormatters = new Map<Locale, Intl.NumberFormat>();
 function moneyFormatter(locale: Locale): Intl.NumberFormat {
   let formatter = moneyFormatters.get(locale);
@@ -28,9 +33,7 @@ function moneyFormatter(locale: Locale): Intl.NumberFormat {
 
 /** Integer cents → localized BRL string (amounts are always reais). */
 export function formatMoney(cents: number, locale: Locale): string {
-  return moneyFormatter(locale)
-    .format(cents / 100)
-    .replace(SPACE_RE, " ");
+  return normalizeSpaces(moneyFormatter(locale).format(cents / 100));
 }
 
 /** Splits a BRL amount so the integer can be rendered larger than the rest. */

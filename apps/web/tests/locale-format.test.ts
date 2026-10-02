@@ -5,6 +5,7 @@ import {
   formatMoney,
   formatRelativeDays,
   moneyParts,
+  normalizeSpaces,
 } from "@/lib/locale-format";
 
 const NBSP_RE = /[\u00A0\u202F]/;
@@ -26,14 +27,17 @@ describe("formatMoney", () => {
     expect(result).not.toMatch(NBSP_RE);
     expect(result).toBe("R$ 1.250,00");
   });
+});
 
-  it("normalizes narrow no-break space (U+202F) from ICU output", () => {
-    // Simulate ICU output containing U+202F (some CLDR versions emit this)
-    const textWithNarrowNBSP = `R$${String.fromCharCode(0x20_2f)}1.250,00`;
-    const textWithNBSP = `R$${String.fromCharCode(0x00_a0)}1.250,00`;
-    // Both should normalize to regular space when processed through the same normalization
-    expect(textWithNarrowNBSP).toMatch(NBSP_RE);
-    expect(textWithNBSP).toMatch(NBSP_RE);
+describe("normalizeSpaces", () => {
+  it("turns NBSP and narrow NBSP into plain spaces", () => {
+    const nbsp = String.fromCharCode(0x00_a0);
+    const narrow = String.fromCharCode(0x20_2f);
+    expect(normalizeSpaces(`R$${nbsp}1${narrow}2`)).toBe("R$ 1 2");
+  });
+
+  it("leaves other text untouched", () => {
+    expect(normalizeSpaces("R$ 1.250,00")).toBe("R$ 1.250,00");
   });
 });
 
