@@ -32,11 +32,16 @@ export function AccountMenu({
   const changeLocale = useChangeLocale();
   const signOut = useSignOut();
   const isDark = theme === "dark";
+  // WCAG 2.5.3: when the name is on screen, the accessible name includes it.
+  const triggerLabel =
+    variant === "full" && identity
+      ? m.account_menu_named({ name: identity.name })
+      : m.account_menu();
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        aria-label={m.account_menu()}
+        aria-label={triggerLabel}
         className={cn(
           "flex items-center gap-2.5 rounded-control text-left transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
           variant === "full" ? "w-full p-2" : "size-11 justify-center"

@@ -20,6 +20,9 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
+// The sidebar trigger is named "Conta, <name>"; the avatar-only one just "Conta".
+const ACCOUNT_TRIGGER = /^Conta/;
+
 const maria: SessionIdentity = {
   id: "u1",
   name: "Maria Souza",
@@ -95,7 +98,13 @@ describe("AppFrame", () => {
 
   it("opens the account menu with settings, theme, language and sign out", async () => {
     await renderAt("/");
-    const [trigger] = screen.getAllByRole("button", { name: "Conta" });
+    // WCAG 2.5.3: the sidebar (full) trigger's name includes the visible name;
+    // the avatar-only top bar has nothing visible to match, so just "Conta".
+    expect(
+      screen.getByRole("button", { name: "Conta, Maria Souza" })
+    ).toHaveTextContent("Maria Souza");
+    expect(screen.getByRole("button", { name: "Conta" })).toBeVisible();
+    const [trigger] = screen.getAllByRole("button", { name: ACCOUNT_TRIGGER });
     await userEvent.click(trigger as HTMLElement);
     expect(
       await screen.findByRole("menuitem", { name: "Ajustes" })
@@ -113,6 +122,7 @@ describe("AppFrame", () => {
   it("renders without identity (cold start) without crashing or leaking a name", async () => {
     await renderAt("/", null);
     expect(screen.queryByText("Maria Souza")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Conta" })).toHaveLength(2);
   });
 
   it("offers 'Novo contrato' in the mobile tab bar", async () => {

@@ -17,6 +17,7 @@
   "search_open": "Buscar…",
   "search_open_short": "Buscar",
   "account_menu": "Conta",
+  "account_menu_named": "Conta, {name}",
   "account_settings": "Ajustes",
   "account_theme_dark": "Tema escuro",
   "account_theme_light": "Tema claro",

@@ -17,6 +17,7 @@
   "search_open": "Search…",
   "search_open_short": "Search",
   "account_menu": "Account",
+  "account_menu_named": "Account, {name}",
   "account_settings": "Settings",
   "account_theme_dark": "Dark theme",
   "account_theme_light": "Light theme",
