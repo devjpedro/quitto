@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import { resolve } from "node:path";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
@@ -17,6 +18,13 @@ const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig(({ command }) => ({
   plugins: [
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      outputStructure: "message-modules",
+      cookieName: "locale",
+      strategy: ["cookie", "preferredLanguage", "baseLocale"],
+    }),
     tanstackStart(),
     // Nitro empacota o servidor do Start pro alvo de deploy (na Vercel detecta
     // o preset sozinho e gera o Build Output API). Só no build: no `vite dev`

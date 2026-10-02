@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
+    "allowJs": true,
     "types": ["vite/client"],
     "paths": { "@quitto/api": ["../api/src/app.ts"], "@/*": ["./src/*"] }
   },

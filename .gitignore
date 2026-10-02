@@ -19,3 +19,6 @@ playwright-report/
 .DS_Store
 .vercel
 .env*
+
+# Paraglide compiled output
+apps/web/src/paraglide/

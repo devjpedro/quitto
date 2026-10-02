@@ -15,6 +15,8 @@ import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
 import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
+import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 export interface RouterContext {
   queryClient: QueryClient;
@@ -32,8 +34,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
       {
         name: "description",
-        content:
-          "Quitto — gerencie contratos parcelados, comprovantes e quitação em um só lugar.",
+        content: m.meta_description(),
       },
       {
         name: "theme-color",
@@ -61,7 +62,7 @@ function RootDocument() {
   return (
     <html
       className={theme === "dark" ? "dark" : undefined}
-      lang="pt-BR"
+      lang={getLocale()}
       suppressHydrationWarning
     >
       <head>
