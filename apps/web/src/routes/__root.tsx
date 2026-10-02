@@ -12,7 +12,7 @@ import "@fontsource/space-grotesk/700.css";
 import "../index.css";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
 
 export interface RouterContext {
@@ -20,7 +20,11 @@ export interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  loader: () => getThemeSSR(),
+  // No cliente lê o cookie direto: server function aqui é um request por preload.
+  loader: () =>
+    typeof document === "undefined"
+      ? getThemeSSR()
+      : parseThemeCookie(document.cookie),
   head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
