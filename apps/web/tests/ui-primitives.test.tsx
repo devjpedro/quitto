@@ -1,0 +1,125 @@
+import { FileText, Lightning } from "@phosphor-icons/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { Button } from "@/components/ui/button";
+import { EmptyState, GhostCard } from "@/components/ui/empty-state";
+import { IconButton } from "@/components/ui/icon-button";
+import { Money } from "@/components/ui/money";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Tag } from "@/components/ui/tag";
+
+describe("Button", () => {
+  it("is a real button that fires onClick and respects disabled", async () => {
+    const onClick = vi.fn();
+    const { rerender } = render(<Button onClick={onClick}>Pagar</Button>);
+    await userEvent.click(screen.getByRole("button", { name: "Pagar" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    rerender(
+      <Button disabled onClick={onClick}>
+        Pagar
+      </Button>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Pagar" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults to type=button so it never submits forms by accident", () => {
+    render(<Button>Ok</Button>);
+    expect(screen.getByRole("button")).toHaveAttribute("type", "button");
+  });
+});
+
+describe("IconButton", () => {
+  it("exposes its label as the accessible name and shows a badge count", () => {
+    render(<IconButton badge={3} icon={Lightning} label="Notificações" />);
+    const button = screen.getByRole("button", { name: "Notificações" });
+    expect(button).toBeVisible();
+    expect(button).toHaveTextContent("3");
+  });
+});
+
+describe("Tag", () => {
+  it("renders its text (status is never color-only)", () => {
+    render(<Tag tone="danger">Atrasada</Tag>);
+    expect(screen.getByText("Atrasada")).toBeVisible();
+  });
+});
+
+function Segmented() {
+  const [value, setValue] = useState<"active" | "done">("active");
+  return (
+    <>
+      <SegmentedControl
+        label="Situação"
+        onValueChange={setValue}
+        options={[
+          { value: "active", label: "Ativos", count: 5 },
+          { value: "done", label: "Concluídos", count: 2 },
+        ]}
+        value={value}
+      />
+      <output>{value}</output>
+    </>
+  );
+}
+
+describe("SegmentedControl", () => {
+  it("selects with the keyboard and never ends up empty", async () => {
+    render(<Segmented />);
+    const group = screen.getByRole("group", { name: "Situação" });
+    expect(group).toBeVisible();
+    await userEvent.tab();
+    expect(screen.getByRole("radio", { name: "Ativos 5" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Concluídos 2" })).toHaveFocus();
+    await userEvent.keyboard(" ");
+    expect(screen.getByRole("status")).toHaveTextContent("done");
+    // clicking the selected option again keeps it selected
+    await userEvent.click(screen.getByRole("radio", { name: "Concluídos 2" }));
+    expect(screen.getByRole("status")).toHaveTextContent("done");
+  });
+});
+
+describe("Money", () => {
+  it("inline renders the full localized amount", () => {
+    render(<Money cents={125_000} />);
+    expect(screen.getByText("R$ 1.250,00")).toBeVisible();
+  });
+
+  it("display keeps the full amount for screen readers and splits the visual parts", () => {
+    const { container } = render(<Money cents={125_050} size="display" />);
+    expect(screen.getByText("R$ 1.250,50")).toHaveClass("sr-only");
+    const visual = container.querySelector("[aria-hidden='true']");
+    expect(visual).toHaveTextContent("R$1.250,50");
+  });
+
+  it("display shows the minus sign for negative values", () => {
+    const { container } = render(<Money cents={-900} size="display" />);
+    expect(container.querySelector("[aria-hidden='true']")).toHaveTextContent(
+      "-R$9,00"
+    );
+  });
+});
+
+describe("EmptyState", () => {
+  it("renders title, description, action and the ghost preview", () => {
+    render(
+      <EmptyState
+        action={<Button>Novo contrato</Button>}
+        description="Cada contrato mostra quanto já foi quitado."
+        icon={FileText}
+        preview={<GhostCard />}
+        title="Seus acordos aparecem aqui"
+      />
+    );
+    expect(
+      screen.getByRole("heading", { name: "Seus acordos aparecem aqui" })
+    ).toBeVisible();
+    expect(
+      screen.getByText("Cada contrato mostra quanto já foi quitado.")
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Novo contrato" })).toBeVisible();
+  });
+});
