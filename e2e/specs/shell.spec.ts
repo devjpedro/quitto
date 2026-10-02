@@ -35,6 +35,55 @@ test("o shell aparece com o nome do usuário mesmo com a API lenta (cookie cache
   expect(Date.now() - started).toBeLessThan(3500);
 });
 
+test("o SSR monta o shell só com o cookie cache, sem perguntar à API", async ({
+  page,
+  context,
+  request,
+}) => {
+  // biome-ignore lint/suspicious/noSkippedTests: runtime precondition, not a disabled test
+  test.skip(
+    !process.env.BETTER_AUTH_SECRET,
+    "precisa do BETTER_AUTH_SECRET no SSR do web"
+  );
+  await signup(page);
+  const cookies = await context.cookies();
+  const sessionData = cookies.filter((c) => c.name.includes("session_data"));
+  const sessionToken = cookies.find((c) => c.name.endsWith("session_token"));
+  expect(sessionData.length).toBeGreaterThan(0);
+  expect(sessionToken).toBeDefined();
+
+  // The token is bogus, so /api/me would answer 401. better-auth's
+  // getCookieCache only verifies the HMAC of session_data (it never compares
+  // it with the token), so only the cache can still identify the user here.
+  // The request fixture is a clean client: it talks to the web SSR directly,
+  // so the Playwright browser never intervenes.
+  const bogusToken = `${sessionToken?.name}=bogus`;
+  const withCache = [
+    ...sessionData.map((c) => `${c.name}=${c.value}`),
+    bogusToken,
+    "locale=pt-BR",
+  ].join("; ");
+
+  // Control: no cache, only the bogus token. The SSR falls back to /api/me,
+  // gets 401 and redirects. This is what makes the next assertion meaningful.
+  const withoutCache = await request.get("/contracts", {
+    headers: { cookie: `${bogusToken}; locale=pt-BR` },
+    maxRedirects: 0,
+  });
+  expect(withoutCache.status()).toBeGreaterThanOrEqual(300);
+  expect(withoutCache.status()).toBeLessThan(400);
+  expect(withoutCache.headers().location).toContain("/login");
+
+  const res = await request.get("/contracts", {
+    headers: { cookie: withCache },
+    maxRedirects: 0,
+  });
+  expect(res.status()).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Navegação principal");
+  expect(html).toContain("Usuário E2E");
+});
+
 test("idioma: en-US pelo menu persiste no cookie e no SSR", async ({
   page,
   context,
@@ -82,14 +131,42 @@ test("celular: o fim da página não fica escondido atrás da tab bar", async ({
     .getByRole("navigation", { name: "Navegação principal" })
     .filter({ visible: true });
   await expect(tabBar).toBeVisible();
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  const mainBox = await page.locator("#conteudo").boundingBox();
   const barBox = await tabBar.boundingBox();
-  // the last pixel of real content must sit above the bar: main's bottom padding ≥ bar height
-  const lastChild = page.locator("#conteudo > *").last();
-  const lastBox = await lastChild.boundingBox();
-  expect(mainBox && barBox && lastBox).toBeTruthy();
-  expect((lastBox?.y ?? 0) + (lastBox?.height ?? 0)).toBeLessThanOrEqual(
-    barBox?.y ?? 0
+  expect(barBox).not.toBeNull();
+  const barHeight = barBox?.height ?? 0;
+  const main = page.locator("#conteudo");
+
+  // (a) the CSS contract: main reserves at least the bar's height at the bottom.
+  const paddingBottom = await main.evaluate((el) =>
+    Number.parseFloat(getComputedStyle(el).paddingBottom)
+  );
+  expect(paddingBottom).toBeGreaterThanOrEqual(barHeight);
+
+  // (b) the geometry, with real overflow: a new account's page is short, so
+  // append a tall spacer as main's last child. Without it the scroll would be
+  // a no-op and the check would pass vacuously.
+  await main.evaluate((el) => {
+    const spacer = document.createElement("div");
+    spacer.id = "e2e-spacer";
+    spacer.style.height = "2000px";
+    el.append(spacer);
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight > window.innerHeight
+    )
+  ).toBe(true);
+  await page.evaluate(() =>
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "instant",
+    })
+  );
+  const spacerBox = await page.locator("#e2e-spacer").boundingBox();
+  const barBoxAtBottom = await tabBar.boundingBox();
+  expect(spacerBox).not.toBeNull();
+  expect(barBoxAtBottom).not.toBeNull();
+  expect((spacerBox?.y ?? 0) + (spacerBox?.height ?? 0)).toBeLessThanOrEqual(
+    barBoxAtBottom?.y ?? 0
   );
 });

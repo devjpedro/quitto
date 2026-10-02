@@ -11,6 +11,10 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
+    // A fresh account is pt-BR. Without this the browser sends Accept-Language
+    // en-US, the first SSR after signup renders en-US and only flips to pt-BR
+    // after hydration + /me + a reload, racing with whatever the test does next.
+    locale: "pt-BR",
     trace: "on-first-retry",
   },
   projects: [
