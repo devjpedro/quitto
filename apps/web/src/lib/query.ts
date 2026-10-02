@@ -58,7 +58,10 @@ export function makeQueryClient(): QueryClient {
         if (isUnauthorized(error) && query.queryKey[0] !== queryKeys.me[0]) {
           client.invalidateQueries({ queryKey: queryKeys.me });
         }
-        if (shouldToast(error)) {
+        // Initial-load failures are shown inline (SectionBoundary or the route
+        // ErrorBoundary), so toasting them too would report the error twice.
+        // Only a failed background refetch, with data still on screen, toasts.
+        if (query.state.data !== undefined && shouldToast(error)) {
           toast.error(errorMessage(error));
         }
       },

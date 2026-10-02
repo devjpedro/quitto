@@ -16,6 +16,12 @@ export async function optimisticUpdate<T>(
     client.setQueryData<T>(queryKey, next);
   }
   return () => {
-    client.setQueryData<T | undefined>(queryKey, previous);
+    if (previous === undefined) {
+      // setQueryData(key, undefined) is a no-op, so the empty snapshot has to
+      // be restored by dropping the entry the optimistic update created.
+      client.removeQueries({ queryKey, exact: true });
+      return;
+    }
+    client.setQueryData<T>(queryKey, previous);
   };
 }

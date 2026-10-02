@@ -80,4 +80,52 @@ describe("ResponsiveSheet", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     );
   });
+
+  describe("drag to dismiss", () => {
+    // jsdom does not derive pageY from clientY, and motion reads pageY.
+    async function dragDown(target: HTMLElement, distance = 200) {
+      const at = (y: number) => ({
+        clientX: 10,
+        clientY: y,
+        pageX: 10,
+        pageY: y,
+      });
+      await userEvent.pointer([
+        { keys: "[MouseLeft>]", target, coords: at(10) },
+        { coords: at(10 + distance / 2) },
+        { coords: at(10 + distance) },
+        { keys: "[/MouseLeft]" },
+      ]);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    function renderBody(width: number) {
+      window.innerWidth = width;
+      const onOpenChange = vi.fn();
+      render(
+        <ResponsiveSheet onOpenChange={onOpenChange} open title="Parcela">
+          <p>conteudo</p>
+        </ResponsiveSheet>
+      );
+      return onOpenChange;
+    }
+
+    it("dismisses when the header of the bottom sheet is dragged down", async () => {
+      const onOpenChange = renderBody(390);
+      await dragDown(screen.getByText("Parcela"));
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+
+    it("does not dismiss when the content is dragged", async () => {
+      const onOpenChange = renderBody(390);
+      await dragDown(screen.getByText("conteudo"));
+      expect(onOpenChange).not.toHaveBeenCalled();
+    });
+
+    it("does not dismiss the side panel when its header is dragged", async () => {
+      const onOpenChange = renderBody(1024);
+      await dragDown(screen.getByText("Parcela"));
+      expect(onOpenChange).not.toHaveBeenCalled();
+    });
+  });
 });

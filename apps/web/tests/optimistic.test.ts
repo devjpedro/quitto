@@ -27,4 +27,16 @@ describe("optimisticUpdate", () => {
     rollback();
     expect(client.getQueryData(["item", "2"])).toBeUndefined();
   });
+
+  it("rollback removes the optimistic data when nothing was cached", async () => {
+    const client = makeTestQueryClient();
+    const rollback = await optimisticUpdate<{ status: string }>(
+      client,
+      ["item", "3"],
+      () => ({ status: "paid" })
+    );
+    expect(client.getQueryData(["item", "3"])).toEqual({ status: "paid" });
+    rollback();
+    expect(client.getQueryData(["item", "3"])).toBeUndefined();
+  });
 });

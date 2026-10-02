@@ -16,20 +16,23 @@ function SlowFallback({
 }) {
   const slow = useDelayedFlag(slowAfterMs);
   return (
-    <div aria-busy="true">
+    <div>
       {children}
-      {slow ? (
-        <p className="mt-2 text-ink-muted text-sm" role="status">
-          {m.section_slow()}
-        </p>
-      ) : null}
+      {/* Always mounted, filled later: a live region that appears already
+          containing its text is not reliably announced. */}
+      <p className="mt-2 text-ink-muted text-sm" role="status">
+        {slow ? m.section_slow() : null}
+      </p>
     </div>
   );
 }
 
 function SectionError({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-card border border-line p-4">
+    <div
+      className="flex flex-wrap items-center gap-3 rounded-card border border-line p-4"
+      role="alert"
+    >
       <p className="text-ink-muted text-sm">{m.section_error()}</p>
       <Button onClick={onRetry} size="sm" variant="secondary">
         {m.section_retry()}

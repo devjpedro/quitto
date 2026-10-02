@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { SectionBoundary } from "@/components/ui/section-boundary";
@@ -18,9 +18,15 @@ describe("SectionBoundary", () => {
       </SectionBoundary>
     );
     expect(screen.getByText("esqueleto")).toBeVisible();
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Conectando ao servidor…"
+    // The live region is mounted empty and filled later: a status that
+    // appears already containing its text is not reliably announced.
+    const status = screen.getByRole("status");
+    expect(status).toBeEmptyDOMElement();
+    expect(status.closest("[aria-busy]")).toBeNull();
+    await waitFor(() =>
+      expect(status).toHaveTextContent("Conectando ao servidor…")
     );
+    expect(screen.getByRole("status")).toBe(status);
   });
 
   it("renders the content when data arrives", async () => {
@@ -43,9 +49,9 @@ describe("SectionBoundary", () => {
         <Data load={load} />
       </SectionBoundary>
     );
-    expect(
-      await screen.findByText("Não foi possível carregar esta parte.")
-    ).toBeVisible();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar esta parte."
+    );
     fail = false;
     await userEvent.click(
       screen.getByRole("button", { name: "Tentar de novo" })

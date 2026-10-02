@@ -40,4 +40,32 @@ describe("ResponsiveSheet with reduced motion", () => {
     await userEvent.keyboard("{Escape}");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it("does not dismiss the bottom sheet by dragging its header", async () => {
+    window.innerWidth = 390;
+    const onOpenChange = vi.fn();
+    render(
+      <ResponsiveSheet onOpenChange={onOpenChange} open title="Parcela">
+        <p>x</p>
+      </ResponsiveSheet>
+    );
+    const at = (y: number) => ({
+      clientX: 10,
+      clientY: y,
+      pageX: 10,
+      pageY: y,
+    });
+    await userEvent.pointer([
+      {
+        keys: "[MouseLeft>]",
+        target: screen.getByText("Parcela"),
+        coords: at(10),
+      },
+      { coords: at(110) },
+      { coords: at(210) },
+      { keys: "[/MouseLeft]" },
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 });

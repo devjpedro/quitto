@@ -16,6 +16,28 @@ const DISMISS_OFFSET_PX = 120;
 const DISMISS_VELOCITY = 500;
 const SPRING = { type: "spring", stiffness: 420, damping: 40 } as const;
 
+/**
+ * Variant and motion for the sheet. Dragging only exists on the bottom sheet
+ * with motion allowed: every drag hook is gated on `canDrag`, because motion
+ * fires onDragEnd for any started drag even when `drag` is false, so an
+ * ungated header would dismiss a side panel.
+ */
+function useSheetMotion() {
+  const isWide = useMediaQuery(MD_UP);
+  const reduceMotion = useReducedMotion();
+  const dragControls = useDragControls();
+  const variant = isWide ? "side" : "bottom";
+  const offscreen = isWide ? { x: "100%" } : { y: "100%" };
+  return {
+    variant,
+    dragControls,
+    canDrag: variant === "bottom" && !reduceMotion,
+    hidden: reduceMotion ? { opacity: 0 } : offscreen,
+    shown: reduceMotion ? { opacity: 1 } : { x: 0, y: 0 },
+    transition: reduceMotion ? { duration: 0.15 } : SPRING,
+  };
+}
+
 /** Side panel from md up, draggable bottom sheet below. Same content in both. */
 export function ResponsiveSheet({
   open,
@@ -30,13 +52,8 @@ export function ResponsiveSheet({
   open: boolean;
   title: string;
 }) {
-  const isWide = useMediaQuery(MD_UP);
-  const reduceMotion = useReducedMotion();
-  const dragControls = useDragControls();
-  const variant = isWide ? "side" : "bottom";
-  const offscreen = isWide ? { x: "100%" } : { y: "100%" };
-  const hidden = reduceMotion ? { opacity: 0 } : offscreen;
-  const shown = reduceMotion ? { opacity: 1 } : { x: 0, y: 0 };
+  const { variant, canDrag, hidden, shown, transition, dragControls } =
+    useSheetMotion();
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -65,14 +82,17 @@ export function ResponsiveSheet({
                     : "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[22px] pb-[env(safe-area-inset-bottom)]"
                 )}
                 data-variant={variant}
-                drag={variant === "bottom" && !reduceMotion ? "y" : false}
+                drag={canDrag ? "y" : false}
                 dragConstraints={{ top: 0, bottom: 0 }}
-                dragControls={dragControls}
+                dragControls={canDrag ? dragControls : undefined}
                 dragElastic={{ top: 0, bottom: 0.6 }}
                 dragListener={false}
                 exit={hidden}
                 initial={hidden}
                 onDragEnd={(_, info) => {
+                  if (!canDrag) {
+                    return;
+                  }
                   if (
                     info.offset.y > DISMISS_OFFSET_PX ||
                     info.velocity.y > DISMISS_VELOCITY
@@ -80,11 +100,13 @@ export function ResponsiveSheet({
                     onOpenChange(false);
                   }
                 }}
-                transition={reduceMotion ? { duration: 0.15 } : SPRING}
+                transition={transition}
               >
                 <div
-                  className="touch-none px-5 pt-2"
-                  onPointerDown={(event) => dragControls.start(event)}
+                  className={cn("px-5 pt-2", canDrag && "touch-none")}
+                  onPointerDown={
+                    canDrag ? (event) => dragControls.start(event) : undefined
+                  }
                 >
                   {variant === "bottom" ? (
                     <div
