@@ -169,6 +169,14 @@ describe("DELETE /api/me", () => {
     );
     expect(res.status).toBe(200);
 
+    // o acesso é revogado na hora, mesmo com o cookie session_data (cache) ainda válido
+    const after = await app.handle(
+      new Request("http://localhost/api/me", {
+        headers: { cookie: mortalCookie },
+      })
+    );
+    expect(after.status).toBe(401);
+
     // contrato próprio sumiu
     const own = await db
       .select()
