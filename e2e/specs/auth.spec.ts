@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { randomEmail, signup, waitForHydrated } from "../fixtures";
+import {
+  openAccountMenu,
+  randomEmail,
+  signup,
+  waitForHydrated,
+} from "../fixtures";
 
 const LOGOUT = /Sair/i;
 const SIGNIN_SUBMIT = /^Entrar$/;
@@ -21,7 +26,8 @@ test("logout volta ao login e a rota protegida exige sessão", async ({
   page,
 }) => {
   await signup(page);
-  await page.getByRole("button", { name: LOGOUT }).click();
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: LOGOUT }).click();
   await page.waitForURL("**/login");
   await page.goto("/contracts");
   await page.waitForURL("**/login**"); // guard redireciona
@@ -33,7 +39,8 @@ test("deep-link protegido deslogado volta ao alvo após login", async ({
 }) => {
   const email = randomEmail();
   await signup(page, email);
-  await page.getByRole("button", { name: LOGOUT }).click();
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: LOGOUT }).click();
   await page.waitForURL("**/login");
   await page.goto("/contracts");
   await page.waitForURL("**/login**");
@@ -48,7 +55,8 @@ test("deep-link protegido deslogado volta ao alvo após login", async ({
 test("login com senha errada mostra erro", async ({ page }) => {
   const email = randomEmail();
   await signup(page, email);
-  await page.getByRole("button", { name: LOGOUT }).click();
+  await openAccountMenu(page);
+  await page.getByRole("menuitem", { name: LOGOUT }).click();
   await page.waitForURL("**/login");
   await waitForHydrated(page);
   await page.locator("#email").fill(email);

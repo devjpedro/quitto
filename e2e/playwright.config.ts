@@ -13,7 +13,19 @@ export default defineConfig({
     baseURL: WEB,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "mobile",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+      },
+      testMatch: /shell\.spec\.ts/,
+    },
+  ],
   webServer: [
     {
       command: "bun run --filter @quitto/api dev",

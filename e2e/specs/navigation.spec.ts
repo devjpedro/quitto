@@ -29,7 +29,7 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   const nav = page.locator("#app-shell nav").first();
 
   // hover dispara o preload por intent do router
-  for (const name of ["Contratos", "Notificações", "Conta", "Dashboard"]) {
+  for (const name of ["Contratos", "Notificações", "Agora"]) {
     await nav.getByRole("link", { name }).hover();
   }
   await nav.getByRole("link", { name: "Contratos" }).click();
@@ -43,11 +43,11 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   await expect(page).toHaveURL(new RegExp(`/contracts/${id}`));
   await nav.getByRole("link", { name: "Notificações" }).click();
   await expect(page).toHaveURL(NOTIFICATIONS_URL);
-  await nav.getByRole("link", { name: "Dashboard" }).click();
+  await nav.getByRole("link", { name: "Agora" }).click();
   await expect(page.getByRole("heading", { name: "Painel" })).toBeVisible();
 
   // preload antigo (stale) reaproveitado no clique reexecuta loaders do root/_app
-  for (const name of ["Contratos", "Notificações", "Conta"]) {
+  for (const name of ["Contratos", "Notificações", "Agora"]) {
     await nav.getByRole("link", { name }).hover();
   }
   await page.clock.fastForward(60_000);
