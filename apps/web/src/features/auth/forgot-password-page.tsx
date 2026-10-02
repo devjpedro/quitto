@@ -2,6 +2,7 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/legacy-ui/button";
 import { Input } from "@/components/legacy-ui/input";
 import { Label } from "@/components/legacy-ui/label";
+import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { requestPasswordReset } from "@/lib/auth-client";
 import { PAGE_TITLE } from "@/lib/page-title";
@@ -10,6 +11,7 @@ const RESET_PATH = "/reset-password";
 
 export function ForgotPasswordPage() {
   useDocumentTitle(PAGE_TITLE.forgotPassword);
+  useApiWarmup();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);

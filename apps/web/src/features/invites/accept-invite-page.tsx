@@ -4,6 +4,7 @@ import { Button } from "@/components/legacy-ui/button";
 import { Skeleton } from "@/components/legacy-ui/skeleton";
 import { Money } from "@/components/money";
 import { PageContainer } from "@/components/page-container";
+import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   useAcceptInviteMutation,
@@ -17,6 +18,7 @@ import { PAGE_TITLE } from "@/lib/page-title";
 
 export function AcceptInvitePage() {
   useDocumentTitle(PAGE_TITLE.acceptInvite);
+  useApiWarmup();
   const { token } = useParams({ from: "/_app/invites/$token" });
   const navigate = useNavigate();
   const { data, isPending, error } = useInviteQuery(token);

@@ -1,6 +1,6 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BrandLoader } from "@/components/brand-loader";
+import { PagePending } from "@/components/layout/page-pending";
 import { Button } from "@/components/legacy-ui/button";
 import { reloadOnceForChunkError } from "@/lib/chunk-reload";
 import { errorMessage } from "@/lib/error-message";
@@ -21,7 +21,7 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   }, [error]);
 
   if (reloading) {
-    return <BrandLoader label="Atualizando…" />;
+    return <PagePending />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { Button } from "@/components/legacy-ui/button";
 import { Input } from "@/components/legacy-ui/input";
 import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
+import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-error-message";
@@ -22,6 +23,7 @@ function submitLabel(mode: "signin" | "signup") {
 
 export function LoginPage() {
   useDocumentTitle(PAGE_TITLE.login);
+  useApiWarmup();
   const search = useSearch({ strict: false }) as { redirect?: string };
   // window não existe no SSR; target só é usado em handlers (client), então guardamos.
   const origin = typeof window === "undefined" ? "" : window.location.origin;
