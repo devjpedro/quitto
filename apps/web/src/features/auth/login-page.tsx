@@ -1,5 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { AuthBrandPanel } from "@/components/auth-brand-panel";
 import { Button } from "@/components/legacy-ui/button";
 import { Input } from "@/components/legacy-ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
 import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
 import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-error-message";
 import { PAGE_TITLE } from "@/lib/page-title";
@@ -24,6 +25,12 @@ function submitLabel(mode: "signin" | "signup") {
 export function LoginPage() {
   useDocumentTitle(PAGE_TITLE.login);
   useApiWarmup();
+  // Every sign-in (e-mail, sign-up, Google) starts here and lands on a full
+  // SSR load. A hint left by a previous user whose session expired would show
+  // their name to the next one, so it goes before anyone signs in.
+  useEffect(() => {
+    clearIdentityCookie();
+  }, []);
   const search = useSearch({ strict: false }) as { redirect?: string };
   // window não existe no SSR; target só é usado em handlers (client), então guardamos.
   const origin = typeof window === "undefined" ? "" : window.location.origin;
