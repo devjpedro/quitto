@@ -15,15 +15,16 @@ import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
 import { useSidebar } from "@/hooks/use-sidebar";
 import { ApiError } from "@/lib/api-client";
 import { decideClientGate } from "@/lib/app-guard";
+import { queryKeys } from "@/lib/query-keys";
 import { parseSidebarCookie } from "@/lib/sidebar";
 import { getSidebarSSR } from "@/lib/sidebar-ssr";
 import { getSessionSSR } from "@/lib/ssr-session";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
-    // Só no SSR. No cliente a sessão já está no cache (useMeQuery) e o gate do
-    // AppLayout cuida do 401 → /login; chamar a server function aqui custava
-    // um round-trip browser → Vercel → API a cada hover (preload) e clique.
+    // SSR only. On the client the session lives in the query cache and the
+    // layout reacts to a 401; calling a server function here would cost a
+    // browser → Vercel → API round-trip on every preload and click.
     if (typeof document !== "undefined") {
       return;
     }
@@ -32,10 +33,12 @@ export const Route = createFileRoute("/_app")({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
     if (session.status === "authed") {
-      // desidrata a sessão pro cliente (sem re-fetch / flash)
-      context.queryClient.setQueryData(meQueryOptions.queryKey, session.user);
+      context.queryClient.setQueryData(queryKeys.session, session.identity);
+      if (session.me) {
+        context.queryClient.setQueryData(meQueryOptions.queryKey, session.me);
+      }
     }
-    // unknown (cold) → segue; o cliente resolve com o loader
+    // "unknown" (cold API): render the shell anyway; the client validates.
   },
   // estado da sidebar lido no SSR (cookie) — o shell já renderiza a largura
   // certa no 1º paint, mesma técnica do tema (getThemeSSR/__root.tsx). No
