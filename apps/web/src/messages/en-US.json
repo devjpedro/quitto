@@ -1,5 +1,9 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "meta_description": "Quitto — manage installment agreements, payment proofs and payoffs in one place.",
-  "skip_to_content": "Skip to content"
+  "skip_to_content": "Skip to content",
+  "section_slow": "Connecting to the server…",
+  "section_error": "We couldn't load this section.",
+  "section_retry": "Try again",
+  "sheet_close": "Close"
 }

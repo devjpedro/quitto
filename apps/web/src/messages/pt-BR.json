@@ -1,5 +1,9 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "meta_description": "Quitto — gerencie contratos parcelados, comprovantes e quitação em um só lugar.",
-  "skip_to_content": "Pular para o conteúdo"
+  "skip_to_content": "Pular para o conteúdo",
+  "section_slow": "Conectando ao servidor…",
+  "section_error": "Não foi possível carregar esta parte.",
+  "section_retry": "Tentar de novo",
+  "sheet_close": "Fechar"
 }
