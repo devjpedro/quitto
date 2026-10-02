@@ -1,23 +1,39 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/components/delete-account-dialog", () => ({
   DeleteAccountDialog: () => <div data-testid="delete-dialog" />,
 }));
-vi.mock("@/components/pix-key-form", () => ({
-  PixKeyForm: () => <div data-testid="pix-key-form" />,
+// Stub by default; the "real" flag swaps in the actual form for the test that
+// needs its input to initialise from /me.
+const pixForm = vi.hoisted(() => ({ real: false }));
+vi.mock("@/components/pix-key-form", async (importActual) => {
+  const actual =
+    await importActual<typeof import("@/components/pix-key-form")>();
+  return {
+    PixKeyForm: () =>
+      pixForm.real ? <actual.PixKeyForm /> : <div data-testid="pix-key-form" />,
+  };
+});
+vi.mock("@/hooks/use-pix", () => ({
+  useUpdatePixKeyMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 const meData = vi.hoisted(() => ({
+  pending: false,
   value: {
     id: "u1",
     name: "Maria",
     email: "maria@example.com",
     emailRemindersAvailable: false,
     emailRemindersOptIn: false,
+    pixKey: null as string | null,
   },
 }));
 vi.mock("@/hooks/use-me", () => ({
-  useMeQuery: () => ({ data: meData.value }),
+  useMeQuery: () =>
+    meData.pending
+      ? { data: undefined, isPending: true }
+      : { data: meData.value, isPending: false },
 }));
 vi.mock("@/hooks/use-email-reminders", () => ({
   useUpdateEmailRemindersMutation: () => ({
@@ -29,8 +45,15 @@ vi.mock("@/hooks/use-email-reminders", () => ({
 import { SettingsPage } from "../src/features/settings/settings-page";
 
 const EXPORT = /exportar/i;
+const PIX_KEY_LABEL = /chave pix/i;
 
 describe("SettingsPage", () => {
+  afterEach(() => {
+    meData.pending = false;
+    meData.value.pixKey = null;
+    pixForm.real = false;
+  });
+
   it("shows export link and the delete section", () => {
     render(<SettingsPage />);
     expect(screen.getByRole("link", { name: EXPORT })).toHaveAttribute(
@@ -49,6 +72,21 @@ describe("SettingsPage", () => {
   it("renders the PixKeyForm", () => {
     render(<SettingsPage />);
     expect(screen.getByTestId("pix-key-form")).toBeInTheDocument();
+  });
+
+  it("holds the PIX form back until /me arrives, then shows the saved key", () => {
+    pixForm.real = true;
+    meData.pending = true;
+    const { rerender } = render(<SettingsPage />);
+    expect(screen.queryByLabelText(PIX_KEY_LABEL)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pix-key-form")).not.toBeInTheDocument();
+
+    meData.pending = false;
+    meData.value.pixKey = "joao@example.com";
+    rerender(<SettingsPage />);
+    expect(screen.getByLabelText(PIX_KEY_LABEL)).toHaveValue(
+      "joao@example.com"
+    );
   });
 
   it("hides the email reminders section when the global switch is off", () => {

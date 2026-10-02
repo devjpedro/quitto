@@ -11,9 +11,25 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
+    // A fresh account has no language chosen (null), so the browser's
+    // Accept-Language decides the UI. Chromium defaults to en-US, and the specs
+    // assert pt-BR copy: pin the browser to pt-BR so every page renders it.
+    locale: "pt-BR",
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "mobile",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+      },
+      testMatch: /shell\.spec\.ts/,
+    },
+  ],
   webServer: [
     {
       command: "bun run --filter @quitto/api dev",

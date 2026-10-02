@@ -1,14 +1,16 @@
 import { useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
+import { Button } from "@/components/legacy-ui/button";
+import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { resetPassword } from "@/lib/auth-client";
 import { PAGE_TITLE } from "@/lib/page-title";
 
 export function ResetPasswordPage() {
   useDocumentTitle(PAGE_TITLE.resetPassword);
+  useApiWarmup();
   const search = useSearch({ strict: false }) as { token?: string };
   const token = search.token ?? "";
   const [newPassword, setNewPassword] = useState("");

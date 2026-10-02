@@ -1,10 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Skeleton } from "@/components/legacy-ui/skeleton";
 import {
   type NotificationItem,
   NotificationList,
 } from "@/components/notification-list";
 import { PageContainer } from "@/components/page-container";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   useMarkAllReadMutation,

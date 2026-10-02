@@ -28,8 +28,9 @@ export const meQueryOptions = queryOptions({
   staleTime: SESSION_STALE_MS,
   retry: shouldRetrySession,
   retryDelay: (attempt) => SESSION_RETRY_BASE_MS * 2 ** attempt,
-  // A sessão nunca "joga" erro: o gate (decideClientGate) trata 401→login e
-  // transitório→loader. Sem isso o throwOnError global cairia na ErrorBoundary.
+  // A sessão nunca "joga" erro: o layout (`isSessionLost`) trata 401→login e
+  // o transitório segue com o seed do SSR. Sem isso o throwOnError global
+  // cairia na ErrorBoundary.
   throwOnError: false,
 });
 

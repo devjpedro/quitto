@@ -7,32 +7,38 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
-import "@fontsource/space-grotesk/500.css";
-import "@fontsource/space-grotesk/700.css";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "@fontsource-variable/bricolage-grotesque";
 import "../index.css";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
-import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
+import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  loader: () => getThemeSSR(),
+  // No cliente lê o cookie direto: server function aqui é um request por preload.
+  loader: () =>
+    typeof document === "undefined"
+      ? getThemeSSR()
+      : parseThemeCookie(document.cookie),
   head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
       {
         name: "description",
-        content:
-          "Quitto — gerencie contratos parcelados, comprovantes e quitação em um só lugar.",
+        content: m.meta_description(),
       },
       {
         name: "theme-color",
-        content: loaderData === "dark" ? "#1c1c1c" : "#faf9f6",
+        content: loaderData === "dark" ? "#1A1B18" : "#F1F0EB",
       },
       { title: "Quitto" },
     ],
@@ -56,7 +62,7 @@ function RootDocument() {
   return (
     <html
       className={theme === "dark" ? "dark" : undefined}
-      lang="pt-BR"
+      lang={getLocale()}
       suppressHydrationWarning
     >
       <head>

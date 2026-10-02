@@ -54,9 +54,7 @@ test("comprovante gera notificação com deep-link para a parcela", async ({
   const { a, b, installmentId } = await setupWithProof(browser);
   try {
     await b.page.goto("/");
-    await expect(
-      b.page.getByRole("button", { name: BELL_UNREAD })
-    ).toBeVisible();
+    await expect(b.page.getByRole("link", { name: BELL_UNREAD })).toBeVisible();
 
     await b.page.goto("/notifications");
     await expect(b.page.getByText(PROOF_NOTIF)).toBeVisible();
@@ -82,11 +80,11 @@ test("marcar todas como lidas zera o contador", async ({ browser }) => {
     await b.page
       .getByRole("button", { name: "Marcar todas como lidas" })
       .click();
-    await expect(b.page.getByRole("button", { name: BELL_UNREAD })).toHaveCount(
+    await expect(b.page.getByRole("link", { name: BELL_UNREAD })).toHaveCount(
       0
     );
     await expect(
-      b.page.getByRole("button", { name: "Notificações", exact: true })
+      b.page.getByRole("link", { name: "Notificações", exact: true })
     ).toBeVisible();
   } finally {
     await a.close();

@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
 import { signOut } from "@/lib/auth-client";
@@ -13,6 +14,7 @@ export function useDeleteAccountMutation() {
     mutationFn: () => unwrap(api.api.me.delete()),
     onSuccess: async () => {
       await signOut();
+      clearIdentityCookie();
       window.location.href = "/login";
     },
   });

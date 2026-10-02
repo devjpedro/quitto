@@ -19,10 +19,19 @@ export const unreadCountQueryOptions = queryOptions({
   queryKey: queryKeys.notificationsUnread,
   queryFn: () => unwrap(api.api.notifications["unread-count"].get()),
   refetchInterval: UNREAD_POLL_MS,
+  // A decorative badge must never take down the shell.
+  throwOnError: false,
 });
 
-export function useNotificationsQuery() {
-  return useQuery(notificationsQueryOptions);
+export function useNotificationsQuery({ enabled = true } = {}) {
+  return useQuery({ ...notificationsQueryOptions, enabled });
+}
+
+export function usePrefetchNotifications() {
+  const qc = useQueryClient();
+  return () => {
+    qc.prefetchQuery(notificationsQueryOptions);
+  };
 }
 
 export function useUnreadCountQuery() {

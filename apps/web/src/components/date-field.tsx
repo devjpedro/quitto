@@ -1,13 +1,13 @@
 import { Calendar as CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/legacy-ui/calendar";
+import { Input } from "@/components/legacy-ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/legacy-ui/popover";
 import {
   dateToISO,
   formatISODateBR,

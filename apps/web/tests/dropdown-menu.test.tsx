@@ -6,7 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../src/components/ui/dropdown-menu";
+} from "../src/components/legacy-ui/dropdown-menu";
 import { renderWithProviders } from "./test-utils";
 
 const RE_ACOES = /ações/i;

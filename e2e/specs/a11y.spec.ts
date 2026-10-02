@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Browser, expect, type Page, test } from "@playwright/test";
 import {
   getContract,
+  isoDaysFromToday,
   newUser,
   seedContract,
   seedInvite,
@@ -137,7 +138,7 @@ test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
       mode: "monthly",
       monthlyAmountCents: 80_000,
       months: 12,
-      firstDueDate: "2026-09-10",
+      firstDueDate: isoDaysFromToday(-21),
     },
   });
   await page.goto(`/contracts/${id}`);
@@ -184,7 +185,7 @@ test("dark mode não tem violações de a11y", async ({
       mode: "monthly",
       monthlyAmountCents: 80_000,
       months: 12,
-      firstDueDate: "2026-09-10",
+      firstDueDate: isoDaysFromToday(-21),
     },
   });
   await page.goto(`/contracts/${monthly.id}`);

@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import { ApiError } from "./api-client";
 import { errorMessage } from "./error-message";
+import { queryKeys } from "./query-keys";
 
 declare module "@tanstack/react-query" {
   interface Register {
@@ -14,9 +15,13 @@ declare module "@tanstack/react-query" {
   }
 }
 
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.httpStatus === 401;
+}
+
 /** 401 is handled by the auth guard (redirect); don't toast it. */
 function shouldToast(error: unknown): boolean {
-  return !(error instanceof ApiError && error.httpStatus === 401);
+  return !isUnauthorized(error);
 }
 
 /** Dispara toast.success quando a mutation declara meta.successMessage. */
@@ -34,7 +39,7 @@ export function toastSuccessFromMeta(
 
 /** Cria um QueryClient novo (fresh por request no SSR). */
 export function makeQueryClient(): QueryClient {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 60_000,
@@ -47,8 +52,16 @@ export function makeQueryClient(): QueryClient {
       },
     },
     queryCache: new QueryCache({
-      onError: (error) => {
-        if (shouldToast(error)) {
+      onError: (error, query) => {
+        // Sessão caiu no meio do uso: revalida `me` e o gate do AppLayout
+        // manda pro /login (no cliente não há check de sessão por navegação).
+        if (isUnauthorized(error) && query.queryKey[0] !== queryKeys.me[0]) {
+          client.invalidateQueries({ queryKey: queryKeys.me });
+        }
+        // Initial-load failures are shown inline (SectionBoundary or the route
+        // ErrorBoundary), so toasting them too would report the error twice.
+        // Only a failed background refetch, with data still on screen, toasts.
+        if (query.state.data !== undefined && shouldToast(error)) {
           toast.error(errorMessage(error));
         }
       },
@@ -62,6 +75,7 @@ export function makeQueryClient(): QueryClient {
       },
     }),
   });
+  return client;
 }
 
 // Singleton transitório (consumidores client-side migram pro contexto no Task 6).

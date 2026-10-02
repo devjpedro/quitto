@@ -107,25 +107,27 @@ test("sem resultado, cria contrato com o texto digitado", async ({ page }) => {
   await expect(page.getByLabel("Título")).toHaveValue("consórcio da moto");
 });
 
-test("mobile: a lupa da bottom-nav abre a busca", async ({ page }) => {
+test("mobile: a lupa do topo abre a busca", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await signup(page);
 
   // No mobile o <aside> do desktop está `display:none`, então some da árvore
-  // de acessibilidade e sobra só a bottom-nav com este nome.
+  // de acessibilidade e sobra só a tab bar com este nome. O ＋ não tem texto,
+  // só `aria-label`.
   const bottomNav = page.getByRole("navigation", {
     name: "Navegação principal",
   });
   await expect(bottomNav.locator("a, button")).toHaveText([
-    "Dashboard",
+    "Agora",
     "Contratos",
-    "Buscar",
-    "Notificações",
-    "Conta",
+    "",
   ]);
+  await expect(
+    bottomNav.getByRole("link", { name: "Novo contrato" })
+  ).toBeVisible();
 
-  // `exact` separa do gatilho "Buscar…" da sidebar expandida.
-  await bottomNav.getByRole("button", { name: "Buscar", exact: true }).click();
+  // A lupa mora na top bar; `exact` separa do gatilho "Buscar…" da sidebar.
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
 
   const palette = page.getByRole("dialog");
   await expect(palette.getByRole("combobox")).toBeFocused();

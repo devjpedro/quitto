@@ -1,6 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { overwriteGetLocale } from "@/paraglide/runtime.js";
+
+// jsdom reports navigator.language = "en-US"; the app's base locale is pt-BR,
+// and component tests assert pt-BR copy unless they opt into another locale.
+overwriteGetLocale(() => "pt-BR");
 
 const noop = () => undefined;
 

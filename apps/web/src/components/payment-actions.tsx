@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/legacy-ui/button";
+import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
+import { Label } from "@/components/legacy-ui/label";
+import { Textarea } from "@/components/legacy-ui/textarea";
 import { useFocusOnOpen } from "@/hooks/use-focus-restore";
 import {
   useConfirmPaymentMutation,

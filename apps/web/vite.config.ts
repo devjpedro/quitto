@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import { resolve } from "node:path";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
@@ -6,6 +7,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { nitro } from "nitro/vite";
 import { defineConfig, type PluginOption } from "vite";
+import { paraglideOptions } from "./paraglide.config";
 
 const analyze = process.env.ANALYZE === "1";
 // No `vercel build` rodando dentro do GitHub Actions, a autodetecção do Nitro
@@ -17,6 +19,7 @@ const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig(({ command }) => ({
   plugins: [
+    paraglideVitePlugin(paraglideOptions),
     tanstackStart(),
     // Nitro empacota o servidor do Start pro alvo de deploy (na Vercel detecta
     // o preset sozinho e gera o Build Output API). Só no build: no `vite dev`
@@ -27,6 +30,9 @@ export default defineConfig(({ command }) => ({
     ...(command === "build"
       ? [
           nitro({
+            // Função SSR/server functions na mesma região da API (Fly gru): o
+            // default (iad1) fazia cada chamada cruzar BR → EUA → BR duas vezes.
+            vercel: { functions: { regions: ["gru1"] } },
             routeRules: onVercel
               ? { "/api/**": { proxy: "https://usequitto-api.fly.dev/api/**" } }
               : {},

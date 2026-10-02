@@ -21,7 +21,8 @@
       "!**/drizzle",
       "!**/*.json",
       "!**/*.jsonc",
-      "!**/*.html"
+      "!**/*.html",
+      "!**/src/paraglide"
     ]
   },
   "overrides": [

@@ -1,6 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/legacy-ui/button";
 
 /** Copies `value` to the clipboard and shows a transient "Copiado!" state. */
 export function CopyButton({ value }: { value: string }) {

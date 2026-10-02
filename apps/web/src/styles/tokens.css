@@ -1,0 +1,89 @@
+/*
+ * Redesign tokens. Names intentionally avoid the legacy shadcn tokens
+ * (accent, muted, border, card…) still defined in index.css, so legacy
+ * screens keep rendering until each one is rebuilt. Values are plain hex:
+ * tests/tokens-contrast.test.ts parses this file.
+ */
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --radius-frame: 24px;
+  --radius-panel: 20px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --shadow-float:
+    0 18px 40px -12px rgb(17 17 17 / 0.18), 0 4px 10px -4px rgb(17 17 17 / 0.08);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-on-brand: var(--on-brand);
+  --color-on-brand-muted: var(--on-brand-muted);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+}
+
+:root {
+  --canvas: #e6e4dd;
+  --surface: #ffffff;
+  --surface-sunken: #f1f0eb;
+  --surface-raised: #ffffff;
+  --ink: #111111;
+  --ink-muted: #62625d;
+  --ink-inverse: #ffffff;
+  --line: #e9e7e1;
+  --line-strong: #d5d3cc;
+  --brand: #1f5a32;
+  --brand-surface: #1f5a32;
+  --brand-subtle: #e8f0ea;
+  --on-brand: #ffffff;
+  --on-brand-muted: #c3dccb;
+  --highlight: #d7f26b;
+  --on-highlight: #111111;
+  --warning: #8a5a00;
+  --warning-subtle: #fdf3d8;
+  --danger: #b42318;
+  --danger-subtle: #fdecea;
+}
+
+.dark {
+  --canvas: #121311;
+  --surface: #242521;
+  --surface-sunken: #1a1b18;
+  --surface-raised: #2e2f2a;
+  --ink: #ecebe6;
+  --ink-muted: #9a9a92;
+  --ink-inverse: #151613;
+  --line: #34352f;
+  --line-strong: #45463f;
+  --brand: #7cc495;
+  --brand-surface: #2b5a3b;
+  --brand-subtle: #23382a;
+  --on-brand: #ecebe6;
+  --on-brand-muted: #b8d6c2;
+  --highlight: #d7f26b;
+  --on-highlight: #151613;
+  --warning: #f2c766;
+  --warning-subtle: #3a3120;
+  --danger: #ff8a7a;
+  --danger-subtle: #3d2420;
+}

@@ -2,6 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  parseIdentityCookie,
+  serializeIdentityCookie,
+} from "@/lib/identity-cookie";
 import { queryKeys } from "@/lib/query-keys";
 
 const navigate = vi.fn();
@@ -244,5 +248,30 @@ describe("CommandPalette", () => {
     renderPalette([ALUGUEL]);
     const painel = screen.getByRole("dialog");
     expect(painel.className).toContain("-translate-x-1/2");
+  });
+
+  it("Sair encerra a sessão e apaga o cookie de identidade antes de ir pro login", async () => {
+    // biome-ignore lint/suspicious/noDocumentCookie: jsdom test setup, the hint written while signed in
+    document.cookie = serializeIdentityCookie(
+      { id: "u1", name: "Maria", email: "m@e.com", image: null },
+      { secure: false }
+    );
+    const seen: { href?: string; cookie?: string } = {};
+    vi.stubGlobal("location", {
+      protocol: "http:",
+      set href(value: string) {
+        seen.href = value;
+        seen.cookie = document.cookie;
+      },
+    });
+    try {
+      renderPalette([]);
+      await userEvent.click(screen.getByText("Sair"));
+      await vi.waitFor(() => expect(seen.href).toBe("/login"));
+      expect(signOut).toHaveBeenCalledTimes(1);
+      expect(parseIdentityCookie(seen.cookie)).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -43,6 +43,27 @@ export async function signup(
   return email;
 }
 
+/** ISO date (YYYY-MM-DD) relative to today in America/Sao_Paulo; keeps seeds from aging. */
+export function isoDaysFromToday(days: number): string {
+  const today = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+  );
+  today.setDate(today.getDate() + days);
+  const y = today.getFullYear();
+  const mo = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${d}`;
+}
+
+/** Opens the account menu (desktop sidebar or mobile top bar — whichever is visible). */
+export async function openAccountMenu(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: "Conta" })
+    .filter({ visible: true })
+    .first()
+    .click();
+}
+
 /** Cria um usuário isolado em seu próprio contexto (cookies próprios). */
 export async function newUser(
   browser: Browser
@@ -84,7 +105,7 @@ export async function seedContract(
           mode: "auto",
           totalAmountCents: 300_000,
           installmentsCount: 3,
-          firstDueDate: "2026-09-10",
+          firstDueDate: isoDaysFromToday(-21),
         } satisfies SeedSchedule),
     },
   });

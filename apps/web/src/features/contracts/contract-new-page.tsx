@@ -19,21 +19,21 @@ import {
 } from "react-hook-form";
 import { CurrencyField } from "@/components/currency-field";
 import { DateField } from "@/components/date-field";
-import { Money } from "@/components/money";
-import { PageContainer } from "@/components/page-container";
-import { Stepper } from "@/components/stepper";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/legacy-ui/button";
+import { Card } from "@/components/legacy-ui/card";
+import { Input } from "@/components/legacy-ui/input";
+import { Label } from "@/components/legacy-ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/legacy-ui/select";
+import { Textarea } from "@/components/legacy-ui/textarea";
+import { Money } from "@/components/money";
+import { PageContainer } from "@/components/page-container";
+import { Stepper } from "@/components/stepper";
 import { useCreateContractMutation } from "@/hooks/use-contract-mutations";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { capitalize, formatBRL, formatISODateBR } from "@/lib/format";

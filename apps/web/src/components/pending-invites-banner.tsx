@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Mail } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/legacy-ui/badge";
+import { Button } from "@/components/legacy-ui/button";
 import { useMyInvitesQuery } from "@/hooks/use-my-invites";
 import { ROLE_LABEL } from "@/lib/labels";
 

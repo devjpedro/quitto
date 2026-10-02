@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeQueryClient } from "../src/lib/query";
 import { makeTestQueryClient } from "./test-utils";
 
 const getList = vi.fn();
@@ -73,6 +74,26 @@ describe("use-notifications", () => {
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.count).toBe(3);
+  });
+
+  it("never throws when the unread count fails (the badge must not take down the shell)", async () => {
+    getUnread.mockResolvedValue({
+      data: null,
+      error: {
+        status: 503,
+        value: { error: { code: "INTERNAL", message: "cold" } },
+      },
+    });
+    // The production client throws every non-401 to the error boundary.
+    const client = makeQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    const { result } = renderHook(() => useUnreadCountQuery(), {
+      wrapper: wrapper(client),
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 
   it("markRead invalidates list + unread", async () => {

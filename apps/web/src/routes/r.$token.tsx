@@ -3,10 +3,12 @@ import {
   PublicReceiptPage,
   PublicReceiptUnavailable,
 } from "@/features/receipts/public-receipt-page";
+import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { getPublicReceiptSSR } from "@/lib/public-receipt-ssr";
 
 function PublicReceiptRoute() {
+  useApiWarmup();
   const receipt = Route.useLoaderData();
   const { token } = Route.useParams();
   return <PublicReceiptPage receipt={receipt} token={token} />;
