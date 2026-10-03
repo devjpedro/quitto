@@ -32,7 +32,30 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 vi.mock("@/lib/ssr-session", () => ({ getSessionSSR: vi.fn() }));
-vi.mock("@/components/command-palette", () => ({ CommandPalette: () => null }));
+// The palette as far as the shell is concerned: its "Notificações" closes it
+// (the focused option leaves the page) and opens the bell panel.
+vi.mock("@/components/command-palette", () => ({
+  CommandPalette: ({
+    onOpenChange,
+    onOpenNotifications,
+    open,
+  }: {
+    onOpenChange: (open: boolean) => void;
+    onOpenNotifications: () => void;
+    open: boolean;
+  }) =>
+    open ? (
+      <button
+        onClick={() => {
+          onOpenChange(false);
+          onOpenNotifications();
+        }}
+        type="button"
+      >
+        palette: Notificações
+      </button>
+    ) : null,
+}));
 vi.mock("@/components/layout/app-frame", () => ({
   AppFrame: ({
     identity,
@@ -56,7 +79,11 @@ vi.mock("@/components/layout/app-frame", () => ({
       <span>
         counts {navCounts.now}/{navCounts.contracts}
       </span>
-      <button onClick={onOpenNotifications} type="button">
+      <button
+        data-notifications-trigger="sidebar"
+        onClick={onOpenNotifications}
+        type="button"
+      >
         bell
       </button>
       {children}
@@ -168,6 +195,21 @@ describe("_app layout", () => {
     expect(
       await screen.findByRole("dialog", { name: "Notificações" })
     ).toBeVisible();
+  });
+
+  it("⌘K → Notificações → Esc gives the focus back to the bell, not to <body>", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    renderWithProviders(<AppLayout />);
+    await userEvent.keyboard("{Meta>}k{/Meta}");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "palette: Notificações" })
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Notificações" })
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "bell" })).toHaveFocus();
   });
 
   it("the milestone of the moment comes from the same home, as text for the sidebar", async () => {

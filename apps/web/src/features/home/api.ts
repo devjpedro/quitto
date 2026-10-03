@@ -2,23 +2,18 @@ import {
   type QueryClient,
   queryOptions,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useHydrated } from "@tanstack/react-router";
-import type { NavCounts } from "@/components/layout/nav-items";
 import { NOTIFICATION_READ_KEY } from "@/features/notifications/api";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
 import {
   type PendingHomeWrites,
   withOnboardingDismissed,
   withPendingWrites,
 } from "./lib/home-cache";
-import { type MomentView, momentMilestone, momentView } from "./lib/moment";
 import type { Home, InstallmentAction, InviteAction } from "./types";
 import {
   pendingHomeActionIds,
@@ -59,60 +54,6 @@ export const homeQueryOptions = queryOptions({
   // over a page that does not show the home (the page shows its own state).
   meta: { silentRefetchError: true },
 });
-
-/**
- * Unread count for the shell badge, read from the home. Never throws: a
- * badge must not take down the shell. SSR and the hydration pass render 0,
- * because the streamed home may land before hydration and a badge that
- * differs from the server HTML would be a hydration mismatch.
- */
-export function useUnreadCount(): number {
-  const hydrated = useHydrated();
-  const { data } = useQuery({
-    ...homeQueryOptions,
-    select: (home) => home.unreadCount,
-    throwOnError: false,
-  });
-  return hydrated ? (data ?? 0) : 0;
-}
-
-/**
- * The milestone of the moment for the sidebar's lime card, already worded.
- * Same care as the badge: read from the home, never throws, and null during
- * SSR and hydration (the sidebar renders before the streamed home lands).
- */
-export function useMomentMilestone(): MomentView | null {
-  const hydrated = useHydrated();
-  const { data } = useQuery({
-    ...homeQueryOptions,
-    select: momentMilestone,
-    throwOnError: false,
-  });
-  return hydrated && data ? momentView(data, getLocale()) : null;
-}
-
-const NO_COUNTS: NavCounts = { contracts: 0, now: 0 };
-
-/** The sidebar's numbers: what needs you now and the active contracts. Module level, so the select is stable. */
-const navCounts = (home: Home): NavCounts => ({
-  contracts: home.activeContractsCount,
-  now: home.actions.length,
-});
-
-/**
- * The counts next to "Agora" and "Contratos" in the sidebar. Same care as the
- * badge: read from the home, never throws, and zero during SSR and hydration
- * (a number the server HTML does not have would be a hydration mismatch).
- */
-export function useNavCounts(): NavCounts {
-  const hydrated = useHydrated();
-  const { data } = useQuery({
-    ...homeQueryOptions,
-    select: navCounts,
-    throwOnError: false,
-  });
-  return hydrated && data ? data : NO_COUNTS;
-}
 
 function markPaid(action: InstallmentAction) {
   return unwrap(

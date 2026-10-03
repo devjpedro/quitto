@@ -1,3 +1,4 @@
+import { Bell } from "@phosphor-icons/react";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -6,10 +7,11 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import { screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, type ShellProps } from "@/components/layout/app-frame";
+import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
 import type { SessionIdentity } from "@/lib/session-resolver";
 import { renderWithProviders } from "./test-utils";
 
@@ -31,29 +33,29 @@ const maria: SessionIdentity = {
 };
 
 const openNotifications = vi.fn();
+const startWidth = window.innerWidth;
 beforeEach(() => {
   openNotifications.mockReset();
 });
-
-const NO_COUNTS: ShellProps["navCounts"] = { contracts: 0, now: 0 };
+afterEach(() => {
+  window.innerWidth = startWidth;
+});
 
 async function renderAt(
   path: string,
-  identity: SessionIdentity | null = maria,
-  unreadCount = 0,
-  moment: ShellProps["moment"] = null,
-  navCounts: ShellProps["navCounts"] = NO_COUNTS
+  shell: Partial<Omit<ShellProps, "onOpenNotifications" | "onOpenSearch">> = {}
 ) {
   const rootRoute = createRootRoute({
     component: () => (
       <AppFrame
-        identity={identity}
-        moment={moment}
-        navCounts={navCounts}
+        identity={maria}
+        moment={null}
+        navCounts={{ contracts: 0, now: 0 }}
         notificationsOpen={false}
         onOpenNotifications={openNotifications}
         onOpenSearch={vi.fn()}
-        unreadCount={unreadCount}
+        unreadCount={0}
+        {...shell}
       >
         <Outlet />
       </AppFrame>
@@ -94,7 +96,7 @@ describe("AppFrame", () => {
   });
 
   it("the bell and the sidebar row carry the unread count and open the panel", async () => {
-    await renderAt("/", maria, 3);
+    await renderAt("/", { unreadCount: 3 });
     const bells = screen.getAllByRole("button", {
       name: "Notificações, 3 não lidas",
     });
@@ -107,17 +109,69 @@ describe("AppFrame", () => {
     expect(openNotifications).toHaveBeenCalledTimes(2);
   });
 
+  it("with the panel open, both bells say so: expanded, filled icon and the sidebar row tinted white", async () => {
+    await renderAt("/", { notificationsOpen: true, unreadCount: 2 });
+    const filled = render(<Bell weight="fill" />).container.querySelector(
+      "svg"
+    );
+    const bells = screen.getAllByRole("button", {
+      name: "Notificações, 2 não lidas",
+    });
+    expect(bells).toHaveLength(2);
+    for (const bell of bells) {
+      expect(bell).toHaveAttribute("aria-expanded", "true");
+      expect(bell.querySelector("svg")?.innerHTML).toBe(filled?.innerHTML);
+    }
+    const row = within(screen.getByRole("complementary")).getByRole("button", {
+      name: "Notificações, 2 não lidas",
+    });
+    expect(row).toHaveClass("bg-surface");
+  });
+
+  it("closed, the bells are outlined and the row is not tinted", async () => {
+    await renderAt("/");
+    const outlined = render(<Bell />).container.querySelector("svg");
+    const bells = screen.getAllByRole("button", { name: "Notificações" });
+    for (const bell of bells) {
+      expect(bell).toHaveAttribute("aria-expanded", "false");
+      expect(bell.querySelector("svg")?.innerHTML).toBe(outlined?.innerHTML);
+    }
+    expect(
+      within(screen.getByRole("complementary")).getByRole("button", {
+        name: "Notificações",
+      })
+    ).not.toHaveClass("bg-surface");
+  });
+
+  it("the bell on screen is the one the focus returns to: the top bar's below md, the sidebar row's from md", async () => {
+    await renderAt("/");
+    const sidebarRow = within(screen.getByRole("complementary")).getByRole(
+      "button",
+      { name: "Notificações" }
+    );
+    const [topBarBell] = within(screen.getByRole("banner")).getAllByRole(
+      "button",
+      { name: "Notificações" }
+    );
+    window.innerWidth = 1024;
+    expect(visibleNotificationsTrigger()).toBe(sidebarRow);
+    window.innerWidth = 390;
+    expect(visibleNotificationsTrigger()).toBe(topBarBell);
+  });
+
   it("one unread reads in the singular", async () => {
-    await renderAt("/", maria, 1);
+    await renderAt("/", { unreadCount: 1 });
     expect(
       screen.getAllByRole("button", { name: "Notificações, 1 não lida" })
     ).toHaveLength(2);
   });
 
   it("shows the milestone of the moment as a lime card at the foot of the sidebar", async () => {
-    await renderAt("/", maria, 0, {
-      title: "Tudo em dia em setembro",
-      detail: "12 de 12 parcelas quitadas",
+    await renderAt("/", {
+      moment: {
+        title: "Tudo em dia em setembro",
+        detail: "12 de 12 parcelas quitadas",
+      },
     });
     const title = screen.getByText("Tudo em dia em setembro");
     expect(title).toBeVisible();
@@ -139,8 +193,15 @@ describe("AppFrame", () => {
     await renderAt("/contracts");
     // The frame follows the screen: 12 px of canvas top, bottom and right, none on the left.
     const shell = document.getElementById("app-shell");
-    expect(shell).toHaveClass("md:bg-canvas", "md:py-3", "md:pr-3");
+    expect(shell).toHaveClass("md:bg-canvas", "md:pt-3");
     expect(shell).not.toHaveClass("md:p-3");
+    // viewport-fit=cover: a phone on its side is md+ with the notch at a side,
+    // so the 12 px of canvas grow to the safe area, and the left one is the safe area itself.
+    expect(shell).toHaveClass(
+      "pl-[env(safe-area-inset-left)]",
+      "md:pr-[max(0.75rem,env(safe-area-inset-right))]",
+      "md:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+    );
     const main = screen.getByRole("main");
     expect(main).toHaveClass("md:rounded-panel", "md:bg-surface");
     const row = main.parentElement;
@@ -151,6 +212,8 @@ describe("AppFrame", () => {
     // No card: the sidebar is the canvas itself, 232 px wide, its own p-3 the gap to the panel.
     const sidebar = screen.getByRole("complementary");
     expect(sidebar).toHaveClass("w-[232px]", "p-3");
+    // A short screen (a phone on its side) scrolls it instead of pushing the account menu out.
+    expect(sidebar).toHaveClass("overflow-y-auto");
     expect(sidebar).not.toHaveClass("rounded-panel");
     expect(sidebar).not.toHaveClass("bg-surface");
     // The search stays a field on the canvas: white, no line around it.
@@ -173,7 +236,7 @@ describe("AppFrame", () => {
   });
 
   it("Agora and Contratos show their counts, hidden from AT and read in the link name", async () => {
-    await renderAt("/contracts", maria, 0, null, { contracts: 2, now: 3 });
+    await renderAt("/contracts", { navCounts: { contracts: 2, now: 3 } });
     const [sidebarNav, tabBar] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
@@ -198,7 +261,7 @@ describe("AppFrame", () => {
   });
 
   it("one pending action and one active contract read in the singular", async () => {
-    await renderAt("/", maria, 0, null, { contracts: 1, now: 1 });
+    await renderAt("/", { navCounts: { contracts: 1, now: 1 } });
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
@@ -251,7 +314,7 @@ describe("AppFrame", () => {
   });
 
   it("renders without identity (cold start) without crashing or leaking a name", async () => {
-    await renderAt("/", null);
+    await renderAt("/", { identity: null });
     expect(screen.queryByText("Maria Souza")).toBeNull();
     expect(screen.getAllByRole("button", { name: "Conta" })).toHaveLength(2);
   });

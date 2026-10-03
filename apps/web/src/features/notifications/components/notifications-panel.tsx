@@ -11,10 +11,13 @@ import { NotificationsList, NotificationsSkeleton } from "./notifications-list";
  * mounts its content while open.
  */
 export function NotificationsPanel({
+  fallbackFocus,
   onOpenChange,
   open,
   unreadCount,
 }: {
+  /** Where the focus goes on close when what opened it left the page (the ⌘K palette). */
+  fallbackFocus?: () => HTMLElement | null;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   unreadCount: number;
@@ -29,6 +32,7 @@ export function NotificationsPanel({
   return (
     <ResponsiveSheet
       description={description}
+      fallbackFocus={fallbackFocus}
       onOpenChange={onOpenChange}
       open={open}
       title={m.notifications_title()}

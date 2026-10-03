@@ -30,8 +30,8 @@ import {
   homeQueryOptions,
   useDismissOnboarding,
   useMarkPaidFromHome,
-  useUnreadCount,
 } from "../src/features/home/api";
+import { useUnreadCount } from "../src/features/home/shell-selectors";
 
 /** Same staleTime as production: only the bell's "always" refetches on focus. */
 function makeClient() {

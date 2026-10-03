@@ -12,12 +12,20 @@ import { queryKeys } from "@/lib/query-keys";
 import { makeQueryClient } from "../src/lib/query";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
-const { markPaid, accept, dismiss, getHome, toastError } = vi.hoisted(() => ({
-  markPaid: vi.fn(),
-  accept: vi.fn(),
-  dismiss: vi.fn(),
-  getHome: vi.fn(),
-  toastError: vi.fn(),
+const { markPaid, accept, dismiss, getHome, toastError, hydration } =
+  vi.hoisted(() => ({
+    markPaid: vi.fn(),
+    accept: vi.fn(),
+    dismiss: vi.fn(),
+    getHome: vi.fn(),
+    toastError: vi.fn(),
+    // A client render outside hydration is hydrated, like the real hook says.
+    hydration: { done: true },
+  }));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useHydrated: () => hydration.done,
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: toastError } }));
@@ -44,10 +52,12 @@ import {
   useAcceptInviteFromHome,
   useDismissOnboarding,
   useMarkPaidFromHome,
+} from "../src/features/home/api";
+import {
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
-} from "../src/features/home/api";
+} from "../src/features/home/shell-selectors";
 
 /**
  * These tests seed the cache with no observer on it: the shared test client's
@@ -424,5 +434,52 @@ describe("useNavCounts", () => {
     await waitFor(() =>
       expect(result.current).toEqual({ contracts: 5, now: 2 })
     );
+  });
+});
+
+describe("passada de hidratação", () => {
+  it("antes de hidratar, o shell não mostra nada do home, nem com ele já em cache (o HTML do servidor não tem)", () => {
+    const client = makeClient();
+    client.setQueryData(
+      queryKeys.home,
+      homeFixture({
+        unreadCount: 3,
+        actions: [installmentAction()],
+        activeContractsCount: 2,
+        milestones: {
+          ...homeFixture().milestones,
+          previousMonthAllClear: { month: "2026-09", paidCount: 12 },
+        },
+      })
+    );
+    hydration.done = false;
+    try {
+      const { result, rerender } = renderHook(
+        () => ({
+          counts: useNavCounts(),
+          moment: useMomentMilestone(),
+          unread: useUnreadCount(),
+        }),
+        { wrapper: wrapper(client) }
+      );
+      expect(result.current).toEqual({
+        counts: { contracts: 0, now: 0 },
+        moment: null,
+        unread: 0,
+      });
+      // Hydrated, the same cache shows: the gate is what hid it.
+      hydration.done = true;
+      rerender();
+      expect(result.current).toEqual({
+        counts: { contracts: 2, now: 1 },
+        moment: {
+          title: "Tudo em dia em setembro",
+          detail: "12 de 12 parcelas quitadas",
+        },
+        unread: 3,
+      });
+    } finally {
+      hydration.done = true;
+    }
   });
 });

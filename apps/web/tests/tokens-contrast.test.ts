@@ -62,6 +62,24 @@ const NON_TEXT_PAIRS: [string, string][] = [
   ["ink", "canvas"],
 ];
 
+// [foreground, background, alpha] text drawn with opacity on a token: the
+// count on the active (black) sidebar row is `text-ink-inverse/70`.
+const ALPHA_TEXT_PAIRS: [string, string, number][] = [
+  ["ink-inverse", "ink", 0.7],
+];
+
+/** `fg` at `alpha` over `bg`, composited per channel as the browser does (sRGB). */
+function composite(fg: string, bg: string, alpha: number): string {
+  const channel = (hex: string, at: number) =>
+    Number.parseInt(hex.slice(at, at + 2), 16);
+  const mixed = [1, 3, 5].map((at) =>
+    Math.round(channel(fg, at) * alpha + channel(bg, at) * (1 - alpha))
+      .toString(16)
+      .padStart(2, "0")
+  );
+  return `#${mixed.join("")}`;
+}
+
 describe("design tokens", () => {
   it("defines every light token in dark mode too", () => {
     expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
@@ -82,6 +100,18 @@ describe("design tokens", () => {
         ).toBeGreaterThanOrEqual(4.5);
       });
     }
+    for (const [fg, bg, alpha] of ALPHA_TEXT_PAIRS) {
+      it(`${theme}: ${fg} at ${alpha * 100}% on ${bg} passes WCAG AA (4.5:1)`, () => {
+        const fgHex = tokens[fg];
+        const bgHex = tokens[bg];
+        expect(fgHex, `missing --${fg}`).toBeDefined();
+        expect(bgHex, `missing --${bg}`).toBeDefined();
+        const mixed = composite(fgHex as string, bgHex as string, alpha);
+        expect(contrastRatio(mixed, bgHex as string)).toBeGreaterThanOrEqual(
+          4.5
+        );
+      });
+    }
     for (const [fg, bg] of NON_TEXT_PAIRS) {
       it(`${theme}: ${fg} on ${bg} passes WCAG 1.4.11 (3:1)`, () => {
         const fgHex = tokens[fg];
@@ -94,6 +124,13 @@ describe("design tokens", () => {
       });
     }
   }
+});
+
+describe("composite", () => {
+  it("mixes per channel: white at 70% on #111111 is #b8b8b8", () => {
+    expect(composite("#ffffff", "#111111", 0.7)).toBe("#b8b8b8");
+    expect(composite("#151613", "#ecebe6", 0.7)).toBe("#565652");
+  });
 });
 
 describe("contrastRatio", () => {

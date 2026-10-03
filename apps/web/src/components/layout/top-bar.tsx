@@ -4,6 +4,7 @@ import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
 import type { ShellProps } from "./app-frame";
 import { notificationsLabel } from "./notifications-label";
+import { notificationsTrigger } from "./notifications-trigger";
 import { Wordmark } from "./wordmark";
 
 export function TopBar({
@@ -30,6 +31,7 @@ export function TopBar({
           label={notificationsLabel(unreadCount)}
           onClick={onOpenNotifications}
           weight={notificationsOpen ? "fill" : "regular"}
+          {...notificationsTrigger("top-bar")}
         />
         <AccountMenu identity={identity} variant="avatar" />
       </div>

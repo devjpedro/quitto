@@ -7,6 +7,7 @@ import type { ShellProps } from "./app-frame";
 import { MomentCard } from "./moment-card";
 import { type NavItem, PRIMARY_NAV } from "./nav-items";
 import { notificationsLabel } from "./notifications-label";
+import { notificationsTrigger } from "./notifications-trigger";
 import { Wordmark } from "./wordmark";
 
 // On the canvas (structure B): hover tints with the panel's white; the active row stays black.
@@ -62,7 +63,9 @@ export function Sidebar({
   unreadCount,
 }: ShellProps) {
   return (
-    <aside className="sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[232px] shrink-0 flex-col p-3 md:flex">
+    // The frame's height (12 px on top, the bottom safe area or 12 px below);
+    // a short screen (a phone on its side) scrolls it, the account menu included.
+    <aside className="sticky top-3 hidden h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] w-[232px] shrink-0 flex-col overflow-y-auto p-3 md:flex">
       <Wordmark className="px-2 py-1.5" />
       <button
         className="mt-4 flex h-10 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -94,6 +97,7 @@ export function Sidebar({
           className={cn(LINK, notificationsOpen && "bg-surface")}
           onClick={onOpenNotifications}
           type="button"
+          {...notificationsTrigger("sidebar")}
         >
           <Bell
             aria-hidden="true"

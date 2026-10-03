@@ -42,10 +42,11 @@ function useSheetMotion() {
  * The sheet opens from state (the bell, a sidebar row), with no Dialog.Trigger,
  * so Radix has nothing to give the focus back to on close and drops it on
  * <body>. Remember what had the focus when it opened and return it there,
- * as long as it is still in the page (WCAG 2.4.3). Without a live target,
- * Radix's own handling stays.
+ * as long as it is still in the page (WCAG 2.4.3). When it left the page, or
+ * nothing had it (the ⌘K palette closes as it opens the sheet), go to
+ * `fallbackFocus`. Without either, Radix's own handling stays.
  */
-function useReturnFocus() {
+function useReturnFocus(fallbackFocus?: () => HTMLElement | null) {
   const returnTo = useRef<HTMLElement | null>(null);
   return {
     onOpenAutoFocus: () => {
@@ -56,9 +57,10 @@ function useReturnFocus() {
           : null;
     },
     onCloseAutoFocus: (event: Event) => {
-      const target = returnTo.current;
+      const opener = returnTo.current;
       returnTo.current = null;
-      if (target?.isConnected) {
+      const target = opener?.isConnected ? opener : fallbackFocus?.();
+      if (target) {
         event.preventDefault();
         target.focus();
       }
@@ -72,17 +74,20 @@ export function ResponsiveSheet({
   onOpenChange,
   title,
   description,
+  fallbackFocus,
   children,
 }: {
   children: ReactNode;
   description?: string;
+  /** Where the focus goes on close when what had it at open left the page, or nothing had it. */
+  fallbackFocus?: () => HTMLElement | null;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   title: string;
 }) {
   const { variant, canDrag, hidden, shown, transition, dragControls } =
     useSheetMotion();
-  const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus();
+  const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus(fallbackFocus);
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -109,7 +114,8 @@ export function ResponsiveSheet({
                 className={cn(
                   "fixed z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
                   variant === "side"
-                    ? "inset-y-3 right-3 w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel"
+                    ? // viewport-fit=cover: off the notch of a phone on its side (md+).
+                      "top-3 right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel"
                     : "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-panel pb-[env(safe-area-inset-bottom)]"
                 )}
                 data-variant={variant}

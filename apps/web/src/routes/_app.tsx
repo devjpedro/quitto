@@ -9,11 +9,12 @@ import { ErrorBoundary } from "react-error-boundary";
 import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
+import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
 import {
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
-} from "@/features/home/api";
+} from "@/features/home/shell-selectors";
 import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
 import { useNotificationsPanel } from "@/features/notifications/hooks/use-notifications-panel";
 import { useCommandPalette } from "@/hooks/use-command-palette";
@@ -89,6 +90,8 @@ function AppLayout() {
         open={searchOpen}
       />
       <NotificationsPanel
+        // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
+        fallbackFocus={visibleNotificationsTrigger}
         onOpenChange={notifications.setOpen}
         open={notifications.open}
         unreadCount={unreadCount}
