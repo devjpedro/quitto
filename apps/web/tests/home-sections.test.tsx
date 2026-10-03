@@ -646,4 +646,22 @@ describe("UpcomingList (mockup 13)", () => {
     ).toHaveClass("font-display", "text-ink");
     expect(screen.getByText("1 parcela")).toBeVisible();
   });
+
+  it("o anel e o hover da primeira e da última linha seguem o canto do bloco", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem(),
+          upcomingItem({ installmentId: "u2", sequence: 3 }),
+        ])}
+      />
+    );
+    // The block clips its corners (overflow-hidden): a square row there
+    // would cut the inset focus ring along the curve.
+    for (const item of screen.getAllByRole("listitem")) {
+      expect(item).toHaveClass("first:rounded-t-card", "last:rounded-b-card");
+      expect(within(item).getByRole("link")).toHaveClass("rounded-[inherit]");
+    }
+  });
 });

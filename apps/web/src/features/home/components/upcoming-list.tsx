@@ -34,7 +34,7 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
   const date = weekdayName(item.dueDate, locale);
   return (
     <Link
-      className="flex min-h-16 items-center gap-3.5 py-2.5 pr-4 pl-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+      className="flex min-h-16 items-center gap-3.5 rounded-[inherit] py-2.5 pr-4 pl-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
       params={{ id: item.contractId }}
       search={{ installment: item.installmentId }}
       to="/contracts/$id"
@@ -139,7 +139,13 @@ export function UpcomingList({
       ) : (
         <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
           {upcoming.items.map((item) => (
-            <li key={item.installmentId}>
+            // The first and last rows take the block's corners (the row
+            // inherits them), so the inset focus ring follows the curve
+            // instead of being clipped by it.
+            <li
+              className="first:rounded-t-card last:rounded-b-card"
+              key={item.installmentId}
+            >
               <UpcomingRow item={item} locale={locale} />
             </li>
           ))}
