@@ -143,20 +143,25 @@ describe("AppFrame", () => {
     ).not.toHaveClass("bg-surface");
   });
 
-  it("the bell on screen is the one the focus returns to: the top bar's below md, the sidebar row's from md", async () => {
+  it("the bell on screen is the one the focus returns to, whatever the width in px says", async () => {
     await renderAt("/");
-    const sidebarRow = within(screen.getByRole("complementary")).getByRole(
-      "button",
-      { name: "Notificações" }
-    );
-    const [topBarBell] = within(screen.getByRole("banner")).getAllByRole(
-      "button",
-      { name: "Notificações" }
-    );
+    const sidebar = screen.getByRole("complementary");
+    const topBar = screen.getByRole("banner");
+    const sidebarRow = within(sidebar).getByRole("button", {
+      name: "Notificações",
+    });
+    const [topBarBell] = within(topBar).getAllByRole("button", {
+      name: "Notificações",
+    });
+    // No CSS in jsdom: display none stands in for md:hidden and hidden md:flex.
+    // 1024 px with the sidebar hidden is md in rem with a browser font above
+    // 16 px (48rem at 22 px is 1056 px), the case a px media query gets wrong.
     window.innerWidth = 1024;
-    expect(visibleNotificationsTrigger()).toBe(sidebarRow);
-    window.innerWidth = 390;
+    sidebar.style.display = "none";
     expect(visibleNotificationsTrigger()).toBe(topBarBell);
+    sidebar.style.display = "";
+    topBar.style.display = "none";
+    expect(visibleNotificationsTrigger()).toBe(sidebarRow);
   });
 
   it("one unread reads in the singular", async () => {
