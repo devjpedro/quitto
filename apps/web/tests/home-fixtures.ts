@@ -11,15 +11,17 @@ export function installmentAction(
   over: Partial<InstallmentAction> = {}
 ): InstallmentAction {
   const installmentId = over.installmentId ?? "i1";
+  const sequence = over.sequence ?? 7;
+  const amountCents = over.amountCents ?? 125_000;
   return {
     id: `installment:${installmentId}`,
     kind: "due_soon",
     installmentId,
     contractId: "c1",
     contractTitle: "Aluguel do apê",
-    sequence: 7,
+    sequence,
     installmentsCount: 12,
-    amountCents: 125_000,
+    amountCents,
     dueDate: "2026-10-03",
     direction: "pay",
     status: "pending",
@@ -27,6 +29,10 @@ export function installmentAction(
     pixCode: "000201pix",
     canMarkPaid: true,
     canConfirm: false,
+    count: 1,
+    installmentIds: [installmentId],
+    sequences: [sequence],
+    totalCents: amountCents,
     ...over,
   };
 }
@@ -63,6 +69,7 @@ export function homeFixture(over: Partial<Home> = {}): Home {
   return {
     today: TODAY,
     actions: [],
+    overdue: { toPayCents: 0, toReceiveCents: 0 },
     upcoming: { items: [], moreCount: 0, toPayCents: 0, toReceiveCents: 0 },
     nextDue: null,
     milestones: {

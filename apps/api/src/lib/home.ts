@@ -6,88 +6,24 @@ import {
   isPaidStatus,
 } from "@quitto/shared";
 import { addDays } from "./dates";
+import { byDueDate, groupOverdue, orderActions } from "./home-groups";
 import {
   type HomeInstallmentRow,
   type PartyContract,
   pixCodeFor,
 } from "./home-parties";
+import type {
+  HomeAgenda,
+  HomeInviteRow,
+  InstallmentAction,
+  InstallmentActionKind,
+  InviteAction,
+  UpcomingItem,
+} from "./home-types";
 
 export const DUE_SOON_DAYS = 7;
 export const UPCOMING_DAYS = 30;
 export const UPCOMING_LIMIT = 8;
-
-export type InstallmentActionKind =
-  | "overdue"
-  | "review"
-  | "disputed"
-  | "due_soon";
-
-export interface UpcomingItem {
-  amountCents: number;
-  contractId: string;
-  contractTitle: string;
-  direction: Direction;
-  dueDate: string;
-  installmentId: string;
-  installmentsCount: number;
-  sequence: number;
-  status: string;
-}
-
-export interface InstallmentAction extends UpcomingItem {
-  canConfirm: boolean;
-  canMarkPaid: boolean;
-  counterpartyName: string | null;
-  id: string;
-  kind: InstallmentActionKind;
-  pixCode: string | null;
-}
-
-export interface InviteAction {
-  contractTitle: string;
-  id: string;
-  inviterName: string;
-  kind: "invite";
-  role: string;
-  token: string;
-}
-
-export type HomeAction = InstallmentAction | InviteAction;
-
-export interface HomeInviteRow {
-  contractId: string;
-  contractTitle: string;
-  createdAt: Date;
-  inviterName: string;
-  role: string;
-  token: string;
-}
-
-export interface HomeAgenda {
-  actions: HomeAction[];
-  nextDue: UpcomingItem | null;
-  upcoming: {
-    items: UpcomingItem[];
-    moreCount: number;
-    toPayCents: number;
-    toReceiveCents: number;
-  };
-}
-
-const KIND_ORDER: Record<InstallmentActionKind, number> = {
-  overdue: 0,
-  review: 1,
-  disputed: 2,
-  due_soon: 3,
-};
-
-function byDueDate(a: UpcomingItem, b: UpcomingItem): number {
-  return (
-    a.dueDate.localeCompare(b.dueDate) ||
-    a.contractTitle.localeCompare(b.contractTitle) ||
-    a.sequence - b.sequence
-  );
-}
 
 /** Which action, if any, an open installment asks of the caller. */
 function classify(
@@ -138,6 +74,10 @@ function toAction(
     ...toUpcoming(party, it),
     id: `installment:${it.id}`,
     kind,
+    count: 1,
+    installmentIds: [it.id],
+    sequences: [it.sequence],
+    totalCents: it.amountCents,
     counterpartyName: party.counterpartyName,
     pixCode: kind === "review" ? null : pixCodeFor(party, it.amountCents),
     canMarkPaid:
@@ -173,9 +113,11 @@ function sumCents(items: UpcomingItem[], direction: Direction): number {
 }
 
 /**
- * The home's agenda. Actions by urgency: overdue, proofs to check, disputed
- * proofs to resend, invites, then what is due within 7 days. "Next 30 days"
- * leaves out what is already an action (the totals don't). nextDue is the
+ * The home's agenda. Overdue installments of one contract and direction are
+ * one card (home-groups). Cards by urgency: overdue, due today, proofs to
+ * check, disputed proofs to resend, invites, then what is due within 7 days.
+ * "Next 30 days" leaves out what is already a card (the totals don't) and
+ * looks ahead only: what is overdue has a total of its own. nextDue is the
  * first open installment from today on, at any distance.
  */
 export function buildAgenda(
@@ -201,9 +143,11 @@ export function buildAgenda(
       }
     }
   }
-  installmentActions.sort(
-    (a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || byDueDate(a, b)
-  );
+  const overdue = installmentActions.filter((a) => a.kind === "overdue");
+  const cards = [
+    ...groupOverdue(overdue),
+    ...installmentActions.filter((a) => a.kind !== "overdue"),
+  ];
   const inviteActions = [...invites]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .map(toInviteAction);
@@ -212,11 +156,11 @@ export function buildAgenda(
   const asAction = new Set(installmentActions.map((a) => a.installmentId));
   const listed = inWindow.filter((it) => !asAction.has(it.installmentId));
   return {
-    actions: [
-      ...installmentActions.filter((a) => a.kind !== "due_soon"),
-      ...inviteActions,
-      ...installmentActions.filter((a) => a.kind === "due_soon"),
-    ],
+    actions: orderActions(cards, inviteActions, todayISO),
+    overdue: {
+      toPayCents: sumCents(overdue, DIRECTION.pay),
+      toReceiveCents: sumCents(overdue, DIRECTION.receive),
+    },
     nextDue: open[0] ?? null,
     upcoming: {
       items: listed.slice(0, UPCOMING_LIMIT),

@@ -17,10 +17,11 @@ import {
 } from "../lib/contract-visibility";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
-import { buildAgenda, type HomeInviteRow } from "../lib/home";
+import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
 import { type HomeContractRows, partyContracts } from "../lib/home-parties";
+import type { HomeInviteRow } from "../lib/home-types";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
 

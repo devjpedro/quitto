@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildAgenda, type HomeInviteRow } from "../src/lib/home";
+import { buildAgenda } from "../src/lib/home";
 import {
   type HomeContractRow,
   type HomeContractRows,
@@ -7,6 +7,7 @@ import {
   type HomeParticipantRow,
   partyContracts,
 } from "../src/lib/home-parties";
+import type { HomeInviteRow } from "../src/lib/home-types";
 
 const ME = "u-me";
 const OTHER = "u-other";

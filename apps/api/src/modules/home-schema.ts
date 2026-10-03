@@ -36,6 +36,10 @@ const installmentActionSchema = t.Object({
   pixCode: nullableString,
   canMarkPaid: t.Boolean(),
   canConfirm: t.Boolean(),
+  count: t.Integer(),
+  installmentIds: t.Array(t.String()),
+  sequences: t.Array(t.Integer()),
+  totalCents: t.Integer(),
 });
 
 const inviteActionSchema = t.Object({
@@ -50,6 +54,10 @@ const inviteActionSchema = t.Object({
 export const homeSchema = t.Object({
   today: t.String(),
   actions: t.Array(t.Union([installmentActionSchema, inviteActionSchema])),
+  overdue: t.Object({
+    toPayCents: t.Integer(),
+    toReceiveCents: t.Integer(),
+  }),
   upcoming: t.Object({
     items: t.Array(upcomingItemSchema),
     moreCount: t.Integer(),
