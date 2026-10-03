@@ -19,14 +19,18 @@ export type FetchLike = (
 
 /**
  * Wraps fetch so a hung read is aborted and rejects with TimeoutError. An
- * abort coming from the caller still goes through untouched.
+ * abort coming from the caller still goes through untouched. The limit
+ * covers the wait for the response headers: fetch resolves there, so a body
+ * that stalls afterwards is not cut.
  */
 export function withRequestTimeout(
   fetchImpl: FetchLike,
   timeoutMs: number
 ): FetchLike {
   return (input, init) => {
-    const method = (init?.method ?? "GET").toUpperCase();
+    const method = (
+      init?.method ?? (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
     // Only reads time out: an aborted write may still land on the server, and
     // "Try again" would then send it twice.
     if (method !== "GET" && method !== "HEAD") {

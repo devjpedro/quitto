@@ -62,4 +62,16 @@ describe("withRequestTimeout", () => {
     expect(fetchImpl.mock.calls[0]?.[1]?.signal?.aborted ?? false).toBe(false);
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("never times out a write passed as a Request either", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = hangingFetch();
+    withRequestTimeout(
+      fetchImpl,
+      1000
+    )(new Request("http://api.test/x", { method: "POST" }));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetchImpl.mock.calls[0]?.[1]?.signal?.aborted ?? false).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
