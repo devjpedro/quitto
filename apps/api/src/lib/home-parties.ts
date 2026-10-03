@@ -1,16 +1,11 @@
-import {
-  buildPixBrCode,
-  DIRECTION,
-  type Direction,
-  normalizeMerchantName,
-  parsePixKey,
-} from "@quitto/shared";
+import { DIRECTION, type Direction } from "@quitto/shared";
 import {
   type Capabilities,
   capabilitiesFromRows,
   pickRecebedor,
   type Recebedor,
 } from "./contract-access";
+import { installmentPix } from "./installment-pix";
 
 export interface HomeContractRow {
   createdAt: Date;
@@ -124,19 +119,8 @@ export function pixCodeFor(
   party: PartyContract,
   amountCents: number
 ): string | null {
-  const key = party.contract.pixKey ?? party.recebedor.profileKey;
-  if (!key) {
-    return null;
-  }
-  try {
-    parsePixKey(key);
-    return buildPixBrCode({
-      key,
-      amountCents,
-      merchantName: normalizeMerchantName(party.recebedor.displayName ?? ""),
-      merchantCity: "BRASIL",
-    });
-  } catch {
-    return null;
-  }
+  return (
+    installmentPix(party.contract.pixKey, party.recebedor, amountCents)?.code ??
+    null
+  );
 }

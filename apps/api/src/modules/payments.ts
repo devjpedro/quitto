@@ -1,10 +1,4 @@
-import {
-  buildPixBrCode,
-  isPaidStatus,
-  NOTIFICATION_TYPE,
-  normalizeMerchantName,
-  parsePixKey,
-} from "@quitto/shared";
+import { isPaidStatus, NOTIFICATION_TYPE } from "@quitto/shared";
 import { desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -18,6 +12,7 @@ import {
 import { recordEvent } from "../lib/audit";
 import { getCapabilities, resolveRecebedor } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { installmentPix } from "../lib/installment-pix";
 import { nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
@@ -349,26 +344,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       } | null = null;
       if (!isPaidStatus(inst.status)) {
         const recebedor = await resolveRecebedor(c);
-        const resolvedKey = c.pixKey ?? recebedor.profileKey ?? null;
-        if (resolvedKey) {
-          try {
-            const { type } = parsePixKey(resolvedKey);
-            pix = {
-              copiaECola: buildPixBrCode({
-                key: resolvedKey,
-                amountCents: inst.amountCents,
-                merchantName: normalizeMerchantName(
-                  recebedor.displayName ?? ""
-                ),
-                merchantCity: "BRASIL",
-              }),
-              keyType: type,
-              payToName: recebedor.displayName ?? "",
-            };
-          } catch {
-            // chave armazenada inesperadamente inválida não deve derrubar o detalhe da parcela
-            pix = null;
-          }
+        const built = installmentPix(c.pixKey, recebedor, inst.amountCents);
+        if (built) {
+          pix = {
+            copiaECola: built.code,
+            keyType: built.keyType,
+            payToName: recebedor.displayName ?? "",
+          };
         }
       }
 

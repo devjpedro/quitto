@@ -6,16 +6,16 @@ import { NotFoundError } from "./errors";
 export type ParticipantSlot = "buyer" | "seller" | "viewer";
 
 export interface ContractAccess {
-  /** Dono do contrato (gestão), derivado de contract.ownerId. */
+  /** Contract owner (management), derived from contract.ownerId. */
   isOwner: boolean;
-  /** Vaga real do usuário no contrato. */
+  /** The user's real slot in the contract. */
   role: ParticipantSlot;
 }
 
 export interface Capabilities extends ContractAccess {
-  /** Pode confirmar/contestar. */
+  /** Can confirm/dispute. */
   isApprover: boolean;
-  /** Pode pagar/anexar comprovante/marcar paga. */
+  /** Can pay/attach proof/mark as paid. */
   isPayer: boolean;
 }
 
@@ -34,6 +34,11 @@ interface OwnedContract {
   ownerRole: string;
 }
 
+/**
+ * The caller's slot: their first linked row that is not a legacy "owner" row,
+ * else the owner's ownerRole (buyer/seller). null = no access. Shared by
+ * getContractRole and capabilitiesFromRows, so every door reads the same slot.
+ */
 function slotOf(
   userId: string,
   c: OwnedContract,
@@ -60,8 +65,10 @@ function slotOf(
 }
 
 /**
- * Capacidade segue a vaga. O dono herda o lado oposto SOMENTE enquanto a outra
- * vaga não tiver contraparte com conta vinculada (linkedUserId !== null).
+ * Capability follows the slot. The owner inherits the opposite side ONLY while
+ * that slot has no counterparty with a linked account (linkedUserId !== null).
+ * `people` must be EVERY participant row of the contract, not just the caller's:
+ * with a partial list the owner would inherit a side someone else already holds.
  * Pure, so the per-contract check and the batched home share one rule.
  * null = the user has no slot in the contract.
  */
@@ -119,7 +126,7 @@ export function pickRecebedor(
   };
 }
 
-/** Resolve quem recebe o dinheiro no contrato e sua chave de perfil. */
+/** Who receives the money in the contract, and their profile key. */
 export async function resolveRecebedor(c: {
   id: string;
   ownerId: string;
@@ -159,50 +166,8 @@ export async function resolveRecebedor(c: {
   return pickRecebedor(c, people, new Map(rows.map((u) => [u.id, u])));
 }
 
-/**
- * Resolve a vaga real do usuário + se ele é o dono. Lança NotFoundError quando o
- * contrato não existe OU o usuário não tem acesso (não vaza existência).
- */
-export async function getContractRole(
-  userId: string,
-  contractId: string
-): Promise<ContractAccess> {
-  const found = await db
-    .select()
-    .from(contract)
-    .where(eq(contract.id, contractId))
-    .limit(1);
-  const row = found[0];
-  if (!row) {
-    throw new NotFoundError("Contrato não encontrado");
-  }
-  const isOwner = row.ownerId === userId;
-  const link = await db
-    .select()
-    .from(participant)
-    .where(
-      and(
-        eq(participant.contractId, contractId),
-        eq(participant.linkedUserId, userId)
-      )
-    )
-    .limit(1);
-  const slot = link[0]?.role;
-  if (slot && slot !== "owner") {
-    return { role: slot, isOwner };
-  }
-  // Safety net: dono sem linha de participante (inconsistência legada) cai no ownerRole.
-  if (isOwner && (row.ownerRole === "buyer" || row.ownerRole === "seller")) {
-    return { role: row.ownerRole, isOwner: true };
-  }
-  throw new NotFoundError("Contrato não encontrado");
-}
-
-/** Capacidades do usuário no contrato. Lança NotFoundError sem acesso. */
-export async function getCapabilities(
-  userId: string,
-  contractId: string
-): Promise<Capabilities> {
+/** The contract's owner fields. Throws NotFoundError when it doesn't exist. */
+async function findOwnedContract(contractId: string): Promise<OwnedContract> {
   const [row] = await db
     .select({ ownerId: contract.ownerId, ownerRole: contract.ownerRole })
     .from(contract)
@@ -211,6 +176,40 @@ export async function getCapabilities(
   if (!row) {
     throw new NotFoundError("Contrato não encontrado");
   }
+  return row;
+}
+
+/**
+ * The user's real slot and whether they own the contract. Throws NotFoundError
+ * when the contract doesn't exist OR the user has no access (doesn't leak existence).
+ */
+export async function getContractRole(
+  userId: string,
+  contractId: string
+): Promise<ContractAccess> {
+  const row = await findOwnedContract(contractId);
+  const ownRows = await db
+    .select({ role: participant.role, linkedUserId: participant.linkedUserId })
+    .from(participant)
+    .where(
+      and(
+        eq(participant.contractId, contractId),
+        eq(participant.linkedUserId, userId)
+      )
+    );
+  const role = slotOf(userId, row, ownRows);
+  if (!role) {
+    throw new NotFoundError("Contrato não encontrado");
+  }
+  return { role, isOwner: row.ownerId === userId };
+}
+
+/** The user's capabilities in the contract. Throws NotFoundError without access. */
+export async function getCapabilities(
+  userId: string,
+  contractId: string
+): Promise<Capabilities> {
+  const row = await findOwnedContract(contractId);
   const people = await db
     .select({ role: participant.role, linkedUserId: participant.linkedUserId })
     .from(participant)

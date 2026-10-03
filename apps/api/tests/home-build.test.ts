@@ -266,6 +266,149 @@ describe("buildAgenda: ações", () => {
     });
     expect(agenda(data).actions).toEqual([]);
   });
+
+  it("contrato sem vaga minha não gera ação, item nem total", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "x", ownerId: OTHER })],
+      participants: [
+        person("x", "buyer", OTHER, "Outro"),
+        person("x", "seller", "u-third", "Terceiro"),
+      ],
+      installments: [
+        inst({ id: "a", contractId: "x", dueDate: "2026-09-01" }),
+        inst({ id: "b", contractId: "x", dueDate: "2026-10-10" }),
+      ],
+    });
+    const result = agenda(data);
+    expect(result.actions).toEqual([]);
+    expect(result.upcoming).toEqual({
+      items: [],
+      moreCount: 0,
+      toPayCents: 0,
+      toReceiveCents: 0,
+    });
+    expect(result.nextDue).toBeNull();
+  });
+
+  it("dono comprador confere o comprovante por herança enquanto o vendedor não tem conta", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "c", requiresConfirmation: true })],
+      participants: [
+        person("c", "buyer", ME, "Eu"),
+        person("c", "seller", null, "Maria"),
+      ],
+      installments: [
+        inst({
+          id: "w",
+          contractId: "c",
+          status: "awaiting_confirmation",
+          dueDate: "2026-10-10",
+        }),
+      ],
+    });
+    expect(agenda(data).actions).toEqual([
+      expect.objectContaining({
+        id: "installment:w",
+        kind: "review",
+        direction: "pay",
+        counterpartyName: "Maria",
+        canConfirm: true,
+        canMarkPaid: false,
+        pixCode: null,
+      }),
+    ]);
+  });
+
+  it("PIX para quem paga: usa a chave do vendedor vinculado, e a do contrato vence a do perfil", () => {
+    const data = rows({
+      contracts: [
+        contractRow({ id: "profile" }),
+        contractRow({ id: "own", pixKey: "loja@example.com" }),
+      ],
+      participants: [
+        person("profile", "buyer", ME, "Eu"),
+        person("profile", "seller", OTHER, "Maria"),
+        person("own", "buyer", ME, "Eu"),
+        person("own", "seller", OTHER, "Maria"),
+      ],
+      users: [
+        { id: ME, name: "Eu", pixKey: "eu@example.com" },
+        { id: OTHER, name: "Maria", pixKey: "maria@example.com" },
+      ],
+      installments: [
+        inst({ id: "p", contractId: "profile", dueDate: "2026-09-30" }),
+        inst({ id: "o", contractId: "own", dueDate: "2026-09-30" }),
+      ],
+    });
+    const byId = new Map(agenda(data).actions.map((a) => [a.id, a]));
+    const viaProfile = byId.get("installment:p");
+    const viaContract = byId.get("installment:o");
+    const profileCode =
+      viaProfile?.kind === "invite" ? null : viaProfile?.pixCode;
+    const contractCode =
+      viaContract?.kind === "invite" ? null : viaContract?.pixCode;
+    expect(viaProfile).toMatchObject({ direction: "pay", canMarkPaid: true });
+    expect(profileCode).toContain("maria@example.com");
+    expect(profileCode).not.toContain("eu@example.com");
+    expect(contractCode).toContain("loja@example.com");
+    expect(contractCode).not.toContain("maria@example.com");
+  });
+});
+
+describe("buildAgenda: fronteiras de data", () => {
+  it("vence hoje é 'vence em breve', não atrasada", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "c" })],
+      participants: [person("c", "buyer", ME, "Eu")],
+      installments: [inst({ id: "today", contractId: "c", dueDate: TODAY })],
+    });
+    expect(agenda(data).actions).toEqual([
+      expect.objectContaining({ id: "installment:today", kind: "due_soon" }),
+    ]);
+  });
+
+  it("'vence em breve' vai até hoje+7, inclusive; hoje+8 fica nos próximos 30 dias", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "c" })],
+      participants: [person("c", "buyer", ME, "Eu")],
+      installments: [
+        inst({ id: "d7", contractId: "c", dueDate: "2026-10-09" }),
+        inst({ id: "d8", contractId: "c", dueDate: "2026-10-10", sequence: 2 }),
+      ],
+    });
+    const { actions, upcoming } = agenda(data);
+    expect(actions.map((a) => [a.id, a.kind])).toEqual([
+      ["installment:d7", "due_soon"],
+    ]);
+    expect(upcoming.items.map((i) => i.installmentId)).toEqual(["d8"]);
+  });
+
+  it("a janela de 30 dias inclui hoje+30 e deixa hoje+31 de fora, nos itens e nos totais", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "c" })],
+      participants: [person("c", "buyer", ME, "Eu")],
+      installments: [
+        inst({
+          id: "d30",
+          contractId: "c",
+          dueDate: "2026-11-01",
+          amountCents: 10_000,
+        }),
+        inst({
+          id: "d31",
+          contractId: "c",
+          dueDate: "2026-11-02",
+          amountCents: 20_000,
+          sequence: 2,
+        }),
+      ],
+    });
+    const { upcoming, nextDue } = agenda(data);
+    expect(upcoming.items.map((i) => i.installmentId)).toEqual(["d30"]);
+    expect(upcoming.moreCount).toBe(0);
+    expect(upcoming.toPayCents).toBe(10_000);
+    expect(nextDue?.installmentId).toBe("d30");
+  });
 });
 
 describe("buildAgenda: próximos 30 dias e próxima parcela", () => {
