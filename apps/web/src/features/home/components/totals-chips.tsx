@@ -19,9 +19,11 @@ const CHIP =
  * Below md the strip is one line that scrolls sideways (mockup 13, frame D):
  * it bleeds to the screen edge so the next chip shows cut as a hint, and the
  * gutter padding lets the last one scroll fully into view. From md it wraps.
+ * The focus ring sits outside: an inset one paints under the chips, which
+ * would cover it.
  */
 const STRIP =
-  "flex min-w-0 gap-1.5 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset max-md:-mx-4 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none] md:flex-wrap";
+  "flex min-w-0 gap-1.5 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:-mx-4 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none] md:flex-wrap";
 
 function MoneyChip({
   cents,

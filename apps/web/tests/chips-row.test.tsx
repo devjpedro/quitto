@@ -73,6 +73,17 @@ describe("TotalsChips", () => {
     expect(strip).not.toHaveAttribute("tabindex");
   });
 
+  it("o foco da faixa é um anel por fora: por dentro, ele ficaria sob os chips", () => {
+    render(<TotalsChips {...ALL} />);
+    const strip = screen.getByRole("list", { name: "Resumo" });
+    expect(strip).toHaveClass(
+      "focus-visible:ring-2",
+      "focus-visible:ring-brand"
+    );
+    // An inset box-shadow paints under the children: the chips would cover it.
+    expect(strip).not.toHaveClass("focus-visible:ring-inset");
+  });
+
   it("mede de novo quando os chips mudam: a faixa que passa a rolar vira parada de Tab", () => {
     // The strip's box keeps its size (the container's width, h-8): only the content grows.
     let contentWidth = 300;
