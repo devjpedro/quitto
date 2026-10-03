@@ -332,97 +332,97 @@ function renderInShell({ open }: { open: boolean }) {
 describe.each([
   { device: "desktop", width: DESKTOP_WIDTH, container: "-translate-x-1/2" },
   { device: "celular", width: MOBILE_WIDTH, container: "inset-y-0" },
-])("CommandPalette com o /api/contracts falhando, no $device", ({
-  width,
-  container,
-}) => {
-  beforeEach(() => {
-    navigate.mockReset();
-    paletteOpenChange.mockReset();
-    contractsQueryFn.mockReset();
-    contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
-    setViewport(width);
-  });
+])(
+  "CommandPalette com o /api/contracts falhando, no $device",
+  ({ width, container }) => {
+    beforeEach(() => {
+      navigate.mockReset();
+      paletteOpenChange.mockReset();
+      contractsQueryFn.mockReset();
+      contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
+      setViewport(width);
+    });
 
-  afterEach(() => {
-    setViewport(DESKTOP_WIDTH);
-  });
+    afterEach(() => {
+      setViewport(DESKTOP_WIDTH);
+    });
 
-  it("fechada: a falha da lista nunca derruba o shell", async () => {
-    const client = renderInShell({ open: false });
-    // The list failed somewhere else (the contracts page, or a fetch the
-    // palette started before it closed): the error lands in the cache entry
-    // the palette shares.
-    await act(async () => {
-      await client.prefetchQuery({
-        queryKey: queryKeys.contracts,
-        queryFn: () => Promise.reject(SERVER_ERROR),
+    it("fechada: a falha da lista nunca derruba o shell", async () => {
+      const client = renderInShell({ open: false });
+      // The list failed somewhere else (the contracts page, or a fetch the
+      // palette started before it closed): the error lands in the cache entry
+      // the palette shares.
+      await act(async () => {
+        await client.prefetchQuery({
+          queryKey: queryKeys.contracts,
+          queryFn: () => Promise.reject(SERVER_ERROR),
+        });
       });
-    });
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+      await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-    expect(client.getQueryState(queryKeys.contracts)?.status).toBe("error");
-    expect(screen.getByText("shell")).toBeVisible();
-    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
-  });
-
-  it("aberta: a lista falha ali dentro e os comandos fixos continuam", async () => {
-    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
-    renderInShell({ open: true });
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Não foi possível carregar os contratos."
-    );
-    expect(screen.getByRole("dialog").className).toContain(container);
-    expect(screen.getByText("shell")).toBeVisible();
-    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
-    for (const name of [
-      "Agora",
-      "Contratos",
-      "Conta",
-      "Criar contrato",
-      "Notificações",
-    ]) {
-      expect(screen.getByRole("option", { name })).toBeVisible();
-    }
-
-    await userEvent.click(
-      screen.getByRole("option", { name: "Criar contrato" })
-    );
-    expect(navigate).toHaveBeenCalledWith({ to: "/contracts/new" });
-  });
-
-  it("aberta: Tentar de novo busca a lista outra vez e a mostra", async () => {
-    contractsQueryFn
-      .mockRejectedValueOnce(SERVER_ERROR)
-      .mockResolvedValueOnce([ALUGUEL]);
-    renderInShell({ open: true });
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Tentar de novo" })
-    );
-
-    expect(
-      await screen.findByRole("option", { name: "Aluguel do apê" })
-    ).toBeVisible();
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(contractsQueryFn).toHaveBeenCalledTimes(2);
-  });
-
-  it("aberta: Tentar de novo pelo teclado (Tab e Enter) busca de novo, sem rodar outro comando", async () => {
-    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
-    renderInShell({ open: true });
-    const retry = await screen.findByRole("button", {
-      name: "Tentar de novo",
+      expect(client.getQueryState(queryKeys.contracts)?.status).toBe("error");
+      expect(screen.getByText("shell")).toBeVisible();
+      expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
     });
 
-    // The cursor starts in the field, and the next tab stop is the button.
-    await userEvent.tab();
-    expect(retry).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
+    it("aberta: a lista falha ali dentro e os comandos fixos continuam", async () => {
+      contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+      renderInShell({ open: true });
 
-    await vi.waitFor(() => expect(contractsQueryFn).toHaveBeenCalledTimes(2));
-    expect(navigate).not.toHaveBeenCalled();
-    expect(paletteOpenChange).not.toHaveBeenCalled();
-  });
-});
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Não foi possível carregar os contratos."
+      );
+      expect(screen.getByRole("dialog").className).toContain(container);
+      expect(screen.getByText("shell")).toBeVisible();
+      expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+      for (const name of [
+        "Agora",
+        "Contratos",
+        "Conta",
+        "Criar contrato",
+        "Notificações",
+      ]) {
+        expect(screen.getByRole("option", { name })).toBeVisible();
+      }
+
+      await userEvent.click(
+        screen.getByRole("option", { name: "Criar contrato" })
+      );
+      expect(navigate).toHaveBeenCalledWith({ to: "/contracts/new" });
+    });
+
+    it("aberta: Tentar de novo busca a lista outra vez e a mostra", async () => {
+      contractsQueryFn
+        .mockRejectedValueOnce(SERVER_ERROR)
+        .mockResolvedValueOnce([ALUGUEL]);
+      renderInShell({ open: true });
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Tentar de novo" })
+      );
+
+      expect(
+        await screen.findByRole("option", { name: "Aluguel do apê" })
+      ).toBeVisible();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(contractsQueryFn).toHaveBeenCalledTimes(2);
+    });
+
+    it("aberta: Tentar de novo pelo teclado (Tab e Enter) busca de novo, sem rodar outro comando", async () => {
+      contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+      renderInShell({ open: true });
+      const retry = await screen.findByRole("button", {
+        name: "Tentar de novo",
+      });
+
+      // The cursor starts in the field, and the next tab stop is the button.
+      await userEvent.tab();
+      expect(retry).toHaveFocus();
+      await userEvent.keyboard("{Enter}");
+
+      await vi.waitFor(() => expect(contractsQueryFn).toHaveBeenCalledTimes(2));
+      expect(navigate).not.toHaveBeenCalled();
+      expect(paletteOpenChange).not.toHaveBeenCalled();
+    });
+  }
+);

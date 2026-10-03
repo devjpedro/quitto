@@ -300,24 +300,27 @@ describe("HomePage", () => {
       }),
     ],
     ["com contrato e sem marcos", homeFixture()],
-  ])("a 1440 px, %s e a lista falhando: a coluna lateral vazia desliga a grade", async (_case, home) => {
-    setScreenWidth(1440);
-    getHome.mockResolvedValue({ data: home, error: null });
-    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
-    renderHome({ likeTheApp: true });
-    await waitFor(() => expect(lowerPart()).not.toBeNull());
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("region", { name: "Notificações recentes" })
-      ).toBeNull()
-    );
-    const lower = lowerPart();
-    expect(lower?.lastElementChild).toBeEmptyDOMElement();
-    // A column left empty turns the grid into a block: no 2fr track stays
-    // blank beside the list or the guide.
-    expect(lower).toHaveClass("lateral:has-[>:empty]:block");
-    expect(lower?.matches(":has(> :empty)")).toBe(true);
-  });
+  ])(
+    "a 1440 px, %s e a lista falhando: a coluna lateral vazia desliga a grade",
+    async (_case, home) => {
+      setScreenWidth(1440);
+      getHome.mockResolvedValue({ data: home, error: null });
+      getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+      renderHome({ likeTheApp: true });
+      await waitFor(() => expect(lowerPart()).not.toBeNull());
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("region", { name: "Notificações recentes" })
+        ).toBeNull()
+      );
+      const lower = lowerPart();
+      expect(lower?.lastElementChild).toBeEmptyDOMElement();
+      // A column left empty turns the grid into a block: no 2fr track stays
+      // blank beside the list or the guide.
+      expect(lower).toHaveClass("lateral:has-[>:empty]:block");
+      expect(lower?.matches(":has(> :empty)")).toBe(true);
+    }
+  );
 
   it("primeiro acesso: o guia verde lidera", async () => {
     getHome.mockResolvedValue({
