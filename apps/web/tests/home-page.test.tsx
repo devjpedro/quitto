@@ -57,8 +57,9 @@ function setScreenWidth(width: number) {
 const startWidth = window.innerWidth;
 
 /** The lower part: list and guide on the left, the side column last. */
+/** The content's lower part (the skeleton's shares its grid, not this class). */
 const lowerPart = () =>
-  document.querySelector<HTMLElement>("[class~='lateral:grid']");
+  document.querySelector<HTMLElement>("[class~='lateral:has-[>:empty]:block']");
 
 function renderHome({ likeTheApp = false } = {}) {
   const client = makeTestQueryClient();

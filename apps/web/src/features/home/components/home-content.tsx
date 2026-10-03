@@ -10,25 +10,18 @@ import { momentMilestone } from "../lib/moment";
 import { ActionList } from "./action-list";
 import { AllClear } from "./all-clear";
 import { HomeEmpty } from "./home-empty";
+import { LOWER_COLUMN, LOWER_WITH_SIDE } from "./home-grid";
 import { Milestones } from "./milestones";
 import { OnboardingGuide } from "./onboarding-guide";
 import { TotalsChips } from "./totals-chips";
 import { UpcomingList } from "./upcoming-list";
 
-/** A column of the lower part from lateral; below it, `contents` (its blocks join the page's single column). */
-const COLUMN =
-  "contents lateral:flex lateral:min-w-0 lateral:flex-col lateral:gap-5";
-
 /**
- * The lower part with a side column (mockup 12): 3fr/2fr from lateral; from
- * wide 2fr for the list and 1fr per side block. auto-fit collapses the track
- * of a side block that is not on screen, instead of leaving a 300 px hole.
  * A column left empty (no milestones for the desktop and "Notificações
  * recentes" gone with a failed list) turns the grid into a block, so no 2fr
  * track stays blank.
  */
-const WITH_SIDE =
-  "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-6 lateral:gap-y-5 wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))] lateral:has-[>:empty]:block";
+const SIDE_COLUMN_EMPTY = "lateral:has-[>:empty]:block";
 
 /**
  * Everything that comes from GET /api/home (streamed from the SSR on the
@@ -88,8 +81,14 @@ export function HomeContent() {
       ) : null}
       {layout.empty ? <HomeEmpty /> : null}
       {lower ? (
-        <div className={cn("flex flex-col gap-4 md:gap-5", WITH_SIDE)}>
-          <div className={COLUMN}>
+        <div
+          className={cn(
+            "flex flex-col gap-4 md:gap-5",
+            LOWER_WITH_SIDE,
+            SIDE_COLUMN_EMPTY
+          )}
+        >
+          <div className={LOWER_COLUMN}>
             {layout.hasContract ? (
               <UpcomingList
                 hasActions={home.actions.length > 0}
@@ -108,7 +107,7 @@ export function HomeContent() {
               </div>
             ) : null}
           </div>
-          <div className={cn(COLUMN, "wide:contents")}>
+          <div className={cn(LOWER_COLUMN, "wide:contents")}>
             {phoneOnlyMilestones ? null : milestones}
             {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
             <RecentNotifications />

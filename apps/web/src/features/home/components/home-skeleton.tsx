@@ -1,6 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotificationsSkeleton } from "@/features/notifications/components/notifications-list";
+import { RECENT_COUNT } from "@/features/notifications/hooks/use-recent-notifications";
+import { cn } from "@/lib/utils";
+import { LOWER_COLUMN, LOWER_WITH_SIDE } from "./home-grid";
 
-/** The home's shape while it loads: subtitle, chips, the action cards (carousel below lg, a grid of 3 to 5 from lg) and three upcoming rows. */
+/**
+ * The home's shape while it loads: subtitle, chips, the action cards
+ * (carousel below lg, a grid of 3 to 5 from lg) and the lower part on the
+ * content's grid: three upcoming rows, and from lateral the side column with
+ * the milestones and "Notificações recentes".
+ */
 export function HomeSkeleton() {
   return (
     // The content's gaps, so nothing shifts when the home streams in.
@@ -18,10 +27,27 @@ export function HomeSkeleton() {
         <Skeleton className="hidden h-44 rounded-card 2xl:block" />
         <Skeleton className="wide:block hidden h-44 rounded-card" />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Skeleton className="h-14 rounded-card" />
-        <Skeleton className="h-14 rounded-card" />
-        <Skeleton className="h-14 rounded-card" />
+      <div className={cn("flex flex-col gap-4 md:gap-5", LOWER_WITH_SIDE)}>
+        <div className={LOWER_COLUMN}>
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-14 rounded-card" />
+            <Skeleton className="h-14 rounded-card" />
+            <Skeleton className="h-14 rounded-card" />
+          </div>
+        </div>
+        <div className={cn(LOWER_COLUMN, "wide:contents")}>
+          <div className="lateral:flex hidden flex-col gap-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-36 rounded-card" />
+          </div>
+          <div className="lateral:flex hidden flex-col gap-2">
+            <Skeleton className="h-4 w-40" />
+            <NotificationsSkeleton
+              className="bg-surface-raised"
+              rows={RECENT_COUNT}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
