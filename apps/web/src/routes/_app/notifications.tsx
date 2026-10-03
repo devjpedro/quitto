@@ -1,6 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { NotificationsPage } from "@/features/notifications/notifications-page";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// The history moved to the bell panel and the actions to "Agora": old
+// bookmarks land on the home. Remove in Fase 6.
 export const Route = createFileRoute("/_app/notifications")({
-  component: NotificationsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });

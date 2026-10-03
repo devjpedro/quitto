@@ -1,18 +1,42 @@
 import { Bell, MagnifyingGlass } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import type { SessionIdentity } from "@/lib/session-resolver";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
+import type { ShellProps } from "./app-frame";
+import { MomentCard } from "./moment-card";
 import { type NavItem, PRIMARY_NAV } from "./nav-items";
+import { notificationsLabel } from "./notifications-label";
 import { Wordmark } from "./wordmark";
 
+// On the canvas (structure B): hover tints with the panel's white; the active row stays black.
 const LINK =
-  "flex min-h-10 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
+  "flex min-h-10 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
 
-function SidebarLink({ item }: { item: NavItem }) {
+/** The number at the end of a row. Hidden from AT: the row's name carries it. */
+function RowCount({ active, count }: { active: boolean; count: number }) {
   return (
-    <Link activeOptions={{ exact: item.exact }} className={LINK} to={item.to}>
+    <span
+      aria-hidden="true"
+      className={cn(
+        "text-xs tabular-nums",
+        // ink-inverse at 70% on the black row: 9.5:1 light, 6.2:1 dark (AA).
+        active ? "text-ink-inverse/70" : "text-ink-muted"
+      )}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function SidebarLink({ count, item }: { count: number; item: NavItem }) {
+  return (
+    <Link
+      activeOptions={{ exact: item.exact }}
+      aria-label={count > 0 ? item.countLabel(count) : undefined}
+      className={LINK}
+      to={item.to}
+    >
       {({ isActive }) => (
         <>
           <item.icon
@@ -20,7 +44,8 @@ function SidebarLink({ item }: { item: NavItem }) {
             size={18}
             weight={isActive ? "fill" : "regular"}
           />
-          {item.label()}
+          <span className="flex-1">{item.label()}</span>
+          {count > 0 ? <RowCount active={isActive} count={count} /> : null}
         </>
       )}
     </Link>
@@ -29,18 +54,18 @@ function SidebarLink({ item }: { item: NavItem }) {
 
 export function Sidebar({
   identity,
-  unreadCount,
+  moment,
+  navCounts,
+  notificationsOpen,
+  onOpenNotifications,
   onOpenSearch,
-}: {
-  identity: SessionIdentity | null;
-  onOpenSearch: () => void;
-  unreadCount: number;
-}) {
+  unreadCount,
+}: ShellProps) {
   return (
-    <aside className="sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[232px] shrink-0 flex-col rounded-panel bg-surface p-3 md:flex">
+    <aside className="sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[232px] shrink-0 flex-col p-3 md:flex">
       <Wordmark className="px-2 py-1.5" />
       <button
-        className="mt-4 flex h-10 items-center gap-2 rounded-control border border-line px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="mt-4 flex h-10 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onOpenSearch}
         type="button"
       >
@@ -55,44 +80,36 @@ export function Sidebar({
           {m.nav_section_wallet()}
         </p>
         {PRIMARY_NAV.map((item) => (
-          <SidebarLink item={item} key={item.to} />
+          <SidebarLink count={navCounts[item.id]} item={item} key={item.to} />
         ))}
         <p className="mt-4 mb-1 px-3 text-ink-muted text-xs">
           {m.nav_section_account()}
         </p>
-        <Link
+        <button
+          aria-expanded={notificationsOpen}
+          aria-haspopup="dialog"
           aria-label={
-            unreadCount > 0
-              ? m.nav_notifications_unread({ count: unreadCount })
-              : undefined
+            unreadCount > 0 ? notificationsLabel(unreadCount) : undefined
           }
-          className={LINK}
-          to="/notifications"
+          className={cn(LINK, notificationsOpen && "bg-surface")}
+          onClick={onOpenNotifications}
+          type="button"
         >
-          {({ isActive }) => (
-            <>
-              <Bell
-                aria-hidden="true"
-                size={18}
-                weight={isActive ? "fill" : "regular"}
-              />
-              <span className="flex-1">{m.nav_notifications()}</span>
-              {unreadCount > 0 ? (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "text-xs tabular-nums",
-                    isActive ? "text-ink-inverse/70" : "text-ink-muted"
-                  )}
-                >
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              ) : null}
-            </>
-          )}
-        </Link>
+          <Bell
+            aria-hidden="true"
+            size={18}
+            weight={notificationsOpen ? "fill" : "regular"}
+          />
+          <span className="flex-1 text-left">{m.nav_notifications()}</span>
+          {unreadCount > 0 ? (
+            <RowCount active={false} count={unreadCount} />
+          ) : null}
+        </button>
       </nav>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-3">
+        {moment ? (
+          <MomentCard detail={moment.detail} title={moment.title} />
+        ) : null}
         <AccountMenu identity={identity} variant="full" />
       </div>
     </aside>

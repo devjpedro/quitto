@@ -9,6 +9,7 @@ import {
 import { queryKeys } from "@/lib/query-keys";
 
 const navigate = vi.fn();
+const openNotifications = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
@@ -87,7 +88,11 @@ function renderPalette(
   }
   return render(
     <QueryClientProvider client={client}>
-      <CommandPalette onOpenChange={() => undefined} open={open} />
+      <CommandPalette
+        onOpenChange={() => undefined}
+        onOpenNotifications={openNotifications}
+        open={open}
+      />
     </QueryClientProvider>
   );
 }
@@ -107,6 +112,7 @@ const CONTRATO_DE_TESTE = /Em dia|Atrasado/;
 describe("CommandPalette", () => {
   beforeEach(() => {
     navigate.mockReset();
+    openNotifications.mockReset();
     signOut.mockReset();
     contractsQueryFn.mockClear();
     setViewport(DESKTOP_WIDTH);
@@ -232,6 +238,14 @@ describe("CommandPalette", () => {
     renderPalette([]);
     await userEvent.type(screen.getByRole(INPUT), "notificacoes");
     expect(screen.getByText("Notificações")).toBeVisible();
+  });
+
+  it("Notificações abre o painel do sino, sem navegar", async () => {
+    renderPalette([]);
+    await userEvent.type(screen.getByRole(INPUT), "notificacoes");
+    await userEvent.click(screen.getByText("Notificações"));
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("no mobile a paleta abre no sheet, não no dialog", () => {

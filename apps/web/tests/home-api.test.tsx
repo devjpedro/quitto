@@ -44,6 +44,8 @@ import {
   useAcceptInviteFromHome,
   useDismissOnboarding,
   useMarkPaidFromHome,
+  useMomentMilestone,
+  useNavCounts,
   useUnreadCount,
 } from "../src/features/home/api";
 
@@ -364,5 +366,63 @@ describe("refetch de fundo do home", () => {
       .catch(() => undefined);
     expect(client.getQueryState(queryKeys.home)?.status).toBe("error");
     expect(toastError).not.toHaveBeenCalled();
+  });
+});
+
+describe("useMomentMilestone", () => {
+  it("o marco do momento sai do home, como texto para o cartão da sidebar", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        milestones: {
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c3",
+            title: "Celular da Ana",
+            paidCount: 9,
+            totalCount: 10,
+            percent: 90,
+          },
+        },
+      }),
+      error: null,
+    });
+    const { result } = renderHook(() => useMomentMilestone(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        title: "Mais perto de quitar",
+        detail: "Celular da Ana · 9/10",
+      })
+    );
+  });
+
+  it("sem marco não há cartão", async () => {
+    const client = makeClient();
+    getHome.mockResolvedValue({ data: homeFixture(), error: null });
+    const { result } = renderHook(() => useMomentMilestone(), {
+      wrapper: wrapper(client),
+    });
+    await waitFor(() =>
+      expect(client.getQueryData(queryKeys.home)).toBeDefined()
+    );
+    expect(result.current).toBeNull();
+  });
+});
+
+describe("useNavCounts", () => {
+  it("as contagens da sidebar saem do home: ações pendentes e contratos ativos", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction(), inviteAction()],
+        activeContractsCount: 5,
+      }),
+      error: null,
+    });
+    const { result } = renderHook(() => useNavCounts(), { wrapper: wrapper() });
+    expect(result.current).toEqual({ contracts: 0, now: 0 });
+    await waitFor(() =>
+      expect(result.current).toEqual({ contracts: 5, now: 2 })
+    );
   });
 });

@@ -8,8 +8,8 @@ import {
 } from "@tanstack/react-router";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { AppFrame } from "@/components/layout/app-frame";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppFrame, type ShellProps } from "@/components/layout/app-frame";
 import type { SessionIdentity } from "@/lib/session-resolver";
 import { renderWithProviders } from "./test-utils";
 
@@ -30,15 +30,28 @@ const maria: SessionIdentity = {
   image: null,
 };
 
+const openNotifications = vi.fn();
+beforeEach(() => {
+  openNotifications.mockReset();
+});
+
+const NO_COUNTS: ShellProps["navCounts"] = { contracts: 0, now: 0 };
+
 async function renderAt(
   path: string,
   identity: SessionIdentity | null = maria,
-  unreadCount = 0
+  unreadCount = 0,
+  moment: ShellProps["moment"] = null,
+  navCounts: ShellProps["navCounts"] = NO_COUNTS
 ) {
   const rootRoute = createRootRoute({
     component: () => (
       <AppFrame
         identity={identity}
+        moment={moment}
+        navCounts={navCounts}
+        notificationsOpen={false}
+        onOpenNotifications={openNotifications}
         onOpenSearch={vi.fn()}
         unreadCount={unreadCount}
       >
@@ -47,13 +60,12 @@ async function renderAt(
     ),
   });
   rootRoute.addChildren(
-    ["/", "/contracts", "/contracts/new", "/notifications", "/settings"].map(
-      (p) =>
-        createRoute({
-          getParentRoute: () => rootRoute,
-          path: p,
-          component: () => <h1>page {p}</h1>,
-        })
+    ["/", "/contracts", "/contracts/new", "/settings"].map((p) =>
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: p,
+        component: () => <h1>page {p}</h1>,
+      })
     )
   );
   const router = createRouter({
@@ -81,11 +93,130 @@ describe("AppFrame", () => {
     );
   });
 
-  it("announces unread notifications in the link name", async () => {
+  it("the bell and the sidebar row carry the unread count and open the panel", async () => {
     await renderAt("/", maria, 3);
+    const bells = screen.getAllByRole("button", {
+      name: "Notificações, 3 não lidas",
+    });
+    expect(bells).toHaveLength(2);
+    for (const bell of bells) {
+      expect(bell).toHaveAttribute("aria-haspopup", "dialog");
+      expect(bell).toHaveAttribute("aria-expanded", "false");
+      await userEvent.click(bell);
+    }
+    expect(openNotifications).toHaveBeenCalledTimes(2);
+  });
+
+  it("one unread reads in the singular", async () => {
+    await renderAt("/", maria, 1);
     expect(
-      screen.getAllByRole("link", { name: "Notificações, 3 não lidas" }).length
-    ).toBeGreaterThan(0);
+      screen.getAllByRole("button", { name: "Notificações, 1 não lida" })
+    ).toHaveLength(2);
+  });
+
+  it("shows the milestone of the moment as a lime card at the foot of the sidebar", async () => {
+    await renderAt("/", maria, 0, {
+      title: "Tudo em dia em setembro",
+      detail: "12 de 12 parcelas quitadas",
+    });
+    const title = screen.getByText("Tudo em dia em setembro");
+    expect(title).toBeVisible();
+    expect(screen.getByText("12 de 12 parcelas quitadas")).toBeVisible();
+    expect(title.closest("aside")).not.toBeNull();
+    // Dark text on lime, never lime text (DIRECAO).
+    expect(title.parentElement).toHaveClass(
+      "bg-highlight",
+      "text-on-highlight"
+    );
+  });
+
+  it("without a milestone the lime card is gone", async () => {
+    await renderAt("/");
+    expect(document.querySelector("aside .bg-highlight")).toBeNull();
+  });
+
+  it("desktop structure B: the sidebar sits on the canvas and only the content is a white panel, with no max width", async () => {
+    await renderAt("/contracts");
+    // The frame follows the screen: 12 px of canvas top, bottom and right, none on the left.
+    const shell = document.getElementById("app-shell");
+    expect(shell).toHaveClass("md:bg-canvas", "md:py-3", "md:pr-3");
+    expect(shell).not.toHaveClass("md:p-3");
+    const main = screen.getByRole("main");
+    expect(main).toHaveClass("md:rounded-panel", "md:bg-surface");
+    const row = main.parentElement;
+    expect(row).toHaveClass("flex");
+    expect(row).not.toHaveClass("max-w-[1440px]");
+    expect(row).not.toHaveClass("mx-auto");
+    expect(row).not.toHaveClass("gap-3");
+    // No card: the sidebar is the canvas itself, 232 px wide, its own p-3 the gap to the panel.
+    const sidebar = screen.getByRole("complementary");
+    expect(sidebar).toHaveClass("w-[232px]", "p-3");
+    expect(sidebar).not.toHaveClass("rounded-panel");
+    expect(sidebar).not.toHaveClass("bg-surface");
+    // The search stays a field on the canvas: white, no line around it.
+    expect(screen.getByRole("button", { name: "Buscar…" })).toHaveClass(
+      "bg-surface",
+      "border-transparent"
+    );
+    // Hover tints with the panel's white; the active row stays black.
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    expect(nav.getByRole("link", { name: "Agora" })).toHaveClass(
+      "hover:bg-surface/60"
+    );
+    expect(nav.getByRole("link", { name: "Contratos" })).toHaveClass(
+      "data-[status=active]:bg-ink",
+      "data-[status=active]:text-ink-inverse"
+    );
+  });
+
+  it("Agora and Contratos show their counts, hidden from AT and read in the link name", async () => {
+    await renderAt("/contracts", maria, 0, null, { contracts: 2, now: 3 });
+    const [sidebarNav, tabBar] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    const now = nav.getByRole("link", { name: "Agora, 3 pendências" });
+    const contracts = nav.getByRole("link", { name: "Contratos, 2 ativos" });
+    expect(now).toHaveTextContent("Agora3");
+    expect(contracts).toHaveTextContent("Contratos2");
+    const nowCount = within(now).getByText("3");
+    expect(nowCount).toHaveAttribute("aria-hidden", "true");
+    expect(nowCount).toHaveClass("tabular-nums", "text-ink-muted");
+    // On the active (black) row the number reads light: ink-inverse at 70% passes AA there.
+    const contractsCount = within(contracts).getByText("2");
+    expect(contractsCount).toHaveAttribute("aria-hidden", "true");
+    expect(contractsCount).toHaveClass("tabular-nums", "text-ink-inverse/70");
+    // On a phone nothing changes: the tab bar shows no numbers.
+    const tabs = within(tabBar as HTMLElement);
+    expect(tabs.getByRole("link", { name: "Agora" }).textContent).toBe("Agora");
+    expect(tabs.getByRole("link", { name: "Contratos" }).textContent).toBe(
+      "Contratos"
+    );
+  });
+
+  it("one pending action and one active contract read in the singular", async () => {
+    await renderAt("/", maria, 0, null, { contracts: 1, now: 1 });
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    expect(nav.getByRole("link", { name: "Agora, 1 pendência" })).toBeVisible();
+    expect(nav.getByRole("link", { name: "Contratos, 1 ativo" })).toBeVisible();
+  });
+
+  it("with nothing to count, no number shows", async () => {
+    await renderAt("/");
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    expect(nav.getByRole("link", { name: "Agora" }).textContent).toBe("Agora");
+    expect(nav.getByRole("link", { name: "Contratos" }).textContent).toBe(
+      "Contratos"
+    );
   });
 
   it("has a skip link to the main content", async () => {

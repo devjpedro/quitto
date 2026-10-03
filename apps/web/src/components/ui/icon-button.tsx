@@ -1,4 +1,4 @@
-import type { Icon } from "@phosphor-icons/react";
+import type { Icon, IconWeight } from "@phosphor-icons/react";
 import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ export function IconButton({
   icon: IconComponent,
   badge,
   asChild = false,
+  weight = "regular",
   className,
   children,
   ...props
@@ -20,11 +21,13 @@ export function IconButton({
    * the label must already carry the count (e.g. "Notificações, 3 não lidas").
    */
   label: string;
+  /** "fill" when the button's target is open/active (Phosphor: outline inactive, filled active). */
+  weight?: IconWeight;
 }) {
   const Comp = asChild ? Slot.Root : "button";
   const content = (
     <>
-      <IconComponent aria-hidden="true" size={20} />
+      <IconComponent aria-hidden="true" size={20} weight={weight} />
       {badge && badge > 0 ? (
         <span
           aria-hidden="true"

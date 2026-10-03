@@ -54,6 +54,14 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink-inverse", "danger"],
 ];
 
+// [foreground, background] pairs of non-text UI (WCAG 1.4.11, 3:1). From md
+// the sidebar sits on the canvas (structure B, mockup 12): its focus ring and
+// the active row's black pill must stand out from it.
+const NON_TEXT_PAIRS: [string, string][] = [
+  ["brand", "canvas"],
+  ["ink", "canvas"],
+];
+
 describe("design tokens", () => {
   it("defines every light token in dark mode too", () => {
     expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
@@ -72,6 +80,17 @@ describe("design tokens", () => {
         expect(
           contrastRatio(fgHex as string, bgHex as string)
         ).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+    for (const [fg, bg] of NON_TEXT_PAIRS) {
+      it(`${theme}: ${fg} on ${bg} passes WCAG 1.4.11 (3:1)`, () => {
+        const fgHex = tokens[fg];
+        const bgHex = tokens[bg];
+        expect(fgHex, `missing --${fg}`).toBeDefined();
+        expect(bgHex, `missing --${bg}`).toBeDefined();
+        expect(
+          contrastRatio(fgHex as string, bgHex as string)
+        ).toBeGreaterThanOrEqual(3);
       });
     }
   }

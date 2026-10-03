@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
@@ -7,11 +8,13 @@ import {
   serializeIdentityCookie,
 } from "@/lib/identity-cookie";
 import { queryKeys } from "@/lib/query-keys";
+import { homeFixture, installmentAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
-const { navigate, meGet } = vi.hoisted(() => ({
+const { navigate, meGet, homeGet } = vi.hoisted(() => ({
   navigate: vi.fn(),
   meGet: vi.fn(),
+  homeGet: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
@@ -23,9 +26,8 @@ vi.mock("@/lib/api", () => ({
   api: {
     api: {
       me: { get: meGet },
-      notifications: {
-        "unread-count": { get: () => new Promise(() => undefined) },
-      },
+      home: { get: homeGet },
+      notifications: { get: () => new Promise(() => undefined) },
     },
   },
 }));
@@ -35,12 +37,28 @@ vi.mock("@/components/layout/app-frame", () => ({
   AppFrame: ({
     identity,
     children,
+    moment,
+    navCounts,
+    onOpenNotifications,
+    unreadCount,
   }: {
     children: ReactNode;
     identity: { name: string } | null;
+    moment: { detail: string; title: string } | null;
+    navCounts: { contracts: number; now: number };
+    onOpenNotifications: () => void;
+    unreadCount: number;
   }) => (
     <div data-testid="shell">
       <span>{identity?.name ?? "no identity"}</span>
+      <span>unread {unreadCount}</span>
+      <span>moment {moment?.title ?? "none"}</span>
+      <span>
+        counts {navCounts.now}/{navCounts.contracts}
+      </span>
+      <button onClick={onOpenNotifications} type="button">
+        bell
+      </button>
       {children}
     </div>
   ),
@@ -54,6 +72,8 @@ const seeded = { id: "u1", name: "Maria", email: "m@e.com", image: null };
 beforeEach(() => {
   navigate.mockReset();
   meGet.mockReset();
+  homeGet.mockReset();
+  homeGet.mockReturnValue(new Promise(() => undefined));
   clearIdentityCookie();
 });
 
@@ -129,5 +149,56 @@ describe("_app layout", () => {
 
     await waitFor(() => expect(navigate).toHaveBeenCalled());
     expect(parseIdentityCookie(cookieAtNavigation)).toBeNull();
+  });
+
+  it("the bell count comes from the home, with no polling of its own", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    homeGet.mockResolvedValue({
+      data: homeFixture({ unreadCount: 4 }),
+      error: null,
+    });
+    renderWithProviders(<AppLayout />);
+    expect(await screen.findByText("unread 4")).toBeVisible();
+  });
+
+  it("the bell opens the notifications panel", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    renderWithProviders(<AppLayout />);
+    await userEvent.click(screen.getByRole("button", { name: "bell" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Notificações" })
+    ).toBeVisible();
+  });
+
+  it("the milestone of the moment comes from the same home, as text for the sidebar", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    homeGet.mockResolvedValue({
+      data: homeFixture({
+        milestones: {
+          ...homeFixture().milestones,
+          previousMonthAllClear: { month: "2026-09", paidCount: 12 },
+        },
+      }),
+      error: null,
+    });
+    renderWithProviders(<AppLayout />);
+    expect(
+      await screen.findByText("moment Tudo em dia em setembro")
+    ).toBeVisible();
+  });
+
+  it("the sidebar counts come from the same home: pending actions and active contracts", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    homeGet.mockResolvedValue({
+      data: homeFixture({
+        actions: ["i1", "i2", "i3"].map((installmentId) =>
+          installmentAction({ installmentId })
+        ),
+        activeContractsCount: 2,
+      }),
+      error: null,
+    });
+    renderWithProviders(<AppLayout />);
+    expect(await screen.findByText("counts 3/2")).toBeVisible();
   });
 });

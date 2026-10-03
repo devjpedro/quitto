@@ -4,7 +4,6 @@ import { ContractRow } from "@/components/contract-row";
 import { Button } from "@/components/legacy-ui/button";
 import { Skeleton } from "@/components/legacy-ui/skeleton";
 import { PageContainer } from "@/components/page-container";
-import { PendingInvitesBanner } from "@/components/pending-invites-banner";
 import { useContractsQuery } from "@/hooks/use-contracts";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { PAGE_TITLE } from "@/lib/page-title";
@@ -94,8 +93,6 @@ export function ContractsListPage() {
           <Link to="/contracts/new">Novo contrato</Link>
         </Button>
       </div>
-
-      <PendingInvitesBanner />
 
       <ContractsListBody data={data} isPending={isPending} />
     </PageContainer>

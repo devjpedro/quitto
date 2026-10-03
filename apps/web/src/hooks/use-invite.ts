@@ -31,7 +31,6 @@ export function useAcceptInviteMutation(token: string) {
     meta: { successMessage: FEEDBACK.inviteAccepted },
     onSuccess: () => {
       invalidateContractViews(qc);
-      qc.invalidateQueries({ queryKey: queryKeys.myInvites });
     },
   });
 }
@@ -42,7 +41,6 @@ export function useDeclineInviteMutation(token: string) {
     mutationFn: () => unwrap(api.api.invites({ token }).decline.post()),
     meta: { successMessage: FEEDBACK.inviteDeclined },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.myInvites });
       qc.invalidateQueries({ queryKey: queryKeys.home });
     },
   });

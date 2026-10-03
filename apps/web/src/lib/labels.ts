@@ -4,23 +4,9 @@ import {
   type ContractStatus,
   INSTALLMENT_STATUS,
   type InstallmentStatus,
-  NOTIFICATION_TYPE,
-  type NotificationType,
   OWNER_ROLE,
   PARTICIPANT_ROLE,
 } from "@quitto/shared";
-import {
-  AlertTriangle,
-  BellRing,
-  CheckCircle2,
-  Clock,
-  FileCheck,
-  type LucideIcon,
-  UserMinus,
-  UserPlus,
-  UserX,
-  XCircle,
-} from "lucide-react";
 import type { InstallmentFilter } from "./installments-filter";
 
 type Tone = "success" | "warning" | "danger" | "neutral" | "brand" | "gold";
@@ -76,38 +62,6 @@ export const AUDIT_TYPE_LABEL: Record<string, string> = {
   [AUDIT_TYPE.receiptShareCreated]: "Link público do recibo criado",
   [AUDIT_TYPE.receiptShareRevoked]: "Link público do recibo revogado",
 };
-
-export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
-  [NOTIFICATION_TYPE.proofSubmitted]: "Novo comprovante para confirmar",
-  [NOTIFICATION_TYPE.paymentConfirmed]: "Pagamento confirmado",
-  [NOTIFICATION_TYPE.paymentDisputed]: "Pagamento contestado",
-  [NOTIFICATION_TYPE.installmentPaid]: "Parcela marcada como paga",
-  [NOTIFICATION_TYPE.installmentDueSoon]: "Parcela vencendo em breve",
-  [NOTIFICATION_TYPE.installmentOverdue]: "Parcela vencida",
-  [NOTIFICATION_TYPE.installmentDueSoonReceivable]:
-    "Parcela a receber vence em breve",
-  [NOTIFICATION_TYPE.installmentOverdueReceivable]:
-    "Parcela a receber está vencida",
-  [NOTIFICATION_TYPE.participantLeft]: "Participante saiu do contrato",
-  [NOTIFICATION_TYPE.inviteAccepted]: "Convite aceito",
-  [NOTIFICATION_TYPE.inviteDeclined]: "Convite recusado",
-};
-
-export const NOTIFICATION_TYPE_ICON: Record<NotificationType, LucideIcon> = {
-  [NOTIFICATION_TYPE.proofSubmitted]: FileCheck,
-  [NOTIFICATION_TYPE.paymentConfirmed]: CheckCircle2,
-  [NOTIFICATION_TYPE.paymentDisputed]: XCircle,
-  [NOTIFICATION_TYPE.installmentPaid]: CheckCircle2,
-  [NOTIFICATION_TYPE.installmentDueSoon]: Clock,
-  [NOTIFICATION_TYPE.installmentOverdue]: AlertTriangle,
-  [NOTIFICATION_TYPE.installmentDueSoonReceivable]: Clock,
-  [NOTIFICATION_TYPE.installmentOverdueReceivable]: AlertTriangle,
-  [NOTIFICATION_TYPE.participantLeft]: UserMinus,
-  [NOTIFICATION_TYPE.inviteAccepted]: UserPlus,
-  [NOTIFICATION_TYPE.inviteDeclined]: UserX,
-};
-
-export const NOTIFICATION_FALLBACK_ICON: LucideIcon = BellRing;
 
 /** Exemplos genéricos de placeholder de formulário (sem nomes/relações pessoais). */
 export const PLACEHOLDER = {

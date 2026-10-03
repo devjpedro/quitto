@@ -9,6 +9,13 @@ import { ErrorBoundary } from "react-error-boundary";
 import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
+import {
+  useMomentMilestone,
+  useNavCounts,
+  useUnreadCount,
+} from "@/features/home/api";
+import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
+import { useNotificationsPanel } from "@/features/notifications/hooks/use-notifications-panel";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useIdentity } from "@/hooks/use-identity";
 import {
@@ -17,7 +24,6 @@ import {
 } from "@/hooks/use-identity-cookie";
 import { useLocaleSync } from "@/hooks/use-locale-sync";
 import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
-import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { queryKeys } from "@/lib/query-keys";
 import { isSessionLost } from "@/lib/session-gate";
 import { getSessionSSR } from "@/lib/ssr-session";
@@ -48,7 +54,10 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   const me = useMeQuery();
   const identity = useIdentity();
-  const unread = useUnreadCountQuery();
+  const unreadCount = useUnreadCount();
+  const moment = useMomentMilestone();
+  const navCounts = useNavCounts();
+  const notifications = useNotificationsPanel();
   const navigate = useNavigate();
   // Registered ONCE here: this layout owns the global ⌘K shortcut.
   const { open: searchOpen, setOpen: setSearchOpen } = useCommandPalette();
@@ -67,10 +76,23 @@ function AppLayout() {
   return (
     <AppFrame
       identity={identity}
+      moment={moment}
+      navCounts={navCounts}
+      notificationsOpen={notifications.open}
+      onOpenNotifications={notifications.show}
       onOpenSearch={() => setSearchOpen(true)}
-      unreadCount={unread.data?.count ?? 0}
+      unreadCount={unreadCount}
     >
-      <CommandPalette onOpenChange={setSearchOpen} open={searchOpen} />
+      <CommandPalette
+        onOpenChange={setSearchOpen}
+        onOpenNotifications={notifications.show}
+        open={searchOpen}
+      />
+      <NotificationsPanel
+        onOpenChange={notifications.setOpen}
+        open={notifications.open}
+        unreadCount={unreadCount}
+      />
       <ErrorBoundary
         FallbackComponent={ErrorFallback}
         resetKeys={[identity?.id]}

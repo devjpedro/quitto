@@ -31,21 +31,15 @@ const EMPTY_STATE_LIMIT = 5;
 const PAGES = [
   {
     to: "/",
-    label: "Dashboard",
+    label: "Agora",
     icon: LayoutDashboard,
-    keywords: ["dashboard", "inicio", "home"],
+    keywords: ["agora", "inicio", "home", "dashboard"],
   },
   {
     to: "/contracts",
     label: "Contratos",
     icon: FileText,
     keywords: ["contratos", "lista"],
-  },
-  {
-    to: "/notifications",
-    label: "Notificações",
-    icon: Bell,
-    keywords: ["notificacoes", "avisos"],
   },
   {
     to: "/settings",
@@ -65,10 +59,12 @@ const THEME_KEYWORDS = [
   "aparencia",
 ];
 const SIGN_OUT_KEYWORDS = ["sair", "logout", "desconectar", "encerrar sessao"];
+const NOTIFICATIONS_KEYWORDS = ["notificacoes", "avisos", "sino"];
 
 const STATIC_KEYWORDS: string[][] = [
   ...PAGES.map((page) => [page.label, ...page.keywords]),
   CREATE_KEYWORDS,
+  NOTIFICATIONS_KEYWORDS,
   THEME_KEYWORDS,
   SIGN_OUT_KEYWORDS,
 ];
@@ -98,8 +94,10 @@ function contractKeywords(contract: SearchableContract): string[] {
 export function CommandPalette({
   open,
   onOpenChange,
+  onOpenNotifications,
 }: {
   onOpenChange: (v: boolean) => void;
+  onOpenNotifications: () => void;
   open: boolean;
 }) {
   const [query, setQuery] = useState("");
@@ -255,6 +253,14 @@ export function CommandPalette({
           >
             <Plus aria-hidden="true" className="size-4 shrink-0 opacity-60" />
             <span>Criar contrato</span>
+          </CommandItem>
+          <CommandItem
+            keywords={NOTIFICATIONS_KEYWORDS}
+            onSelect={() => run(onOpenNotifications)}
+            value="acao-notificacoes"
+          >
+            <Bell aria-hidden="true" className="size-4 shrink-0 opacity-60" />
+            <span>Notificações</span>
           </CommandItem>
           <CommandItem
             keywords={THEME_KEYWORDS}
