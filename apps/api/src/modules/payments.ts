@@ -1,5 +1,5 @@
 import { isPaidStatus, NOTIFICATION_TYPE } from "@quitto/shared";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import {
@@ -28,6 +28,9 @@ const proofMimeSchema = t.Union([
   t.Literal("image/png"),
 ]);
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type InstallmentRow = typeof installment.$inferSelect;
+
 /** Every installment mutation answers with the updated row, so the web can setQueryData. */
 const installmentEntitySchema = t.Object({
   id: t.String(),
@@ -40,7 +43,7 @@ const installmentEntitySchema = t.Object({
   confirmedAt: t.Union([t.String(), t.Null()]),
 });
 
-function toInstallmentEntity(row: typeof installment.$inferSelect) {
+function toInstallmentEntity(row: InstallmentRow) {
   return {
     id: row.id,
     contractId: row.contractId,
@@ -51,6 +54,31 @@ function toInstallmentEntity(row: typeof installment.$inferSelect) {
     paidAt: row.paidAt?.toISOString() ?? null,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
   };
+}
+
+/**
+ * Moves the installment out of the status it was read in. If someone else moved
+ * it first (a double tap, the other party), no row matches: it throws 422 inside
+ * the transaction, which rolls back before any event or notification is written.
+ */
+async function transitionInstallment(
+  tx: Tx,
+  from: InstallmentRow,
+  values: Partial<typeof installment.$inferInsert>
+): Promise<InstallmentRow> {
+  const [row] = await tx
+    .update(installment)
+    .set(values)
+    .where(
+      and(eq(installment.id, from.id), eq(installment.status, from.status))
+    )
+    .returning();
+  if (!row) {
+    throw new ValidationError(
+      "A parcela mudou enquanto você agia; atualize e tente de novo"
+    );
+  }
+  return row;
 }
 
 /** Loads installment + parent contract and the caller's capabilities. Throws 404 if no access. */
@@ -150,14 +178,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           sizeBytes,
           uploadedBy: user.id,
         });
-        const [row] = await tx
-          .update(installment)
-          .set({
-            status: newStatus,
-            ...(newStatus === "paid" ? { paidAt: new Date() } : {}),
-          })
-          .where(eq(installment.id, inst.id))
-          .returning();
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          ...(newStatus === "paid" ? { paidAt: new Date() } : {}),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -178,9 +202,6 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         return row;
       });
 
-      if (!updated) {
-        throw new NotFoundError("Parcela não encontrada");
-      }
       return toInstallmentEntity(updated);
     },
     {
@@ -211,15 +232,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         c.requiresConfirmation
       );
       const updated = await db.transaction(async (tx) => {
-        const [row] = await tx
-          .update(installment)
-          .set({
-            status: newStatus,
-            confirmedAt: new Date(),
-            paidAt: new Date(),
-          })
-          .where(eq(installment.id, inst.id))
-          .returning();
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          confirmedAt: new Date(),
+          paidAt: new Date(),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -235,9 +252,6 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         });
         return row;
       });
-      if (!updated) {
-        throw new NotFoundError("Parcela não encontrada");
-      }
       return toInstallmentEntity(updated);
     },
     {
@@ -263,11 +277,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         c.requiresConfirmation
       );
       const updated = await db.transaction(async (tx) => {
-        const [row] = await tx
-          .update(installment)
-          .set({ status: newStatus })
-          .where(eq(installment.id, inst.id))
-          .returning();
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -285,9 +297,6 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         });
         return row;
       });
-      if (!updated) {
-        throw new NotFoundError("Parcela não encontrada");
-      }
       return toInstallmentEntity(updated);
     },
     {
@@ -314,11 +323,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         c.requiresConfirmation
       );
       const updated = await db.transaction(async (tx) => {
-        const [row] = await tx
-          .update(installment)
-          .set({ status: newStatus, paidAt: new Date() })
-          .where(eq(installment.id, inst.id))
-          .returning();
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          paidAt: new Date(),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -334,9 +342,6 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         });
         return row;
       });
-      if (!updated) {
-        throw new NotFoundError("Parcela não encontrada");
-      }
       return toInstallmentEntity(updated);
     },
     {

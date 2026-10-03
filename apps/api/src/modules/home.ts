@@ -11,7 +11,10 @@ import {
   proof,
   user as userTable,
 } from "../db/schema";
-import { visibleContractsWhere } from "../lib/contract-visibility";
+import {
+  visibleContractsWhere,
+  visibleNotificationsWhere,
+} from "../lib/contract-visibility";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { buildAgenda, type HomeInviteRow } from "../lib/home";
@@ -167,7 +170,7 @@ async function loadUnreadCount(userId: string): Promise<number> {
   const [row] = await db
     .select({ value: count() })
     .from(notification)
-    .where(and(eq(notification.userId, userId), isNull(notification.readAt)));
+    .where(and(visibleNotificationsWhere(userId), isNull(notification.readAt)));
   return row?.value ?? 0;
 }
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { installment } from "../src/db/schema";
+import { auditEvent, installment } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function post(cookie: string, path: string, body?: unknown) {
@@ -59,9 +59,9 @@ describe("mutações de parcela devolvem a parcela atualizada", () => {
     expect(typeof body.paidAt).toBe("string");
   });
 
-  it("confirm devolve status confirmed e confirmedAt", async () => {
+  it("confirm devolve status confirmed, confirmedAt e paidAt", async () => {
     const cookie = await signUpCookie(uniqueEmail("entity-confirm"));
-    const { installmentId } = await firstInstallment(cookie, true);
+    const { contractId, installmentId } = await firstInstallment(cookie, true);
     // The proof upload needs storage; the state it leaves behind is what matters here.
     await db
       .update(installment)
@@ -73,8 +73,16 @@ describe("mutações de parcela devolvem a parcela atualizada", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toMatchObject({ id: installmentId, status: "confirmed" });
+    expect(body).toMatchObject({
+      id: installmentId,
+      contractId,
+      sequence: 1,
+      amountCents: 1000,
+      dueDate: "2026-07-10",
+      status: "confirmed",
+    });
     expect(typeof body.confirmedAt).toBe("string");
+    expect(typeof body.paidAt).toBe("string");
   });
 
   it("dispute devolve status disputed", async () => {
@@ -96,6 +104,27 @@ describe("mutações de parcela devolvem a parcela atualizada", () => {
       id: installmentId,
       status: "disputed",
       paidAt: null,
+      confirmedAt: null,
     });
+  });
+
+  it("dois mark-paid ao mesmo tempo: um passa, o outro dá 422 e só um evento fica", async () => {
+    const cookie = await signUpCookie(uniqueEmail("entity-race"));
+    const { installmentId } = await firstInstallment(cookie, false);
+    const path = `/api/installments/${installmentId}/mark-paid`;
+
+    const results = await Promise.all([post(cookie, path), post(cookie, path)]);
+
+    expect(results.map((r) => r.status).sort()).toEqual([200, 422]);
+    const events = await db
+      .select({ id: auditEvent.id })
+      .from(auditEvent)
+      .where(
+        and(
+          eq(auditEvent.installmentId, installmentId),
+          eq(auditEvent.type, "installment_paid")
+        )
+      );
+    expect(events).toHaveLength(1);
   });
 });
