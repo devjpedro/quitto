@@ -342,4 +342,72 @@ describe("notificações agrupadas e a leitura do grupo", () => {
     );
     expect(unread.count).toBe(24);
   });
+
+  it("ids mistos, um meu e os de outra pessoa: lê só o meu, e os dela ficam como estavam", async () => {
+    const myEmail = uniqueEmail("notif-mixed-me");
+    const me = await signUpCookie(myEmail);
+    await seedOverdue(myEmail, me);
+    const [mine] = await get<{ ids: string[] }[]>(me, "/api/notifications");
+    const otherEmail = uniqueEmail("notif-mixed-other");
+    const other = await signUpCookie(otherEmail);
+    await seedOverdue(otherEmail, other);
+    const [theirs] = await get<{ ids: string[] }[]>(
+      other,
+      "/api/notifications"
+    );
+    // One id of mine gets past the 404; the other person's must stay untouched.
+    const res = await send(me, "POST", "/api/notifications/read", {
+      ids: [mine?.ids[0], ...(theirs?.ids ?? [])],
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, count: 1 });
+    const myUnread = await get<{ count: number }>(
+      me,
+      "/api/notifications/unread-count"
+    );
+    expect(myUnread.count).toBe(23);
+    const theirUnread = await get<{ count: number }>(
+      other,
+      "/api/notifications/unread-count"
+    );
+    expect(theirUnread.count).toBe(24);
+  });
+
+  it("reler não regrava: o count são os recém-lidos, e o que já estava lido guarda o readAt", async () => {
+    const email = uniqueEmail("notif-reread");
+    const cookie = await signUpCookie(email);
+    await seedOverdue(email, cookie);
+    const [line] = await get<{ ids: string[] }[]>(cookie, "/api/notifications");
+    const ids = line?.ids ?? [];
+    const first = ids[0] as string;
+    // One notice of the line was already read, days earlier.
+    const earlier = new Date(Date.UTC(2026, 8, 30, 12, 0, 0));
+    await db
+      .update(notification)
+      .set({ readAt: earlier })
+      .where(eq(notification.id, first));
+    const readAtOf = async (id: string) => {
+      const [found] = await db
+        .select({ readAt: notification.readAt })
+        .from(notification)
+        .where(eq(notification.id, id));
+      return found?.readAt;
+    };
+    const res = await send(cookie, "POST", "/api/notifications/read", { ids });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, count: 23 });
+    expect(await readAtOf(first)).toEqual(earlier);
+    // Reading the same line again still works, and reads nothing new.
+    const again = await send(cookie, "POST", "/api/notifications/read", {
+      ids,
+    });
+    expect(again.status).toBe(200);
+    expect(await again.json()).toEqual({ ok: true, count: 0 });
+    expect(await readAtOf(first)).toEqual(earlier);
+    const unread = await get<{ count: number }>(
+      cookie,
+      "/api/notifications/unread-count"
+    );
+    expect(unread.count).toBe(0);
+  });
 });

@@ -109,18 +109,28 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
       const { user } = await requireAuth(request.headers);
       // A grouped line reads every notification behind it, the user's own
       // and still visible only (the same rule as the list and the counts).
+      const mine = and(
+        inArray(notification.id, body.ids),
+        visibleNotificationsWhere(user.id)
+      );
+      // Only the unread ones change: `count` is how many this call read, and
+      // a notification already read keeps its readAt.
       const updated = await db
         .update(notification)
         .set({ readAt: new Date() })
-        .where(
-          and(
-            inArray(notification.id, body.ids),
-            visibleNotificationsWhere(user.id)
-          )
-        )
+        .where(and(mine, isNull(notification.readAt)))
         .returning({ id: notification.id });
       if (updated.length === 0) {
-        throw new NotFoundError("Notificação não encontrada");
+        // Reading a line again is fine (count 0); ids none of which are the
+        // user's are not.
+        const [own] = await db
+          .select({ id: notification.id })
+          .from(notification)
+          .where(mine)
+          .limit(1);
+        if (!own) {
+          throw new NotFoundError("Notificação não encontrada");
+        }
       }
       return { ok: true as const, count: updated.length };
     },
