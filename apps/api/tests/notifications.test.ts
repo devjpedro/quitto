@@ -242,7 +242,9 @@ describe("endpoints de notificação", () => {
         })
       )
     ).json();
-    expect(list.length).toBe(2);
+    // Two in a row, same type and contract: one line (B's notice is not here, or it would be 3).
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ count: 2, unreadCount: 2 });
 
     const count = await (
       await app.handle(

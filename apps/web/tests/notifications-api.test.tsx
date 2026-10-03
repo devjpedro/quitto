@@ -6,6 +6,7 @@ import type { Home, HomeAction } from "@/features/home/types";
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction } from "./home-fixtures";
+import { notificationItem } from "./notification-fixtures";
 
 const { getHome, postRead, postReadAll } = vi.hoisted(() => ({
   getHome: vi.fn(),
@@ -45,7 +46,7 @@ function deferred() {
 }
 
 function note(id: string, readAt: string | null = null): NotificationItem {
-  return {
+  return notificationItem({
     id,
     type: "payment_confirmed",
     contractId: "c1",
@@ -56,7 +57,7 @@ function note(id: string, readAt: string | null = null): NotificationItem {
     contractTitle: "Aluguel do apê",
     installmentSequence: 7,
     installmentsCount: 12,
-  };
+  });
 }
 
 function setup(

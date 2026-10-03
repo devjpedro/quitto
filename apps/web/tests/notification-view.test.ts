@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { notificationView } from "@/features/notifications/lib/notification-view";
 import type { NotificationItem } from "@/features/notifications/types";
+import { notificationItem } from "./notification-fixtures";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
 
 function item(over: Partial<NotificationItem> = {}): NotificationItem {
-  return {
+  return notificationItem({
     id: "n1",
     type: "payment_confirmed",
     contractId: "c1",
@@ -17,7 +18,7 @@ function item(over: Partial<NotificationItem> = {}): NotificationItem {
     installmentSequence: 7,
     installmentsCount: 12,
     ...over,
-  };
+  });
 }
 
 describe("notificationView", () => {

@@ -7,6 +7,7 @@ import { RecentNotifications } from "@/features/notifications/components/recent-
 import { NotificationsPanelContext } from "@/features/notifications/hooks/use-notifications-panel";
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
+import { notificationItem } from "./notification-fixtures";
 import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
@@ -40,7 +41,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 
 function note(id: string): NotificationItem {
-  return {
+  return notificationItem({
     id,
     type: "payment_confirmed",
     contractId: "c1",
@@ -51,7 +52,7 @@ function note(id: string): NotificationItem {
     contractTitle: "Aluguel do apê",
     installmentSequence: 7,
     installmentsCount: 12,
-  };
+  });
 }
 
 const FAILED = {

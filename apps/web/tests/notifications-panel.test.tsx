@@ -8,6 +8,7 @@ import { NotificationsPanel } from "@/features/notifications/components/notifica
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture } from "./home-fixtures";
+import { notificationItem } from "./notification-fixtures";
 import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
@@ -37,7 +38,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 
-const unreadNote: NotificationItem = {
+const unreadNote: NotificationItem = notificationItem({
   id: "n1",
   type: "payment_confirmed",
   contractId: "c1",
@@ -48,17 +49,22 @@ const unreadNote: NotificationItem = {
   contractTitle: "Aluguel do apê",
   installmentSequence: 7,
   installmentsCount: 12,
-};
+});
 
-const readNote: NotificationItem = {
-  ...unreadNote,
+// Built on its own (not spread from unreadNote), so its ids, groupKey and
+// unreadCount follow its own id and readAt.
+const readNote: NotificationItem = notificationItem({
   id: "n2",
   type: "invite_accepted",
+  contractId: "c1",
   installmentId: null,
-  installmentSequence: null,
   metadata: { email: "ana@example.com" },
   readAt: new Date().toISOString(),
-};
+  createdAt: unreadNote.createdAt,
+  contractTitle: "Aluguel do apê",
+  installmentSequence: null,
+  installmentsCount: 12,
+});
 
 /** As the shell does (Task 13): a button opens the panel, and the count is the cached home's. */
 function Harness({
