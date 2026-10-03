@@ -1,4 +1,4 @@
-import type { Locale } from "@quitto/shared";
+import { APP_TIME_ZONE, isoDateInTimeZone, type Locale } from "@quitto/shared";
 
 export interface MoneyParts {
   currency: string;
@@ -170,6 +170,32 @@ const TIME_STEPS: {
 ];
 
 /**
+ * How long ago an instant was, as a whole amount of one unit. Amounts are
+ * truncated, so a unit never reaches the next one ("59 min", never "60 min").
+ * Days are calendar days in the app's timezone: "ontem" is the day before
+ * today in São Paulo, not a block of 24 hours.
+ */
+function elapsedAmount(
+  instantMs: number,
+  nowMs: number
+): { unit: Intl.RelativeTimeFormatUnit; value: number } {
+  const seconds = Math.max(0, Math.trunc((nowMs - instantMs) / 1000));
+  const step = TIME_STEPS.find((s) => seconds < s.limit);
+  if (!step) {
+    return { unit: "year", value: Math.trunc(seconds / YEAR_SECONDS) };
+  }
+  if (step.unit !== "day") {
+    return { unit: step.unit, value: Math.trunc(seconds / step.seconds) };
+  }
+  const days = daysBetween(
+    isoDateInTimeZone(new Date(instantMs), APP_TIME_ZONE),
+    isoDateInTimeZone(new Date(nowMs), APP_TIME_ZONE)
+  );
+  // Under 7 × 24 h can still span 7 midnights: that already reads as a week.
+  return days < 7 ? { unit: "day", value: days } : { unit: "week", value: 1 };
+}
+
+/**
  * "há 2 h", "ontem", "há 3 dias" for a past instant (ISO timestamp). `nowMs`
  * is injectable. A timestamp a few seconds ahead (client clock behind the
  * server's) reads as "agora", never "em 3 s".
@@ -179,21 +205,12 @@ export function formatRelativeTime(
   nowMs: number,
   locale: Locale
 ): string {
-  const diffSeconds = Math.min(
-    0,
-    Math.round((Date.parse(isoTimestamp) - nowMs) / 1000)
-  );
-  const step = TIME_STEPS.find((s) => Math.abs(diffSeconds) < s.limit) ?? {
-    seconds: YEAR_SECONDS,
-    unit: "year" as const,
-  };
+  const { unit, value } = elapsedAmount(Date.parse(isoTimestamp), nowMs);
   const formatter = cached(
     timeFormatters,
     locale,
     () =>
       new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" })
   );
-  return normalizeSpaces(
-    formatter.format(Math.round(diffSeconds / step.seconds), step.unit)
-  );
+  return normalizeSpaces(formatter.format(-value, unit));
 }

@@ -171,6 +171,44 @@ describe("formatRelativeTime", () => {
       "yesterday"
     );
   });
+
+  // São Paulo is UTC-3: 2026-10-03T02:00Z is 23:00 of Oct 2 there.
+  it("46 h atrás, mas ainda ontem no calendário de São Paulo, é 'ontem'", () => {
+    const lateTonight = Date.parse("2026-10-03T02:00:00Z");
+    const yesterdayAt1am = "2026-10-01T04:00:00Z";
+    expect(formatRelativeTime(yesterdayAt1am, lateTonight, "pt-BR")).toBe(
+      "ontem"
+    );
+    expect(formatRelativeTime(yesterdayAt1am, lateTonight, "en-US")).toBe(
+      "yesterday"
+    );
+  });
+
+  it("26 h atrás, cruzando duas meias-noites de São Paulo, é 'anteontem'", () => {
+    const earlyToday = Date.parse("2026-10-02T04:00:00Z");
+    const twoDaysAgoAt11pm = "2026-10-01T02:00:00Z";
+    expect(formatRelativeTime(twoDaysAgoAt11pm, earlyToday, "pt-BR")).toBe(
+      "anteontem"
+    );
+    expect(formatRelativeTime(twoDaysAgoAt11pm, earlyToday, "en-US")).toBe(
+      "2 days ago"
+    );
+  });
+
+  it("nunca chega ao valor da unidade seguinte ('há 60 min', 'há 24 h')", () => {
+    const ago = (seconds: number) =>
+      new Date(now - seconds * 1000).toISOString();
+    expect(formatRelativeTime(ago(59.6), now, "pt-BR")).toBe("há 59 seg.");
+    expect(formatRelativeTime(ago(59 * 60 + 40), now, "pt-BR")).toBe(
+      "há 59 min."
+    );
+    expect(formatRelativeTime(ago(23 * 3600 + 59 * 60), now, "pt-BR")).toBe(
+      "há 23 h"
+    );
+    expect(formatRelativeTime(ago(6.5 * 86_400), now, "pt-BR")).toBe(
+      "semana passada"
+    );
+  });
 });
 
 describe("formatMonthName", () => {
@@ -201,6 +239,23 @@ describe("formatadores em cache", () => {
     const spy = vi.spyOn(Intl, "RelativeTimeFormat");
     formatRelativeDays("2026-10-03", "2026-10-02", "en-US");
     formatRelativeDays("2026-10-04", "2026-10-02", "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.DateTimeFormat para o nome do mês no mesmo idioma", () => {
+    formatMonthName("2026-09", "en-US");
+    const spy = vi.spyOn(Intl, "DateTimeFormat");
+    formatMonthName("2026-10", "en-US");
+    formatMonthName("2026-11", "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.RelativeTimeFormat a cada aviso da lista (tempo relativo)", () => {
+    const now = Date.parse("2026-10-02T12:00:00Z");
+    formatRelativeTime("2026-10-02T10:00:00Z", now, "en-US");
+    const spy = vi.spyOn(Intl, "RelativeTimeFormat");
+    formatRelativeTime("2026-10-02T11:00:00Z", now, "en-US");
+    formatRelativeTime("2026-09-30T12:00:00Z", now, "en-US");
     expect(spy).toHaveBeenCalledTimes(0);
   });
 });

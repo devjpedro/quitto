@@ -43,6 +43,16 @@ describe("chargeMessage", () => {
       "Hi! Just a reminder about installment 7 of 12 of “Aluguel do apê”: R$1,250.00, due on 10/05/2026."
     );
   });
+
+  it("vence hoje: ainda é lembrete, não cobrança de atraso", () => {
+    expect(chargeMessage({ ...base, dueDate: base.todayISO }, "pt-BR")[0]).toBe(
+      "Oi! Passando para lembrar da parcela 7 de 12 de “Aluguel do apê”: R$ 1.250,00, com vencimento em 02/10/2026."
+    );
+  });
+
+  it("PIX vazio não entra na mensagem", () => {
+    expect(chargeMessage({ ...base, pixCode: "" }, "pt-BR")).toHaveLength(1);
+  });
 });
 
 describe("whatsappUrl", () => {
@@ -51,6 +61,31 @@ describe("whatsappUrl", () => {
     expect(url.startsWith(WA_PREFIX)).toBe(true);
     expect(decodeURIComponent(url.slice(WA_PREFIX.length))).toBe(
       ["Oi! R$ 1.250,00", "000201"].join(String.fromCharCode(10, 10))
+    );
+  });
+
+  it("codifica a mensagem real: aspas, acento, R$, & + % e o espaço do Intl", () => {
+    const paragraphs = chargeMessage(
+      {
+        ...base,
+        contractTitle: "Aluguel do apê & cia + 50%",
+        pixCode: "000201abc",
+      },
+      "pt-BR"
+    );
+    const text = whatsappUrl(paragraphs).slice(WA_PREFIX.length);
+    const nbsp = String.fromCharCode(0x00_a0);
+    const narrowNbsp = String.fromCharCode(0x20_2f);
+    for (const raw of [" ", nbsp, narrowNbsp, "“", "ê", "$", "&", "+"]) {
+      expect(text).not.toContain(raw);
+    }
+    expect(text).toContain(
+      "%E2%80%9CAluguel%20do%20ap%C3%AA%20%26%20cia%20%2B%2050%25%E2%80%9D"
+    );
+    // The amount keeps a plain space (%20), never Intl's NBSP (%C2%A0).
+    expect(text).toContain("R%24%201.250%2C00");
+    expect(decodeURIComponent(text)).toBe(
+      paragraphs.join(String.fromCharCode(10, 10))
     );
   });
 });
