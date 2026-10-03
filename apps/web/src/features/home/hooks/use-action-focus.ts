@@ -5,7 +5,8 @@ import type { HomeAction } from "../types";
 /**
  * An action takes its card out at once (optimistic), and the focused button
  * goes with it. Hands the focus to the card that took its place: its first
- * button, or the list itself when no card is left.
+ * button. The last card is the page's: the home stops rendering the list, and
+ * useFocusAfterLastAction hands the focus to the summary.
  */
 export function useActionFocus(actions: HomeAction[]) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -27,12 +28,11 @@ export function useActionFocus(actions: HomeAction[]) {
       return;
     }
     const index = focusIndexAfterRemoval(removedIndex, ids.length);
-    const item =
-      index === null ? null : section.querySelector("ul")?.children[index];
-    const button = item?.querySelector<HTMLElement>(
-      "a[href], button:not(:disabled)"
-    );
-    (button ?? section).focus();
+    if (index === null) {
+      return;
+    }
+    const item = section.querySelector("ul")?.children[index];
+    item?.querySelector<HTMLElement>("a[href], button:not(:disabled)")?.focus();
   }, [actions]);
 
   /** Called when a card's action starts. Only a focused button hands the focus on: a mouse tap that left it on the page keeps it there. */

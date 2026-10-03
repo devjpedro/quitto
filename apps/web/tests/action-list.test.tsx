@@ -406,10 +406,9 @@ describe("ActionList", () => {
   });
 });
 
+// Without a card left the home drops the list, and the page hands the focus
+// to the summary (home-page.test.tsx, "quando sai a última ação").
 describe("ActionList · foco depois da ação", () => {
-  const region = () =>
-    screen.getByRole("region", { name: "O que fazer agora" });
-
   it("pelo teclado: o foco vai para o 1º botão do cartão que ficou no mesmo lugar", async () => {
     markPaid.mockReturnValue(new Promise(() => undefined));
     renderLive(twoToPay());
@@ -446,17 +445,6 @@ describe("ActionList · foco depois da ação", () => {
         name: "Pagar com PIX",
       })
     );
-  });
-
-  it("pelo teclado: sem cartão sobrando, o foco vai para a lista", async () => {
-    markPaid.mockReturnValue(new Promise(() => undefined));
-    renderLive([installmentAction()]);
-    await userEvent.tab();
-    await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(articleOf(7)).toBeNull());
-    expect(document.activeElement).toBe(region());
-    expect(region()).toHaveAttribute("tabindex", "-1");
   });
 
   it("um link não tira o cartão, e o foco fica nele", async () => {

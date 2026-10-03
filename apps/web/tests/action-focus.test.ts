@@ -8,7 +8,7 @@ describe("focusIndexAfterRemoval", () => {
     expect(focusIndexAfterRemoval(2, 2)).toBe(1);
   });
 
-  it("sem cartão sobrando, nenhum (o foco vai para a lista)", () => {
+  it("sem cartão sobrando, nenhum (a lista sai da página, e a página cuida do foco)", () => {
     expect(focusIndexAfterRemoval(0, 0)).toBeNull();
   });
 });

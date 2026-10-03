@@ -75,8 +75,6 @@ export function ActionList({
       className="flex flex-col gap-2 focus:outline-none"
       onKeyDownCapture={swallowKeyRepeat}
       ref={sectionRef}
-      // With no card left, the list itself takes the focus of the last action.
-      tabIndex={actions.length === 0 ? -1 : undefined}
     >
       <ul
         className={cn(
