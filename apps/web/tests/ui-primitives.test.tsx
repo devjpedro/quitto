@@ -145,15 +145,15 @@ describe("Money", () => {
     expect(screen.getByText("R$ 1.250,00")).toBeVisible();
   });
 
-  it("display keeps the full amount for screen readers and splits the visual parts", () => {
-    const { container } = render(<Money cents={125_050} size="display" />);
+  it("card keeps the full amount for screen readers and splits the visual parts", () => {
+    const { container } = render(<Money cents={125_050} size="card" />);
     expect(screen.getByText("R$ 1.250,50")).toHaveClass("sr-only");
     const visual = container.querySelector("[aria-hidden='true']");
     expect(visual).toHaveTextContent("R$1.250,50");
   });
 
-  it("display shows the minus sign for negative values", () => {
-    const { container } = render(<Money cents={-900} size="display" />);
+  it("card shows the minus sign for negative values", () => {
+    const { container } = render(<Money cents={-900} size="card" />);
     expect(container.querySelector("[aria-hidden='true']")).toHaveTextContent(
       "-R$9,00"
     );

@@ -57,11 +57,7 @@ export function ActionCard({
           {action.contractTitle}
         </p>
       ) : (
-        <Money
-          cents={action.amountCents}
-          className="text-[28px] leading-tight"
-          size="display"
-        />
+        <Money cents={action.amountCents} size="card" />
       )}
       {view.detail ? (
         <p className={cn("text-xs", muted)}>{view.detail}</p>

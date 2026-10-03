@@ -2,41 +2,69 @@ import { formatMoney, moneyParts } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
 import { getLocale } from "@/paraglide/runtime.js";
 
-/** BRL amount. `display` renders the integer large with "R$" and cents set back. */
+// DIRECAO › Tipografia: the card's amount 34, the milestone's 24, a list's
+// 17, always tabular, with "R$" and the cents set back.
+const DISPLAY = {
+  card: {
+    root: "text-[34px] leading-[1.15] tracking-[-0.035em]",
+    currency: "relative top-[0.42em] mr-[3px] align-top text-[13px]",
+    cents: "text-[0.56em] tracking-[-0.01em]",
+  },
+  milestone: {
+    root: "text-2xl leading-[1.2] tracking-[-0.03em]",
+    currency: "relative top-[0.38em] mr-0.5 align-top text-[11px]",
+    cents: "text-sm",
+  },
+  list: {
+    root: "text-[17px] tracking-[-0.02em]",
+    currency: "mr-[3px] text-xs",
+    cents: "text-[13px]",
+  },
+} as const;
+
+/** BRL amount. `inline` is plain text; the other sizes set "R$" and the cents back. `sign` ("+" money in, "−" money out) sits in the small "R$". */
 export function Money({
   cents,
-  size = "inline",
   className,
+  sign,
+  size = "inline",
 }: {
   cents: number;
   className?: string;
-  size?: "inline" | "display";
+  sign?: "+" | "−";
+  size?: "inline" | keyof typeof DISPLAY;
 }) {
   const locale = getLocale();
   const full = formatMoney(cents, locale);
+  const spoken = sign ? `${sign} ${full}` : full;
   if (size === "inline") {
     return (
       <span className={cn("whitespace-nowrap tabular-nums", className)}>
-        {full}
+        {spoken}
       </span>
     );
   }
   const parts = moneyParts(cents, locale);
+  const look = DISPLAY[size];
   return (
     <span
       className={cn(
-        "whitespace-nowrap font-display font-medium tabular-nums tracking-[-0.03em]",
+        "whitespace-nowrap font-display font-medium tabular-nums",
+        look.root,
         className
       )}
     >
-      <span className="sr-only">{full}</span>
+      <span className="sr-only">{spoken}</span>
       <span aria-hidden="true">
         {parts.sign}
-        <span className="mr-0.5 align-top font-sans text-[0.45em] tracking-normal">
+        <span
+          className={cn("font-medium font-sans tracking-normal", look.currency)}
+        >
+          {sign ? `${sign} ` : ""}
           {parts.currency}
         </span>
         {parts.integer}
-        <span className="text-[0.55em]">
+        <span className={look.cents}>
           {parts.decimal}
           {parts.fraction}
         </span>
