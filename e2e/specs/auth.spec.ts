@@ -1,12 +1,11 @@
 import { expect, test } from "@playwright/test";
 import {
+  GREETING,
   openAccountMenu,
   randomEmail,
   signup,
   waitForHydrated,
 } from "../fixtures";
-
-const GREETING = /^(Bom dia|Boa tarde|Boa noite), Usuário$/;
 
 const LOGOUT = /Sair/i;
 const SIGNIN_SUBMIT = /^Entrar$/;

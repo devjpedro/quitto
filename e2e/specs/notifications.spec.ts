@@ -86,6 +86,8 @@ test("marcar todas como lidas zera o contador", async ({ browser }) => {
     await b.page.goto("/");
     const panel = await openNotifications(b.page);
     await expect(panel.getByText(PROOF_NOTIF)).toBeVisible();
+    // The unread one carries the tag before "mark all as read" takes it away.
+    await expect(panel.getByText("Nova", { exact: true })).toHaveCount(1);
     await panel
       .getByRole("button", { name: "Marcar todas como lidas" })
       .click();

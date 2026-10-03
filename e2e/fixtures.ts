@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import AxeBuilder from "@axe-core/playwright";
 import type {
   APIRequestContext,
   Browser,
@@ -14,6 +15,19 @@ export const PROOF_PDF = path.join(here, "fixtures", "comprovante.pdf");
 
 const SIGNUP_TOGGLE = /Alternar para criar conta/i;
 const CREATE_ACCOUNT = /^Criar conta$/;
+const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
+
+/** The "Agora" greeting for the account signup creates ("Usuário E2E"). */
+export const GREETING = /^(Bom dia|Boa tarde|Boa noite), Usuário$/;
+
+/** A 500 the way the API sends it, for page.route(...).fulfill. */
+export const API_FAILURE = {
+  status: 500,
+  contentType: "application/json",
+  body: JSON.stringify({
+    error: { code: "INTERNAL", message: "falha simulada" },
+  }),
+};
 
 export function randomEmail(): string {
   return `e2e-${randomUUID()}@e2e.test`;
@@ -27,7 +41,7 @@ export async function waitForHydrated(page: Page): Promise<void> {
   await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
 }
 
-/** Registra um usuário novo pela UI e espera cair no dashboard. Retorna o e-mail. */
+/** Registra um usuário novo pela UI e espera cair no Agora. Retorna o e-mail. */
 export async function signup(
   page: Page,
   email = randomEmail()
@@ -43,8 +57,8 @@ export async function signup(
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("password123");
   await page.getByRole("button", { name: CREATE_ACCOUNT }).click();
-  await page.waitForURL("**/"); // dashboard
-  await waitForHydrated(page); // dashboard hidratado antes de qualquer clique
+  await page.waitForURL("**/"); // Agora
+  await waitForHydrated(page); // Agora hidratado antes de qualquer clique
   return email;
 }
 
@@ -77,7 +91,16 @@ export async function openNotifications(page: Page): Promise<Locator> {
     .click();
   const panel = page.getByRole("dialog", { name: "Notificações" });
   await expect(panel).toBeVisible();
-  // The sheet slides in on a spring: wait until it rests, so axe and clicks see the final frame.
+  await sheetAtRest(panel);
+  return panel;
+}
+
+/**
+ * The sheet slides in on a spring: wait until it rests, so axe and clicks see
+ * the final frame. Radix also only takes Escape once the dialog's layer is
+ * registered, a few ms after it mounts: a press in that instant is lost.
+ */
+export async function sheetAtRest(panel: Locator): Promise<void> {
   await expect
     .poll(() =>
       panel.evaluate((el) => {
@@ -86,7 +109,31 @@ export async function openNotifications(page: Page): Promise<Locator> {
       })
     )
     .toBe(true);
-  return panel;
+}
+
+/** The "Agora" link of the visible navigation (desktop sidebar or mobile tab bar). */
+export function nowLink(page: Page): Locator {
+  return page
+    .locator("#app-shell nav")
+    .filter({ visible: true })
+    .first()
+    .getByRole("link", { name: "Agora" });
+}
+
+/** axe with the WCAG 2.2 AA tags: no violation on the page as it is now. */
+export async function scan(page: Page): Promise<void> {
+  const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+  expect(results.violations).toEqual([]);
+}
+
+/**
+ * Moves the page's Date.now ahead without firing timers (needs
+ * page.clock.install()). Unlike fastForward, a read in flight keeps its 15 s
+ * timeout, which no real wait would abort.
+ */
+export async function advanceDateNow(page: Page, ms: number): Promise<void> {
+  const now = await page.evaluate(() => Date.now());
+  await page.clock.setSystemTime(now + ms);
 }
 
 /** Opens the account menu (desktop sidebar or mobile top bar — whichever is visible). */

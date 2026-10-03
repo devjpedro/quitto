@@ -1,8 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
-import { openNotifications, seedContract, signup } from "../fixtures";
+import {
+  advanceDateNow,
+  GREETING,
+  openNotifications,
+  seedContract,
+  signup,
+} from "../fixtures";
 
 const LOGIN_URL = /\/login/;
-const GREETING = /^(Bom dia|Boa tarde|Boa noite), Usuário$/;
 
 /**
  * Coleta as chamadas de server function (`/_serverFn/*`). Em produção cada uma
@@ -17,18 +22,6 @@ function collectServerFnCalls(page: Page): string[] {
     }
   });
   return calls;
-}
-
-/**
- * Moves the page's clock 60 s ahead without firing timers. What ages is what
- * the router compares with Date.now (the preload goes stale after 30 s). A
- * fastForward would also fire, inside the jump, the 15 s timeout of every
- * read started meanwhile (the shell refetches right after an SSR load), and
- * no real wait aborts those.
- */
-async function sixtySecondsLater(page: Page): Promise<void> {
-  const now = await page.evaluate(() => Date.now());
-  await page.clock.setSystemTime(now + 60_000);
 }
 
 test("hover e navegação dentro do app não chamam server functions", async ({
@@ -46,8 +39,11 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   }
   await nav.getByRole("link", { name: "Contratos" }).click();
   await expect(page.getByRole("heading", { name: "Contratos" })).toBeVisible();
-  // uso real: o preloadStaleTime (30s) expira e o preload reexecuta os loaders
-  await sixtySecondsLater(page);
+  // uso real: o preloadStaleTime (30s) expira e o preload reexecuta os loaders.
+  // Only Date.now moves: what ages is what the router and the queries compare
+  // with it. A fastForward would also fire, inside the jump, the 15 s timeout
+  // of every read started meanwhile, which no real wait aborts.
+  await advanceDateNow(page, 60_000);
   await page.getByRole("link", { name: "Novo contrato" }).hover();
   const row = page.locator(`a[href="/contracts/${id}"]`).first();
   await row.hover();
@@ -65,9 +61,21 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   for (const name of ["Contratos", "Agora"]) {
     await nav.getByRole("link", { name }).hover();
   }
-  await sixtySecondsLater(page);
+  await advanceDateNow(page, 60_000);
+  const contractsReads: string[] = [];
+  page.on("request", (req) => {
+    if (
+      req.method() === "GET" &&
+      new URL(req.url()).pathname === "/api/contracts"
+    ) {
+      contractsReads.push(req.url());
+    }
+  });
   await nav.getByRole("link", { name: "Contratos" }).click();
   await expect(page.getByRole("heading", { name: "Contratos" })).toBeVisible();
+  // The 60 s did age the data: going back reads the list again, through the
+  // API and never through a server function.
+  await expect.poll(() => contractsReads.length).toBeGreaterThan(0);
 
   expect(calls).toEqual([]);
 });
