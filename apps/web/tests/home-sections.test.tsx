@@ -25,6 +25,7 @@ const { dismiss } = vi.hoisted(() => ({ dismiss: vi.fn() }));
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
+const NINE_OF_TEN = /parcela 9 de 10/;
 
 vi.mock("@/lib/api", () => ({
   api: { api: { me: { onboarding: { dismiss: { post: () => dismiss() } } } } },
@@ -126,12 +127,11 @@ describe("seções do home", () => {
     );
     expect(screen.getByText("+ R$ 320,00")).toBeVisible();
     expect(screen.getByText("− R$ 390,00")).toBeVisible();
-    // One tag only: below the date on a phone, mid-row from md (the row's grid places it).
+    // One tag only, beside the title in the row's first line (not in the meta).
     expect(screen.getAllByText("Comprovante enviado")).toHaveLength(1);
-    expect(screen.getByText("Comprovante enviado")).toHaveClass(
-      "row-start-3",
-      "md:col-start-2"
-    );
+    const titleLine = screen.getByText("Comprovante enviado").parentElement;
+    expect(titleLine).toHaveTextContent("Curso de inglês");
+    expect(titleLine).not.toHaveTextContent("você paga");
     expect(screen.getByText("+ 3 parcelas nos próximos 30 dias")).toBeVisible();
   });
 
@@ -553,5 +553,97 @@ describe("seções do home", () => {
     expect(
       screen.getByRole("button", { name: "dispensar guia" })
     ).toBeVisible();
+  });
+});
+
+describe("UpcomingList (mockup 13)", () => {
+  const upcoming = (items: ReturnType<typeof upcomingItem>[]) => ({
+    items,
+    moreCount: 0,
+    toPayCents: 0,
+    toReceiveCents: 0,
+  });
+
+  it("um bloco preenchido com divisórias retas, sem uma caixa por linha", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem(),
+          upcomingItem({ installmentId: "u2", sequence: 3 }),
+        ])}
+      />
+    );
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass(
+      "bg-surface-card",
+      "divide-y",
+      "divide-divider",
+      "rounded-card"
+    );
+    for (const link of within(list).getAllByRole("link")) {
+      expect(link).not.toHaveClass("border");
+      expect(link).toHaveClass(
+        "hover:bg-surface-card-hover",
+        "focus-visible:ring-inset"
+      );
+    }
+  });
+
+  it("cada linha: o tile de data, o dia da semana, a parcela a partir de md e o valor com sinal", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([upcomingItem()])}
+      />
+    );
+    const row = screen.getByRole("link");
+    // 2026-10-10 is a Saturday; installment 9 of 10, to receive R$ 320,00.
+    expect(within(row).getByText("sábado, 10 de outubro")).toHaveClass(
+      "sr-only"
+    );
+    expect(row).toHaveTextContent("sáb. · você recebe");
+    expect(within(row).getByText(NINE_OF_TEN)).toHaveClass("max-md:hidden");
+    expect(within(row).getByText("+ R$ 320,00")).toHaveClass("sr-only");
+  });
+
+  it("a última parcela ganha 'última'; a primeira, 'primeira'", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({
+            installmentId: "a",
+            sequence: 10,
+            installmentsCount: 10,
+          }),
+          upcomingItem({
+            installmentId: "b",
+            sequence: 1,
+            installmentsCount: 12,
+            direction: "pay",
+          }),
+        ])}
+      />
+    );
+    const [last, first] = screen.getAllByRole("link");
+    expect(within(last as HTMLElement).getByText("última")).toBeVisible();
+    expect(within(first as HTMLElement).getByText("primeira")).toBeVisible();
+    expect(within(first as HTMLElement).getByText("− R$ 320,00")).toHaveClass(
+      "sr-only"
+    );
+  });
+
+  it("o título é o de seção: Bricolage em ink, com a contagem à direita", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([upcomingItem()])}
+      />
+    );
+    expect(
+      screen.getByRole("heading", { name: "Próximos 30 dias" })
+    ).toHaveClass("font-display", "text-ink");
+    expect(screen.getByText("1 parcela")).toBeVisible();
   });
 });
