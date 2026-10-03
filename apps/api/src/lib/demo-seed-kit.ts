@@ -1,0 +1,192 @@
+import { generateMonthlySchedule } from "@quitto/shared";
+import { addDays } from "./dates";
+
+export const DEMO_DOMAIN = "demo.quitto.dev";
+export const DEMO_PASSWORD = "quitto123";
+
+export type DemoAccountKey = "agora" | "atraso" | "novo" | "tres" | "bia";
+
+export interface DemoAccount {
+  createdDaysAgo: number;
+  email: string;
+  key: DemoAccountKey;
+  name: string;
+  pixKey: string | null;
+}
+
+export interface DemoInstallment {
+  amountCents: number;
+  /** ISO instant of the confirmation, in a contract that asks for one. */
+  confirmedAt: string | null;
+  dueDate: string;
+  /** ISO instant: paid on the due date, at noon in São Paulo. */
+  paidAt: string | null;
+  /** ISO instant of the proof waiting for confirmation, when there is one. */
+  proofAt: string | null;
+  sequence: number;
+  status: "pending" | "paid" | "confirmed" | "awaiting_confirmation";
+}
+
+export interface DemoContract {
+  counterpart: { displayName: string; role: "buyer" | "seller" };
+  createdDaysAgo: number;
+  installments: DemoInstallment[];
+  /** The counterpart's slot is invited by e-mail to this account (left pending). */
+  invite: DemoAccountKey | null;
+  key: string;
+  owner: DemoAccountKey;
+  ownerRole: "buyer" | "seller";
+  pixKey: string | null;
+  requiresConfirmation: boolean;
+  title: string;
+}
+
+export interface DemoNotification {
+  account: DemoAccountKey;
+  /** ISO instant. */
+  at: string;
+  contract: string;
+  metadata: Record<string, unknown> | null;
+  read: boolean;
+  sequence: number | null;
+  type: string;
+}
+
+export interface DemoScenario {
+  accounts: DemoAccount[];
+  contracts: DemoContract[];
+  notifications: DemoNotification[];
+}
+
+/**
+ * `iso` moved by whole months, back or forth, the day clamped to the month's
+ * end. The shared addMonths is only right for positive months (its % goes
+ * negative across a year): planner's decision 19.
+ */
+export function shiftMonths(iso: string, months: number): string {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  const index = y * 12 + (m - 1) + months;
+  const year = Math.floor(index / 12);
+  const month = index - year * 12 + 1;
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+export interface MonthlySpec {
+  amountCents: number;
+  /** A contract with confirmation: its paid installments are "confirmed", as the product makes them. */
+  confirmed?: boolean;
+  firstDueDate: string;
+  months: number;
+  paid: number;
+  /** The installment whose proof waits for the receiver. */
+  review?: number;
+  /** The installment that falls due today (pinned, whatever the month lengths). */
+  today?: { sequence: number; todayISO: string };
+}
+
+function statusOf(
+  sequence: number,
+  spec: MonthlySpec
+): DemoInstallment["status"] {
+  if (sequence <= spec.paid) {
+    return spec.confirmed ? "confirmed" : "paid";
+  }
+  return sequence === spec.review ? "awaiting_confirmation" : "pending";
+}
+
+export function monthly(spec: MonthlySpec): DemoInstallment[] {
+  return generateMonthlySchedule({
+    monthlyAmountCents: spec.amountCents,
+    months: spec.months,
+    firstDueDate: spec.firstDueDate,
+  }).map((row) => {
+    const status = statusOf(row.sequence, spec);
+    const dueDate =
+      row.sequence === spec.today?.sequence ? spec.today.todayISO : row.dueDate;
+    const paid = status === "paid" || status === "confirmed";
+    return {
+      sequence: row.sequence,
+      amountCents: row.amountCents,
+      dueDate,
+      status,
+      paidAt: paid ? `${dueDate}T15:00:00.000Z` : null,
+      confirmedAt: status === "confirmed" ? `${dueDate}T15:00:00.000Z` : null,
+      proofAt: null,
+    };
+  });
+}
+
+/** An instant `days` from today at `hhmm` UTC (São Paulo is UTC-3). */
+export function at(todayISO: string, days: number, hhmm: string): string {
+  return `${addDays(todayISO, days)}T${hhmm}:00.000Z`;
+}
+
+export function account(
+  key: DemoAccountKey,
+  name: string,
+  createdDaysAgo: number,
+  pixKey: string | null
+): DemoAccount {
+  return { key, name, email: `${key}@${DEMO_DOMAIN}`, createdDaysAgo, pixKey };
+}
+
+/** A contract's fixed part: the owner holds one slot, an unlinked counterpart the other. */
+export function base(
+  key: string,
+  owner: DemoAccountKey,
+  title: string,
+  ownerRole: "buyer" | "seller",
+  counterpart: string
+): Omit<DemoContract, "installments" | "createdDaysAgo"> {
+  return {
+    key,
+    owner,
+    title,
+    ownerRole,
+    requiresConfirmation: false,
+    pixKey: null,
+    counterpart: {
+      displayName: counterpart,
+      role: ownerRole === "buyer" ? "seller" : "buyer",
+    },
+    invite: null,
+  };
+}
+
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * The demo seed wipes and rewrites the demo accounts, uploads proof files
+ * and signs people up: never in production, never against a remote database
+ * or bucket (the compose service name "postgres" can be a remote one on a
+ * docker network), and never with a real e-mail key (sign-up sends a
+ * verification e-mail, and a Resend error would stop the seed half-way).
+ */
+export function assertDemoEnvironment(env: {
+  DATABASE_URL: string;
+  NODE_ENV: string;
+  RESEND_API_KEY?: string | undefined;
+  S3_ENDPOINT?: string | undefined;
+}): void {
+  if (env.NODE_ENV === "production") {
+    throw new Error("seed:demo não roda em produção (NODE_ENV=production)");
+  }
+  const dbHost = new URL(env.DATABASE_URL).hostname;
+  if (!LOCAL_HOSTS.has(dbHost)) {
+    throw new Error(
+      `seed:demo só roda em banco local; o DATABASE_URL aponta para ${dbHost}`
+    );
+  }
+  const s3Host = env.S3_ENDPOINT ? new URL(env.S3_ENDPOINT).hostname : null;
+  if (s3Host === null || !LOCAL_HOSTS.has(s3Host)) {
+    throw new Error(
+      `seed:demo precisa do MinIO local; o S3_ENDPOINT é ${s3Host ?? "vazio"}`
+    );
+  }
+  if (env.RESEND_API_KEY) {
+    throw new Error(
+      "seed:demo não roda com RESEND_API_KEY: o cadastro mandaria e-mail de verdade. Rode: RESEND_API_KEY= bun run seed:demo"
+    );
+  }
+}
