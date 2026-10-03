@@ -89,6 +89,8 @@ export const homeSchema = t.Object({
         paidCount: t.Integer(),
         totalCount: t.Integer(),
         percent: t.Integer(),
+        remainingCount: t.Integer(),
+        nextDueDate: nullableString,
       }),
       t.Null(),
     ]),
@@ -104,6 +106,8 @@ export const homeSchema = t.Object({
     settled: t.Object({
       paidCents: t.Integer(),
       receivedCents: t.Integer(),
+      payableTotalCents: t.Integer(),
+      receivableTotalCents: t.Integer(),
     }),
   }),
   onboarding: t.Object({

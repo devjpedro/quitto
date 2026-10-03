@@ -20,13 +20,20 @@ describe("milestoneCells", () => {
         paidCount: 9,
         totalCount: 10,
         percent: 90,
+        remainingCount: 1,
+        nextDueDate: "2026-10-13",
       },
       monthToDate: {
         month: "2026-10",
         paidCents: 125_000,
         receivedCents: 338_000,
       },
-      settled: { paidCents: 1_250_000, receivedCents: 4_190_000 },
+      settled: {
+        paidCents: 1_250_000,
+        receivedCents: 4_190_000,
+        payableTotalCents: 1_250_000,
+        receivableTotalCents: 4_190_000,
+      },
     });
     expect(cells.map((c) => c.id)).toEqual([
       "all_clear",
@@ -41,7 +48,12 @@ describe("milestoneCells", () => {
   it("quitado só numa direção: uma célula só, nunca a soma", () => {
     const cells = milestoneCells({
       ...homeFixture().milestones,
-      settled: { paidCents: 0, receivedCents: 4_190_000 },
+      settled: {
+        paidCents: 0,
+        receivedCents: 4_190_000,
+        payableTotalCents: 0,
+        receivableTotalCents: 4_190_000,
+      },
     });
     expect(cells).toEqual([{ id: "settled_received", cents: 4_190_000 }]);
   });
@@ -56,13 +68,20 @@ describe("stripCells", () => {
       paidCount: 9,
       totalCount: 10,
       percent: 90,
+      remainingCount: 1,
+      nextDueDate: "2026-10-13",
     },
     monthToDate: {
       month: "2026-10",
       paidCents: 125_000,
       receivedCents: 338_000,
     },
-    settled: { paidCents: 1_250_000, receivedCents: 0 },
+    settled: {
+      paidCents: 1_250_000,
+      receivedCents: 0,
+      payableTotalCents: 1_250_000,
+      receivableTotalCents: 0,
+    },
   });
 
   it("o marco do momento abre a faixa em linha inteira; o resto vai de dois em dois", () => {
@@ -95,6 +114,8 @@ describe("onlyMomentStrip", () => {
     paidCount: 9,
     totalCount: 10,
     percent: 90,
+    remainingCount: 1,
+    nextDueDate: "2026-10-13",
   };
 
   it("só o marco do momento: a faixa é só do celular (no desktop a sidebar o mostra)", () => {
@@ -109,7 +130,12 @@ describe("onlyMomentStrip", () => {
     const milestones = {
       ...homeFixture().milestones,
       closestToPayoff: closest,
-      settled: { paidCents: 1_250_000, receivedCents: 0 },
+      settled: {
+        paidCents: 1_250_000,
+        receivedCents: 0,
+        payableTotalCents: 1_250_000,
+        receivableTotalCents: 0,
+      },
     };
     expect(onlyMomentStrip(milestones, "closest")).toBe(false);
   });

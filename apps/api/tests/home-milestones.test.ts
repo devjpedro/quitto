@@ -91,8 +91,15 @@ describe("buildMilestones", () => {
       paidCount: 3,
       totalCount: 4,
       percent: 75,
+      remainingCount: 1,
+      nextDueDate: "2026-10-20",
     });
-    expect(result.settled).toEqual({ paidCents: 5 * 10_000, receivedCents: 0 });
+    expect(result.settled).toEqual({
+      paidCents: 5 * 10_000,
+      receivedCents: 0,
+      payableTotalCents: 8 * 10_000,
+      receivableTotalCents: 0,
+    });
   });
 
   describe("mais perto de quitar: o percentual fica entre 1% e 99% em contrato em aberto", () => {
@@ -119,7 +126,7 @@ describe("buildMilestones", () => {
       expect(result.closestToPayoff?.percent).toBe(99);
     });
 
-    it("R$ 1,00 pago de R$ 100.000,00 mostra 1%, nunca 0%", () => {
+    it("abaixo de 50% não é marco: R$ 1,00 pago de R$ 100.000,00 não vira 'mais perto de quitar'", () => {
       const result = milestones({
         ...base,
         installments: [
@@ -127,7 +134,45 @@ describe("buildMilestones", () => {
           inst({ id: "b", contractId: "c", amountCents: 9_999_900 }),
         ],
       });
-      expect(result.closestToPayoff?.percent).toBe(1);
+      expect(result.closestToPayoff).toBeNull();
+    });
+
+    it("49% ainda não vale; 50% já vale", () => {
+      const at = (paid: number) =>
+        milestones({
+          ...base,
+          installments: [
+            inst({
+              id: "a",
+              contractId: "c",
+              status: "paid",
+              amountCents: paid,
+            }),
+            inst({ id: "b", contractId: "c", amountCents: 10_000 - paid }),
+          ],
+        }).closestToPayoff;
+      expect(at(4900)).toBeNull();
+      expect(at(5000)?.percent).toBe(50);
+    });
+
+    it("falta 1: traz quantas faltam e a data da próxima em aberto", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({ id: "a", contractId: "c", sequence: 1, status: "paid" }),
+          inst({ id: "b", contractId: "c", sequence: 2, status: "paid" }),
+          inst({
+            id: "c",
+            contractId: "c",
+            sequence: 3,
+            dueDate: "2026-10-13",
+          }),
+        ],
+      });
+      expect(result.closestToPayoff).toMatchObject({
+        remainingCount: 1,
+        nextDueDate: "2026-10-13",
+      });
     });
   });
 
@@ -240,7 +285,12 @@ describe("buildMilestones", () => {
       receivedCents: 7000,
     });
     // "Já quitado no total": one total per direction, never summed together.
-    expect(result.settled).toEqual({ paidCents: 12_500, receivedCents: 7000 });
+    expect(result.settled).toEqual({
+      paidCents: 12_500,
+      receivedCents: 7000,
+      payableTotalCents: 12_500,
+      receivableTotalCents: 7000,
+    });
   });
 
   it("tudo em dia no mês passado só quando todas as parcelas de lá foram pagas no prazo", () => {
@@ -446,6 +496,74 @@ describe("buildMilestones", () => {
         ],
       });
       expect(result.previousMonthAllClear).toBeNull();
+    });
+  });
+
+  it("o total por direção soma os contratos em aberto e os quitados, e nunca junta as duas direções", () => {
+    const result = milestones({
+      contracts: [
+        contractRow({ id: "pay", ownerRole: "buyer" }),
+        contractRow({ id: "recv", ownerRole: "seller" }),
+        contractRow({ id: "done", ownerRole: "seller" }),
+      ],
+      participants: [
+        {
+          contractId: "pay",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+        {
+          contractId: "recv",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+        {
+          contractId: "done",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+      ],
+      installments: [
+        inst({
+          id: "p1",
+          contractId: "pay",
+          status: "paid",
+          amountCents: 180_000,
+        }),
+        inst({
+          id: "p2",
+          contractId: "pay",
+          sequence: 2,
+          amountCents: 180_000,
+        }),
+        inst({
+          id: "r1",
+          contractId: "recv",
+          status: "paid",
+          amountCents: 35_000,
+        }),
+        inst({
+          id: "r2",
+          contractId: "recv",
+          sequence: 2,
+          amountCents: 35_000,
+        }),
+        inst({
+          id: "d1",
+          contractId: "done",
+          status: "confirmed",
+          amountCents: 25_000,
+        }),
+      ],
+    });
+    expect(result.settled).toEqual({
+      paidCents: 180_000,
+      payableTotalCents: 360_000,
+      receivedCents: 60_000,
+      receivableTotalCents: 95_000,
     });
   });
 });

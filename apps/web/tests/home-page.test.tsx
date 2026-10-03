@@ -181,7 +181,12 @@ describe("HomePage", () => {
         onboarding: { ...homeFixture().onboarding, hasPixKey: false },
         milestones: {
           ...homeFixture().milestones,
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         },
       }),
       error: null,
@@ -342,7 +347,12 @@ describe("HomePage", () => {
       data: homeFixture({
         milestones: {
           ...homeFixture().milestones,
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         },
       }),
       error: null,
@@ -412,6 +422,8 @@ describe("HomePage", () => {
             paidCount: 1,
             totalCount: 3,
             percent: 33,
+            remainingCount: 2,
+            nextDueDate: "2026-10-13",
           },
         },
       }),

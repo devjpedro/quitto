@@ -5,98 +5,32 @@ import {
   isoDateInTimeZone,
   isPaidStatus,
 } from "@quitto/shared";
+import { type ClosestToPayoff, closestToPayoff } from "./home-closest";
 import type { HomeInstallmentRow, PartyContract } from "./home-parties";
+import { tally } from "./home-tally";
 
-export interface ClosestToPayoff {
-  contractId: string;
-  paidCount: number;
-  percent: number;
-  title: string;
-  totalCount: number;
+export type { ClosestToPayoff } from "./home-closest";
+
+/** Paid so far and the whole value, one pair per direction: "Já recebeu R$ X · de R$ Y". */
+export interface SettledTotals {
+  paidCents: number;
+  payableTotalCents: number;
+  receivableTotalCents: number;
+  receivedCents: number;
 }
 
 export interface HomeMilestones {
   closestToPayoff: ClosestToPayoff | null;
   monthToDate: { month: string; paidCents: number; receivedCents: number };
   previousMonthAllClear: { month: string; paidCount: number } | null;
-  /** Everything already paid, one total per direction (never summed together). */
-  settled: { paidCents: number; receivedCents: number };
+  /** Everything already paid and the whole value, one pair per direction (never summed together). */
+  settled: SettledTotals;
 }
 
 /** "2026-10" → "2026-09"; "2026-01" → "2025-12". */
 export function previousMonth(month: string): string {
   const [year, monthNumber] = month.split("-").map(Number) as [number, number];
   return new Date(Date.UTC(year, monthNumber - 2, 1)).toISOString().slice(0, 7);
-}
-
-interface Tally {
-  paidCents: number;
-  paidCount: number;
-  totalCents: number;
-  totalCount: number;
-}
-
-function tally(installments: HomeInstallmentRow[]): Tally {
-  const out: Tally = {
-    paidCents: 0,
-    paidCount: 0,
-    totalCents: 0,
-    totalCount: installments.length,
-  };
-  for (const it of installments) {
-    out.totalCents += it.amountCents;
-    if (isPaidStatus(it.status)) {
-      out.paidCents += it.amountCents;
-      out.paidCount += 1;
-    }
-  }
-  return out;
-}
-
-function isCloser(
-  candidate: ClosestToPayoff,
-  remaining: number,
-  best: { remaining: number; value: ClosestToPayoff }
-): boolean {
-  if (candidate.percent !== best.value.percent) {
-    return candidate.percent > best.value.percent;
-  }
-  if (remaining !== best.remaining) {
-    return remaining < best.remaining;
-  }
-  return candidate.title.localeCompare(best.value.title) < 0;
-}
-
-/** Paid share of an open contract: 1 to 99, so it never reads as done (100%) or untouched (0%). */
-function openPercent(paidCents: number, totalCents: number): number {
-  return Math.min(99, Math.max(1, Math.round((paidCents / totalCents) * 100)));
-}
-
-/** Open contract with the largest paid share (ties: fewer installments left, then title). Never-paid ones don't count. */
-function closestToPayoff(parties: PartyContract[]): ClosestToPayoff | null {
-  let best: { remaining: number; value: ClosestToPayoff } | null = null;
-  for (const party of parties) {
-    const t = tally(party.installments);
-    if (
-      t.paidCount === 0 ||
-      t.paidCount === t.totalCount ||
-      t.totalCents === 0
-    ) {
-      continue;
-    }
-    const value: ClosestToPayoff = {
-      contractId: party.contract.id,
-      title: party.contract.title,
-      paidCount: t.paidCount,
-      totalCount: t.totalCount,
-      percent: openPercent(t.paidCents, t.totalCents),
-    };
-    const remaining = t.totalCount - t.paidCount;
-    if (!best || isCloser(value, remaining, best)) {
-      best = { value, remaining };
-    }
-  }
-  return best?.value ?? null;
 }
 
 /**
@@ -171,21 +105,25 @@ function monthAllClear(
   return { month, paidCount: due.length };
 }
 
-/** "Você já pagou" and "Já recebeu": what is paid in the contracts you pay, and in the ones you receive. */
-function settledByDirection(
-  parties: PartyContract[]
-): HomeMilestones["settled"] {
-  let paidCents = 0;
-  let receivedCents = 0;
+/** "Você já pagou" and "Já recebeu", each with the whole value of its contracts, open and settled. */
+function settledByDirection(parties: PartyContract[]): SettledTotals {
+  const out: SettledTotals = {
+    paidCents: 0,
+    payableTotalCents: 0,
+    receivedCents: 0,
+    receivableTotalCents: 0,
+  };
   for (const party of parties) {
-    const cents = tally(party.installments).paidCents;
+    const t = tally(party.installments);
     if (party.direction === DIRECTION.pay) {
-      paidCents += cents;
+      out.paidCents += t.paidCents;
+      out.payableTotalCents += t.totalCents;
     } else {
-      receivedCents += cents;
+      out.receivedCents += t.paidCents;
+      out.receivableTotalCents += t.totalCents;
     }
   }
-  return { paidCents, receivedCents };
+  return out;
 }
 
 export function buildMilestones(

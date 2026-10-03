@@ -185,13 +185,20 @@ describe("seções do home", () => {
             paidCount: 9,
             totalCount: 10,
             percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
           },
           monthToDate: {
             month: "2026-10",
             paidCents: 0,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         }}
         momentId={null}
       />
@@ -218,13 +225,20 @@ describe("seções do home", () => {
         paidCount: 9,
         totalCount: 10,
         percent: 90,
+        remainingCount: 1,
+        nextDueDate: "2026-10-13",
       },
       monthToDate: {
         month: "2026-10",
         paidCents: 125_000,
         receivedCents: 338_000,
       },
-      settled: { paidCents: 0, receivedCents: 0 },
+      settled: {
+        paidCents: 0,
+        receivedCents: 0,
+        payableTotalCents: 0,
+        receivableTotalCents: 0,
+      },
     };
     renderWithProviders(<Milestones milestones={milestones} momentId={null} />);
     expect(screen.getByText("1 de 1 parcela quitada")).toBeVisible();
@@ -256,7 +270,12 @@ describe("seções do home", () => {
             paidCents: 0,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 0, receivedCents: 4_190_000 },
+          settled: {
+            paidCents: 0,
+            receivedCents: 4_190_000,
+            payableTotalCents: 0,
+            receivableTotalCents: 4_190_000,
+          },
         }}
         momentId="all_clear"
       />
@@ -297,7 +316,12 @@ describe("seções do home", () => {
             paidCents: 125_000,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         }}
         momentId={null}
       />

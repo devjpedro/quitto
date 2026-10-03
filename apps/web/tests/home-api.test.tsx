@@ -391,6 +391,8 @@ describe("useMomentMilestone", () => {
             paidCount: 9,
             totalCount: 10,
             percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
           },
         },
       }),

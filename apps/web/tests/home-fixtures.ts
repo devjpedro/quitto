@@ -124,7 +124,12 @@ export function homeFixture(over: Partial<Home> = {}): Home {
       closestToPayoff: null,
       monthToDate: { month: "2026-10", paidCents: 0, receivedCents: 0 },
       previousMonthAllClear: null,
-      settled: { paidCents: 0, receivedCents: 0 },
+      settled: {
+        paidCents: 0,
+        receivedCents: 0,
+        payableTotalCents: 0,
+        receivableTotalCents: 0,
+      },
     },
     onboarding: {
       hasContract: true,
