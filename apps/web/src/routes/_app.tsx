@@ -16,7 +16,10 @@ import {
   useUnreadCount,
 } from "@/features/home/shell-selectors";
 import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
-import { useNotificationsPanel } from "@/features/notifications/hooks/use-notifications-panel";
+import {
+  NotificationsPanelContext,
+  useNotificationsPanel,
+} from "@/features/notifications/hooks/use-notifications-panel";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useIdentity } from "@/hooks/use-identity";
 import {
@@ -75,33 +78,35 @@ function AppLayout() {
   }, [sessionLost, navigate]);
 
   return (
-    <AppFrame
-      identity={identity}
-      moment={moment}
-      navCounts={navCounts}
-      notificationsOpen={notifications.open}
-      onOpenNotifications={notifications.show}
-      onOpenSearch={() => setSearchOpen(true)}
-      unreadCount={unreadCount}
-    >
-      <CommandPalette
-        onOpenChange={setSearchOpen}
+    <NotificationsPanelContext value={notifications.show}>
+      <AppFrame
+        identity={identity}
+        moment={moment}
+        navCounts={navCounts}
+        notificationsOpen={notifications.open}
         onOpenNotifications={notifications.show}
-        open={searchOpen}
-      />
-      <NotificationsPanel
-        // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
-        fallbackFocus={visibleNotificationsTrigger}
-        onOpenChange={notifications.setOpen}
-        open={notifications.open}
+        onOpenSearch={() => setSearchOpen(true)}
         unreadCount={unreadCount}
-      />
-      <ErrorBoundary
-        FallbackComponent={ErrorFallback}
-        resetKeys={[identity?.id]}
       >
-        <Outlet />
-      </ErrorBoundary>
-    </AppFrame>
+        <CommandPalette
+          onOpenChange={setSearchOpen}
+          onOpenNotifications={notifications.show}
+          open={searchOpen}
+        />
+        <NotificationsPanel
+          // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
+          fallbackFocus={visibleNotificationsTrigger}
+          onOpenChange={notifications.setOpen}
+          open={notifications.open}
+          unreadCount={unreadCount}
+        />
+        <ErrorBoundary
+          FallbackComponent={ErrorFallback}
+          resetKeys={[identity?.id]}
+        >
+          <Outlet />
+        </ErrorBoundary>
+      </AppFrame>
+    </NotificationsPanelContext>
   );
 }

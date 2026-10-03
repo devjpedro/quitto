@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useShowNotifications } from "@/features/notifications/hooks/use-notifications-panel";
 import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
 import {
   parseIdentityCookie,
@@ -11,15 +12,16 @@ import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
-const { navigate, meGet, homeGet } = vi.hoisted(() => ({
+const { navigate, meGet, homeGet, outlet } = vi.hoisted(() => ({
   navigate: vi.fn(),
   meGet: vi.fn(),
   homeGet: vi.fn(),
+  outlet: { view: null as (() => ReactNode) | null },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Outlet: () => <p>page content</p>,
+  Outlet: () => outlet.view?.() ?? <p>page content</p>,
   useNavigate: () => navigate,
 }));
 vi.mock("@/lib/api", () => ({
@@ -96,11 +98,22 @@ import { Route } from "../src/routes/_app";
 const AppLayout = Route.options.component as () => ReactNode;
 const seeded = { id: "u1", name: "Maria", email: "m@e.com", image: null };
 
+/** Page content that opens the bell panel, as "Notificações recentes › Ver todas" does. */
+function SeeAllFromThePage() {
+  const showNotifications = useShowNotifications();
+  return (
+    <button onClick={showNotifications} type="button">
+      see all from the page
+    </button>
+  );
+}
+
 beforeEach(() => {
   navigate.mockReset();
   meGet.mockReset();
   homeGet.mockReset();
   homeGet.mockReturnValue(new Promise(() => undefined));
+  outlet.view = null;
   clearIdentityCookie();
 });
 
@@ -210,6 +223,35 @@ describe("_app layout", () => {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("button", { name: "bell" })).toHaveFocus();
+  });
+
+  it("the page content can open the bell panel through the shell (Ver todas)", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    outlet.view = () => <SeeAllFromThePage />;
+    renderWithProviders(<AppLayout />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "see all from the page" })
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Notificações" })
+    ).toBeVisible();
+  });
+
+  it("closing the panel opened by Ver todas gives the focus back to Ver todas: the opener wins over the bell fallback", async () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    outlet.view = () => <SeeAllFromThePage />;
+    renderWithProviders(<AppLayout />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "see all from the page" })
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Notificações" })
+    ).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      screen.getByRole("button", { name: "see all from the page" })
+    ).toHaveFocus();
   });
 
   it("the milestone of the moment comes from the same home, as text for the sidebar", async () => {

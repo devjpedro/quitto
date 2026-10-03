@@ -7,8 +7,9 @@ import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
-const { getHome, markPaid } = vi.hoisted(() => ({
+const { getHome, getNotifications, markPaid } = vi.hoisted(() => ({
   getHome: vi.fn(),
+  getNotifications: vi.fn(),
   markPaid: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("@/lib/api", () => ({
   api: {
     api: {
       home: { get: () => getHome() },
+      notifications: { get: () => getNotifications() },
       me: { get: () => new Promise(() => undefined) },
       installments: () => ({ "mark-paid": { post: () => markPaid() } }),
     },
@@ -52,6 +54,7 @@ function renderHome() {
 
 beforeEach(() => {
   getHome.mockReset();
+  getNotifications.mockReset();
   markPaid.mockReset();
 });
 
@@ -165,7 +168,7 @@ describe("HomePage", () => {
     expect(screen.queryByRole("region", { name: "Marcos" })).toBeNull();
   });
 
-  it("sem contrato, com um convite e o guia por terminar: o guia compacto vem embaixo, sem grade nem coluna lateral", async () => {
+  it("sem contrato, com um convite e o guia por terminar: o guia compacto vem embaixo, e a coluna lateral leva só as Notificações recentes", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({
         actions: [inviteAction()],
@@ -193,13 +196,34 @@ describe("HomePage", () => {
       screen.queryByRole("region", { name: "Próximos 30 dias" })
     ).toBeNull();
     expect(screen.queryByRole("region", { name: "Marcos" })).toBeNull();
-    // Guide → its order-last wrapper → the left column → the lower part, which
-    // has no side column, so it never turns into the grid.
+    // Guide → its order-last wrapper → the left column → the lower part. With
+    // no milestones the side column still has "Notificações recentes", so the
+    // grid is on and no side column is ever left empty.
     const left = guide.parentElement?.parentElement;
     const lower = left?.parentElement;
     expect(guide.parentElement).toHaveClass("order-last");
-    expect(lower?.children).toHaveLength(1);
-    expect(lower).not.toHaveClass("lateral:grid");
+    const recent = screen.getByRole("region", {
+      name: "Notificações recentes",
+    });
+    expect(recent.parentElement?.parentElement).toBe(lower);
+    expect(lower?.children).toHaveLength(2);
+    expect(lower).toHaveClass("lateral:grid");
+  });
+
+  it("a coluna lateral leva as Notificações recentes, só a partir de lateral e sem buscar na tela estreita", async () => {
+    getHome.mockResolvedValue({ data: homeFixture(), error: null });
+    renderHome();
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    expect(recent).toHaveClass("hidden", "lateral:flex");
+    // In the side column; from wide it takes a column of its own.
+    const side = recent.parentElement;
+    expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
+    // Now the side column always has something: the grid is on even without milestones.
+    expect(side?.parentElement).toHaveClass("lateral:grid");
+    // jsdom is 1024 px wide: below lateral nothing is fetched.
+    expect(getNotifications).not.toHaveBeenCalled();
   });
 
   it("primeiro acesso: o guia verde lidera", async () => {

@@ -122,6 +122,8 @@
   "home_empty_title": "Your to-dos show up here",
   "home_empty_description": "Add an agreement and Quitto shows here what to pay, what to collect and what to check, in the right order.",
   "home_empty_cta": "New contract",
+  "home_recent_notifications": "Recent notifications",
+  "home_recent_notifications_all": "See all",
   "onboarding_tag": "Start here",
   "onboarding_progress": "{done} of {total}",
   "onboarding_progress_label": "Guide progress",

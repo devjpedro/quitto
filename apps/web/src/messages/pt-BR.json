@@ -122,6 +122,8 @@
   "home_empty_title": "Suas pendências aparecem aqui",
   "home_empty_description": "Cadastre um acordo e o Quitto mostra aqui o que pagar, o que cobrar e o que conferir, na ordem certa.",
   "home_empty_cta": "Novo contrato",
+  "home_recent_notifications": "Notificações recentes",
+  "home_recent_notifications_all": "Ver todas",
   "onboarding_tag": "Comece por aqui",
   "onboarding_progress": "{done} de {total}",
   "onboarding_progress_label": "Progresso do guia",

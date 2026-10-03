@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { cn } from "@/lib/utils";
 import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "../api";
@@ -29,8 +30,8 @@ const WITH_SIDE =
  * Everything that comes from GET /api/home (streamed from the SSR on the
  * first load). Below lateral it is one column in the order of mockup 11:
  * list, milestones, guide. From lateral (1440 px) the lower part grows by
- * columns: list and guide on the left, the side column on the right; from
- * wide (1840 px) each side block takes a column of its own.
+ * columns: list and guide on the left; milestones and "Notificações
+ * recentes" on the right; from wide (1840 px) each takes a column of its own.
  */
 export function HomeContent() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
@@ -75,12 +76,7 @@ export function HomeContent() {
       ) : null}
       {layout.empty ? <HomeEmpty /> : null}
       {lower ? (
-        <div
-          className={cn(
-            "flex flex-col gap-4 md:gap-5",
-            layout.hasContract && WITH_SIDE
-          )}
-        >
+        <div className={cn("flex flex-col gap-4 md:gap-5", WITH_SIDE)}>
           <div className={COLUMN}>
             {layout.hasContract ? (
               <UpcomingList upcoming={home.upcoming} />
@@ -96,15 +92,17 @@ export function HomeContent() {
               </div>
             ) : null}
           </div>
-          {layout.hasContract ? (
-            <div className={cn(COLUMN, "wide:contents")}>
-              {/* The milestone of the moment opens the strip on a phone; from md the sidebar shows it. */}
+          <div className={cn(COLUMN, "wide:contents")}>
+            {layout.hasContract ? (
+              // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
               <Milestones
                 milestones={home.milestones}
                 momentId={momentMilestone(home)?.id ?? null}
               />
-            </div>
-          ) : null}
+            ) : null}
+            {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
+            <RecentNotifications />
+          </div>
         </div>
       ) : null}
     </div>
