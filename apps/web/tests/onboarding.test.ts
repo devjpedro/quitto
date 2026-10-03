@@ -3,6 +3,8 @@ import { onboardingView, stepTarget } from "@/features/home/lib/onboarding";
 import { homeFixture } from "./home-fixtures";
 
 const fresh = {
+  accountCreatedOn: "2026-10-02",
+  activePartyContracts: 0,
   hasContract: false,
   hasPixKey: false,
   hasCounterparty: false,

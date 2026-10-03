@@ -94,6 +94,10 @@ export function inviteAction(over: Partial<InviteAction> = {}): InviteAction {
     contractTitle: "Moto da Ana",
     role: "seller",
     inviterName: "Ana",
+    installmentsCount: 4,
+    amountCents: 30_000,
+    totalCents: 120_000,
+    firstDueDate: "2026-11-10",
     ...over,
   };
 }
@@ -132,6 +136,8 @@ export function homeFixture(over: Partial<Home> = {}): Home {
       },
     },
     onboarding: {
+      accountCreatedOn: TODAY,
+      activePartyContracts: 0,
       hasContract: true,
       hasPixKey: true,
       hasCounterparty: true,
@@ -142,6 +148,7 @@ export function homeFixture(over: Partial<Home> = {}): Home {
     },
     unreadCount: 0,
     activeContractsCount: 0,
+    activeContracts: [],
     ...over,
   };
 }

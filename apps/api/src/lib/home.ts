@@ -102,6 +102,10 @@ function toInviteAction(row: HomeInviteRow): InviteAction {
     contractTitle: row.contractTitle,
     role: row.role,
     inviterName: row.inviterName,
+    installmentsCount: row.installmentsCount,
+    amountCents: row.amountCents,
+    totalCents: row.totalCents,
+    firstDueDate: row.firstDueDate,
   };
 }
 

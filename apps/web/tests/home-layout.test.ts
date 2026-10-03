@@ -3,6 +3,8 @@ import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
+  accountCreatedOn: "2026-10-02",
+  activePartyContracts: 0,
   hasContract: false,
   hasPixKey: false,
   hasCounterparty: false,

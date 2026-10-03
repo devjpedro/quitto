@@ -65,6 +65,10 @@ const inviteActionSchema = t.Object({
   contractTitle: t.String(),
   role: t.String(),
   inviterName: t.String(),
+  installmentsCount: t.Integer(),
+  amountCents: t.Union([t.Integer(), t.Null()]),
+  totalCents: t.Integer(),
+  firstDueDate: nullableString,
 });
 
 export const homeSchema = t.Object({
@@ -111,6 +115,8 @@ export const homeSchema = t.Object({
     }),
   }),
   onboarding: t.Object({
+    accountCreatedOn: t.String(),
+    activePartyContracts: t.Integer(),
     hasContract: t.Boolean(),
     hasPixKey: t.Boolean(),
     hasCounterparty: t.Boolean(),
@@ -121,4 +127,13 @@ export const homeSchema = t.Object({
   }),
   unreadCount: t.Integer(),
   activeContractsCount: t.Integer(),
+  activeContracts: t.Array(
+    t.Object({
+      contractId: t.String(),
+      title: t.String(),
+      paidCount: t.Integer(),
+      totalCount: t.Integer(),
+      hasOverdue: t.Boolean(),
+    })
+  ),
 });

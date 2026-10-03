@@ -72,6 +72,10 @@ function invite(over: Partial<HomeInviteRow> = {}): HomeInviteRow {
     role: "buyer",
     inviterName: "Bia Lopes",
     createdAt: new Date("2026-10-02T12:00:00Z"),
+    installmentsCount: 4,
+    amountCents: 30_000,
+    totalCents: 120_000,
+    firstDueDate: "2026-11-10",
     ...over,
   };
 }

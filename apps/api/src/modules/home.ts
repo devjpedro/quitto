@@ -1,5 +1,16 @@
 import { CONTRACT_STATUS, todayISO } from "@quitto/shared";
-import { and, count, desc, eq, gt, inArray, isNull, max } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  max,
+  min,
+  sum,
+} from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../db/client";
 import {
@@ -21,6 +32,7 @@ import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
 import { type HomeContractRows, partyContracts } from "../lib/home-parties";
+import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
@@ -108,6 +120,45 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
   return { contracts, installments, participants, users };
 }
 
+interface InviteTerms {
+  firstDueDate: string | null;
+  installmentsCount: number;
+  maxCents: number | null;
+  minCents: number | null;
+  totalCents: number | null;
+}
+
+/**
+ * Count, sum, first due date and the smallest and largest installment of
+ * each invited contract, in one grouped read. From the installments, never
+ * contract.totalAmountCents: editing one installment does not update it, and
+ * the invite page sums the installments too.
+ */
+async function loadInviteTerms(
+  contractIds: string[]
+): Promise<Map<string, InviteTerms>> {
+  const terms = new Map<string, InviteTerms>();
+  if (contractIds.length === 0) {
+    return terms;
+  }
+  const rows = await db
+    .select({
+      contractId: installment.contractId,
+      firstDueDate: min(installment.dueDate),
+      minCents: min(installment.amountCents),
+      maxCents: max(installment.amountCents),
+      totalCents: sum(installment.amountCents).mapWith(Number),
+      installmentsCount: count(),
+    })
+    .from(installment)
+    .where(inArray(installment.contractId, contractIds))
+    .groupBy(installment.contractId);
+  for (const { contractId, ...row } of rows) {
+    terms.set(contractId, row);
+  }
+  return terms;
+}
+
 /** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot, and its latest copy decides. */
 async function loadInvites(email: string): Promise<HomeInviteRow[]> {
   const rows = await db
@@ -139,12 +190,29 @@ async function loadInvites(email: string): Promise<HomeInviteRow[]> {
   // counts. If it was declined, the slot is gone, even when an older copy is
   // still pending (the decline used to mark just the copy it was called with).
   const seen = new Set<string>();
-  return rows.flatMap(({ participantId, declinedAt, ...row }) => {
+  const pending = rows.flatMap(({ participantId, declinedAt, ...row }) => {
     if (seen.has(participantId)) {
       return [];
     }
     seen.add(participantId);
     return declinedAt === null ? [row] : [];
+  });
+  // "4 parcelas de R$ 300,00 · a partir de 10/11" (owner's decision 5). Runs
+  // in the invites' branch, beside the contracts' reads: no sequential trip.
+  const terms = await loadInviteTerms(pending.map((row) => row.contractId));
+  return pending.map((row) => {
+    const t = terms.get(row.contractId);
+    return {
+      ...row,
+      installmentsCount: t?.installmentsCount ?? 0,
+      totalCents: t?.totalCents ?? 0,
+      firstDueDate: t?.firstDueDate ?? null,
+      // One amount per installment, or null when they differ (the card shows the total).
+      amountCents:
+        t && t.minCents !== null && t.minCents === t.maxCents
+          ? t.minCents
+          : null,
+    };
   });
 }
 
@@ -154,6 +222,7 @@ async function loadProfile(userId: string) {
       pixKey: userTable.pixKey,
       emailRemindersOptIn: userTable.emailRemindersOptIn,
       onboardingDismissedAt: userTable.onboardingDismissedAt,
+      createdAt: userTable.createdAt,
     })
     .from(userTable)
     .where(eq(userTable.id, userId))
@@ -163,6 +232,7 @@ async function loadProfile(userId: string) {
       pixKey: null,
       emailRemindersOptIn: false,
       onboardingDismissedAt: null,
+      createdAt: new Date(),
     }
   );
 }
@@ -206,6 +276,8 @@ export const homeModule = new Elysia({ prefix: "/api" }).get(
       activeContractsCount: rows.contracts.filter(
         (c) => c.status === CONTRACT_STATUS.active
       ).length,
+      // "Contratos ativos" in the sidebar: no extra read, the rows are loaded (planner's decision 1).
+      activeContracts: sidebarContracts(rows, today),
     };
   },
   { response: homeSchema }

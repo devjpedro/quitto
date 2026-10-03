@@ -629,6 +629,7 @@ describe("onboardingFacts", () => {
     pixKey: null,
     emailRemindersOptIn: false,
     onboardingDismissedAt: null,
+    createdAt: new Date("2026-09-01T12:00:00Z"),
   };
 
   it("conta nova: nada feito", () => {
@@ -640,6 +641,8 @@ describe("onboardingFacts", () => {
         true
       )
     ).toEqual({
+      accountCreatedOn: "2026-09-01",
+      activePartyContracts: 0,
       hasContract: false,
       hasPixKey: false,
       hasCounterparty: false,
@@ -691,10 +694,13 @@ describe("onboardingFacts", () => {
         pixKey: "joao@example.com",
         emailRemindersOptIn: true,
         onboardingDismissedAt: new Date("2026-10-01T10:00:00Z"),
+        createdAt: new Date("2026-09-01T12:00:00Z"),
       },
       false
     );
     expect(facts).toEqual({
+      accountCreatedOn: "2026-09-01",
+      activePartyContracts: 2,
       hasContract: true,
       hasPixKey: true,
       hasCounterparty: true,
@@ -838,5 +844,43 @@ describe("onboardingFacts", () => {
       hasCounterparty: false,
       counterpartyContractId: null,
     });
+  });
+
+  it("contratos ativos em que é parte: os acompanhados e os cancelados não contam", () => {
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [
+          contractRow({ id: "mine" }),
+          contractRow({ id: "followed", ownerId: "u-owner" }),
+          contractRow({ id: "gone", status: "cancelled" }),
+        ],
+        installments: [],
+        participants: [
+          {
+            contractId: "mine",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "followed",
+            role: "viewer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "gone",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+        ],
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts.activePartyContracts).toBe(1);
   });
 });

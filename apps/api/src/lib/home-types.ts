@@ -38,23 +38,33 @@ export interface InstallmentAction extends UpcomingItem {
 }
 
 export interface InviteAction {
+  /** null when the installments have different amounts: the card shows the total instead. */
+  amountCents: number | null;
   contractTitle: string;
+  firstDueDate: string | null;
   id: string;
+  installmentsCount: number;
   inviterName: string;
   kind: "invite";
   role: string;
   token: string;
+  totalCents: number;
 }
 
 export type HomeAction = InstallmentAction | InviteAction;
 
 export interface HomeInviteRow {
+  /** null when the installments have different amounts: the card shows the total instead. */
+  amountCents: number | null;
   contractId: string;
   contractTitle: string;
   createdAt: Date;
+  firstDueDate: string | null;
+  installmentsCount: number;
   inviterName: string;
   role: string;
   token: string;
+  totalCents: number;
 }
 
 /**

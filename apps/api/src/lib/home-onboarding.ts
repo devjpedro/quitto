@@ -1,6 +1,15 @@
-import { type HomeContractRows, partyContracts } from "./home-parties";
+import { CONTRACT_STATUS, isoDateInTimeZone } from "@quitto/shared";
+import {
+  type HomeContractRows,
+  type PartyContract,
+  partyContracts,
+} from "./home-parties";
 
 export interface HomeOnboarding {
+  /** The day the account was created, on São Paulo's calendar: the web hides the guide after 30 days. */
+  accountCreatedOn: string;
+  /** Active contracts the user pays or receives in (followed and cancelled ones don't count): the guide hides itself at 3. */
+  activePartyContracts: number;
   /** Most recent contract the user owns: where "invite the other party" leads. */
   counterpartyContractId: string | null;
   dismissedAt: string | null;
@@ -18,8 +27,11 @@ export interface HomeOnboarding {
  * with an account or not. A viewer is never the other party, and neither is
  * anyone in a contract the user only follows (partyContracts drops those).
  */
-function hasOtherParty(userId: string, rows: HomeContractRows): boolean {
-  return partyContracts(userId, rows).some((party) => {
+function hasOtherParty(
+  parties: PartyContract[],
+  rows: HomeContractRows
+): boolean {
+  return parties.some((party) => {
     const opposite = party.caps.role === "buyer" ? "seller" : "buyer";
     return rows.participants.some(
       (p) => p.contractId === party.contract.id && p.role === opposite
@@ -39,6 +51,7 @@ export function onboardingFacts(
     emailRemindersOptIn: boolean;
     onboardingDismissedAt: Date | null;
     pixKey: string | null;
+    createdAt: Date;
   },
   remindersAvailable: boolean
 ): HomeOnboarding {
@@ -46,10 +59,16 @@ export function onboardingFacts(
   const owned = live
     .filter((c) => c.ownerId === userId)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const parties = partyContracts(userId, rows);
+  const activePartyContracts = parties.filter(
+    (party) => party.contract.status === CONTRACT_STATUS.active
+  ).length;
   return {
+    accountCreatedOn: isoDateInTimeZone(profile.createdAt),
+    activePartyContracts,
     hasContract: live.length > 0,
     hasPixKey: profile.pixKey !== null,
-    hasCounterparty: hasOtherParty(userId, rows),
+    hasCounterparty: hasOtherParty(parties, rows),
     remindersOn: profile.emailRemindersOptIn,
     remindersAvailable,
     counterpartyContractId: owned[0]?.id ?? null,
