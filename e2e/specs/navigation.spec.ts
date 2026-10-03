@@ -5,6 +5,7 @@ import {
   openNotifications,
   seedContract,
   signup,
+  waitForHydrated,
 } from "../fixtures";
 
 const LOGIN_URL = /\/login/;
@@ -23,6 +24,53 @@ function collectServerFnCalls(page: Page): string[] {
   });
   return calls;
 }
+
+/** Every read the browser makes from the API (`GET /api/*`), by path. */
+function collectApiReads(page: Page): string[] {
+  const reads: string[] = [];
+  page.on("request", (req) => {
+    const { pathname } = new URL(req.url());
+    if (req.method() === "GET" && pathname.startsWith("/api/")) {
+      reads.push(pathname);
+    }
+  });
+  return reads;
+}
+
+/** Long enough for a read repeated after hydration (a remount, a refetch) to show. */
+const AFTER_HYDRATION_MS = 2000;
+
+test("carregamento SSR: o navegador lê só o que o SSR não trouxe, uma vez cada", async ({
+  page,
+}) => {
+  await signup(page);
+  // A returning user has the identity hint cookie. With it the SSR draws the
+  // shell from the hint and never waits on the API (a cold API included), so
+  // `me` is not in the payload: the layout reads /api/me once, on its first
+  // mount, and that read is the session check and the full profile (locale,
+  // PIX key). Without the hint the SSR reads /me itself and the browser doesn't.
+  const cookies = await page.context().cookies();
+  expect(cookies.map((cookie) => cookie.name)).toContain("quitto_identity");
+  const reads = collectApiReads(page);
+
+  // The home streams in the HTML: no /api/home from the browser.
+  await page.goto("/");
+  await waitForHydrated(page);
+  await expect(
+    page.getByRole("heading", { level: 1, name: GREETING })
+  ).toBeVisible();
+  await page.waitForTimeout(AFTER_HYDRATION_MS);
+  expect(reads.toSorted()).toEqual(["/api/me"]);
+
+  // The contracts route has no loader: the SSR never reads the list, and the
+  // browser reads it once, plus the home that feeds the sidebar's counters.
+  reads.splice(0);
+  await page.goto("/contracts");
+  await waitForHydrated(page);
+  await expect(page.getByRole("heading", { name: "Contratos" })).toBeVisible();
+  await page.waitForTimeout(AFTER_HYDRATION_MS);
+  expect(reads.toSorted()).toEqual(["/api/contracts", "/api/home", "/api/me"]);
+});
 
 test("hover e navegação dentro do app não chamam server functions", async ({
   page,
