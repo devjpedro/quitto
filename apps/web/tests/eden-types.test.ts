@@ -154,3 +154,22 @@ it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mi
   expectTypeOf<MineItem["role"]>().toEqualTypeOf<string>();
   expectTypeOf<MineItem["expiresAt"]>().toEqualTypeOf<string>();
 });
+
+it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
+  const api = treaty<App>("http://localhost:3000");
+  type HomeData = Awaited<ReturnType<typeof api.api.home.get>>["data"];
+  expectTypeOf<HomeData>().not.toBeAny();
+  expectTypeOf<NonNullable<HomeData>["unreadCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<
+    NonNullable<HomeData>["activeContractsCount"]
+  >().toEqualTypeOf<number>();
+  expectTypeOf<
+    NonNullable<HomeData>["actions"][number]["kind"]
+  >().toEqualTypeOf<
+    "overdue" | "review" | "disputed" | "due_soon" | "invite"
+  >();
+  expectTypeOf<NonNullable<HomeData>["milestones"]["settled"]>().toEqualTypeOf<{
+    paidCents: number;
+    receivedCents: number;
+  }>();
+});

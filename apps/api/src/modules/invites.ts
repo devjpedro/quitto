@@ -239,10 +239,19 @@ export const invitesModule = new Elysia({ prefix: "/api" })
         .where(eq(contract.id, row.contractId))
         .limit(1);
       await db.transaction(async (tx) => {
+        // Decline every pending invite of this slot for this e-mail, so a
+        // duplicate sent earlier doesn't come back as an action.
         await tx
           .update(invite)
           .set({ declinedAt: new Date() })
-          .where(eq(invite.id, row.id));
+          .where(
+            and(
+              eq(invite.participantId, row.participantId),
+              eq(invite.email, row.email),
+              isNull(invite.acceptedAt),
+              isNull(invite.declinedAt)
+            )
+          );
         if (c) {
           await createNotifications(tx, [
             {
