@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   daysBetween,
   formatDate,
   formatMoney,
+  formatMonthName,
   formatRelativeDays,
+  formatRelativeTime,
   moneyParts,
   normalizeSpaces,
 } from "@/lib/locale-format";
@@ -118,5 +120,87 @@ describe("relative days", () => {
     expect(formatRelativeDays("2026-09-27", "2026-10-01", "en-US")).toBe(
       "4 days ago"
     );
+  });
+});
+
+describe("formatDate: presets curtos", () => {
+  it("dia e mês sem ano", () => {
+    expect(formatDate("2026-10-03", "pt-BR", "dayMonth")).toBe("03/10");
+    expect(formatDate("2026-10-03", "en-US", "dayMonth")).toBe("10/03");
+  });
+
+  it("dia da semana abreviado + dia e mês", () => {
+    expect(formatDate("2026-10-03", "pt-BR", "weekdayShort")).toBe(
+      "sáb., 03/10"
+    );
+    expect(formatDate("2026-10-03", "en-US", "weekdayShort")).toBe(
+      "Sat, 10/03"
+    );
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const now = Date.parse("2026-10-02T12:00:00Z");
+
+  it("horas, ontem e dias atrás", () => {
+    expect(formatRelativeTime("2026-10-02T10:00:00Z", now, "pt-BR")).toBe(
+      "há 2 h"
+    );
+    expect(formatRelativeTime("2026-10-01T12:00:00Z", now, "pt-BR")).toBe(
+      "ontem"
+    );
+    expect(formatRelativeTime("2026-09-29T12:00:00Z", now, "pt-BR")).toBe(
+      "há 3 dias"
+    );
+    expect(formatRelativeTime("2026-10-02T12:00:00Z", now, "pt-BR")).toBe(
+      "agora"
+    );
+  });
+
+  it("um aviso que chega com o relógio do cliente atrasado é 'agora', nunca 'em 5 s'", () => {
+    expect(formatRelativeTime("2026-10-02T12:00:05Z", now, "pt-BR")).toBe(
+      "agora"
+    );
+  });
+
+  it("no idioma pedido", () => {
+    expect(formatRelativeTime("2026-10-02T10:00:00Z", now, "en-US")).toBe(
+      "2 hr. ago"
+    );
+    expect(formatRelativeTime("2026-10-01T12:00:00Z", now, "en-US")).toBe(
+      "yesterday"
+    );
+  });
+});
+
+describe("formatMonthName", () => {
+  it("nome do mês por idioma", () => {
+    expect(formatMonthName("2026-09", "pt-BR")).toBe("setembro");
+    expect(formatMonthName("2026-09", "en-US")).toBe("September");
+  });
+});
+
+describe("formatadores em cache", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The first call (before the spy) creates the formatter for real: a
+  // formatter built under vi.spyOn lacks the Intl prototype in vitest 4.
+  it("não cria outro Intl.DateTimeFormat para o mesmo idioma e preset", () => {
+    formatDate("2026-10-02", "en-US", "medium");
+    const spy = vi.spyOn(Intl, "DateTimeFormat");
+    formatDate("2026-10-03", "en-US", "medium");
+    formatDate("2026-10-04", "en-US", "medium");
+    formatDate("2026-10-05", "en-US", "medium");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.RelativeTimeFormat para o mesmo idioma (dias)", () => {
+    formatRelativeDays("2026-10-02", "2026-10-02", "en-US");
+    const spy = vi.spyOn(Intl, "RelativeTimeFormat");
+    formatRelativeDays("2026-10-03", "2026-10-02", "en-US");
+    formatRelativeDays("2026-10-04", "2026-10-02", "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
   });
 });

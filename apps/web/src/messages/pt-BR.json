@@ -24,5 +24,8 @@
   "account_theme_light": "Tema claro",
   "account_language": "Idioma",
   "account_sign_out": "Sair",
-  "account_language_error": "Não foi possível mudar o idioma. Tente de novo."
+  "account_language_error": "Não foi possível mudar o idioma. Tente de novo.",
+  "whatsapp_charge_upcoming": "Oi! Passando para lembrar da parcela {sequence} de {count} de “{title}”: {amount}, com vencimento em {date}.",
+  "whatsapp_charge_overdue": "Oi! A parcela {sequence} de {count} de “{title}” ({amount}) venceu em {date}. Consegue ver isso pra mim?",
+  "whatsapp_pix_intro": "Pix copia e cola:"
 }
