@@ -79,7 +79,7 @@ export function ResponsiveSheet({
                   "fixed z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
                   variant === "side"
                     ? "inset-y-3 right-3 w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel"
-                    : "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[22px] pb-[env(safe-area-inset-bottom)]"
+                    : "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-panel pb-[env(safe-area-inset-bottom)]"
                 )}
                 data-variant={variant}
                 drag={canDrag ? "y" : false}
