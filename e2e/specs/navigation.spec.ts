@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page, type Request, test } from "@playwright/test";
 import {
   advanceDateNow,
   GREETING,
@@ -9,6 +9,8 @@ import {
 } from "../fixtures";
 
 const LOGIN_URL = /\/login/;
+/** The identity hint the client writes (`apps/web/src/lib/identity-cookie.ts`). */
+const IDENTITY_COOKIE = "quitto_identity";
 
 /**
  * Coleta as chamadas de server function (`/_serverFn/*`). Em produção cada uma
@@ -25,20 +27,41 @@ function collectServerFnCalls(page: Page): string[] {
   return calls;
 }
 
-/** Every read the browser makes from the API (`GET /api/*`), by path. */
-function collectApiReads(page: Page): string[] {
+/** After the expected reads have answered: long enough for a repeated one (a remount, a refetch) to show. */
+const REPEAT_WINDOW_MS = 1500;
+
+/**
+ * A full SSR load of `url`, and the reads the browser made from the API
+ * (`GET /api/*`) for it, by path and sorted. The network, not a timer, says
+ * when the expected reads are done: it waits for the answer to each one, then
+ * keeps watching a short window in which a repeated or extra read would show.
+ */
+async function apiReadsOfSsrLoad(
+  page: Page,
+  url: string,
+  expected: string[]
+): Promise<string[]> {
   const reads: string[] = [];
-  page.on("request", (req) => {
+  const onRequest = (req: Request) => {
     const { pathname } = new URL(req.url());
     if (req.method() === "GET" && pathname.startsWith("/api/")) {
       reads.push(pathname);
     }
-  });
-  return reads;
+  };
+  page.on("request", onRequest);
+  const answered = expected.map((path) =>
+    page.waitForResponse(
+      (res) =>
+        res.request().method() === "GET" && new URL(res.url()).pathname === path
+    )
+  );
+  await page.goto(url);
+  await waitForHydrated(page);
+  await Promise.all(answered);
+  await page.waitForTimeout(REPEAT_WINDOW_MS);
+  page.off("request", onRequest);
+  return reads.toSorted();
 }
-
-/** Long enough for a read repeated after hydration (a remount, a refetch) to show. */
-const AFTER_HYDRATION_MS = 2000;
 
 test("carregamento SSR: o navegador lê só o que o SSR não trouxe, uma vez cada", async ({
   page,
@@ -48,28 +71,35 @@ test("carregamento SSR: o navegador lê só o que o SSR não trouxe, uma vez cad
   // shell from the hint and never waits on the API (a cold API included), so
   // `me` is not in the payload: the layout reads /api/me once, on its first
   // mount, and that read is the session check and the full profile (locale,
-  // PIX key). Without the hint the SSR reads /me itself and the browser doesn't.
+  // PIX key).
   const cookies = await page.context().cookies();
-  expect(cookies.map((cookie) => cookie.name)).toContain("quitto_identity");
-  const reads = collectApiReads(page);
+  expect(cookies.map((cookie) => cookie.name)).toContain(IDENTITY_COOKIE);
 
   // The home streams in the HTML: no /api/home from the browser.
-  await page.goto("/");
-  await waitForHydrated(page);
+  const homeReads = await apiReadsOfSsrLoad(page, "/", ["/api/me"]);
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();
-  await page.waitForTimeout(AFTER_HYDRATION_MS);
-  expect(reads.toSorted()).toEqual(["/api/me"]);
+  expect(homeReads).toEqual(["/api/me"]);
 
   // The contracts route has no loader: the SSR never reads the list, and the
   // browser reads it once, plus the home that feeds the sidebar's counters.
-  reads.splice(0);
-  await page.goto("/contracts");
-  await waitForHydrated(page);
+  const contractsReads = await apiReadsOfSsrLoad(page, "/contracts", [
+    "/api/contracts",
+    "/api/home",
+    "/api/me",
+  ]);
   await expect(page.getByRole("heading", { name: "Contratos" })).toBeVisible();
-  await page.waitForTimeout(AFTER_HYDRATION_MS);
-  expect(reads.toSorted()).toEqual(["/api/contracts", "/api/home", "/api/me"]);
+  expect(contractsReads).toEqual(["/api/contracts", "/api/home", "/api/me"]);
+
+  // Without the hint the SSR reads /me itself and seeds it, so the browser
+  // reads nothing at all. Not an empty pass: the loads above show the reads.
+  await page.context().clearCookies({ name: IDENTITY_COOKIE });
+  const noHintReads = await apiReadsOfSsrLoad(page, "/", []);
+  await expect(
+    page.getByRole("heading", { level: 1, name: GREETING })
+  ).toBeVisible();
+  expect(noHintReads).toEqual([]);
 });
 
 test("hover e navegação dentro do app não chamam server functions", async ({

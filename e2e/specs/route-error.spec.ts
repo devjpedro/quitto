@@ -64,6 +64,23 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
   }
   await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
 
+  // By keyboard: Tab from the field reaches Tentar de novo, and Enter reads
+  // the list again there, without running the highlighted command (Agora).
+  let retriedReads = 0;
+  page.on("request", (req) => {
+    if (new URL(req.url()).pathname === "/api/contracts") {
+      retriedReads += 1;
+    }
+  });
+  await page.keyboard.press("Tab");
+  await expect(
+    palette.getByRole("button", { name: "Tentar de novo" })
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => retriedReads).toBeGreaterThan(0);
+  await expect(palette).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/");
+
   await palette
     .getByRole("option", { name: "Criar contrato", exact: true })
     .click();

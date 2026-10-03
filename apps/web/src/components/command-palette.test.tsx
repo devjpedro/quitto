@@ -301,6 +301,7 @@ const SERVER_ERROR = new ApiError({
   message: "Erro interno",
 });
 const ROUTE_ERROR = "Ops, algo deu errado";
+const paletteOpenChange = vi.fn();
 
 /**
  * The palette inside a stand-in for the `_app` shell, on the app's own
@@ -317,7 +318,7 @@ function renderInShell({ open }: { open: boolean }) {
       <ErrorBoundary fallback={<p>{ROUTE_ERROR}</p>}>
         <p>shell</p>
         <CommandPalette
-          onOpenChange={() => undefined}
+          onOpenChange={paletteOpenChange}
           onOpenNotifications={openNotifications}
           open={open}
         />
@@ -327,11 +328,23 @@ function renderInShell({ open }: { open: boolean }) {
   return client;
 }
 
-describe("CommandPalette com o /api/contracts falhando", () => {
+// Each width takes its own container: the Dialog on desktop, the Sheet on a phone.
+describe.each([
+  { device: "desktop", width: DESKTOP_WIDTH, container: "-translate-x-1/2" },
+  { device: "celular", width: MOBILE_WIDTH, container: "inset-y-0" },
+])("CommandPalette com o /api/contracts falhando, no $device", ({
+  width,
+  container,
+}) => {
   beforeEach(() => {
     navigate.mockReset();
+    paletteOpenChange.mockReset();
     contractsQueryFn.mockReset();
     contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
+    setViewport(width);
+  });
+
+  afterEach(() => {
     setViewport(DESKTOP_WIDTH);
   });
 
@@ -360,6 +373,7 @@ describe("CommandPalette com o /api/contracts falhando", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar os contratos."
     );
+    expect(screen.getByRole("dialog").className).toContain(container);
     expect(screen.getByText("shell")).toBeVisible();
     expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
     for (const name of [
@@ -393,5 +407,22 @@ describe("CommandPalette com o /api/contracts falhando", () => {
     ).toBeVisible();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(contractsQueryFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("aberta: Tentar de novo pelo teclado (Tab e Enter) busca de novo, sem rodar outro comando", async () => {
+    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+    renderInShell({ open: true });
+    const retry = await screen.findByRole("button", {
+      name: "Tentar de novo",
+    });
+
+    // The cursor starts in the field, and the next tab stop is the button.
+    await userEvent.tab();
+    expect(retry).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+
+    await vi.waitFor(() => expect(contractsQueryFn).toHaveBeenCalledTimes(2));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(paletteOpenChange).not.toHaveBeenCalled();
   });
 });

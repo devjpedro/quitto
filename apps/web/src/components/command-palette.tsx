@@ -101,7 +101,19 @@ function ContractsLoadError({ onRetry }: { onRetry: () => void }) {
       role="alert"
     >
       <p className="text-ink text-sm">{m.palette_contracts_error()}</p>
-      <Button onClick={onRetry} size="sm" variant="secondary">
+      <Button
+        onClick={onRetry}
+        // cmdk handles Enter at its root for any target: it cancels the
+        // button's own activation and runs the highlighted command instead.
+        // Stopping it here lets Enter press this button, as it does anywhere.
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.stopPropagation();
+          }
+        }}
+        size="sm"
+        variant="secondary"
+      >
         {m.section_retry()}
       </Button>
     </div>
@@ -176,14 +188,13 @@ function PaletteCommands({
   const { theme, setTheme } = useTheme();
   const signOut = useSignOut();
   const inputRef = useRef<HTMLInputElement>(null);
-  // fetch-on-first-open: a paleta monta em TODA rota do `_app`, e este
-  // componente só monta com ela aberta, então nada é buscado com ela fechada.
-  // Mesma queryKey e mesmo cache do `useContractsQuery` — a paleta reaproveita
-  // o que a lista de contratos já buscou.
-  // Closed, the palette holds no observer of the list, so a failure of it (a
-  // 500 or a timeout, from the contracts page or from a fetch started here
-  // before closing) never reaches it. Open, it fails here, not at the route's
-  // boundary: the app's `throwOnError` would take the whole shell down.
+  // Fetch on open: the palette sits on every `_app` route, but this component
+  // only mounts while it is open, so a closed palette neither fetches the list
+  // nor observes it, and a failure of it (a 500 or a timeout, from the
+  // contracts page or from a fetch started here before closing) never reaches
+  // it. Same queryKey and cache as `useContractsQuery`, so it reuses what the
+  // contracts page already fetched. Open, the list fails here and not at the
+  // route's boundary: the app's `throwOnError` would take the whole shell down.
   const contractsQuery = useQuery({
     ...contractsQueryOptions,
     throwOnError: false,
