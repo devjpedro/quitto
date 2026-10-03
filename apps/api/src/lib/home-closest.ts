@@ -16,9 +16,13 @@ export interface ClosestToPayoff {
   totalCount: number;
 }
 
-/** Paid share of an open contract: 1 to 99, so it never reads as done (100%) or untouched (0%). */
+/**
+ * Paid share of an open contract, rounded as the screen shows it, up to 99 so
+ * it never reads as done (100%). No floor: below CLOSEST_MIN_PERCENT there is
+ * no milestone, and the cut compares this same number (planner's decision 5).
+ */
 function openPercent(paidCents: number, totalCents: number): number {
-  return Math.min(99, Math.max(1, Math.round((paidCents / totalCents) * 100)));
+  return Math.min(99, Math.round((paidCents / totalCents) * 100));
 }
 
 function nextOpenDueDate(installments: HomeInstallmentRow[]): string | null {

@@ -102,7 +102,7 @@ describe("buildMilestones", () => {
     });
   });
 
-  describe("mais perto de quitar: o percentual fica entre 1% e 99% em contrato em aberto", () => {
+  describe("mais perto de quitar: o percentual fica entre 50% e 99% em contrato em aberto", () => {
     const base = {
       contracts: [contractRow({ id: "c", title: "Carro" })],
       participants: [
@@ -137,7 +137,7 @@ describe("buildMilestones", () => {
       expect(result.closestToPayoff).toBeNull();
     });
 
-    it("49% ainda não vale; 50% já vale", () => {
+    it("49% ainda não vale; 50% já vale, pelo mesmo % arredondado que a tela mostra", () => {
       const at = (paid: number) =>
         milestones({
           ...base,
@@ -153,14 +153,30 @@ describe("buildMilestones", () => {
         }).closestToPayoff;
       expect(at(4900)).toBeNull();
       expect(at(5000)?.percent).toBe(50);
+      // Decision 5: 49.5% shows as 50%, so it counts; 49.49% shows as 49%, so it doesn't.
+      expect(at(4950)?.percent).toBe(50);
+      expect(at(4949)).toBeNull();
     });
 
     it("falta 1: traz quantas faltam e a data da próxima em aberto", () => {
       const result = milestones({
         ...base,
         installments: [
-          inst({ id: "a", contractId: "c", sequence: 1, status: "paid" }),
-          inst({ id: "b", contractId: "c", sequence: 2, status: "paid" }),
+          // The paid ones fell due earlier: their dates never count as "next".
+          inst({
+            id: "a",
+            contractId: "c",
+            sequence: 1,
+            status: "paid",
+            dueDate: "2026-08-13",
+          }),
+          inst({
+            id: "b",
+            contractId: "c",
+            sequence: 2,
+            status: "confirmed",
+            dueDate: "2026-09-13",
+          }),
           inst({
             id: "c",
             contractId: "c",
@@ -171,6 +187,46 @@ describe("buildMilestones", () => {
       });
       expect(result.closestToPayoff).toMatchObject({
         remainingCount: 1,
+        nextDueDate: "2026-10-13",
+      });
+    });
+
+    it("a próxima é a menor data entre as em aberto, em qualquer ordem, nunca a de uma paga", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            sequence: 1,
+            status: "paid",
+            dueDate: "2026-08-13",
+          }),
+          inst({
+            id: "b",
+            contractId: "c",
+            sequence: 2,
+            status: "paid",
+            dueDate: "2026-09-13",
+          }),
+          // Out of order on purpose: the first open one in the list is not the next.
+          inst({
+            id: "d",
+            contractId: "c",
+            sequence: 4,
+            dueDate: "2026-11-13",
+          }),
+          inst({
+            id: "c",
+            contractId: "c",
+            sequence: 3,
+            dueDate: "2026-10-13",
+          }),
+        ],
+      });
+      expect(result.closestToPayoff).toMatchObject({
+        percent: 50,
+        remainingCount: 2,
         nextDueDate: "2026-10-13",
       });
     });

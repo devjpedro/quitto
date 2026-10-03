@@ -181,6 +181,13 @@ it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
     payableTotalCents: number;
     receivableTotalCents: number;
   }>();
+  // The closest-to-payoff milestone brings what's left and when the next one
+  // is due; nextDueDate is null-able, never optional (no undefined).
+  type HomeClosest = NonNullable<
+    NonNullable<HomeData>["milestones"]["closestToPayoff"]
+  >;
+  expectTypeOf<HomeClosest["remainingCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeClosest["nextDueDate"]>().toEqualTypeOf<string | null>();
   // Every installment card carries its contract's summary; statuses is null
   // above 24 installments, never optional (planner's decision 4: no undefined).
   type HomeInstallmentAction = Exclude<
