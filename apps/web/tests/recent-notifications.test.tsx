@@ -1,19 +1,23 @@
 import { QueryClient } from "@tanstack/react-query";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ErrorBoundary } from "react-error-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { NotificationsPanelContext } from "@/features/notifications/hooks/use-notifications-panel";
 import type { NotificationItem } from "@/features/notifications/types";
+import { queryKeys } from "@/lib/query-keys";
 import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const CONFIRMED_ROW = /Pagamento confirmado/;
 
-const { getList, postRead, navigate } = vi.hoisted(() => ({
+const { getList, postRead, navigate, hydration } = vi.hoisted(() => ({
   getList: vi.fn(),
   postRead: vi.fn(),
   navigate: vi.fn(),
+  // jsdom renders already hydrated; false stands in for the SSR and hydration pass.
+  hydration: { done: true },
 }));
 
 vi.mock("@/lib/api", () => {
@@ -32,6 +36,7 @@ vi.mock("@/lib/api", () => {
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useNavigate: () => navigate,
+  useHydrated: () => hydration.done,
 }));
 
 function note(id: string): NotificationItem {
@@ -68,17 +73,27 @@ function renderRecent() {
   const showAll = vi.fn();
   const client = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: Number.POSITIVE_INFINITY },
+      // throwOnError as in the app (src/lib/query.ts), which sends every
+      // non-401 error to the boundary: the block must opt out on its own.
+      queries: {
+        retry: false,
+        gcTime: Number.POSITIVE_INFINITY,
+        throwOnError: true,
+      },
       mutations: { retry: false },
     },
   });
+  // As on the home: the block sits next to the rest, inside the home's boundary.
   renderWithProviders(
     <NotificationsPanelContext value={showAll}>
-      <RecentNotifications />
+      <ErrorBoundary fallback={<p>home boundary</p>}>
+        <p>rest of the home</p>
+        <RecentNotifications />
+      </ErrorBoundary>
     </NotificationsPanelContext>,
     { client }
   );
-  return { showAll };
+  return { client, showAll };
 }
 
 const region = () =>
@@ -88,6 +103,7 @@ beforeEach(() => {
   getList.mockReset();
   postRead.mockReset();
   navigate.mockReset();
+  hydration.done = true;
   setScreenWidth(1440);
 });
 
@@ -131,26 +147,45 @@ describe("RecentNotifications", () => {
     });
   });
 
-  it("sem aviso: o vazio compacto do painel", async () => {
+  it("sem aviso: o vazio compacto do painel, com o sino no quadrado das linhas", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderRecent();
+    const heading = await within(region()).findByRole("heading", {
+      name: "Nada novo por aqui",
+    });
+    expect(heading).toBeVisible();
+    // The same empty as the panel (mockup 10): the bell in the 32 px brand tile.
     expect(
-      await within(region()).findByRole("heading", {
-        name: "Nada novo por aqui",
-      })
-    ).toBeVisible();
+      heading.parentElement?.querySelector("[aria-hidden='true']")
+    ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");
   });
 
-  it("abaixo de 1440 px (celular incluído) não busca nada", async () => {
+  it("carregando: o esqueleto tem as 4 linhas do bloco, no mesmo fundo", () => {
+    getList.mockReturnValue(new Promise(() => undefined));
+    renderRecent();
+    const skeleton = region().querySelector("ul[aria-hidden='true']");
+    expect(skeleton).toHaveClass("bg-surface-raised");
+    expect(skeleton?.children).toHaveLength(4);
+  });
+
+  it("abaixo de 1440 px (celular incluído) não busca nada", () => {
     setScreenWidth(1439);
     renderRecent();
     // The block is in the HTML (hidden by CSS), with the panel's skeleton.
+    // An enabled query would have fetched within the render's act already.
     expect(region()).toHaveClass("hidden");
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(region().querySelector("ul[aria-hidden='true']")).not.toBeNull();
     expect(getList).not.toHaveBeenCalled();
   });
 
-  it("se a lista falha, o bloco some e a home continua", async () => {
+  it("antes da hidratação não busca nada, nem em tela larga: o esqueleto, como no HTML do servidor", () => {
+    hydration.done = false;
+    renderRecent();
+    expect(region().querySelector("ul[aria-hidden='true']")).not.toBeNull();
+    expect(getList).not.toHaveBeenCalled();
+  });
+
+  it("se a lista falha, o bloco some sem jogar o erro para a fronteira da home", async () => {
     getList.mockResolvedValue(FAILED);
     renderRecent();
     await waitFor(() =>
@@ -158,5 +193,25 @@ describe("RecentNotifications", () => {
         screen.queryByRole("region", { name: "Notificações recentes" })
       ).toBeNull()
     );
+    expect(screen.getByText("rest of the home")).toBeVisible();
+    expect(screen.queryByText("home boundary")).toBeNull();
+  });
+
+  it("uma revalidação que falha mantém as linhas em cache, como o painel", async () => {
+    getList.mockResolvedValue({ data: [note("n1")], error: null });
+    const { client } = renderRecent();
+    await within(region()).findByRole("button", { name: CONFIRMED_ROW });
+    // The panel refetches on open (staleTime 0); a failed read invalidates the list.
+    getList.mockResolvedValue(FAILED);
+    await act(async () => {
+      await client.refetchQueries({ queryKey: queryKeys.notifications });
+      // React Query tells the observers on the next macrotask (notifyManager's
+      // setTimeout 0): let the block render the failed state before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(client.getQueryState(queryKeys.notifications)?.status).toBe("error");
+    expect(
+      within(region()).getByRole("button", { name: CONFIRMED_ROW })
+    ).toBeVisible();
   });
 });

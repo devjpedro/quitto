@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
@@ -41,8 +41,35 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 const GREETING = /^(Bom dia|Boa tarde|Boa noite), Maria$/;
 
-function renderHome() {
+const NOTIFICATIONS_FAILED = {
+  data: null,
+  error: { status: 500, value: { error: { code: "INTERNAL", message: "x" } } },
+};
+
+/** The test setup's matchMedia answers min-width queries against innerWidth. */
+function setScreenWidth(width: number) {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: width,
+  });
+}
+
+const startWidth = window.innerWidth;
+
+/** The lower part: list and guide on the left, the side column last. */
+const lowerPart = () =>
+  document.querySelector<HTMLElement>("[class~='lateral:grid']");
+
+function renderHome({ likeTheApp = false } = {}) {
   const client = makeTestQueryClient();
+  if (likeTheApp) {
+    // As in the app (src/lib/query.ts): every non-401 error goes to the boundary.
+    const defaults = client.getDefaultOptions();
+    client.setDefaultOptions({
+      ...defaults,
+      queries: { ...defaults.queries, throwOnError: true },
+    });
+  }
   client.setQueryData(queryKeys.session, {
     id: "u1",
     name: "Maria Souza",
@@ -56,6 +83,10 @@ beforeEach(() => {
   getHome.mockReset();
   getNotifications.mockReset();
   markPaid.mockReset();
+});
+
+afterEach(() => {
+  setScreenWidth(startWidth);
 });
 
 describe("HomePage", () => {
@@ -220,10 +251,72 @@ describe("HomePage", () => {
     // In the side column; from wide it takes a column of its own.
     const side = recent.parentElement;
     expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
-    // Now the side column always has something: the grid is on even without milestones.
+    // The block keeps the side column filled, so the grid is on (the case
+    // without milestones is the one with no contract, above).
     expect(side?.parentElement).toHaveClass("lateral:grid");
     // jsdom is 1024 px wide: below lateral nothing is fetched.
     expect(getNotifications).not.toHaveBeenCalled();
+  });
+
+  it("a 1440 px, se a lista de notificações falha, o bloco some e a home continua", async () => {
+    setScreenWidth(1440);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        milestones: {
+          ...homeFixture().milestones,
+          settled: { paidCents: 4_190_000, receivedCents: 0 },
+        },
+      }),
+      error: null,
+    });
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("region", { name: "Próximos 30 dias" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    // The error stays in the block: the home is still on screen, not the boundary.
+    expect(
+      screen.getByRole("region", { name: "Próximos 30 dias" })
+    ).toBeVisible();
+    expect(screen.getByRole("region", { name: "Marcos" })).toBeVisible();
+    // The milestones keep the side column filled, so the grid stays on.
+    expect(lowerPart()?.matches(":has(> :empty)")).toBe(false);
+  });
+
+  it.each([
+    [
+      "sem contrato, com o guia compacto",
+      homeFixture({
+        actions: [inviteAction()],
+        onboarding: {
+          ...homeFixture().onboarding,
+          hasContract: false,
+          counterpartyContractId: null,
+        },
+      }),
+    ],
+    ["com contrato e sem marcos", homeFixture()],
+  ])("a 1440 px, %s e a lista falhando: a coluna lateral vazia desliga a grade", async (_case, home) => {
+    setScreenWidth(1440);
+    getHome.mockResolvedValue({ data: home, error: null });
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    renderHome({ likeTheApp: true });
+    await waitFor(() => expect(lowerPart()).not.toBeNull());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    const lower = lowerPart();
+    expect(lower?.lastElementChild).toBeEmptyDOMElement();
+    // A column left empty turns the grid into a block: no 2fr track stays
+    // blank beside the list or the guide.
+    expect(lower).toHaveClass("lateral:has-[>:empty]:block");
+    expect(lower?.matches(":has(> :empty)")).toBe(true);
   });
 
   it("primeiro acesso: o guia verde lidera", async () => {

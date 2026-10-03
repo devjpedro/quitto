@@ -22,9 +22,11 @@ const COLUMN =
  * The lower part with a side column (mockup 12): 3fr/2fr from lateral; from
  * wide 2fr for the list and 1fr per side block. auto-fit collapses the track
  * of a side block that is not on screen, instead of leaving a 300 px hole.
+ * A column left empty (no milestones and "Notificações recentes" gone with a
+ * failed list) turns the grid into a block, so no 2fr track stays blank.
  */
 const WITH_SIDE =
-  "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-6 lateral:gap-y-5 wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))]";
+  "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-6 lateral:gap-y-5 wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))] lateral:has-[>:empty]:block";
 
 /**
  * Everything that comes from GET /api/home (streamed from the SSR on the
