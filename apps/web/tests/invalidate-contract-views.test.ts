@@ -16,6 +16,9 @@ describe("invalidateContractViews", () => {
     expect(qc.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["dashboard"],
     });
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["home"],
+    });
   });
 
   it("also invalidates the specific contract when an id is given", () => {

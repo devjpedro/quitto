@@ -11,6 +11,7 @@ export function invalidateContractViews(
 ): void {
   queryClient.invalidateQueries({ queryKey: queryKeys.contracts });
   queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+  queryClient.invalidateQueries({ queryKey: queryKeys.home });
   if (contractId) {
     queryClient.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
   }

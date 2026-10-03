@@ -27,5 +27,10 @@
   "account_language_error": "We couldn't change the language. Please try again.",
   "whatsapp_charge_upcoming": "Hi! Just a reminder about installment {sequence} of {count} of “{title}”: {amount}, due on {date}.",
   "whatsapp_charge_overdue": "Hi! Installment {sequence} of {count} of “{title}” ({amount}) was due on {date}. Could you take a look?",
-  "whatsapp_pix_intro": "Pix copy-and-paste code:"
+  "whatsapp_pix_intro": "Pix copy-and-paste code:",
+  "home_toast_marked_paid": "Installment marked as paid",
+  "home_toast_marked_received": "Installment marked as received",
+  "home_toast_confirmed": "Payment confirmed",
+  "home_toast_invite_accepted": "Invite accepted",
+  "home_toast_invite_declined": "Invite declined"
 }

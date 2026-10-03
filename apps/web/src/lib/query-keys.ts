@@ -3,6 +3,7 @@ export const queryKeys = {
   me: ["me"] as const,
   session: ["session"] as const,
   dashboard: ["dashboard"] as const,
+  home: ["home"] as const,
   contracts: ["contracts"] as const,
   contract: (id: string) => ["contract", id] as const,
   installment: (id: string) => ["installment", id] as const,

@@ -43,6 +43,7 @@ export function useDeclineInviteMutation(token: string) {
     meta: { successMessage: FEEDBACK.inviteDeclined },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.myInvites });
+      qc.invalidateQueries({ queryKey: queryKeys.home });
     },
   });
 }
