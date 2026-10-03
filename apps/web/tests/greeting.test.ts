@@ -12,6 +12,14 @@ describe("partOfDay", () => {
     expect(partOfDay(Date.UTC(2026, 9, 2, 23, 0))).toBe("evening"); // 20:00
     expect(partOfDay(Date.UTC(2026, 9, 3, 7, 59))).toBe("evening"); // 04:59
   });
+
+  it("as fronteiras: 05:00 já é manhã, 12:00 já é tarde, 18:00 já é noite", () => {
+    expect(partOfDay(Date.UTC(2026, 9, 2, 8, 0))).toBe("morning"); // 05:00
+    expect(partOfDay(Date.UTC(2026, 9, 2, 14, 59))).toBe("morning"); // 11:59
+    expect(partOfDay(Date.UTC(2026, 9, 2, 15, 0))).toBe("afternoon"); // 12:00
+    expect(partOfDay(Date.UTC(2026, 9, 2, 20, 59))).toBe("afternoon"); // 17:59
+    expect(partOfDay(Date.UTC(2026, 9, 2, 21, 0))).toBe("evening"); // 18:00
+  });
 });
 
 describe("firstName", () => {

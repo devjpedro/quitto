@@ -3,7 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** The home's shape while it loads: subtitle, chips, the action cards (carousel below lg, a grid of 3 to 5 from lg) and three upcoming rows. */
 export function HomeSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
+    // The content's gaps, so nothing shifts when the home streams in.
+    <div className="flex flex-col gap-4 md:gap-5">
       <Skeleton className="h-4 w-56" />
       <div className="flex gap-1.5">
         <Skeleton className="h-8 w-28 rounded-full" />

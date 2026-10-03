@@ -34,7 +34,7 @@ export const INSTALLMENT_STATUS_LABEL: Record<InstallmentStatus, string> = {
 };
 
 // pending/awaitingConfirmation = "a receber" (ainda em aberto) — usa o mesmo
-// acento dourado do resto do app para dinheiro em trânsito (ex.: dashboard).
+// acento dourado do resto do app para dinheiro em trânsito.
 export const INSTALLMENT_STATUS_TONE: Record<InstallmentStatus, Tone> = {
   [INSTALLMENT_STATUS.pending]: "gold",
   [INSTALLMENT_STATUS.awaitingConfirmation]: "gold",

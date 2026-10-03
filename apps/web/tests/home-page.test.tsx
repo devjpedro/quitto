@@ -1,10 +1,10 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
-import { homeFixture, installmentAction } from "./home-fixtures";
+import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
 const { getHome, markPaid } = vi.hoisted(() => ({
@@ -165,6 +165,43 @@ describe("HomePage", () => {
     expect(screen.queryByRole("region", { name: "Marcos" })).toBeNull();
   });
 
+  it("sem contrato, com um convite e o guia por terminar: o guia compacto vem embaixo, sem grade nem coluna lateral", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [inviteAction()],
+        onboarding: {
+          ...homeFixture().onboarding,
+          hasContract: false,
+          counterpartyContractId: null,
+        },
+      }),
+      error: null,
+    });
+    renderHome();
+    const guide = (
+      await screen.findByRole("button", { name: "dispensar guia" })
+    ).closest("section") as HTMLElement;
+    expect(guide).toBeVisible();
+    expect(within(guide).getByText("Criar o primeiro contrato")).toBeVisible();
+    // The invite is the only action, so the green guide card does not lead.
+    expect(
+      screen.queryByRole("heading", {
+        name: "Cadastre o primeiro acordo que você quer acompanhar.",
+      })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "Próximos 30 dias" })
+    ).toBeNull();
+    expect(screen.queryByRole("region", { name: "Marcos" })).toBeNull();
+    // Guide → its order-last wrapper → the left column → the lower part, which
+    // has no side column, so it never turns into the grid.
+    const left = guide.parentElement?.parentElement;
+    const lower = left?.parentElement;
+    expect(guide.parentElement).toHaveClass("order-last");
+    expect(lower?.children).toHaveLength(1);
+    expect(lower).not.toHaveClass("lateral:grid");
+  });
+
   it("primeiro acesso: o guia verde lidera", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({
@@ -214,6 +251,70 @@ describe("HomePage", () => {
     expect(summary).toHaveAttribute("tabindex", "-1");
   });
 
+  it("como no Chromium, o botão que fica desabilitado perde o foco antes de o cartão sair, e o foco ainda vai para o resumo", async () => {
+    // jsdom keeps the focus on a button that turns disabled (busy); Chromium
+    // drops it to the body, and only then the optimistic update takes the
+    // card out (measured ~10 ms apart). Emulate both.
+    const dropFocusWhenDisabled = new MutationObserver((records) => {
+      for (const { target } of records) {
+        if (
+          target === document.activeElement &&
+          (target as HTMLButtonElement).disabled
+        ) {
+          // jsdom will not blur a disabled button: hand the focus to a
+          // throwaway input and remove it, which leaves the body focused.
+          const sink = document.createElement("input");
+          document.body.append(sink);
+          sink.focus();
+          sink.remove();
+        }
+      }
+    });
+    try {
+      markPaid.mockReturnValue(new Promise(() => undefined));
+      getHome.mockResolvedValue({
+        data: homeFixture({ actions: [installmentAction()] }),
+        error: null,
+      });
+      const { client } = renderHome();
+      const markPaidButton = await screen.findByRole("button", {
+        name: "Já paguei",
+      });
+      dropFocusWhenDisabled.observe(markPaidButton, {
+        attributes: true,
+        attributeFilter: ["disabled"],
+      });
+      // Holds the optimistic update (it awaits cancelQueries first) until the busy state is on screen.
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const cancel = client.cancelQueries.bind(client);
+      vi.spyOn(client, "cancelQueries").mockImplementation(async (...args) => {
+        await gate;
+        return cancel(...args);
+      });
+      await userEvent.tab(); // "Novo contrato"
+      await userEvent.tab(); // "Pagar com PIX"
+      await userEvent.tab(); // "Já paguei"
+      expect(document.activeElement).toBe(markPaidButton);
+      await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(markPaidButton).toBeDisabled());
+      // The focus is already lost, with the card still on screen.
+      expect(document.activeElement).toBe(document.body);
+      expect(
+        screen.getByRole("article", { name: "Aluguel do apê · 7/12" })
+      ).toBeVisible();
+      release();
+      expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+      expect(document.activeElement).toBe(
+        screen.getByText("Nada pede sua atenção agora.")
+      );
+    } finally {
+      dropFocusWhenDisabled.disconnect();
+    }
+  });
+
   it("a lista que esvazia por fora (outra tela, outra aba) não mexe no foco de quem está em outro lugar", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({ actions: [installmentAction()] }),
@@ -227,5 +328,19 @@ describe("HomePage", () => {
     client.setQueryData(queryKeys.home, homeFixture());
     expect(await screen.findByText("Nada pendente agora")).toBeVisible();
     expect(document.activeElement).toBe(shortcut);
+  });
+
+  it("ninguém focado (Safari, leitor de tela) e a lista esvazia por fora: o foco fica onde estava", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction()] }),
+      error: null,
+    });
+    const { client } = renderHome();
+    await screen.findByRole("article", { name: "Aluguel do apê · 7/12" });
+    expect(document.activeElement).toBe(document.body);
+    // A refetch on returning to the tab: the other party already paid.
+    client.setQueryData(queryKeys.home, homeFixture());
+    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    expect(document.activeElement).toBe(document.body);
   });
 });
