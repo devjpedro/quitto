@@ -2,6 +2,8 @@ import { RING, RING_CIRCUMFERENCE } from "@/components/ring-geometry";
 import { cn } from "@/lib/utils";
 
 const TONE = {
+  // 22 is the logo's TRACK_MIX, as a literal class (Tailwind only builds what
+  // it finds); the test ties the two.
   brand: { track: "stroke-brand/22", arc: "stroke-brand" },
   // On the lime card (mockup 13): dark ink, the track at 16%.
   onHighlight: { track: "stroke-on-highlight/16", arc: "stroke-on-highlight" },

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ON_BRAND_TRACK_MIX } from "@/components/ui/installment-bar";
 import { contrastRatio, relativeLuminance } from "@/lib/contrast";
 
 const css = readFileSync(
@@ -119,6 +120,18 @@ const ALPHA_TEXT_PAIRS: [string, string, number][] = [
   ["ink-inverse", "ink", 0.7],
 ];
 
+// [foreground, overlay, base, percent] non-text drawn on a track that is
+// `overlay` at `percent` over `base`: the green card's installment bar, whose
+// track is on-brand at ON_BRAND_TRACK_MIX % (installment-bar.tsx), at rest
+// and on hover. Overdue is the salmon stripe; paid, a proof waiting and "due
+// today" are on-brand (WCAG 1.4.11).
+const TRACK_NON_TEXT_PAIRS: [string, string, string, number][] = [
+  ["on-brand-alert", "on-brand", "brand-surface", ON_BRAND_TRACK_MIX],
+  ["on-brand-alert", "on-brand", "brand-hover", ON_BRAND_TRACK_MIX],
+  ["on-brand", "on-brand", "brand-surface", ON_BRAND_TRACK_MIX],
+  ["on-brand", "on-brand", "brand-hover", ON_BRAND_TRACK_MIX],
+];
+
 /** `fg` at `alpha` over `bg`, composited per channel as the browser does (sRGB). */
 function composite(fg: string, bg: string, alpha: number): string {
   const channel = (hex: string, at: number) =>
@@ -161,6 +174,22 @@ describe("design tokens", () => {
         expect(contrastRatio(mixed, bgHex as string)).toBeGreaterThanOrEqual(
           4.5
         );
+      });
+    }
+    for (const [fg, overlay, base, percent] of TRACK_NON_TEXT_PAIRS) {
+      it(`${theme}: ${fg} on ${overlay} at ${percent}% over ${base} passes WCAG 1.4.11 (3:1)`, () => {
+        const fgHex = tokens[fg];
+        const overlayHex = tokens[overlay];
+        const baseHex = tokens[base];
+        expect(fgHex, `missing --${fg}`).toBeDefined();
+        expect(overlayHex, `missing --${overlay}`).toBeDefined();
+        expect(baseHex, `missing --${base}`).toBeDefined();
+        const track = composite(
+          overlayHex as string,
+          baseHex as string,
+          percent / 100
+        );
+        expect(contrastRatio(fgHex as string, track)).toBeGreaterThanOrEqual(3);
       });
     }
     for (const [fg, bg] of NON_TEXT_PAIRS) {

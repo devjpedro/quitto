@@ -2,6 +2,13 @@ import { cn } from "@/lib/utils";
 
 export type BarStatus = "paid" | "overdue" | "review" | "today" | "open";
 
+/**
+ * The green card's track: on-brand at this %, the `bg-on-brand/16` below (a
+ * literal, since Tailwind only builds what it finds; the test ties the two).
+ * At 16 the salmon overdue stripe keeps 3:1 on it (tokens-contrast).
+ */
+export const ON_BRAND_TRACK_MIX = 16;
+
 const SEGMENT: Record<"panel" | "brand", Record<BarStatus, string>> = {
   panel: {
     paid: "bg-brand",
@@ -10,13 +17,14 @@ const SEGMENT: Record<"panel" | "brand", Record<BarStatus, string>> = {
     today: "shadow-[inset_0_0_0_1.5px_var(--ink)]",
     open: "bg-track",
   },
-  // On the green card (mockup 13): paid in its text color, overdue in salmon.
+  // On the green card (mockup 13): paid in its text color, overdue in salmon,
+  // the track at 16% rather than the mockup's 20% (ON_BRAND_TRACK_MIX).
   brand: {
     paid: "bg-on-brand",
     overdue: "stripes-on-brand-alert",
     review: "stripes-on-brand",
     today: "shadow-[inset_0_0_0_1.5px_var(--on-brand)]",
-    open: "bg-on-brand/20",
+    open: "bg-on-brand/16",
   },
 };
 

@@ -175,7 +175,8 @@
 /*
  * Installment bar (DIRECAO › Progresso): an overdue segment, a proof
  * waiting, and the same two on the green card. The status is in the
- * pattern, never only in the color.
+ * pattern, never only in the color: overdue leans -45°, a proof waiting the
+ * opposite way (+45°), since danger and warning are close in lightness.
  */
 @utility stripes-danger {
   background-image: repeating-linear-gradient(
@@ -187,7 +188,7 @@
 
 @utility stripes-warning {
   background-image: repeating-linear-gradient(
-    -45deg,
+    45deg,
     var(--warning) 0 2px,
     color-mix(in srgb, var(--warning) 28%, transparent) 2px 4px
   );
@@ -195,7 +196,7 @@
 
 @utility stripes-on-brand {
   background-image: repeating-linear-gradient(
-    -45deg,
+    45deg,
     var(--on-brand) 0 2px,
     color-mix(in srgb, var(--on-brand) 32%, transparent) 2px 4px
   );
