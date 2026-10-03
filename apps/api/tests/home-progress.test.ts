@@ -1,0 +1,157 @@
+import { describe, expect, it } from "bun:test";
+import { buildAgenda } from "../src/lib/home";
+import {
+  type HomeContractRow,
+  type HomeInstallmentRow,
+  partyContracts,
+} from "../src/lib/home-parties";
+import {
+  BAR_SEGMENTS_MAX,
+  barStatus,
+  contractSummary,
+} from "../src/lib/home-progress";
+import type { InstallmentAction } from "../src/lib/home-types";
+
+const ME = "u-me";
+const TODAY = "2026-10-03";
+
+function inst(
+  over: Partial<HomeInstallmentRow> & { id: string }
+): HomeInstallmentRow {
+  return {
+    contractId: "c",
+    sequence: 1,
+    amountCents: 35_000,
+    dueDate: "2026-10-30",
+    status: "pending",
+    paidAt: null,
+    lastProofAt: null,
+    ...over,
+  };
+}
+
+describe("barStatus", () => {
+  it("paga vence tudo; depois comprovante esperando, atraso, hoje e aberta", () => {
+    expect(
+      barStatus(
+        inst({ id: "a", status: "confirmed", dueDate: "2026-09-01" }),
+        TODAY
+      )
+    ).toBe("paid");
+    expect(barStatus(inst({ id: "b", status: "paid" }), TODAY)).toBe("paid");
+    expect(
+      barStatus(
+        inst({
+          id: "c",
+          status: "awaiting_confirmation",
+          dueDate: "2026-09-01",
+        }),
+        TODAY
+      )
+    ).toBe("review");
+    expect(barStatus(inst({ id: "d", dueDate: "2026-10-02" }), TODAY)).toBe(
+      "overdue"
+    );
+    expect(
+      barStatus(
+        inst({ id: "e", status: "disputed", dueDate: "2026-10-02" }),
+        TODAY
+      )
+    ).toBe("overdue");
+    expect(barStatus(inst({ id: "f", dueDate: TODAY }), TODAY)).toBe("today");
+    expect(barStatus(inst({ id: "g", dueDate: "2026-10-04" }), TODAY)).toBe(
+      "open"
+    );
+  });
+});
+
+describe("contractSummary", () => {
+  it("conta pagas, atrasadas e o que falta, com um status por parcela na ordem da sequência", () => {
+    const summary = contractSummary(
+      [
+        inst({ id: "3", sequence: 3, dueDate: "2026-08-30" }),
+        inst({ id: "1", sequence: 1, status: "paid", dueDate: "2026-06-30" }),
+        inst({
+          id: "2",
+          sequence: 2,
+          status: "confirmed",
+          dueDate: "2026-07-30",
+        }),
+        inst({ id: "4", sequence: 4, dueDate: TODAY }),
+        inst({ id: "5", sequence: 5 }),
+      ],
+      TODAY
+    );
+    expect(summary).toEqual({
+      paidCount: 2,
+      overdueCount: 1,
+      remainingCents: 105_000,
+      statuses: ["paid", "paid", "overdue", "today", "open"],
+    });
+  });
+
+  it(`até ${BAR_SEGMENTS_MAX} parcelas há um status por parcela; acima disso, só as contagens`, () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, i) =>
+        inst({
+          id: `i${i + 1}`,
+          sequence: i + 1,
+          status: i < 4 ? "paid" : "pending",
+        })
+      );
+    expect(contractSummary(many(24), TODAY).statuses).toHaveLength(24);
+    expect(contractSummary(many(25), TODAY)).toMatchObject({
+      paidCount: 4,
+      statuses: null,
+    });
+  });
+});
+
+describe("buildAgenda: o progresso no cartão", () => {
+  it("o cartão traz o contrato inteiro, e o grupo de atrasadas também", () => {
+    const contract: HomeContractRow = {
+      id: "c",
+      title: "Notebook da Marina",
+      ownerId: ME,
+      ownerRole: "seller",
+      requiresConfirmation: false,
+      status: "active",
+      pixKey: null,
+      installmentsCount: 4,
+      createdAt: new Date("2026-06-01T12:00:00Z"),
+    };
+    const parties = partyContracts(ME, {
+      contracts: [contract],
+      installments: [
+        inst({ id: "1", sequence: 1, status: "paid", dueDate: "2026-07-30" }),
+        inst({ id: "2", sequence: 2, dueDate: "2026-08-30" }),
+        inst({ id: "3", sequence: 3, dueDate: "2026-09-30" }),
+        inst({ id: "4", sequence: 4, dueDate: "2026-10-30" }),
+      ],
+      participants: [
+        {
+          contractId: "c",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "João Souza",
+        },
+        {
+          contractId: "c",
+          role: "buyer",
+          linkedUserId: null,
+          displayName: "Marina Pires",
+        },
+      ],
+      users: [],
+    });
+    const [card] = buildAgenda(parties, [], TODAY)
+      .actions as InstallmentAction[];
+    expect(card?.count).toBe(2);
+    expect(card?.contract).toEqual({
+      paidCount: 1,
+      overdueCount: 2,
+      remainingCents: 105_000,
+      statuses: ["paid", "overdue", "overdue", "open"],
+    });
+  });
+});

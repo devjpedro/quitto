@@ -129,6 +129,12 @@ function overdueCard(
     installmentIds: [over.installmentId],
     sequences: [sequence],
     totalCents: amountCents,
+    contract: {
+      paidCount: 0,
+      overdueCount: 1,
+      remainingCents: amountCents,
+      statuses: ["overdue"],
+    },
     ...over,
   };
 }

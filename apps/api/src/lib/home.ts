@@ -12,6 +12,7 @@ import {
   type PartyContract,
   pixCodeFor,
 } from "./home-parties";
+import { type ContractSummary, contractSummary } from "./home-progress";
 import type {
   HomeAgenda,
   HomeInviteRow,
@@ -67,7 +68,8 @@ function toUpcoming(
 function toAction(
   party: PartyContract,
   it: HomeInstallmentRow,
-  kind: InstallmentActionKind
+  kind: InstallmentActionKind,
+  summary: ContractSummary
 ): InstallmentAction {
   const { caps, contract } = party;
   return {
@@ -78,6 +80,7 @@ function toAction(
     installmentIds: [it.id],
     sequences: [it.sequence],
     totalCents: it.amountCents,
+    contract: summary,
     counterpartyName: party.counterpartyName,
     pixCode: kind === "review" ? null : pixCodeFor(party, it.amountCents),
     canMarkPaid:
@@ -130,13 +133,14 @@ export function buildAgenda(
   const installmentActions: InstallmentAction[] = [];
   const open: UpcomingItem[] = [];
   for (const party of parties) {
+    const summary = contractSummary(party.installments, todayISO);
     for (const it of party.installments) {
       if (isPaidStatus(it.status)) {
         continue;
       }
       const kind = classify(party, it, todayISO, soonLimit);
       if (kind) {
-        installmentActions.push(toAction(party, it, kind));
+        installmentActions.push(toAction(party, it, kind, summary));
       }
       if (it.dueDate >= todayISO) {
         open.push(toUpcoming(party, it));

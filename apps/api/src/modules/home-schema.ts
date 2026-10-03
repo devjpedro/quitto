@@ -15,6 +15,21 @@ const upcomingItemSchema = t.Object({
   status: t.String(),
 });
 
+const barStatusSchema = t.Union([
+  t.Literal("paid"),
+  t.Literal("overdue"),
+  t.Literal("review"),
+  t.Literal("today"),
+  t.Literal("open"),
+]);
+
+const contractSummarySchema = t.Object({
+  paidCount: t.Integer(),
+  overdueCount: t.Integer(),
+  remainingCents: t.Integer(),
+  statuses: t.Union([t.Array(barStatusSchema), t.Null()]),
+});
+
 const installmentActionSchema = t.Object({
   id: t.String(),
   kind: t.Union([
@@ -40,6 +55,7 @@ const installmentActionSchema = t.Object({
   installmentIds: t.Array(t.String()),
   sequences: t.Array(t.Integer()),
   totalCents: t.Integer(),
+  contract: contractSummarySchema,
 });
 
 const inviteActionSchema = t.Object({

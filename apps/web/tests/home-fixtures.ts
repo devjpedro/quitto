@@ -33,6 +33,26 @@ export function installmentAction(
     installmentIds: [installmentId],
     sequences: [sequence],
     totalCents: amountCents,
+    contract: {
+      paidCount: 6,
+      overdueCount: 0,
+      remainingCents: 6 * amountCents,
+      statuses: [
+        "paid",
+        "paid",
+        "paid",
+        "paid",
+        "paid",
+        "paid",
+        // Installment 7 is due tomorrow (dueDate 2026-10-03, TODAY 2026-10-02): open, not today.
+        "open",
+        "open",
+        "open",
+        "open",
+        "open",
+        "open",
+      ],
+    },
     ...over,
   };
 }

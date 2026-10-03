@@ -1,4 +1,5 @@
 import type { Direction } from "@quitto/shared";
+import type { ContractSummary } from "./home-progress";
 
 export type InstallmentActionKind =
   | "overdue"
@@ -21,6 +22,8 @@ export interface UpcomingItem {
 export interface InstallmentAction extends UpcomingItem {
   canConfirm: boolean;
   canMarkPaid: boolean;
+  /** The whole contract: the card's bar and legend. */
+  contract: ContractSummary;
   /** How many overdue installments the card stands for; 1 on every other card. */
   count: number;
   counterpartyName: string | null;
