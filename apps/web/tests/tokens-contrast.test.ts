@@ -41,6 +41,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink-inverse", "ink"],
   ["brand", "surface"],
   ["brand", "brand-subtle"],
+  ["brand", "surface-raised"],
+  ["ink-inverse", "brand"],
   ["on-brand", "brand-surface"],
   ["on-brand-muted", "brand-surface"],
   ["on-highlight", "highlight"],
