@@ -72,7 +72,7 @@ export function ActionList({
   return (
     <section
       aria-label={m.home_actions_title()}
-      className="flex flex-col gap-2 focus:outline-none"
+      className="flex flex-col gap-3 focus:outline-none"
       onKeyDownCapture={swallowKeyRepeat}
       ref={sectionRef}
     >
@@ -81,7 +81,7 @@ export function ActionList({
           // relative: the cards' sr-only texts are absolute, and without a
           // positioned ancestor here they escape the carousel's overflow-x
           // and widen the whole page.
-          "relative flex gap-2",
+          "relative flex gap-3",
           expanded
             ? "flex-col"
             : "-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 [scrollbar-width:none] md:-mx-6 md:scroll-px-6 md:px-6",

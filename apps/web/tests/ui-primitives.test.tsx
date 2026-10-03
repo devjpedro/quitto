@@ -60,6 +60,13 @@ describe("Button", () => {
     expect(button).not.toHaveClass("focus-visible:ring-brand");
     expect(button).not.toHaveClass("focus-visible:ring-offset-surface");
   });
+
+  it("inset: the secondary button inside a card, filled one step lighter, no border", () => {
+    render(<Button variant="inset">Já paguei</Button>);
+    const button = screen.getByRole("button", { name: "Já paguei" });
+    expect(button).toHaveClass("bg-surface-inset");
+    expect(button).not.toHaveClass("border");
+  });
 });
 
 describe("IconButton", () => {

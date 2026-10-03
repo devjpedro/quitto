@@ -19,8 +19,12 @@ describe("HomeSkeleton", () => {
     expect(list).toHaveClass(...classes(LOWER_COLUMN));
     // From wide each side block takes a column of its own, as in the content.
     expect(side).toHaveClass(...classes(LOWER_COLUMN), "wide:contents");
-    // The three upcoming rows at any width.
-    expect(list?.firstElementChild?.children).toHaveLength(3);
+    // "Próximos 30 dias" at any width: its section title and one filled block.
+    expect(list?.firstElementChild?.children).toHaveLength(2);
+    expect(list?.firstElementChild?.lastElementChild).toHaveClass(
+      "h-48",
+      "bg-surface-card"
+    );
     // The side blocks only from lateral, like the content's.
     const [milestones, recent] = Array.from(side?.children ?? []);
     expect(milestones).toHaveClass("hidden", "lateral:flex");
@@ -29,5 +33,26 @@ describe("HomeSkeleton", () => {
     const rows = recent?.querySelector("ul");
     expect(rows).toHaveClass("bg-surface-raised");
     expect(rows?.children).toHaveLength(4);
+  });
+
+  it("os ossos de cartão e de lista são preenchidos como o que vai chegar (brancos no celular)", () => {
+    const { container } = render(<HomeSkeleton />);
+    const bones = [
+      ...container.querySelectorAll<HTMLElement>("[aria-hidden='true']"),
+    ];
+    expect(
+      bones.some(
+        (bone) =>
+          bone.classList.contains("h-60") &&
+          bone.classList.contains("bg-surface-card")
+      )
+    ).toBe(true);
+    expect(
+      bones.some(
+        (bone) =>
+          bone.classList.contains("h-48") &&
+          bone.classList.contains("bg-surface-card")
+      )
+    ).toBe(true);
   });
 });

@@ -59,6 +59,9 @@ describe("SectionBoundary", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar esta parte."
     );
+    // Fill, not outline (mockup 13): the error box is a card on the panel.
+    expect(screen.getByRole("alert")).toHaveClass("bg-surface-card");
+    expect(screen.getByRole("alert")).not.toHaveClass("border");
     fail = false;
     await userEvent.click(
       screen.getByRole("button", { name: "Tentar de novo" })

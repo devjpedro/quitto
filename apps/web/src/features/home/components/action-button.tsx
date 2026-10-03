@@ -18,7 +18,7 @@ import { m } from "@/paraglide/messages.js";
 import { type ActionButtonKind, LINK_BUTTONS } from "../lib/action-view";
 import type { HomeAction } from "../types";
 
-export type CardButtonVariant = "onBrand" | "onBrandOutline" | "secondary";
+export type CardButtonVariant = "onBrand" | "onBrandOutline" | "inset";
 
 const LABEL: Record<ActionButtonKind, () => string> = {
   pix: m.home_action_pix,

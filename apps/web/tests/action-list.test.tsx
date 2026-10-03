@@ -230,9 +230,9 @@ describe("ActionList", () => {
       name: "Aluguel do apê · parcela 7 de 12",
     });
     expect(card).toBeVisible();
-    // Same 1 px border as the white cards, in the card's own green (mockup 11):
-    // the content lines up across the row.
-    expect(card).toHaveClass("border", "border-brand-surface");
+    // Fill, not outline (mockup 13): the green card and its hover step.
+    expect(card).toHaveClass("bg-brand-surface", "hover:bg-brand-hover");
+    expect(card).not.toHaveClass("border");
     expect(screen.getByText("Faça primeiro · amanhã")).toBeVisible();
     expect(screen.getByText("R$ 1.250,00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Pagar com PIX" })).toHaveAttribute(
@@ -538,9 +538,10 @@ describe("ActionList", () => {
       name: "Aluguel do apê · parcelas 5 e 6 de 12",
     });
     expect(within(card).getByText("Faça primeiro · 2 atrasadas")).toBeVisible();
-    expect(
-      within(card).getByText("para Maria Souza · desde 01/09")
-    ).toBeVisible();
+    // The name is in bold inside the line (PersonText): the line reads as one.
+    const person = within(card).getByText("Maria Souza").parentElement;
+    expect(person).toHaveTextContent("para Maria Souza · desde 01/09");
+    expect(person).toBeVisible();
     expect(
       within(card).getByRole("link", { name: "Pagar a mais antiga" })
     ).toHaveAttribute("href", "/contracts/al?installment=al-5");
@@ -575,6 +576,110 @@ describe("ActionList", () => {
     expect(whatsappText()).toContain(
       "7 parcelas de “Venda do terreno”, entre a 3 e a 12, estão em aberto"
     );
+  });
+
+  it("cartão comum: preenchido no tom quente, sem contorno, e o hover desce um degrau", () => {
+    renderList(twoToPay());
+    const second = screen.getByRole("article", {
+      name: "Aluguel do apê · parcela 2 de 12",
+    });
+    expect(second).toHaveClass(
+      "bg-surface-card",
+      "hover:bg-surface-card-hover"
+    );
+    expect(second).not.toHaveClass("border");
+    expect(
+      within(second).getByRole("button", { name: "Já paguei" })
+    ).toHaveClass("bg-surface-inset");
+  });
+
+  it("cartão de parcela: a pessoa com rosto, a barra do contrato inteiro e a legenda", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction(),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    expect(within(card).getByText("MS")).toHaveAttribute("aria-hidden", "true");
+    expect(within(card).getByText("Maria Souza").tagName).toBe("B");
+    expect(card.querySelectorAll("[data-status]")).toHaveLength(12);
+    expect(within(card).getByText("6 de 12 pagas")).toBeVisible();
+    expect(within(card).getByText("falta R$ 7.500,00")).toBeVisible();
+  });
+
+  it("legenda no cartão estreito: quebra a linha em vez de vazar, e o 'falta' fica à direita (1024 px)", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction(),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    const remaining = within(card).getByText("falta R$ 7.500,00");
+    // 182 px of content at 1024: "4 de 12 pagas" and "falta R$ 14.400,00" need 190.
+    expect(remaining.parentElement).toHaveClass(
+      "flex-wrap",
+      "whitespace-nowrap"
+    );
+    expect(remaining).toHaveClass("ml-auto");
+  });
+
+  it("convite: avatar de 28 px, o título grande e as condições", () => {
+    renderList([installmentAction({ installmentId: "x0" }), inviteAction()]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    expect(within(card).getByText("A")).toHaveClass("size-7");
+    expect(within(card).getByText("4 parcelas de R$ 300,00")).toBeVisible();
+    expect(card).toHaveTextContent("a partir de 10/11");
+  });
+
+  it("cartão estreito: os botões empilham na largura toda, sem meia linha (O2, 1024 px)", () => {
+    renderList([installmentAction({ kind: "review", canConfirm: true })]);
+    const card = screen.getByRole("article");
+    expect(card).toHaveClass("@container");
+    for (const control of [
+      screen.getByRole("link", { name: "Conferir" }),
+      screen.getByRole("button", { name: "Confirmar" }),
+    ]) {
+      expect(control).toHaveClass("@max-[15rem]:w-full");
+    }
+  });
+
+  it("12 px entre os cartões, no carrossel e na grade", () => {
+    renderList(overdue(3));
+    expect(itemOf(1)?.parentElement).toHaveClass("gap-3");
+  });
+
+  it("Já paguei ao lado de um grupo: a falha devolve só o cartão simples, no mesmo lugar, e a contagem volta", async () => {
+    markPaid.mockResolvedValue({
+      data: null,
+      error: { status: 422, value: null },
+    });
+    const group = installmentAction({
+      id: "overdue:nb:receive",
+      kind: "overdue",
+      direction: "receive",
+      installmentId: "nb-3",
+      contractId: "nb",
+      contractTitle: "Notebook da Marina",
+      dueDate: "2026-08-30",
+      pixCode: null,
+      canMarkPaid: false,
+      count: 2,
+      installmentIds: ["nb-3", "nb-4"],
+      sequences: [3, 4],
+      totalCents: 70_000,
+    });
+    const client = makeClient([
+      group,
+      installmentAction({ installmentId: "i2", sequence: 2, pixCode: null }),
+    ]);
+    renderWithProviders(<LiveList />, { client });
+    await userEvent.click(screen.getByRole("button", { name: "Já paguei" }));
+    await waitFor(() => expect(markPaid).toHaveBeenCalledWith("i2"));
+    // The refusal brings back only the single card, where it was: the group stays first.
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
+    const [first, second] = screen.getAllByRole("article");
+    expect(first).toHaveTextContent("Notebook da Marina");
+    expect(second).toHaveTextContent("Aluguel do apê · parcela 2 de 12");
+    // And the count goes back with it: pending counts are cards, read from the cache.
+    expect(client.getQueryData<Home>(queryKeys.home)?.actions).toHaveLength(2);
   });
 });
 

@@ -20,25 +20,24 @@ export function HomeSkeleton() {
         <Skeleton className="h-8 w-36 rounded-full" />
         <Skeleton className="hidden h-8 w-36 rounded-full md:block" />
       </div>
-      <div className="flex wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] gap-2 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]">
-        <Skeleton className="h-44 w-[calc(100%-2.75rem)] shrink-0 rounded-card lg:w-auto" />
-        <Skeleton className="h-44 w-[calc(100%-2.75rem)] shrink-0 rounded-card lg:w-auto" />
-        <Skeleton className="hidden h-44 rounded-card lg:block" />
-        <Skeleton className="hidden h-44 rounded-card 2xl:block" />
-        <Skeleton className="wide:block hidden h-44 rounded-card" />
+      <div className="flex wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] gap-3 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]">
+        <Skeleton className="h-60 w-[calc(100%-2.75rem)] shrink-0 rounded-card bg-surface-card lg:w-auto" />
+        <Skeleton className="h-60 w-[calc(100%-2.75rem)] shrink-0 rounded-card bg-surface-card lg:w-auto" />
+        <Skeleton className="hidden h-60 rounded-card bg-surface-card lg:block" />
+        <Skeleton className="hidden h-60 rounded-card bg-surface-card 2xl:block" />
+        <Skeleton className="wide:block hidden h-60 rounded-card bg-surface-card" />
       </div>
       <div className={cn("flex flex-col gap-4 md:gap-5", LOWER_WITH_SIDE)}>
         <div className={LOWER_COLUMN}>
-          <div className="flex flex-col gap-1.5">
-            <Skeleton className="h-14 rounded-card" />
-            <Skeleton className="h-14 rounded-card" />
-            <Skeleton className="h-14 rounded-card" />
+          <div>
+            <Skeleton className="mb-3 h-5 w-40" />
+            <Skeleton className="h-48 rounded-card bg-surface-card" />
           </div>
         </div>
         <div className={cn(LOWER_COLUMN, "wide:contents")}>
           <div className="lateral:flex hidden flex-col gap-2">
             <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-36 rounded-card" />
+            <Skeleton className="h-36 rounded-card bg-surface-card" />
           </div>
           <div className="lateral:flex hidden flex-col gap-2">
             <Skeleton className="h-4 w-40" />
