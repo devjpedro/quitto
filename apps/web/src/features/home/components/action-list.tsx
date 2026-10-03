@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -7,9 +7,6 @@ import { useActionLock } from "../hooks/use-action-lock";
 import { useCarouselIndex } from "../hooks/use-carousel-index";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";
-
-/** Cards in the desktop row at lg; 2xl fits a fourth and wide a fifth. */
-const DESKTOP_VISIBLE = 3;
 
 /**
  * A held Enter or Space repeats its keydown, and every repeat would activate
@@ -39,36 +36,32 @@ function pastTheRow(index: number): string | false {
   return index > 4 && "lg:hidden";
 }
 
-/** "Ver todas (N)" while some card is past the row: N > 3 below 2xl, N > 4 below wide, N > 5 from wide. */
-function seeAllRow(count: number): string {
-  return cn(
-    "hidden justify-end lg:flex",
-    count <= 4 && "2xl:hidden",
-    count <= 5 && "wide:hidden"
-  );
-}
-
 /**
  * Below lg: a scroll-snap carousel where the next card peeks at the edge,
  * with "1 de N" and "Ver todas" (which turns it into a list). From lg (the
  * sidebar leaves no room for three columns at md): a grid that grows by
  * columns, never by stretching a card (3, then 4 at 2xl and 5 at wide), with
- * "Ver todas (N)" for the rest. A single action takes the full width, and
- * two columns of the grid.
+ * "Ver todas (N)" for the rest on the chips row (ChipsRow), which shares
+ * `expanded`. A single action takes the full width, and two columns of the
+ * grid.
  */
 export function ActionList({
   actions,
+  expanded,
+  listId,
+  onToggle,
   today,
 }: {
   actions: HomeAction[];
+  expanded: boolean;
+  listId: string;
+  onToggle: () => void;
   today: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const { ref, index } = useCarouselIndex(actions.length, expanded);
   const tryLock = useActionLock();
   const { sectionRef, onActionStart } = useActionFocus(actions);
   const single = actions.length === 1;
-  const toggle = () => setExpanded((value) => !value);
   return (
     <section
       aria-label={m.home_actions_title()}
@@ -88,6 +81,7 @@ export function ActionList({
           "lg:mx-0 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] lg:overflow-visible lg:px-0",
           "wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
         )}
+        id={listId}
         ref={ref}
       >
         {actions.map((action, i) => (
@@ -123,26 +117,13 @@ export function ActionList({
                 })}
           </span>
           <Button
+            aria-controls={listId}
             aria-expanded={expanded}
-            onClick={toggle}
+            onClick={onToggle}
             size="sm"
             variant="ghost"
           >
             {expanded ? m.home_see_less() : m.home_see_all()}
-          </Button>
-        </div>
-      ) : null}
-      {actions.length > DESKTOP_VISIBLE ? (
-        <div className={seeAllRow(actions.length)}>
-          <Button
-            aria-expanded={expanded}
-            onClick={toggle}
-            size="sm"
-            variant="ghost"
-          >
-            {expanded
-              ? m.home_see_less()
-              : m.home_see_all_count({ count: actions.length })}
           </Button>
         </div>
       ) : null}

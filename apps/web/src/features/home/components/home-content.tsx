@@ -1,6 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useId, useState } from "react";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
+import { capitalize } from "@/lib/format";
+import { formatDate } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "../api";
 import { useFocusAfterLastAction } from "../hooks/use-focus-after-last-action";
@@ -9,6 +13,7 @@ import { onlyMomentStrip } from "../lib/milestones";
 import { momentMilestone } from "../lib/moment";
 import { ActionList } from "./action-list";
 import { AllClear } from "./all-clear";
+import { ChipsRow } from "./chips-row";
 import { HomeEmpty } from "./home-empty";
 import { LOWER_COLUMN, LOWER_WITH_SIDE } from "./home-grid";
 import { Milestones } from "./milestones";
@@ -32,6 +37,10 @@ const SIDE_COLUMN_EMPTY = "lateral:has-[>:empty]:block";
  */
 export function HomeContent() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
+  const locale = getLocale();
+  const listId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const toggle = () => setExpanded((value) => !value);
   const summaryRef = useFocusAfterLastAction(home.actions.length);
   const layout = homeLayout(home);
   const lower = layout.hasContract || layout.compactGuide;
@@ -49,11 +58,16 @@ export function HomeContent() {
         // Takes the focus of the last action (useFocusAfterLastAction). The
         // ring keeps 4 px off the text, in the page color; the sticky top bar
         // (~56 px) would cover it on a phone.
-        className="-mt-2 scroll-mt-16 rounded-control text-ink-muted text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:-mt-3 md:scroll-mt-4 md:focus-visible:ring-offset-surface"
+        className="-mt-2 scroll-mt-16 rounded-control text-ink-muted text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:-mt-3 md:scroll-mt-4 md:text-[14px] md:focus-visible:ring-offset-surface"
         ref={summaryRef}
         tabIndex={-1}
       >
-        {homeSubtitle(home, layout, getLocale())}
+        <span className="max-md:hidden">
+          {m.home_date_lead({
+            date: capitalize(formatDate(home.today, locale, "long")),
+          })}{" "}
+        </span>
+        {homeSubtitle(home, layout, locale)}
       </p>
       {layout.heroGuide ? (
         <OnboardingGuide
@@ -63,14 +77,30 @@ export function HomeContent() {
         />
       ) : null}
       {layout.showChips ? (
-        <TotalsChips
-          pendingCount={home.actions.length}
-          toPayCents={home.upcoming.toPayCents}
-          toReceiveCents={home.upcoming.toReceiveCents}
+        <ChipsRow
+          chips={
+            <TotalsChips
+              overdueToPayCents={home.overdue.toPayCents}
+              overdueToReceiveCents={home.overdue.toReceiveCents}
+              pendingCount={home.actions.length}
+              toPayCents={home.upcoming.toPayCents}
+              toReceiveCents={home.upcoming.toReceiveCents}
+            />
+          }
+          count={home.actions.length}
+          expanded={expanded}
+          listId={listId}
+          onToggle={toggle}
         />
       ) : null}
       {home.actions.length > 0 ? (
-        <ActionList actions={home.actions} today={home.today} />
+        <ActionList
+          actions={home.actions}
+          expanded={expanded}
+          listId={listId}
+          onToggle={toggle}
+          today={home.today}
+        />
       ) : null}
       {layout.allClear ? (
         <AllClear

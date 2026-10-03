@@ -54,6 +54,8 @@ describe("seções do home", () => {
   it("chips: pendências em limão e totais dos próximos 30 dias", () => {
     renderWithProviders(
       <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
         pendingCount={4}
         toPayCents={215_000}
         toReceiveCents={510_000}
@@ -65,20 +67,30 @@ describe("seções do home", () => {
     expect(chips.getByText("R$ 5.100,00")).toBeVisible();
   });
 
-  it("chips: uma pendência no singular, com a borda dos vizinhos; tudo zerado não mostra nada", () => {
+  it("chips: uma pendência no singular, em limão preenchido; tudo zerado não mostra nada", () => {
     const { container } = renderWithProviders(
-      <TotalsChips pendingCount={0} toPayCents={0} toReceiveCents={0} />
+      <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
+        pendingCount={0}
+        toPayCents={0}
+        toReceiveCents={0}
+      />
     );
     expect(container).toBeEmptyDOMElement();
     renderWithProviders(
-      <TotalsChips pendingCount={1} toPayCents={0} toReceiveCents={0} />
+      <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
+        pendingCount={1}
+        toPayCents={0}
+        toReceiveCents={0}
+      />
     );
     const chips = within(screen.getByRole("list", { name: "Resumo" }));
-    // Same 1 px border as the outlined chips, so all of them share one height.
-    expect(chips.getByRole("listitem")).toHaveClass(
-      "border",
-      "border-highlight"
-    );
+    // Filled, not outlined (mockup 13): the pending chip is lime with no border.
+    expect(chips.getByRole("listitem")).toHaveClass("bg-highlight");
+    expect(chips.getByRole("listitem")).not.toHaveClass("border");
     expect(chips.getByText("pendência")).toBeVisible();
   });
 

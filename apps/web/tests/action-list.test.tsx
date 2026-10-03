@@ -1,9 +1,10 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { MouseEventHandler, ReactNode } from "react";
+import { type MouseEventHandler, type ReactNode, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
+import { SeeAllButton } from "@/features/home/components/chips-row";
 import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
 import type { Home, HomeAction } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
@@ -91,9 +92,32 @@ function makeClient(actions: HomeAction[]) {
   return client;
 }
 
+/** The list as the page mounts it: "Ver todas (N)" lives on the chips row and shares the state. */
+function Actions({ actions }: { actions: HomeAction[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const onToggle = () => setExpanded((value) => !value);
+  return (
+    <>
+      <SeeAllButton
+        count={actions.length}
+        expanded={expanded}
+        listId="acoes"
+        onToggle={onToggle}
+      />
+      <ActionList
+        actions={actions}
+        expanded={expanded}
+        listId="acoes"
+        onToggle={onToggle}
+        today={TODAY}
+      />
+    </>
+  );
+}
+
 /** Actions as a static prop: the card under the finger never leaves the screen. */
 function renderList(actions: HomeAction[] = [installmentAction()]) {
-  return renderWithProviders(<ActionList actions={actions} today={TODAY} />, {
+  return renderWithProviders(<Actions actions={actions} />, {
     client: makeClient(actions),
   });
 }
@@ -104,7 +128,7 @@ function LiveList() {
     queryKey: queryKeys.home,
     queryFn: () => new Promise<Home>(() => undefined),
   });
-  return data ? <ActionList actions={data.actions} today={TODAY} /> : null;
+  return data ? <Actions actions={data.actions} /> : null;
 }
 
 function renderLive(actions: HomeAction[]) {

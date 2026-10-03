@@ -40,6 +40,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 
 const GREETING = /^(Bom dia|Boa tarde|Boa noite), Maria$/;
+const DATE_LEAD = /Sexta-feira, 2 de outubro ·/;
+const TWO_THINGS = /2 coisas pedem sua atenção/;
 
 const NOTIFICATIONS_FAILED = {
   data: null,
@@ -173,6 +175,25 @@ describe("HomePage", () => {
     const shortcut = screen.getByRole("link", { name: "Novo contrato" });
     expect(shortcut).toHaveAttribute("href", "/contracts/new");
     expect(shortcut).toHaveClass("hidden", "md:inline-flex");
+  });
+
+  it("cabeçalho: saudação 32/700 e, no desktop, a data por extenso antes do resumo", async () => {
+    // TODAY (home-fixtures) is 2026-10-02, a Friday.
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2", sequence: 8 }),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    expect(
+      screen.getByRole("heading", { level: 1, name: GREETING })
+    ).toHaveClass("md:text-[32px]", "font-bold");
+    expect(await screen.findByText(DATE_LEAD)).toHaveClass("max-md:hidden");
+    expect(screen.getByText(TWO_THINGS)).toBeVisible();
   });
 
   it("tela larga: o conteúdo para em 1840 px, com respiro de 24 a 32 px, e a parte de baixo cresce por colunas", async () => {
