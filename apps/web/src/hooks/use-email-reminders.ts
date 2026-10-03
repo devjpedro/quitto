@@ -31,6 +31,10 @@ export function useUpdateEmailRemindersMutation() {
         optIn ? FEEDBACK.emailRemindersOn : FEEDBACK.emailRemindersOff
       );
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.me }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.me });
+      // The guide's reminders step lives in the home.
+      qc.invalidateQueries({ queryKey: queryKeys.home });
+    },
   });
 }

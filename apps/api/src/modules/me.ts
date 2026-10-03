@@ -1,10 +1,10 @@
 import { isLocale, type Locale, parsePixKey } from "@quitto/shared";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { user as userTable } from "../db/schema";
 import { emailRemindersEnabled } from "../lib/email-reminders";
-import { ValidationError } from "../lib/errors";
+import { NotFoundError, ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
 // The union mirrors LOCALES from @quitto/shared.
@@ -105,4 +105,30 @@ export const meModule = new Elysia({ prefix: "/api" })
         locale: accountLocaleSchema,
       }),
     }
+  )
+  .post(
+    "/me/onboarding/dismiss",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      // The first dismissal wins: retries and other tabs keep the original time.
+      await db
+        .update(userTable)
+        .set({ onboardingDismissedAt: new Date() })
+        .where(
+          and(
+            eq(userTable.id, user.id),
+            isNull(userTable.onboardingDismissedAt)
+          )
+        );
+      const [row] = await db
+        .select({ dismissedAt: userTable.onboardingDismissedAt })
+        .from(userTable)
+        .where(eq(userTable.id, user.id))
+        .limit(1);
+      if (!row?.dismissedAt) {
+        throw new NotFoundError("Usuário não encontrado");
+      }
+      return { dismissedAt: row.dismissedAt.toISOString() };
+    },
+    { response: t.Object({ dismissedAt: t.String() }) }
   );

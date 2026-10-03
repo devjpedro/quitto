@@ -26,6 +26,8 @@ export const user = pgTable("user", {
     .default(false),
   // null = the user never chose a language; the browser decides until they do.
   locale: text("locale"),
+  // Set when the user dismisses the "Comece por aqui" checklist on the home.
+  onboardingDismissedAt: timestamp("onboarding_dismissed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -94,25 +96,29 @@ export const participantRoleEnum = pgEnum("participant_role", [
   "viewer",
 ]);
 
-export const contract = pgTable("contract", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  ownerId: text("owner_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  ownerRole: ownerRoleEnum("owner_role").notNull(),
-  totalAmountCents: integer("total_amount_cents").notNull(),
-  installmentsCount: integer("installments_count").notNull(),
-  monthlyAmountCents: integer("monthly_amount_cents"),
-  pixKey: text("pix_key"),
-  requiresConfirmation: boolean("requires_confirmation")
-    .notNull()
-    .default(false),
-  status: contractStatusEnum("status").notNull().default("active"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const contract = pgTable(
+  "contract",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    ownerRole: ownerRoleEnum("owner_role").notNull(),
+    totalAmountCents: integer("total_amount_cents").notNull(),
+    installmentsCount: integer("installments_count").notNull(),
+    monthlyAmountCents: integer("monthly_amount_cents"),
+    pixKey: text("pix_key"),
+    requiresConfirmation: boolean("requires_confirmation")
+      .notNull()
+      .default(false),
+    status: contractStatusEnum("status").notNull().default("active"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [index("contract_owner_id_idx").on(table.ownerId)]
+);
 
 export const installment = pgTable(
   "installment",
@@ -214,7 +220,10 @@ export const invite = pgTable(
     declinedAt: timestamp("declined_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("invite_token_idx").on(table.token)]
+  (table) => [
+    index("invite_token_idx").on(table.token),
+    index("invite_email_idx").on(table.email),
+  ]
 );
 
 export const notification = pgTable(

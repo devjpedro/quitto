@@ -134,7 +134,17 @@ describe.if(configured)("confirm upload (sem confirmação)", () => {
     const cId = await createContract(cookie, false);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await uploadProof(cookie, iId);
-    expect((await res.json()).status).toBe("paid");
+    const body = await res.json();
+    expect(body).toMatchObject({
+      id: iId,
+      contractId: cId,
+      sequence: 1,
+      amountCents: 1000,
+      dueDate: "2026-07-10",
+      status: "paid",
+      confirmedAt: null,
+    });
+    expect(typeof body.paidAt).toBe("string");
   });
 });
 

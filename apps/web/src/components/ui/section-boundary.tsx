@@ -1,8 +1,9 @@
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
-import { type ReactNode, Suspense } from "react";
+import { type ReactNode, Suspense, useRef } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
+import { isTimeoutError } from "@/lib/with-timeout";
 import { m } from "@/paraglide/messages.js";
 
 const SLOW_AFTER_MS = 3000;
@@ -27,13 +28,21 @@ function SlowFallback({
   );
 }
 
-function SectionError({ onRetry }: { onRetry: () => void }) {
+function SectionError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
   return (
     <div
       className="flex flex-wrap items-center gap-3 rounded-card border border-line p-4"
       role="alert"
     >
-      <p className="text-ink-muted text-sm">{m.section_error()}</p>
+      <p className="text-ink-muted text-sm">
+        {isTimeoutError(error) ? m.section_timeout() : m.section_error()}
+      </p>
       <Button onClick={onRetry} size="sm" variant="secondary">
         {m.section_retry()}
       </Button>
@@ -42,9 +51,10 @@ function SectionError({ onRetry }: { onRetry: () => void }) {
 }
 
 /**
- * One loading/error unit of a page: the shell never blocks on data. Shows
- * the section's own skeleton, a notice when the API is slow (cold start),
- * and an inline retry on failure.
+ * One loading/error unit of a page: the shell never blocks on data. Shows the
+ * section's own skeleton, a notice when the API is slow (cold start), and an
+ * inline "Try again" when the request fails or times out. After a retry the
+ * focus moves to the section, since the button that had it is gone.
  */
 export function SectionBoundary({
   children,
@@ -55,24 +65,36 @@ export function SectionBoundary({
   fallback: ReactNode;
   slowAfterMs?: number;
 }) {
+  const regionRef = useRef<HTMLDivElement>(null);
   return (
-    <QueryErrorResetBoundary>
-      {({ reset }) => (
-        <ErrorBoundary
-          fallbackRender={({ resetErrorBoundary }) => (
-            <SectionError onRetry={resetErrorBoundary} />
-          )}
-          onReset={reset}
-        >
-          <Suspense
-            fallback={
-              <SlowFallback slowAfterMs={slowAfterMs}>{fallback}</SlowFallback>
-            }
+    <div
+      className="rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      ref={regionRef}
+      tabIndex={-1}
+    >
+      <QueryErrorResetBoundary>
+        {({ reset }) => (
+          <ErrorBoundary
+            fallbackRender={({ error, resetErrorBoundary }) => (
+              <SectionError error={error} onRetry={resetErrorBoundary} />
+            )}
+            onReset={() => {
+              reset();
+              regionRef.current?.focus();
+            }}
           >
-            {children}
-          </Suspense>
-        </ErrorBoundary>
-      )}
-    </QueryErrorResetBoundary>
+            <Suspense
+              fallback={
+                <SlowFallback slowAfterMs={slowAfterMs}>
+                  {fallback}
+                </SlowFallback>
+              }
+            >
+              {children}
+            </Suspense>
+          </ErrorBoundary>
+        )}
+      </QueryErrorResetBoundary>
+    </div>
   );
 }

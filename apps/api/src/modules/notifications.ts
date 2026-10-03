@@ -1,7 +1,8 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { notification } from "../db/schema";
+import { contract, installment, notification } from "../db/schema";
+import { visibleNotificationsWhere } from "../lib/contract-visibility";
 import { NotFoundError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
@@ -13,9 +14,22 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
     async ({ request }) => {
       const { user } = await requireAuth(request.headers);
       const rows = await db
-        .select()
+        .select({
+          id: notification.id,
+          type: notification.type,
+          contractId: notification.contractId,
+          installmentId: notification.installmentId,
+          metadata: notification.metadata,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt,
+          contractTitle: contract.title,
+          installmentsCount: contract.installmentsCount,
+          installmentSequence: installment.sequence,
+        })
         .from(notification)
-        .where(eq(notification.userId, user.id))
+        .innerJoin(contract, eq(notification.contractId, contract.id))
+        .leftJoin(installment, eq(notification.installmentId, installment.id))
+        .where(visibleNotificationsWhere(user.id))
         .orderBy(desc(notification.createdAt))
         .limit(LIST_LIMIT);
       return rows.map((r) => ({
@@ -26,6 +40,9 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
         metadata: r.metadata as Record<string, unknown> | null,
         readAt: r.readAt ? r.readAt.toISOString() : null,
         createdAt: r.createdAt.toISOString(),
+        contractTitle: r.contractTitle,
+        installmentsCount: r.installmentsCount,
+        installmentSequence: r.installmentSequence ?? null,
       }));
     },
     {
@@ -38,6 +55,9 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
           metadata: t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
           readAt: t.Union([t.String(), t.Null()]),
           createdAt: t.String(),
+          contractTitle: t.String(),
+          installmentsCount: t.Integer(),
+          installmentSequence: t.Union([t.Integer(), t.Null()]),
         })
       ),
     }
@@ -50,7 +70,7 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
         .select({ value: count() })
         .from(notification)
         .where(
-          and(eq(notification.userId, user.id), isNull(notification.readAt))
+          and(visibleNotificationsWhere(user.id), isNull(notification.readAt))
         );
       return { count: row?.value ?? 0 };
     },
@@ -64,7 +84,7 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
         .update(notification)
         .set({ readAt: new Date() })
         .where(
-          and(eq(notification.userId, user.id), isNull(notification.readAt))
+          and(visibleNotificationsWhere(user.id), isNull(notification.readAt))
         );
       return { ok: true as const };
     },

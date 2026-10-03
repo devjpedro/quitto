@@ -86,4 +86,26 @@ describe("resolveSessionSSR", () => {
     });
     expect((await resolveSessionSSR(d)).status).toBe("authed");
   });
+
+  it("aborta a ida ao /api/me quando estoura o tempo", async () => {
+    let received: AbortSignal | undefined;
+    const d = deps({
+      fetchMe: vi.fn((signal: AbortSignal) => {
+        received = signal;
+        return new Promise<Response>(() => undefined);
+      }),
+    });
+    expect(await resolveSessionSSR(d)).toEqual({ status: "unknown" });
+    expect(received?.aborted).toBe(true);
+  });
+
+  it("limpa o timer quando o /api/me responde antes", async () => {
+    vi.useFakeTimers();
+    try {
+      expect((await resolveSessionSSR(deps())).status).toBe("authed");
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

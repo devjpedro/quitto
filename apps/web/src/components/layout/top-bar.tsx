@@ -1,22 +1,21 @@
 import { Bell, MagnifyingGlass } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
 import { IconButton } from "@/components/ui/icon-button";
-import type { SessionIdentity } from "@/lib/session-resolver";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
+import type { ShellProps } from "./app-frame";
+import { notificationsLabel } from "./notifications-label";
+import { notificationsTrigger } from "./notifications-trigger";
 import { Wordmark } from "./wordmark";
 
 export function TopBar({
   identity,
-  unreadCount,
+  notificationsOpen,
+  onOpenNotifications,
   onOpenSearch,
-}: {
-  identity: SessionIdentity | null;
-  onOpenSearch: () => void;
-  unreadCount: number;
-}) {
+  unreadCount,
+}: ShellProps) {
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between bg-surface-sunken/90 px-4 py-1.5 backdrop-blur md:hidden">
+    <header className="sticky top-0 z-30 flex items-center justify-between bg-surface-sunken/90 px-4 pt-[calc(0.375rem+env(safe-area-inset-top))] pb-1.5 backdrop-blur md:hidden">
       <Wordmark />
       <div className="flex items-center gap-0.5">
         <IconButton
@@ -25,17 +24,15 @@ export function TopBar({
           onClick={onOpenSearch}
         />
         <IconButton
-          asChild
+          aria-expanded={notificationsOpen}
+          aria-haspopup="dialog"
           badge={unreadCount}
           icon={Bell}
-          label={
-            unreadCount > 0
-              ? m.nav_notifications_unread({ count: unreadCount })
-              : m.nav_notifications()
-          }
-        >
-          <Link to="/notifications" />
-        </IconButton>
+          label={notificationsLabel(unreadCount)}
+          onClick={onOpenNotifications}
+          weight={notificationsOpen ? "fill" : "regular"}
+          {...notificationsTrigger("top-bar")}
+        />
         <AccountMenu identity={identity} variant="avatar" />
       </div>
     </header>

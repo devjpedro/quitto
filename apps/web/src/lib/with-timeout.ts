@@ -23,3 +23,11 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     );
   });
 }
+
+/**
+ * By name, so any error called TimeoutError counts. One that timed out in the
+ * SSR reaches the browser rebuilt by timeoutErrorAdapter (src/start.ts).
+ */
+export function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.name === "TimeoutError";
+}

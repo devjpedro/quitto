@@ -7,7 +7,7 @@ import {
   type ScheduleRow,
   todayISO,
 } from "@quitto/shared";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
@@ -18,6 +18,7 @@ import {
   resolveRecebedor,
 } from "../lib/contract-access";
 import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
+import { visibleContractsWhere } from "../lib/contract-visibility";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
@@ -139,20 +140,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     async ({ request }) => {
       const { user } = await requireAuth(request.headers);
 
-      const linked = await db
-        .select({ contractId: participant.contractId })
-        .from(participant)
-        .where(eq(participant.linkedUserId, user.id));
-      const linkedIds = linked.map((l) => l.contractId);
-
       const rows = await db
         .select()
         .from(contract)
-        .where(
-          linkedIds.length > 0
-            ? or(eq(contract.ownerId, user.id), inArray(contract.id, linkedIds))
-            : eq(contract.ownerId, user.id)
-        );
+        .where(visibleContractsWhere(user.id));
 
       if (rows.length === 0) {
         return [];

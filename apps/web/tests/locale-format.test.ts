@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   daysBetween,
   formatDate,
   formatMoney,
+  formatMonthName,
   formatRelativeDays,
+  formatRelativeTime,
   moneyParts,
   normalizeSpaces,
 } from "@/lib/locale-format";
@@ -118,5 +120,194 @@ describe("relative days", () => {
     expect(formatRelativeDays("2026-09-27", "2026-10-01", "en-US")).toBe(
       "4 days ago"
     );
+  });
+});
+
+describe("formatDate: presets curtos", () => {
+  it("dia e mês sem ano", () => {
+    expect(formatDate("2026-10-03", "pt-BR", "dayMonth")).toBe("03/10");
+    expect(formatDate("2026-10-03", "en-US", "dayMonth")).toBe("10/03");
+  });
+
+  it("dia da semana abreviado + dia e mês", () => {
+    expect(formatDate("2026-10-03", "pt-BR", "weekdayShort")).toBe(
+      "sáb., 03/10"
+    );
+    expect(formatDate("2026-10-03", "en-US", "weekdayShort")).toBe(
+      "Sat, 10/03"
+    );
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const now = Date.parse("2026-10-02T12:00:00Z");
+
+  it("horas, ontem e dias atrás", () => {
+    expect(formatRelativeTime("2026-10-02T10:00:00Z", now, "pt-BR")).toBe(
+      "há 2 h"
+    );
+    expect(formatRelativeTime("2026-10-01T12:00:00Z", now, "pt-BR")).toBe(
+      "ontem"
+    );
+    expect(formatRelativeTime("2026-09-29T12:00:00Z", now, "pt-BR")).toBe(
+      "há 3 dias"
+    );
+    expect(formatRelativeTime("2026-10-02T12:00:00Z", now, "pt-BR")).toBe(
+      "agora"
+    );
+  });
+
+  it("um aviso que chega com o relógio do cliente atrasado é 'agora', nunca 'em 5 s'", () => {
+    expect(formatRelativeTime("2026-10-02T12:00:05Z", now, "pt-BR")).toBe(
+      "agora"
+    );
+  });
+
+  it("no idioma pedido", () => {
+    expect(formatRelativeTime("2026-10-02T10:00:00Z", now, "en-US")).toBe(
+      "2 hr. ago"
+    );
+    expect(formatRelativeTime("2026-10-01T12:00:00Z", now, "en-US")).toBe(
+      "yesterday"
+    );
+  });
+
+  // São Paulo is UTC-3: 2026-10-03T02:00Z is 23:00 of Oct 2 there.
+  it("46 h atrás, mas ainda ontem no calendário de São Paulo, é 'ontem'", () => {
+    const lateTonight = Date.parse("2026-10-03T02:00:00Z");
+    const yesterdayAt1am = "2026-10-01T04:00:00Z";
+    expect(formatRelativeTime(yesterdayAt1am, lateTonight, "pt-BR")).toBe(
+      "ontem"
+    );
+    expect(formatRelativeTime(yesterdayAt1am, lateTonight, "en-US")).toBe(
+      "yesterday"
+    );
+  });
+
+  it("26 h atrás, cruzando duas meias-noites de São Paulo, é 'anteontem'", () => {
+    const earlyToday = Date.parse("2026-10-02T04:00:00Z");
+    const twoDaysAgoAt11pm = "2026-10-01T02:00:00Z";
+    expect(formatRelativeTime(twoDaysAgoAt11pm, earlyToday, "pt-BR")).toBe(
+      "anteontem"
+    );
+    expect(formatRelativeTime(twoDaysAgoAt11pm, earlyToday, "en-US")).toBe(
+      "2 days ago"
+    );
+  });
+
+  it("nunca chega ao valor da unidade seguinte ('há 60 min', 'há 24 h')", () => {
+    const ago = (seconds: number) =>
+      new Date(now - seconds * 1000).toISOString();
+    expect(formatRelativeTime(ago(59.6), now, "pt-BR")).toBe("há 59 seg.");
+    expect(formatRelativeTime(ago(59 * 60 + 40), now, "pt-BR")).toBe(
+      "há 59 min."
+    );
+    expect(formatRelativeTime(ago(23 * 3600 + 59 * 60), now, "pt-BR")).toBe(
+      "há 23 h"
+    );
+    expect(formatRelativeTime(ago(6.5 * 86_400), now, "pt-BR")).toBe(
+      "há 1 semana"
+    );
+  });
+
+  // Weeks, months and years are elapsed blocks, not calendar periods: they
+  // never use "semana passada" / "mês passado" / "ano passado". Amounts are
+  // truncated, with a month of 30.44 days (2_629_800 s).
+  it("semana, mês e ano dizem tempo decorrido, nunca 'semana/mês/ano passado'", () => {
+    // 13 days (Sat Sep 19, two calendar weeks back): trunc(1.86 wk) = 1.
+    expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 semana"
+    );
+    expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "en-US")).toBe(
+      "1 week ago"
+    );
+    // Aug 5 read on Oct 2 is 58 days: trunc(1.91 mo) = 1, so "há 1 mês".
+    expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 mês"
+    );
+    expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "en-US")).toBe(
+      "1 month ago"
+    );
+    // November 2024 is 699 days: trunc(1.91 yr) = 1.
+    expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 ano"
+    );
+    expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "en-US")).toBe(
+      "1 year ago"
+    );
+  });
+
+  // Mockup 10 writes weeks, months and years in full ("há 1 semana"); the
+  // smaller units stay short ("há 2 h", "2 hr. ago").
+  it("semana, mês e ano por extenso; horas e minutos curtos", () => {
+    // Sep 12 read on Oct 2 is 20 days: trunc(2.86 wk) = 2.
+    expect(formatRelativeTime("2026-09-12T12:00:00Z", now, "pt-BR")).toBe(
+      "há 2 semanas"
+    );
+    expect(formatRelativeTime("2026-09-12T12:00:00Z", now, "en-US")).toBe(
+      "2 weeks ago"
+    );
+    // Jun 2 read on Oct 2 is 122 days: trunc(4.01 mo) = 4.
+    expect(formatRelativeTime("2026-06-02T12:00:00Z", now, "pt-BR")).toBe(
+      "há 4 meses"
+    );
+    expect(formatRelativeTime("2026-10-02T11:30:00Z", now, "pt-BR")).toBe(
+      "há 30 min."
+    );
+    expect(formatRelativeTime("2026-10-02T11:30:00Z", now, "en-US")).toBe(
+      "30 min. ago"
+    );
+  });
+});
+
+describe("formatMonthName", () => {
+  it("nome do mês por idioma", () => {
+    expect(formatMonthName("2026-09", "pt-BR")).toBe("setembro");
+    expect(formatMonthName("2026-09", "en-US")).toBe("September");
+  });
+});
+
+describe("formatadores em cache", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // The first call (before the spy) creates the formatter for real: a
+  // formatter built under vi.spyOn lacks the Intl prototype in vitest 4.
+  it("não cria outro Intl.DateTimeFormat para o mesmo idioma e preset", () => {
+    formatDate("2026-10-02", "en-US", "medium");
+    const spy = vi.spyOn(Intl, "DateTimeFormat");
+    formatDate("2026-10-03", "en-US", "medium");
+    formatDate("2026-10-04", "en-US", "medium");
+    formatDate("2026-10-05", "en-US", "medium");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.RelativeTimeFormat para o mesmo idioma (dias)", () => {
+    formatRelativeDays("2026-10-02", "2026-10-02", "en-US");
+    const spy = vi.spyOn(Intl, "RelativeTimeFormat");
+    formatRelativeDays("2026-10-03", "2026-10-02", "en-US");
+    formatRelativeDays("2026-10-04", "2026-10-02", "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.DateTimeFormat para o nome do mês no mesmo idioma", () => {
+    formatMonthName("2026-09", "en-US");
+    const spy = vi.spyOn(Intl, "DateTimeFormat");
+    formatMonthName("2026-10", "en-US");
+    formatMonthName("2026-11", "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+
+  it("não cria outro Intl.RelativeTimeFormat a cada aviso da lista (tempo relativo)", () => {
+    const now = Date.parse("2026-10-02T12:00:00Z");
+    // Warms both formatters: hours read as elapsed time, days as calendar words.
+    formatRelativeTime("2026-10-02T10:00:00Z", now, "en-US");
+    formatRelativeTime("2026-10-01T12:00:00Z", now, "en-US");
+    const spy = vi.spyOn(Intl, "RelativeTimeFormat");
+    formatRelativeTime("2026-10-02T11:00:00Z", now, "en-US");
+    formatRelativeTime("2026-09-30T12:00:00Z", now, "en-US");
+    formatRelativeTime("2026-08-05T12:00:00Z", now, "en-US");
+    expect(spy).toHaveBeenCalledTimes(0);
   });
 });

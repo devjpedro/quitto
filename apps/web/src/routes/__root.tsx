@@ -6,11 +6,11 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Toaster } from "sonner";
 import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@fontsource-variable/bricolage-grotesque";
 import "../index.css";
+import { AppToaster } from "@/components/ui/app-toaster";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
 import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
@@ -31,7 +31,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1.0" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1.0, viewport-fit=cover",
+      },
       {
         name: "description",
         content: m.meta_description(),
@@ -73,7 +76,7 @@ function RootDocument() {
       </head>
       <body>
         <Outlet />
-        <Toaster position="top-right" richColors />
+        <AppToaster />
         <Scripts />
       </body>
     </html>

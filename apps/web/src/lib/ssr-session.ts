@@ -24,9 +24,10 @@ export const getSessionSSR = createServerFn({ method: "GET" }).handler(
     return resolveSessionSSR({
       hasSessionCookie: getSessionCookie(headers) !== null,
       readIdentityHint: async () => parseIdentityCookie(headers.get("cookie")),
-      fetchMe: () =>
+      fetchMe: (signal) =>
         fetch(`${API_URL}/api/me`, {
           headers: { cookie: headers.get("cookie") ?? "" },
+          signal,
         }),
       timeoutMs: SESSION_SSR_TIMEOUT_MS,
     });

@@ -8,6 +8,10 @@ export function useUpdatePixKeyMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (pixKey: string | null) => unwrap(api.api.me.patch({ pixKey })),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.me }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.me });
+      // The guide's Pix step and the receiver's Pix codes live in the home.
+      qc.invalidateQueries({ queryKey: queryKeys.home });
+    },
   });
 }

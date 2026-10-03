@@ -12,8 +12,12 @@ export const buttonVariants = cva(
         secondary:
           "border border-line bg-surface text-ink hover:bg-surface-sunken",
         ghost: "text-ink hover:bg-surface-sunken",
+        // Dark: light button with dark text on the green card, as in mockup 08.
+        // The dark:hover keeps the hover from falling back to the graphite one.
         onBrand:
-          "bg-surface text-ink hover:bg-surface/90 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface",
+          "bg-surface text-ink hover:bg-surface/90 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface dark:bg-ink dark:text-ink-inverse dark:hover:bg-ink/90",
+        onBrandOutline:
+          "border border-on-brand/40 text-on-brand hover:bg-on-brand/10 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface",
         danger: "bg-danger text-ink-inverse hover:bg-danger/90",
       },
       size: {

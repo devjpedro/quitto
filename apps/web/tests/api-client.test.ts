@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, unwrap } from "../src/lib/api-client";
+import { TimeoutError } from "../src/lib/with-timeout";
 
 describe("unwrap", () => {
   it("returns data when there is no error", async () => {
@@ -36,5 +37,14 @@ describe("unwrap", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.httpStatus).toBe(500);
     expect(err.code).toBe("UNKNOWN");
+  });
+
+  it("rethrows the TimeoutError that Eden wraps as a 503", async () => {
+    const timeout = new TimeoutError();
+    await expect(
+      unwrap(
+        Promise.resolve({ data: null, error: { status: 503, value: timeout } })
+      )
+    ).rejects.toBe(timeout);
   });
 });

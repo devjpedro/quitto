@@ -1,13 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { seedContract, signup, waitForHydrated } from "../fixtures";
+import {
+  brDaysFromToday,
+  seedContract,
+  signup,
+  waitForHydrated,
+} from "../fixtures";
 
-const TO_PAY_VALUE = /3\.000,00|R\$/;
 const MONTHLY_SUMMARY_LINE = /\/mês · 12 meses/;
 const MONTHLY_DETAIL_CHIP = /800,00\/mês · 12 meses/;
 
-test("criar contrato (auto) aparece na lista e reflete no dashboard", async ({
-  page,
-}) => {
+test("criar contrato (auto) aparece na lista e no Agora", async ({ page }) => {
   await signup(page);
   await page.goto("/contracts/new");
   await waitForHydrated(page);
@@ -19,7 +21,7 @@ test("criar contrato (auto) aparece na lista e reflete no dashboard", async ({
   // Passo 2 — auto (firstDueDate é obrigatório)
   await page.locator("#total").fill("3.000,00");
   await page.locator("#count").fill("3");
-  await page.locator("#first").fill("10/09/2026");
+  await page.locator("#first").fill(brDaysFromToday(5));
   await page.getByRole("button", { name: "Criar contrato" }).click();
 
   // detalhe do contrato
@@ -31,9 +33,11 @@ test("criar contrato (auto) aparece na lista e reflete no dashboard", async ({
   await page.goto("/contracts");
   await expect(page.getByText("Aluguel E2E")).toBeVisible();
 
-  // reflete no dashboard
+  // aparece no Agora: a 1ª parcela vence em 5 dias
   await page.goto("/");
-  await expect(page.getByTestId("stat-to-pay")).toContainText(TO_PAY_VALUE);
+  await expect(
+    page.getByRole("article", { name: "Aluguel E2E · 1/3" })
+  ).toBeVisible();
 });
 
 test("wizard bloqueia título vazio", async ({ page }) => {
@@ -69,7 +73,7 @@ test("criar contrato mensal gera parcelas iguais e mostra a intenção", async (
   await page.getByRole("button", { name: "Mensal" }).click();
   await page.locator("#monthly-amount").fill("800,00");
   await page.locator("#months").fill("12");
-  await page.locator("#monthly-first").fill("10/09/2026");
+  await page.locator("#monthly-first").fill(brDaysFromToday(10));
 
   // resumo mostra a intenção antes de criar
   await expect(page.getByText(MONTHLY_SUMMARY_LINE)).toBeVisible();

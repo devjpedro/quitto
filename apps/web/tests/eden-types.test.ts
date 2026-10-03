@@ -74,12 +74,19 @@ it("infers the Fase-3a installment endpoints cross-package (eden#215 mitigation)
     objectKey: string;
   }>();
 
-  // POST confirm — response is { status }.
+  // POST confirm — response is the updated installment (Fase 1, Task 5).
   const confirm = api.api.installments({ installmentId: "i" }).confirm.post;
   type ConfirmResponse = Awaited<ReturnType<typeof confirm>>["data"];
   expectTypeOf<ConfirmResponse>().not.toBeAny();
   expectTypeOf<NonNullable<ConfirmResponse>>().toEqualTypeOf<{
+    id: string;
+    contractId: string;
+    sequence: number;
+    amountCents: number;
+    dueDate: string;
     status: string;
+    paidAt: string | null;
+    confirmedAt: string | null;
   }>();
 });
 
@@ -153,4 +160,23 @@ it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mi
   expectTypeOf<MineItem["contractTitle"]>().toEqualTypeOf<string>();
   expectTypeOf<MineItem["role"]>().toEqualTypeOf<string>();
   expectTypeOf<MineItem["expiresAt"]>().toEqualTypeOf<string>();
+});
+
+it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
+  const api = treaty<App>("http://localhost:3000");
+  type HomeData = Awaited<ReturnType<typeof api.api.home.get>>["data"];
+  expectTypeOf<HomeData>().not.toBeAny();
+  expectTypeOf<NonNullable<HomeData>["unreadCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<
+    NonNullable<HomeData>["activeContractsCount"]
+  >().toEqualTypeOf<number>();
+  expectTypeOf<
+    NonNullable<HomeData>["actions"][number]["kind"]
+  >().toEqualTypeOf<
+    "overdue" | "review" | "disputed" | "due_soon" | "invite"
+  >();
+  expectTypeOf<NonNullable<HomeData>["milestones"]["settled"]>().toEqualTypeOf<{
+    paidCents: number;
+    receivedCents: number;
+  }>();
 });

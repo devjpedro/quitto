@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 
@@ -20,6 +21,60 @@ function renderSheet(onOpenChange = vi.fn()) {
     </ResponsiveSheet>
   );
   return onOpenChange;
+}
+
+/** Opened by state, as the bell opens the notifications panel: no Dialog.Trigger. */
+function SheetWithOpener() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} type="button">
+        Abrir
+      </button>
+      <ResponsiveSheet onOpenChange={setOpen} open={open} title="Parcela">
+        <button type="button">Enviar comprovante</button>
+      </ResponsiveSheet>
+    </>
+  );
+}
+
+/**
+ * Opened by a launcher that leaves the page, as the ⌘K palette opens the
+ * notifications panel and closes. `leaves` says when: as the sheet opens
+ * (nothing has the focus at open) or right after (it had it, then is gone).
+ */
+function SheetFromLauncher({ leaves }: { leaves: "at-open" | "after-open" }) {
+  const bell = useRef<HTMLButtonElement>(null);
+  const [launcher, setLauncher] = useState(true);
+  const [open, setOpen] = useState(false);
+  function launch() {
+    setOpen(true);
+    if (leaves === "at-open") {
+      setLauncher(false);
+    } else {
+      setTimeout(() => setLauncher(false), 0);
+    }
+  }
+  return (
+    <>
+      <button ref={bell} type="button">
+        Sino
+      </button>
+      {launcher ? (
+        <button onClick={launch} type="button">
+          Paleta: Notificações
+        </button>
+      ) : null}
+      <ResponsiveSheet
+        fallbackFocus={() => bell.current}
+        onOpenChange={setOpen}
+        open={open}
+        title="Notificações"
+      >
+        <button type="button">Abrir aviso</button>
+      </ResponsiveSheet>
+    </>
+  );
 }
 
 describe("ResponsiveSheet", () => {
@@ -47,7 +102,13 @@ describe("ResponsiveSheet", () => {
         <p>x</p>
       </ResponsiveSheet>
     );
-    expect(screen.getByRole("dialog")).toHaveAttribute("data-variant", "side");
+    const side = screen.getByRole("dialog");
+    expect(side).toHaveAttribute("data-variant", "side");
+    // viewport-fit=cover: a phone on its side (md+) has the notch at a side.
+    expect(side).toHaveClass(
+      "right-[max(0.75rem,env(safe-area-inset-right))]",
+      "bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
+    );
     unmount();
     window.innerWidth = 390;
     render(
@@ -60,6 +121,52 @@ describe("ResponsiveSheet", () => {
       "bottom"
     );
   });
+
+  it("gives the focus back to the button that opened it, on Escape and on Close", async () => {
+    render(<SheetWithOpener />);
+    const opener = screen.getByRole("button", { name: "Abrir" });
+    await userEvent.click(opener);
+    expect(
+      screen.getByRole("button", { name: "Enviar comprovante" })
+    ).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(opener).toHaveFocus();
+
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(opener).toHaveFocus();
+  });
+
+  for (const leaves of ["at-open", "after-open"] as const) {
+    it(`when what opened it left the page (${leaves}), the focus goes to the fallback, not to <body>`, async () => {
+      render(<SheetFromLauncher leaves={leaves} />);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Paleta: Notificações" })
+      );
+      expect(
+        await screen.findByRole("button", { name: "Abrir aviso" })
+      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("button", {
+            hidden: true,
+            name: "Paleta: Notificações",
+          })
+        ).toBeNull()
+      );
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      );
+      expect(screen.getByRole("button", { name: "Sino" })).toHaveFocus();
+    });
+  }
 
   it("closes from the Close button", async () => {
     const onOpenChange = renderSheet();

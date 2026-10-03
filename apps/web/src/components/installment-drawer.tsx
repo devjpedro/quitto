@@ -295,6 +295,8 @@ export function InstallmentDrawer({
       open={open}
     >
       <SheetContent
+        // No description to point at (Radix's documented opt-out).
+        aria-describedby={undefined}
         onCloseAutoFocus={(e) => {
           // Restore focus to the row that opened the drawer instead of letting
           // it fall to <body>.

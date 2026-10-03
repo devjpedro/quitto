@@ -1,11 +1,5 @@
-import {
-  buildPixBrCode,
-  isPaidStatus,
-  NOTIFICATION_TYPE,
-  normalizeMerchantName,
-  parsePixKey,
-} from "@quitto/shared";
-import { desc, eq } from "drizzle-orm";
+import { isPaidStatus, NOTIFICATION_TYPE } from "@quitto/shared";
+import { and, desc, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import {
@@ -18,6 +12,7 @@ import {
 import { recordEvent } from "../lib/audit";
 import { getCapabilities, resolveRecebedor } from "../lib/contract-access";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { installmentPix } from "../lib/installment-pix";
 import { nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
 import { requireAuth } from "../lib/session";
@@ -32,6 +27,59 @@ const proofMimeSchema = t.Union([
   t.Literal("image/jpeg"),
   t.Literal("image/png"),
 ]);
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type InstallmentRow = typeof installment.$inferSelect;
+
+/** Every installment mutation answers with the updated row, so the web can setQueryData. */
+const installmentEntitySchema = t.Object({
+  id: t.String(),
+  contractId: t.String(),
+  sequence: t.Integer(),
+  amountCents: t.Integer(),
+  dueDate: t.String(),
+  status: t.String(),
+  paidAt: t.Union([t.String(), t.Null()]),
+  confirmedAt: t.Union([t.String(), t.Null()]),
+});
+
+function toInstallmentEntity(row: InstallmentRow) {
+  return {
+    id: row.id,
+    contractId: row.contractId,
+    sequence: row.sequence,
+    amountCents: row.amountCents,
+    dueDate: row.dueDate,
+    status: row.status,
+    paidAt: row.paidAt?.toISOString() ?? null,
+    confirmedAt: row.confirmedAt?.toISOString() ?? null,
+  };
+}
+
+/**
+ * Moves the installment out of the status it was read in. If someone else moved
+ * it first (a double tap, the other party), no row matches: it throws 422 inside
+ * the transaction, which rolls back before any event or notification is written.
+ */
+async function transitionInstallment(
+  tx: Tx,
+  from: InstallmentRow,
+  values: Partial<typeof installment.$inferInsert>
+): Promise<InstallmentRow> {
+  const [row] = await tx
+    .update(installment)
+    .set(values)
+    .where(
+      and(eq(installment.id, from.id), eq(installment.status, from.status))
+    )
+    .returning();
+  if (!row) {
+    throw new ValidationError(
+      "A parcela mudou enquanto você agia; atualize e tente de novo"
+    );
+  }
+  return row;
+}
 
 /** Loads installment + parent contract and the caller's capabilities. Throws 404 if no access. */
 async function loadInstallmentForUser(userId: string, installmentId: string) {
@@ -121,7 +169,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         c.requiresConfirmation
       );
 
-      await db.transaction(async (tx) => {
+      const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
           installmentId: inst.id,
           objectKey: body.objectKey,
@@ -130,13 +178,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           sizeBytes,
           uploadedBy: user.id,
         });
-        await tx
-          .update(installment)
-          .set({
-            status: newStatus,
-            ...(newStatus === "paid" ? { paidAt: new Date() } : {}),
-          })
-          .where(eq(installment.id, inst.id));
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          ...(newStatus === "paid" ? { paidAt: new Date() } : {}),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -154,9 +199,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
             : NOTIFICATION_TYPE.installmentPaid,
           metadata: { fileName: body.fileName },
         });
+        return row;
       });
 
-      return { status: newStatus };
+      return toInstallmentEntity(updated);
     },
     {
       params: t.Object({ installmentId: t.String() }),
@@ -165,7 +211,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         fileName: t.String({ minLength: 1, maxLength: 200 }),
         mimeType: proofMimeSchema,
       }),
-      response: t.Object({ status: t.String() }),
+      response: installmentEntitySchema,
     }
   )
   .post(
@@ -185,15 +231,12 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         "confirm",
         c.requiresConfirmation
       );
-      await db.transaction(async (tx) => {
-        await tx
-          .update(installment)
-          .set({
-            status: newStatus,
-            confirmedAt: new Date(),
-            paidAt: new Date(),
-          })
-          .where(eq(installment.id, inst.id));
+      const updated = await db.transaction(async (tx) => {
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          confirmedAt: new Date(),
+          paidAt: new Date(),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -207,12 +250,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           target: "payer",
           type: NOTIFICATION_TYPE.paymentConfirmed,
         });
+        return row;
       });
-      return { status: newStatus };
+      return toInstallmentEntity(updated);
     },
     {
       params: t.Object({ installmentId: t.String() }),
-      response: t.Object({ status: t.String() }),
+      response: installmentEntitySchema,
     }
   )
   .post(
@@ -232,11 +276,10 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         "dispute",
         c.requiresConfirmation
       );
-      await db.transaction(async (tx) => {
-        await tx
-          .update(installment)
-          .set({ status: newStatus })
-          .where(eq(installment.id, inst.id));
+      const updated = await db.transaction(async (tx) => {
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -252,13 +295,14 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           type: NOTIFICATION_TYPE.paymentDisputed,
           metadata: body.reason ? { reason: body.reason } : null,
         });
+        return row;
       });
-      return { status: newStatus };
+      return toInstallmentEntity(updated);
     },
     {
       params: t.Object({ installmentId: t.String() }),
       body: t.Object({ reason: t.Optional(t.String({ maxLength: 500 })) }),
-      response: t.Object({ status: t.String() }),
+      response: installmentEntitySchema,
     }
   )
   .post(
@@ -278,11 +322,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         "mark_paid",
         c.requiresConfirmation
       );
-      await db.transaction(async (tx) => {
-        await tx
-          .update(installment)
-          .set({ status: newStatus, paidAt: new Date() })
-          .where(eq(installment.id, inst.id));
+      const updated = await db.transaction(async (tx) => {
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          paidAt: new Date(),
+        });
         await recordEvent(tx, {
           contractId: inst.contractId,
           installmentId: inst.id,
@@ -296,12 +340,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           target: "approver",
           type: NOTIFICATION_TYPE.installmentPaid,
         });
+        return row;
       });
-      return { status: newStatus };
+      return toInstallmentEntity(updated);
     },
     {
       params: t.Object({ installmentId: t.String() }),
-      response: t.Object({ status: t.String() }),
+      response: installmentEntitySchema,
     }
   )
   .get(
@@ -349,26 +394,13 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       } | null = null;
       if (!isPaidStatus(inst.status)) {
         const recebedor = await resolveRecebedor(c);
-        const resolvedKey = c.pixKey ?? recebedor.profileKey ?? null;
-        if (resolvedKey) {
-          try {
-            const { type } = parsePixKey(resolvedKey);
-            pix = {
-              copiaECola: buildPixBrCode({
-                key: resolvedKey,
-                amountCents: inst.amountCents,
-                merchantName: normalizeMerchantName(
-                  recebedor.displayName ?? ""
-                ),
-                merchantCity: "BRASIL",
-              }),
-              keyType: type,
-              payToName: recebedor.displayName ?? "",
-            };
-          } catch {
-            // chave armazenada inesperadamente inválida não deve derrubar o detalhe da parcela
-            pix = null;
-          }
+        const built = installmentPix(c.pixKey, recebedor, inst.amountCents);
+        if (built) {
+          pix = {
+            copiaECola: built.code,
+            keyType: built.keyType,
+            payToName: recebedor.displayName ?? "",
+          };
         }
       }
 

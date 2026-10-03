@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   // Ultracite 7.x ships its Biome preset as versioned configs under the
   // `ultracite/biome/*` export paths (there is no top-level "ultracite"
   // config in 7.x, unlike older versions). core = base preset,

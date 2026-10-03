@@ -52,10 +52,13 @@ export function EmptyState({
   action,
   preview,
   variant = "full",
+  iconTile = false,
 }: {
   action?: ReactNode;
   description: string;
   icon: Icon;
+  /** Compact only: the icon in a 32 px brand tile, like the rows it stands in for (mockup 10). */
+  iconTile?: boolean;
   preview?: ReactNode;
   title: string;
   variant?: "full" | "compact";
@@ -63,7 +66,16 @@ export function EmptyState({
   if (variant === "compact") {
     return (
       <div className="flex flex-col gap-1.5 rounded-card border border-line p-4">
-        <IconComponent aria-hidden="true" className="text-brand" size={22} />
+        {iconTile ? (
+          <span
+            aria-hidden="true"
+            className="mb-0.5 flex size-8 items-center justify-center rounded-control bg-brand-subtle text-brand"
+          >
+            <IconComponent size={17} />
+          </span>
+        ) : (
+          <IconComponent aria-hidden="true" className="text-brand" size={22} />
+        )}
         <h3 className="font-semibold text-ink text-sm">{title}</h3>
         <p className="text-ink-muted text-sm leading-relaxed">{description}</p>
         {action ? <div className="mt-1">{action}</div> : null}

@@ -12,6 +12,8 @@ const TONE: Record<
   danger: "bg-danger-subtle text-danger",
 };
 
+export type TagTone = keyof typeof TONE;
+
 export function Tag({
   tone = "neutral",
   className,
@@ -19,7 +21,7 @@ export function Tag({
 }: {
   children: ReactNode;
   className?: string;
-  tone?: keyof typeof TONE;
+  tone?: TagTone;
 }) {
   return (
     <span

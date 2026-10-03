@@ -55,6 +55,22 @@ describe("query error toasts", () => {
     expect(error).toHaveBeenCalledWith("x");
   });
 
+  it("does not toast a background refetch failure of a query that opts out", async () => {
+    error.mockClear();
+    const qc = makeQueryClient();
+    qc.setQueryData(["silent-refetch"], { id: 1 });
+    await qc
+      .fetchQuery({
+        queryKey: ["silent-refetch"],
+        queryFn: failing,
+        retry: false,
+        staleTime: 0,
+        meta: { silentRefetchError: true },
+      })
+      .catch(() => undefined);
+    expect(error).not.toHaveBeenCalled();
+  });
+
   it("never toasts a 401, even with data", async () => {
     error.mockClear();
     const qc = makeQueryClient();
