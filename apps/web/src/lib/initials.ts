@@ -1,4 +1,4 @@
-const WHITESPACE_RE = /\s+/;
+export const WHITESPACE_RE = /\s+/;
 
 /** "João Pedro Souza" → "JS"; empty → "?". */
 export function initials(name: string | undefined): string {

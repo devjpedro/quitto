@@ -11,4 +11,9 @@ describe("initials", () => {
     expect(initials(undefined)).toBe("?");
     expect(initials("   ")).toBe("?");
   });
+
+  it("keeps the accent and ignores double spaces and NBSP", () => {
+    expect(initials("Júlia  Nogueira")).toBe("JN");
+    expect(initials(`Érica${String.fromCharCode(160)}Silva`)).toBe("ÉS");
+  });
 });

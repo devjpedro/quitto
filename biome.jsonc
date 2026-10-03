@@ -56,6 +56,16 @@
       "linter": {
         "rules": { "suspicious": { "noBitwiseOperators": "off" } }
       }
+    },
+    {
+      // FNV-1a + o finalizador do murmur3 (a cor do avatar pelo nome, mockup 13)
+      // são definidos em XOR, multiplicação de 32 bits e deslocamento: não há
+      // forma idiomática sem operadores bitwise. Mesmo caso do CRC do PIX acima.
+      // Só o arquivo do hash: o teste não usa operador de bits.
+      "includes": ["apps/web/src/lib/avatar-color.ts"],
+      "linter": {
+        "rules": { "suspicious": { "noBitwiseOperators": "off" } }
+      }
     }
   ]
 }
