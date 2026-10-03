@@ -40,6 +40,26 @@ describe("Button", () => {
     expect(button).not.toHaveClass("focus-visible:ring-brand");
     expect(button).not.toHaveClass("focus-visible:ring-offset-surface");
   });
+
+  it("onBrand stays light on the green card in the dark theme (mockup 08), hover included", () => {
+    render(<Button variant="onBrand">Entrar</Button>);
+    expect(screen.getByRole("button", { name: "Entrar" })).toHaveClass(
+      "dark:bg-ink",
+      "dark:text-ink-inverse",
+      "dark:hover:bg-ink/90"
+    );
+  });
+
+  it("onBrandOutline swaps the focus ring too", () => {
+    render(<Button variant="onBrandOutline">Recusar</Button>);
+    const button = screen.getByRole("button", { name: "Recusar" });
+    expect(button).toHaveClass(
+      "focus-visible:ring-highlight",
+      "focus-visible:ring-offset-brand-surface"
+    );
+    expect(button).not.toHaveClass("focus-visible:ring-brand");
+    expect(button).not.toHaveClass("focus-visible:ring-offset-surface");
+  });
 });
 
 describe("IconButton", () => {

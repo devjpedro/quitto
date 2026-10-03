@@ -15,6 +15,14 @@
   --radius-card: 14px;
   --radius-control: 10px;
 
+  /*
+   * Desktop tiers (DIRECAO › Layout, mockup 12): the home's side column from
+   * 1440 px and five action cards per row from 1840 px. Tailwind's 2xl
+   * (96rem, 1536 px) is the four-card tier. They become lateral: and wide:.
+   */
+  --breakpoint-lateral: 90rem;
+  --breakpoint-wide: 115rem;
+
   --shadow-float:
     0 18px 40px -12px rgb(17 17 17 / 0.18), 0 4px 10px -4px rgb(17 17 17 / 0.08);
 }
