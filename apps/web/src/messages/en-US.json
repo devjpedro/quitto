@@ -4,6 +4,7 @@
   "skip_to_content": "Skip to content",
   "section_slow": "Connecting to the server…",
   "section_error": "We couldn't load this section.",
+  "section_timeout": "The server took too long to respond.",
   "section_retry": "Try again",
   "sheet_close": "Close",
   "nav_primary": "Main navigation",

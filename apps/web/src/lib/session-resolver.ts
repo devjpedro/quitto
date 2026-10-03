@@ -43,7 +43,7 @@ export function toIdentity(user: SessionIdentity): SessionIdentity {
  * API validates the session against the database on every request.
  */
 export async function resolveSessionSSR(deps: {
-  fetchMe: () => Promise<Response>;
+  fetchMe: (signal: AbortSignal) => Promise<Response>;
   hasSessionCookie: boolean;
   readIdentityHint: () => Promise<SessionIdentity | null>;
   timeoutMs: number;
@@ -55,11 +55,17 @@ export async function resolveSessionSSR(deps: {
   if (hint) {
     return { status: "authed", identity: hint, me: null };
   }
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<"timeout">((resolve) => {
-    setTimeout(() => resolve("timeout"), deps.timeoutMs);
+    timer = setTimeout(() => {
+      // Don't leave a hung request to a cold API running behind the response.
+      controller.abort();
+      resolve("timeout");
+    }, deps.timeoutMs);
   });
   try {
-    const res = await Promise.race([deps.fetchMe(), timeout]);
+    const res = await Promise.race([deps.fetchMe(controller.signal), timeout]);
     if (res === "timeout") {
       return { status: "unknown" };
     }
@@ -70,5 +76,7 @@ export async function resolveSessionSSR(deps: {
     return res.status === 401 ? { status: "anon" } : { status: "unknown" };
   } catch {
     return { status: "unknown" };
+  } finally {
+    clearTimeout(timer);
   }
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ApiError } from "./api-client";
 import { errorMessage } from "./error-message";
 import { queryKeys } from "./query-keys";
+import { isTimeoutError } from "./with-timeout";
 
 declare module "@tanstack/react-query" {
   interface Register {
@@ -22,6 +23,20 @@ function isUnauthorized(error: unknown): boolean {
 /** 401 is handled by the auth guard (redirect); don't toast it. */
 function shouldToast(error: unknown): boolean {
   return !isUnauthorized(error);
+}
+
+/**
+ * Retries a failed query once, but never a 401 (the session gate redirects)
+ * nor a timeout (the section shows "Try again" and the user decides).
+ */
+export function shouldRetryQuery(
+  failureCount: number,
+  error: unknown
+): boolean {
+  if (isTimeoutError(error) || isUnauthorized(error)) {
+    return false;
+  }
+  return failureCount < 1;
 }
 
 /** Dispara toast.success quando a mutation declara meta.successMessage. */
@@ -43,12 +58,17 @@ export function makeQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 60_000,
-        retry: 1,
+        retry: shouldRetryQuery,
         refetchOnWindowFocus: false,
         // Erro de dado (não-401) sobe pra ErrorBoundary → "Ops, algo deu errado"
         // (evita tela branca com dados client-fetched). 401 fica pro gate de sessão.
         throwOnError: (error) =>
           !(error instanceof ApiError && error.httpStatus === 401),
+      },
+      dehydrate: {
+        // A pending SSR query that times out reaches the browser as its error;
+        // redacted, it would be retried and shown as a generic failure.
+        shouldRedactErrors: (error) => !isTimeoutError(error),
       },
     },
     queryCache: new QueryCache({

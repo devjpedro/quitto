@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "@quitto/shared";
+import { isTimeoutError } from "./with-timeout";
 
 /** Typed client-side error mirroring the backend envelope (spec §8). */
 export class ApiError extends Error {
@@ -42,6 +43,11 @@ function isErrorBody(value: unknown): value is ApiErrorBody {
 export async function unwrap<T>(call: Promise<EdenResult<T>>): Promise<T> {
   const { data, error } = await call;
   if (error) {
+    // Eden turns a rejected fetch into { status: 503, value: <the thrown error> }:
+    // keep the timeout recognizable so the section can say what happened.
+    if (isTimeoutError(error.value)) {
+      throw error.value;
+    }
     const status = error.status ?? 500;
     if (isErrorBody(error.value)) {
       const body = error.value.error;

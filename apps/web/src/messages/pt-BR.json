@@ -4,6 +4,7 @@
   "skip_to_content": "Pular para o conteúdo",
   "section_slow": "Conectando ao servidor…",
   "section_error": "Não foi possível carregar esta parte.",
+  "section_timeout": "O servidor demorou para responder.",
   "section_retry": "Tentar de novo",
   "sheet_close": "Fechar",
   "nav_primary": "Navegação principal",

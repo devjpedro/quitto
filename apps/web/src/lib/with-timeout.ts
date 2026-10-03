@@ -23,3 +23,8 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     );
   });
 }
+
+/** Also true for a TimeoutError that crossed the SSR stream (same name, not the same class). */
+export function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.name === "TimeoutError";
+}
