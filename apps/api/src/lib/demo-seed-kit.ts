@@ -1,4 +1,4 @@
-import { generateMonthlySchedule } from "@quitto/shared";
+import { generateMonthlySchedule, NOTIFICATION_TYPE } from "@quitto/shared";
 import { addDays } from "./dates";
 
 export const DEMO_DOMAIN = "demo.quitto.dev";
@@ -154,6 +154,28 @@ export function base(
   };
 }
 
+const REMINDER_TYPES: ReadonlySet<string> = new Set([
+  NOTIFICATION_TYPE.installmentDueSoon,
+  NOTIFICATION_TYPE.installmentOverdue,
+  NOTIFICATION_TYPE.installmentDueSoonReceivable,
+  NOTIFICATION_TYPE.installmentOverdueReceivable,
+]);
+
+/**
+ * The dedupe key the reminder sweep writes (lib/reminders.ts), so a
+ * `cron:reminders` after the seed skips the reminders already there instead
+ * of writing them twice. Event notices (a proof, a confirmation) have none.
+ */
+export function reminderDedupeKey(
+  type: string,
+  installmentId: string | null,
+  userId: string
+): string | null {
+  return REMINDER_TYPES.has(type) && installmentId
+    ? `reminder:${type}:${installmentId}:${userId}`
+    : null;
+}
+
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /**
@@ -162,6 +184,9 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
  * or bucket (the compose service name "postgres" can be a remote one on a
  * docker network), and never with a real e-mail key (sign-up sends a
  * verification e-mail, and a Resend error would stop the seed half-way).
+ * The host check can't see a tunnel: a remote database forwarded to
+ * localhost (e.g. `fly proxy 5432`) passes it, so never point the local
+ * DATABASE_URL at a remote database.
  */
 export function assertDemoEnvironment(env: {
   DATABASE_URL: string;

@@ -220,7 +220,8 @@ function notifications(t: string): DemoNotification[] {
       sequence: 3,
       at: at(t, -1, "13:00"),
       read: false,
-      metadata: null,
+      // As modules/payments.ts writes it: the uploaded file's name.
+      metadata: { fileName: "comprovante.pdf" },
     },
     {
       account: "agora",

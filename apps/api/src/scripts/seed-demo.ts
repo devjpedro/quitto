@@ -21,6 +21,7 @@ import {
   DEMO_PASSWORD,
   type DemoAccountKey,
   type DemoContract,
+  reminderDedupeKey,
 } from "../lib/demo-seed-kit";
 import { deleteObjects, presignUpload } from "../lib/storage";
 
@@ -205,15 +206,18 @@ for (const spec of scenario.contracts) {
 await db.insert(notification).values(
   scenario.notifications.map((n) => {
     const target = contracts.get(n.contract);
+    const userId = users.get(n.account)?.id as string;
+    const installmentId =
+      n.sequence === null
+        ? null
+        : (target?.installmentIds.get(n.sequence) ?? null);
     return {
-      userId: users.get(n.account)?.id as string,
+      userId,
       type: n.type,
       contractId: target?.contractId as string,
-      installmentId:
-        n.sequence === null
-          ? null
-          : (target?.installmentIds.get(n.sequence) ?? null),
+      installmentId,
       metadata: n.metadata,
+      dedupeKey: reminderDedupeKey(n.type, installmentId, userId),
       readAt: n.read ? new Date(n.at) : null,
       createdAt: new Date(n.at),
     };
@@ -221,7 +225,7 @@ await db.insert(notification).values(
 );
 
 console.info(
-  `seed:demo pronto. Senha de todas: ${DEMO_PASSWORD}. Contas: ${scenario.accounts
+  `seed:demo pronto. Nenhum e-mail saiu (os avisos [mailer] acima confirmam). Senha de todas: ${DEMO_PASSWORD}. Contas: ${scenario.accounts
     .map((a) => a.email)
     .join(", ")}`
 );
