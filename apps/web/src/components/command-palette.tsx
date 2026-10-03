@@ -30,22 +30,24 @@ import { m } from "@/paraglide/messages.js";
 
 const EMPTY_STATE_LIMIT = 5;
 
+/** Labels are functions: read on render, they follow the account's locale. */
 const PAGES = [
   {
     to: "/",
-    label: "Agora",
+    label: m.nav_now,
     icon: LayoutDashboard,
-    keywords: ["agora", "inicio", "home", "dashboard"],
+    keywords: ["agora", "now", "inicio", "home", "dashboard"],
   },
   {
     to: "/contracts",
-    label: "Contratos",
+    label: m.nav_contracts,
     icon: FileText,
     keywords: ["contratos", "lista"],
   },
   {
     to: "/settings",
-    label: "Conta",
+    // Legacy copy, like the rest of the palette: i18n with its re-skin (Fase 5).
+    label: () => "Conta",
     icon: Settings,
     keywords: ["conta", "perfil", "configuracoes", "ajustes"],
   },
@@ -61,15 +63,24 @@ const THEME_KEYWORDS = [
   "aparencia",
 ];
 const SIGN_OUT_KEYWORDS = ["sair", "logout", "desconectar", "encerrar sessao"];
-const NOTIFICATIONS_KEYWORDS = ["notificacoes", "avisos", "sino"];
-
-const STATIC_KEYWORDS: string[][] = [
-  ...PAGES.map((page) => [page.label, ...page.keywords]),
-  CREATE_KEYWORDS,
-  NOTIFICATIONS_KEYWORDS,
-  THEME_KEYWORDS,
-  SIGN_OUT_KEYWORDS,
+const NOTIFICATIONS_KEYWORDS = [
+  "notificacoes",
+  "notifications",
+  "avisos",
+  "sino",
+  "bell",
 ];
+
+/** The fixed commands' search terms, in the locale of the render. */
+function staticKeywords(): string[][] {
+  return [
+    ...PAGES.map((page) => [page.label(), ...page.keywords]),
+    CREATE_KEYWORDS,
+    NOTIFICATIONS_KEYWORDS,
+    THEME_KEYWORDS,
+    SIGN_OUT_KEYWORDS,
+  ];
+}
 
 interface SearchableContract {
   description: string | null;
@@ -221,7 +232,7 @@ function PaletteCommands({
     if (query === "") {
       return true;
     }
-    const haystacks = [...visible.map(contractKeywords), ...STATIC_KEYWORDS];
+    const haystacks = [...visible.map(contractKeywords), ...staticKeywords()];
     return haystacks.some((keywords) => commandFilter("", query, keywords) > 0);
   }, [query, visible]);
 
@@ -334,7 +345,7 @@ function PaletteCommands({
             return (
               <CommandItem
                 key={page.to}
-                keywords={[page.label, ...page.keywords]}
+                keywords={[page.label(), ...page.keywords]}
                 onSelect={() => run(() => navigate({ to: page.to }))}
                 value={`ir-para-${page.to}`}
               >
@@ -342,7 +353,7 @@ function PaletteCommands({
                   aria-hidden="true"
                   className="size-4 shrink-0 opacity-60"
                 />
-                <span>{page.label}</span>
+                <span>{page.label()}</span>
               </CommandItem>
             );
           })}
@@ -363,7 +374,7 @@ function PaletteCommands({
             value="acao-notificacoes"
           >
             <Bell aria-hidden="true" className="size-4 shrink-0 opacity-60" />
-            <span>Notificações</span>
+            <span>{m.nav_notifications()}</span>
           </CommandItem>
           <CommandItem
             keywords={THEME_KEYWORDS}

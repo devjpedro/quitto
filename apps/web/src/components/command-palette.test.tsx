@@ -10,6 +10,7 @@ import {
 } from "@/lib/identity-cookie";
 import { makeQueryClient } from "@/lib/query";
 import { queryKeys } from "@/lib/query-keys";
+import { overwriteGetLocale } from "@/paraglide/runtime.js";
 
 const navigate = vi.fn();
 const openNotifications = vi.fn();
@@ -243,6 +244,39 @@ describe("CommandPalette", () => {
     renderPalette([]);
     await userEvent.type(screen.getByRole(INPUT), "notificacoes");
     expect(screen.getByText("Notificações")).toBeVisible();
+  });
+
+  describe("os comandos desta fase (Agora e Notificações) na língua da conta", () => {
+    afterEach(() => {
+      overwriteGetLocale(() => "pt-BR");
+    });
+
+    it("em inglês: Now e Notifications, achados pelo nome em inglês", async () => {
+      overwriteGetLocale(() => "en-US");
+      renderPalette([]);
+      expect(screen.getByRole("option", { name: "Now" })).toBeVisible();
+      expect(
+        screen.getByRole("option", { name: "Notifications" })
+      ).toBeVisible();
+      await userEvent.type(screen.getByRole(INPUT), "now");
+      expect(screen.getByRole("option", { name: "Now" })).toBeVisible();
+      await userEvent.clear(screen.getByRole(INPUT));
+      await userEvent.type(screen.getByRole(INPUT), "notifications");
+      expect(
+        screen.getByRole("option", { name: "Notifications" })
+      ).toBeVisible();
+    });
+
+    it("em português, a busca em inglês também acha (palavras-chave nos dois idiomas)", async () => {
+      renderPalette([]);
+      await userEvent.type(screen.getByRole(INPUT), "now");
+      expect(screen.getByRole("option", { name: "Agora" })).toBeVisible();
+      await userEvent.clear(screen.getByRole(INPUT));
+      await userEvent.type(screen.getByRole(INPUT), "notifications");
+      expect(
+        screen.getByRole("option", { name: "Notificações" })
+      ).toBeVisible();
+    });
   });
 
   it("Notificações abre o painel do sino, sem navegar", async () => {
