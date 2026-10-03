@@ -280,9 +280,13 @@ export function ContractDetailPage() {
         </ul>
       </section>
 
+      {/* The router keeps this page mounted when only the search or the id
+          changes: a new ?status= (or another contract) restarts the list on
+          that filter. A chip picked by hand or a closed drawer keeps it. */}
       <InstallmentsSection
         initialFilter={status}
         installments={installments}
+        key={`${id}:${status ?? "all"}`}
         onSelect={setOpenId}
       />
 

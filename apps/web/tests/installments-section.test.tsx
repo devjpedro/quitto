@@ -148,6 +148,8 @@ describe("InstallmentsSection", () => {
     expect(
       screen.getByRole("button", { name: "Atrasadas (1)" })
     ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("installment-row-a")).toBeVisible();
+    expect(screen.queryByTestId("installment-row-b")).toBeNull();
   });
 
   it("chama onSelect com o id ao clicar numa linha", () => {
