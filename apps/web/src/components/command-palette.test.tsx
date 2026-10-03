@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ErrorBoundary } from "react-error-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/api-client";
 import {
   parseIdentityCookie,
   serializeIdentityCookie,
 } from "@/lib/identity-cookie";
+import { makeQueryClient } from "@/lib/query";
 import { queryKeys } from "@/lib/query-keys";
 
 const navigate = vi.fn();
@@ -19,7 +22,9 @@ vi.mock("@tanstack/react-router", () => ({
 // exatamente a pergunta desta suíte: a paleta busca com a paleta fechada?
 // A promessa nunca resolve: a `queryFn` aqui é ponto de observação, não fonte
 // de dados; quem entrega dados é o cache semeado em `renderPalette`.
-const contractsQueryFn = vi.fn(() => new Promise<never>(() => undefined));
+const contractsQueryFn = vi.fn(
+  (): Promise<unknown> => new Promise(() => undefined)
+);
 vi.mock("@/hooks/use-contracts", () => ({
   contractsQueryOptions: {
     queryKey: queryKeys.contracts,
@@ -287,5 +292,106 @@ describe("CommandPalette", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+const SERVER_ERROR = new ApiError({
+  code: "INTERNAL",
+  httpStatus: 500,
+  message: "Erro interno",
+});
+const ROUTE_ERROR = "Ops, algo deu errado";
+
+/**
+ * The palette inside a stand-in for the `_app` shell, on the app's own
+ * QueryClient: its `throwOnError` throws every non-401 error, and the boundary
+ * plays the route's error screen, which takes the whole shell with it.
+ */
+function renderInShell({ open }: { open: boolean }) {
+  const client = makeQueryClient();
+  // The app retries a failed read once, a second later; these tests only need
+  // the final error.
+  client.setQueryDefaults(queryKeys.contracts, { retry: false });
+  render(
+    <QueryClientProvider client={client}>
+      <ErrorBoundary fallback={<p>{ROUTE_ERROR}</p>}>
+        <p>shell</p>
+        <CommandPalette
+          onOpenChange={() => undefined}
+          onOpenNotifications={openNotifications}
+          open={open}
+        />
+      </ErrorBoundary>
+    </QueryClientProvider>
+  );
+  return client;
+}
+
+describe("CommandPalette com o /api/contracts falhando", () => {
+  beforeEach(() => {
+    navigate.mockReset();
+    contractsQueryFn.mockReset();
+    contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
+    setViewport(DESKTOP_WIDTH);
+  });
+
+  it("fechada: a falha da lista nunca derruba o shell", async () => {
+    const client = renderInShell({ open: false });
+    // The list failed somewhere else (the contracts page, or a fetch the
+    // palette started before it closed): the error lands in the cache entry
+    // the palette shares.
+    await act(async () => {
+      await client.prefetchQuery({
+        queryKey: queryKeys.contracts,
+        queryFn: () => Promise.reject(SERVER_ERROR),
+      });
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+    expect(client.getQueryState(queryKeys.contracts)?.status).toBe("error");
+    expect(screen.getByText("shell")).toBeVisible();
+    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+  });
+
+  it("aberta: a lista falha ali dentro e os comandos fixos continuam", async () => {
+    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+    renderInShell({ open: true });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar os contratos."
+    );
+    expect(screen.getByText("shell")).toBeVisible();
+    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+    for (const name of [
+      "Agora",
+      "Contratos",
+      "Conta",
+      "Criar contrato",
+      "Notificações",
+    ]) {
+      expect(screen.getByRole("option", { name })).toBeVisible();
+    }
+
+    await userEvent.click(
+      screen.getByRole("option", { name: "Criar contrato" })
+    );
+    expect(navigate).toHaveBeenCalledWith({ to: "/contracts/new" });
+  });
+
+  it("aberta: Tentar de novo busca a lista outra vez e a mostra", async () => {
+    contractsQueryFn
+      .mockRejectedValueOnce(SERVER_ERROR)
+      .mockResolvedValueOnce([ALUGUEL]);
+    renderInShell({ open: true });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Tentar de novo" })
+    );
+
+    expect(
+      await screen.findByRole("option", { name: "Aluguel do apê" })
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(contractsQueryFn).toHaveBeenCalledTimes(2);
   });
 });

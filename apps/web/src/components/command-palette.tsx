@@ -10,7 +10,7 @@ import {
   Settings,
   Sun,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Command,
   CommandGroup,
@@ -20,11 +20,13 @@ import {
 } from "@/components/legacy-ui/command";
 import { Dialog, DialogContent } from "@/components/legacy-ui/dialog";
 import { Sheet, SheetContent } from "@/components/legacy-ui/sheet";
+import { Button } from "@/components/ui/button";
 import { contractsQueryOptions } from "@/hooks/use-contracts";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useTheme } from "@/hooks/use-theme";
 import { commandFilter, sortByUrgency } from "@/lib/search";
+import { m } from "@/paraglide/messages.js";
 
 const EMPTY_STATE_LIMIT = 5;
 
@@ -91,6 +93,21 @@ function contractKeywords(contract: SearchableContract): string[] {
   ].filter(Boolean);
 }
 
+/** The contract list failed: says so in place, while every fixed command keeps working. */
+function ContractsLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-3 border-line border-b px-4 py-3"
+      role="alert"
+    >
+      <p className="text-ink text-sm">{m.palette_contracts_error()}</p>
+      <Button onClick={onRetry} size="sm" variant="secondary">
+        {m.section_retry()}
+      </Button>
+    </div>
+  );
+}
+
 export function CommandPalette({
   open,
   onOpenChange,
@@ -101,15 +118,79 @@ export function CommandPalette({
   open: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const isDesktop = useIsDesktop();
+
+  // The Dialog and the Sheet only mount their content while open, so the
+  // commands (and the contract list they read) only exist with the palette open.
+  const commands = (
+    <PaletteCommands
+      onOpenChange={onOpenChange}
+      onOpenNotifications={onOpenNotifications}
+      query={query}
+      setQuery={setQuery}
+    />
+  );
+
+  if (isDesktop) {
+    return (
+      <Dialog onOpenChange={onOpenChange} open={open}>
+        <DialogContent
+          // A paleta não tem texto descritivo: o placeholder do campo já diz o
+          // que ela faz. `undefined` explícito é o escape hatch do Radix para
+          // não apontar `aria-describedby` para um Description inexistente.
+          aria-describedby={undefined}
+          className="max-w-xl"
+          title="Buscar"
+        >
+          {commands}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Sheet onOpenChange={onOpenChange} open={open}>
+      <SheetContent
+        aria-describedby={undefined}
+        className="max-w-full"
+        title="Buscar"
+      >
+        {commands}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function PaletteCommands({
+  query,
+  setQuery,
+  onOpenChange,
+  onOpenNotifications,
+}: {
+  onOpenChange: (v: boolean) => void;
+  onOpenNotifications: () => void;
+  query: string;
+  setQuery: (query: string) => void;
+}) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const signOut = useSignOut();
-  const isDesktop = useIsDesktop();
-  // fetch-on-first-open: a paleta monta em TODA rota do `_app`, então buscar
-  // aqui de forma incondicional seria um `GET /api/contracts` por página.
+  const inputRef = useRef<HTMLInputElement>(null);
+  // fetch-on-first-open: a paleta monta em TODA rota do `_app`, e este
+  // componente só monta com ela aberta, então nada é buscado com ela fechada.
   // Mesma queryKey e mesmo cache do `useContractsQuery` — a paleta reaproveita
-  // o que a lista de contratos já buscou, só não dispara nada sozinha fechada.
-  const { data } = useQuery({ ...contractsQueryOptions, enabled: open });
+  // o que a lista de contratos já buscou.
+  // Closed, the palette holds no observer of the list, so a failure of it (a
+  // 500 or a timeout, from the contracts page or from a fetch started here
+  // before closing) never reaches it. Open, it fails here, not at the route's
+  // boundary: the app's `throwOnError` would take the whole shell down.
+  const contractsQuery = useQuery({
+    ...contractsQueryOptions,
+    throwOnError: false,
+  });
+  const { data } = contractsQuery;
+  // With a list still on screen, a failed refetch is the global toast's job.
+  const listFailed = contractsQuery.isError && data === undefined;
 
   // Query pendente ou em erro entra como lista vazia: os grupos "Ir para" e
   // "Ações" respondem sozinhos e a paleta nunca fica inerte.
@@ -142,14 +223,14 @@ export function CommandPalette({
   const isDark = theme === "dark";
 
   // O cmdk só reelege o "primeiro item" quando a BUSCA muda: itens que montam
-  // depois entram sem seleção e o Enter fica inerte. Com `enabled: open` o
-  // `GET /contracts` só sai na abertura, então digitar rápido cai exatamente
-  // nessa janela. Re-montar o Command uma única vez, quando a lista chega, faz
+  // depois entram sem seleção e o Enter fica inerte. Como o `GET /contracts`
+  // só sai na abertura, digitar rápido cai exatamente nessa janela.
+  // Re-montar o Command uma única vez, quando a lista chega, faz
   // o cmdk reaplicar a busca atual já com os itens no DOM. O texto digitado é
   // estado nosso (`query`), então sobrevive; o `autoFocus` devolve o cursor.
   const listKey = data === undefined ? "aguardando-contratos" : "com-contratos";
 
-  const content = (
+  return (
     <Command filter={commandFilter} key={listKey} label="Buscar">
       {/* `autoFocus` NÃO é mais para vencer o Radix na montagem: com o "Fechar"
           movido para depois do `{children}` (dialog.tsx/sheet.tsx), o primeiro
@@ -166,8 +247,19 @@ export function CommandPalette({
         autoFocus
         onValueChange={setQuery}
         placeholder="Buscar contratos, páginas e ações…"
+        ref={inputRef}
         value={query}
       />
+      {listFailed ? (
+        <ContractsLoadError
+          onRetry={() => {
+            // The alert (and this button) leave while the list loads again:
+            // the cursor goes back to the field instead of the dialog's frame.
+            inputRef.current?.focus();
+            contractsQuery.refetch();
+          }}
+        />
+      ) : null}
       {/* `label` explícito: sem ele o cmdk nomeia a listbox de "Suggestions". */}
       <CommandList label="Sugestões">
         {query !== "" && !hasResults ? (
@@ -285,34 +377,5 @@ export function CommandPalette({
         </CommandGroup>
       </CommandList>
     </Command>
-  );
-
-  if (isDesktop) {
-    return (
-      <Dialog onOpenChange={onOpenChange} open={open}>
-        <DialogContent
-          // A paleta não tem texto descritivo: o placeholder do campo já diz o
-          // que ela faz. `undefined` explícito é o escape hatch do Radix para
-          // não apontar `aria-describedby` para um Description inexistente.
-          aria-describedby={undefined}
-          className="max-w-xl"
-          title="Buscar"
-        >
-          {content}
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  return (
-    <Sheet onOpenChange={onOpenChange} open={open}>
-      <SheetContent
-        aria-describedby={undefined}
-        className="max-w-full"
-        title="Buscar"
-      >
-        {content}
-      </SheetContent>
-    </Sheet>
   );
 }

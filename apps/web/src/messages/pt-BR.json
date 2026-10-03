@@ -22,6 +22,7 @@
   "nav_section_account": "Conta",
   "search_open": "Buscar…",
   "search_open_short": "Buscar",
+  "palette_contracts_error": "Não foi possível carregar os contratos.",
   "account_menu": "Conta",
   "account_menu_named": "Conta, {name}",
   "account_settings": "Ajustes",

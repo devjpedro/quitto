@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { API_FAILURE, nowLink, signup, waitForHydrated } from "../fixtures";
 
+const NEW_CONTRACT_URL = /\/contracts\/new$/;
+
 test("loader que falha mostra a fronteira de erro (não tela branca)", async ({
   page,
 }) => {
@@ -25,4 +27,46 @@ test("Agora com o /api/home falhando: o erro fica só na seção", async ({
   await expect(page.getByRole("alert")).toContainText(
     "Não foi possível carregar esta parte."
   );
+});
+
+test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue de pé", async ({
+  page,
+}) => {
+  await signup(page);
+  await page.route("**/api/contracts", (route) => route.fulfill(API_FAILURE));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+  // The `_app` registers ⌘K after the root hydrates: wait for the listener.
+  await page
+    .locator("html[data-shortcuts-ready]")
+    .waitFor({ state: "attached" });
+  await page.keyboard.press("ControlOrMeta+k");
+  const palette = page.getByRole("dialog");
+
+  // The app retries a failed read once, a second later.
+  await expect(palette.getByRole("alert")).toContainText(
+    "Não foi possível carregar os contratos."
+  );
+  await expect(
+    palette.getByRole("button", { name: "Tentar de novo" })
+  ).toBeVisible();
+  for (const name of [
+    "Agora",
+    "Contratos",
+    "Conta",
+    "Criar contrato",
+    "Notificações",
+  ]) {
+    await expect(
+      palette.getByRole("option", { name, exact: true })
+    ).toBeVisible();
+  }
+  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
+
+  await palette
+    .getByRole("option", { name: "Criar contrato", exact: true })
+    .click();
+  await expect(page).toHaveURL(NEW_CONTRACT_URL);
+  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
 });
