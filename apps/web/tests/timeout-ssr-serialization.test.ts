@@ -14,6 +14,8 @@ import { startInstance } from "../src/start";
 // the browser runs it. These helpers do the same two halves the Start does
 // (router-core ssr-server and ssr-client), with the app's own adapters, so
 // what reaches the query is exactly what the browser would see.
+// router-core and seroval are devDependencies pinned exact for this test;
+// ssr-serialization-pins.test.ts fails when they part from the app's copies.
 
 const SCOPE_ID = "tsr";
 
