@@ -476,4 +476,37 @@ describe("ActionList · foco depois da ação", () => {
       links.stop();
     }
   });
+
+  it("segurar Enter não age no cartão que recebeu o foco: a repetição da tecla é cancelada", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    // No Pix: each card's first button is its "Já paguei".
+    renderLive([
+      installmentAction({ installmentId: "i1", sequence: 1, pixCode: null }),
+      installmentAction({ installmentId: "i2", sequence: 2, pixCode: null }),
+    ]);
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(articleOf(1)).toBeNull());
+    const next = within(articleOf(2) as HTMLElement).getByRole("button", {
+      name: "Já paguei",
+    });
+    expect(document.activeElement).toBe(next);
+    // user-event 14.6 never marks a held key as a repeat (its keydown carries
+    // only key and code), so the auto-repeat is a native KeyboardEvent here.
+    const keydown = (key: string, repeat: boolean) =>
+      next.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key,
+          repeat,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    // dispatchEvent is false when the list cancelled the keydown (and with it the activation).
+    expect(keydown("Enter", true)).toBe(false);
+    expect(keydown(" ", true)).toBe(false);
+    expect(keydown("Enter", false)).toBe(true);
+    expect(markPaid).toHaveBeenCalledTimes(1);
+    expect(markPaid).toHaveBeenCalledWith("i1");
+  });
 });

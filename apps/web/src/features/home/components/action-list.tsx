@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type KeyboardEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -10,6 +10,19 @@ import { ActionCard } from "./action-card";
 
 /** Cards in the desktop row at lg; 2xl fits a fourth and wide a fifth. */
 const DESKTOP_VISIBLE = 3;
+
+/**
+ * A held Enter or Space repeats its keydown, and every repeat would activate
+ * the button that has the focus by then: the first button of the card that
+ * took the place of the one just acted on, once the 700 ms lock is over.
+ * Cancelling the repeated keydown cancels that activation: only the first
+ * press acts.
+ */
+function swallowKeyRepeat(event: KeyboardEvent) {
+  if (event.repeat && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+  }
+}
 
 /**
  * Hides a card past the desktop row, by CSS only: every card is in the HTML,
@@ -60,6 +73,7 @@ export function ActionList({
     <section
       aria-label={m.home_actions_title()}
       className="flex flex-col gap-2 focus:outline-none"
+      onKeyDownCapture={swallowKeyRepeat}
       ref={sectionRef}
       // With no card left, the list itself takes the focus of the last action.
       tabIndex={actions.length === 0 ? -1 : undefined}
