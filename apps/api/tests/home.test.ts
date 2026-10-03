@@ -668,6 +668,29 @@ describe("GET /api/home", () => {
     expect(home.onboarding.activePartyContracts).toBe(6);
   });
 
+  it("contrato só acompanhado: entra nos contratos ativos da sidebar, mas não conta para o guia", async () => {
+    const owner = await signUpCookie(uniqueEmail("home-followed-owner"));
+    const viewerEmail = uniqueEmail("home-followed");
+    const viewer = await signUpCookie(viewerEmail);
+    const id = await createContract(owner, "Só acompanho", addDays(today, -5));
+    const token = await inviteTo(owner, id, viewerEmail, "viewer");
+    expect((await post(viewer, `/api/invites/${token}/accept`)).status).toBe(
+      200
+    );
+    const home = await getHome(viewer);
+    expect(home.activeContractsCount).toBe(1);
+    expect(home.activeContracts).toEqual([
+      {
+        contractId: id,
+        title: "Só acompanho",
+        paidCount: 0,
+        totalCount: 3,
+        hasOverdue: true,
+      },
+    ]);
+    expect(home.onboarding.activePartyContracts).toBe(0);
+  });
+
   it("a conta diz em que dia foi criada, no calendário de São Paulo", async () => {
     const home = await getHome(await signUpCookie(uniqueEmail("home-created")));
     expect(home.onboarding.accountCreatedOn).toBe(today);

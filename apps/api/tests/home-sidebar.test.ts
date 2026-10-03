@@ -128,6 +128,48 @@ describe("sidebarContracts", () => {
     ]);
   });
 
+  it("contestada vencida marca atraso, como a barra do cartão (decisão 21)", () => {
+    const data = rows(
+      [contract("z", "2026-01-01T12:00:00Z")],
+      [
+        inst("z", 1, { status: "disputed", dueDate: "2026-09-01" }),
+        inst("z", 2),
+      ]
+    );
+    expect(sidebarContracts(data, TODAY)).toEqual([
+      {
+        contractId: "z",
+        title: "Contrato z",
+        paidCount: 0,
+        totalCount: 2,
+        hasOverdue: true,
+      },
+    ]);
+  });
+
+  it("contrato que a pessoa só acompanha entra, como no 'Ver todos (N)'", () => {
+    const data: HomeContractRows = {
+      contracts: [
+        contract("mine", "2026-01-01T12:00:00Z"),
+        contract("followed", "2026-02-01T12:00:00Z", { ownerId: "u-owner" }),
+      ],
+      installments: [],
+      participants: [
+        {
+          contractId: "followed",
+          role: "viewer",
+          linkedUserId: "u-me",
+          displayName: "Eu",
+        },
+      ],
+      users: [],
+    };
+    expect(sidebarContracts(data, TODAY).map((c) => c.contractId)).toEqual([
+      "followed",
+      "mine",
+    ]);
+  });
+
   it("criados no mesmo instante: desempata pelo id, sempre do mesmo jeito", () => {
     const same = "2026-05-01T12:00:00Z";
     const data = rows([contract("b2", same), contract("a1", same)]);

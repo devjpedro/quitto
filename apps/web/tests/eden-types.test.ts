@@ -200,4 +200,34 @@ it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
     remainingCents: number;
     statuses: ("paid" | "overdue" | "review" | "today" | "open")[] | null;
   }>();
+  // The invite card's terms: amountCents is null when the installments have
+  // different amounts, and firstDueDate is null-able; both never optional.
+  type HomeInviteAction = Extract<
+    NonNullable<HomeData>["actions"][number],
+    { kind: "invite" }
+  >;
+  expectTypeOf<HomeInviteAction["installmentsCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeInviteAction["amountCents"]>().toEqualTypeOf<
+    number | null
+  >();
+  expectTypeOf<HomeInviteAction["totalCents"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeInviteAction["firstDueDate"]>().toEqualTypeOf<
+    string | null
+  >();
+  // The sidebar's active contracts, and the two facts the guide hides itself by.
+  expectTypeOf<
+    NonNullable<HomeData>["activeContracts"][number]
+  >().toEqualTypeOf<{
+    contractId: string;
+    title: string;
+    paidCount: number;
+    totalCount: number;
+    hasOverdue: boolean;
+  }>();
+  expectTypeOf<
+    NonNullable<HomeData>["onboarding"]["accountCreatedOn"]
+  >().toEqualTypeOf<string>();
+  expectTypeOf<
+    NonNullable<HomeData>["onboarding"]["activePartyContracts"]
+  >().toEqualTypeOf<number>();
 });

@@ -846,7 +846,7 @@ describe("onboardingFacts", () => {
     });
   });
 
-  it("contratos ativos em que é parte: os acompanhados e os cancelados não contam", () => {
+  it("contratos ativos em que é parte: os acompanhados, os concluídos e os cancelados não contam", () => {
     const facts = onboardingFacts(
       ME,
       {
@@ -854,6 +854,7 @@ describe("onboardingFacts", () => {
           contractRow({ id: "mine" }),
           contractRow({ id: "followed", ownerId: "u-owner" }),
           contractRow({ id: "gone", status: "cancelled" }),
+          contractRow({ id: "done", status: "completed" }),
         ],
         installments: [],
         participants: [
@@ -875,6 +876,12 @@ describe("onboardingFacts", () => {
             linkedUserId: ME,
             displayName: "Eu",
           },
+          {
+            contractId: "done",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
         ],
         users: [],
       },
@@ -882,5 +889,15 @@ describe("onboardingFacts", () => {
       true
     );
     expect(facts.activePartyContracts).toBe(1);
+  });
+
+  it("o dia da conta é o de São Paulo: 01:30 UTC ainda é a véspera lá", () => {
+    const facts = onboardingFacts(
+      ME,
+      { contracts: [], installments: [], participants: [], users: [] },
+      { ...profile, createdAt: new Date("2026-09-02T01:30:00Z") },
+      true
+    );
+    expect(facts.accountCreatedOn).toBe("2026-09-01");
   });
 });
