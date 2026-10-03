@@ -51,6 +51,9 @@ const TEXT_PAIRS: [string, string][] = [
   ["warning", "surface"],
   ["danger", "danger-subtle"],
   ["danger", "surface"],
+  // An error toast: its title and description on danger-subtle.
+  ["ink", "danger-subtle"],
+  ["ink-muted", "danger-subtle"],
   ["ink-inverse", "danger"],
 ];
 
