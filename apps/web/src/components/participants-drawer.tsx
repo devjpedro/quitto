@@ -345,6 +345,8 @@ export function ParticipantsDrawer({
       open={open}
     >
       <SheetContent
+        // No description to point at (Radix's documented opt-out).
+        aria-describedby={undefined}
         onCloseAutoFocus={(e) => {
           if (triggerRef.current?.isConnected) {
             e.preventDefault();

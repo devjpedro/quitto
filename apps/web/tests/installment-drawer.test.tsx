@@ -79,6 +79,28 @@ describe("InstallmentDrawer", () => {
     expect(screen.queryByText(PIX_HEADING)).not.toBeInTheDocument();
   });
 
+  it("opens without Radix's missing-description warning (no description: empty aria-describedby)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    renderWithProviders(
+      <InstallmentDrawer
+        capabilities={{ isPayer: true, isApprover: true }}
+        contractId="c1"
+        contractTitle="Aluguel"
+        installment={installment}
+        installmentsCount={12}
+        isOwner
+        onClose={noop}
+        open
+        requiresConfirmation
+      />
+    );
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("Missing `Description`")
+    );
+    warn.mockRestore();
+  });
+
   it("hides edit + actions for a viewer", () => {
     renderWithProviders(
       <InstallmentDrawer

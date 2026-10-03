@@ -177,6 +177,23 @@ describe("ParticipantsDrawer", () => {
     await waitFor(() => expect(removeParticipant).toHaveBeenCalledWith("p1"));
   });
 
+  it("abre sem o aviso do Radix de descrição ausente (não há descrição: aria-describedby vazio)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    renderWithProviders(
+      <ParticipantsDrawer
+        contractId="c1"
+        onClose={vi.fn()}
+        open={true}
+        participants={[]}
+      />
+    );
+    expect(screen.getByRole("dialog", { name: "Participantes" })).toBeVisible();
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("Missing `Description`")
+    );
+    warn.mockRestore();
+  });
+
   it("exibe o badge 'Dono' quando isOwner=true", () => {
     renderWithProviders(
       <ParticipantsDrawer
