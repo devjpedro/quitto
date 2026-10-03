@@ -9,7 +9,8 @@ export const APP_ICON_SURFACE = "#1F5A32";
  * `maskable` fills the square edge to edge (the platform rounds it).
  * public/favicon.svg and the PNG icons are rendered from this component
  * (apps/web/scripts/app-icons.tsx for the favicon, e2e/scripts/app-icons.ts
- * for the PNGs); a test keeps the favicon in sync.
+ * for the PNGs); a test keeps the favicon in sync. After changing it, run
+ * `cd e2e && bun scripts/app-icons.ts`: it regenerates the favicon and the PNGs.
  */
 export function AppIcon({
   maskable = false,
