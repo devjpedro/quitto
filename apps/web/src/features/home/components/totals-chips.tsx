@@ -22,7 +22,7 @@ export function TotalsChips({
   return (
     <ul aria-label={m.home_chips_label()} className="flex flex-wrap gap-1.5">
       {pendingCount > 0 ? (
-        <li className="rounded-full bg-highlight px-3 py-1.5 text-on-highlight text-sm">
+        <li className="rounded-full border border-highlight bg-highlight px-3 py-1.5 text-on-highlight text-sm">
           <span className="font-semibold tabular-nums">{pendingCount}</span>{" "}
           {one ? m.home_chip_pending_one() : m.home_chip_pending_other()}
         </li>

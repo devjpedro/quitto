@@ -8,7 +8,12 @@ import { HomeEmpty } from "@/features/home/components/home-empty";
 import { Milestones } from "@/features/home/components/milestones";
 import { OnboardingGuide } from "@/features/home/components/onboarding-guide";
 import { TotalsChips } from "@/features/home/components/totals-chips";
-import { UpcomingList } from "@/features/home/components/upcoming-list";
+import {
+  UPCOMING_SECTION_ID,
+  UpcomingList,
+} from "@/features/home/components/upcoming-list";
+import { milestoneCells } from "@/features/home/lib/milestones";
+import { momentView } from "@/features/home/lib/moment";
 import { onboardingView } from "@/features/home/lib/onboarding";
 import type { Home } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
@@ -19,6 +24,7 @@ const { dismiss } = vi.hoisted(() => ({ dismiss: vi.fn() }));
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const ANA_ROW = /Celular da Ana/;
+const PIX_STEP = /^Cadastrar sua chave PIX/;
 
 vi.mock("@/lib/api", () => ({
   api: { api: { me: { onboarding: { dismiss: { post: () => dismiss() } } } } },
@@ -57,6 +63,23 @@ describe("seções do home", () => {
     expect(chips.getByText("pendências")).toBeVisible();
     expect(chips.getByText("R$ 2.150,00")).toBeVisible();
     expect(chips.getByText("R$ 5.100,00")).toBeVisible();
+  });
+
+  it("chips: uma pendência no singular, com a borda dos vizinhos; tudo zerado não mostra nada", () => {
+    const { container } = renderWithProviders(
+      <TotalsChips pendingCount={0} toPayCents={0} toReceiveCents={0} />
+    );
+    expect(container).toBeEmptyDOMElement();
+    renderWithProviders(
+      <TotalsChips pendingCount={1} toPayCents={0} toReceiveCents={0} />
+    );
+    const chips = within(screen.getByRole("list", { name: "Resumo" }));
+    // Same 1 px border as the outlined chips, so all of them share one height.
+    expect(chips.getByRole("listitem")).toHaveClass(
+      "border",
+      "border-highlight"
+    );
+    expect(chips.getByText("pendência")).toBeVisible();
   });
 
   it("próximos 30 dias: linhas com + recebe / − paga, comprovante enviado e o que sobrou", () => {
@@ -165,6 +188,42 @@ describe("seções do home", () => {
     expect(screen.queryByText("Já recebeu")).toBeNull();
   });
 
+  it("marcos: a faixa diz o mesmo que o cartão limão do marco do momento", () => {
+    const milestones = {
+      previousMonthAllClear: { month: "2026-09", paidCount: 1 },
+      closestToPayoff: {
+        contractId: "c3",
+        title: "Celular da Ana",
+        paidCount: 9,
+        totalCount: 10,
+        percent: 90,
+      },
+      monthToDate: {
+        month: "2026-10",
+        paidCents: 125_000,
+        receivedCents: 338_000,
+      },
+      settled: { paidCents: 0, receivedCents: 0 },
+    };
+    renderWithProviders(<Milestones milestones={milestones} momentId={null} />);
+    expect(screen.getByText("1 de 1 parcela quitada")).toBeVisible();
+    for (const cell of milestoneCells(milestones)) {
+      // The four kinds the lime card can show; "Já quitado" is strip-only.
+      if (
+        cell.id === "all_clear" ||
+        cell.id === "closest" ||
+        cell.id === "paid" ||
+        cell.id === "received"
+      ) {
+        const view = momentView(cell, "pt-BR");
+        expect(screen.getByText(view.title)).toBeVisible();
+        if (cell.id === "all_clear" || cell.id === "closest") {
+          expect(screen.getByText(view.detail)).toBeVisible();
+        }
+      }
+    }
+  });
+
   it("marcos: o do momento abre a faixa no celular e some dela a partir de md (a sidebar mostra)", () => {
     renderWithProviders(
       <Milestones
@@ -250,6 +309,8 @@ describe("seções do home", () => {
 
   it("nada pendente cita a próxima parcela e leva aos próximos 30 dias, sem mexer na URL", async () => {
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    // The real list, not a stand-in: the jump depends on its section id.
     renderWithProviders(
       <>
         <AllClear
@@ -261,9 +322,18 @@ describe("seções do home", () => {
           })}
           today={TODAY}
         />
-        <section id="upcoming" />
+        <UpcomingList
+          upcoming={{
+            items: [upcomingItem()],
+            moreCount: 0,
+            toPayCents: 0,
+            toReceiveCents: 32_000,
+          }}
+        />
       </>
     );
+    const region = screen.getByRole("region", { name: "Próximos 30 dias" });
+    expect(region).toHaveAttribute("id", UPCOMING_SECTION_ID);
     expect(screen.getByText("Nada pendente agora")).toBeVisible();
     expect(
       screen.getByText(
@@ -274,7 +344,19 @@ describe("seções do home", () => {
     expect(cta).toHaveClass("w-full", "md:w-auto");
     await userEvent.click(cta);
     expect(scroll).toHaveBeenCalledWith({ block: "start" });
+    // The focus follows the jump (keyboard and screen reader land on the list), without a second scroll.
+    expect(region).toHaveFocus();
+    expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
     scroll.mockRestore();
+    focus.mockRestore();
+  });
+
+  it("nada pendente sem parcela em aberto: diz isso e não oferece o salto", () => {
+    renderWithProviders(
+      <AllClear hasUpcoming={false} nextDue={null} today={TODAY} />
+    );
+    expect(screen.getByText("Nenhuma parcela em aberto.")).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("vazio: contorno do cartão de ação, uma frase e Novo contrato", () => {
@@ -328,9 +410,18 @@ describe("seções do home", () => {
       screen.getByRole("progressbar", { name: "Progresso do guia" })
     ).toHaveAttribute("value", "1");
     expect(screen.getByText("1 de 4")).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Criar meu primeiro contrato" })
-    ).toHaveAttribute("href", "/contracts/new");
+    const heroCta = screen.getByRole("link", {
+      name: "Criar meu primeiro contrato",
+    });
+    expect(heroCta).toHaveAttribute("href", "/contracts/new");
+    // From lg the green card stretches to the checklist: the action sits at its foot (mockup 09).
+    expect(heroCta).toHaveClass("lg:mt-auto");
+    // Side by side only from lg: with the sidebar, md leaves the checklist too narrow.
+    const guide = screen.getByRole("region", {
+      name: "Cadastre o primeiro acordo que você quer acompanhar.",
+    });
+    expect(guide).toHaveClass("lg:grid-cols-[1fr_1.3fr]");
+    expect(guide).not.toHaveClass("md:grid-cols-[1fr_1.3fr]");
     expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
     expect(screen.getByText("opcional")).toBeVisible();
     await userEvent.click(
@@ -341,5 +432,68 @@ describe("seções do home", () => {
         client.getQueryData<Home>(queryKeys.home)?.onboarding.dismissedAt
       ).toBe("2026-10-02T10:00:00.000Z")
     );
+  });
+
+  it("guia: o ＋ em negrito só no passo do contrato (PIX e lembretes não 'adicionam')", () => {
+    const onboarding = {
+      ...homeFixture().onboarding,
+      hasPixKey: false,
+      remindersOn: false,
+    };
+    const { unmount } = renderWithProviders(
+      <OnboardingGuide
+        onboarding={onboarding}
+        variant="hero"
+        view={onboardingView(onboarding)}
+      />
+    );
+    const pix = screen.getByRole("link", { name: "Cadastrar chave PIX" });
+    expect(pix).toHaveAttribute("href", "/settings");
+    expect(pix.querySelector("svg")).toBeNull();
+    unmount();
+    const fresh = { ...onboarding, hasContract: false };
+    renderWithProviders(
+      <OnboardingGuide
+        onboarding={fresh}
+        variant="hero"
+        view={onboardingView(fresh)}
+      />
+    );
+    expect(
+      screen
+        .getByRole("link", { name: "Criar meu primeiro contrato" })
+        .querySelector("svg")
+    ).not.toBeNull();
+  });
+
+  it("guia compacto (já há ações): título com o progresso e a lista, sem o cartão verde", () => {
+    const onboarding = {
+      ...homeFixture().onboarding,
+      hasPixKey: false,
+      hasCounterparty: false,
+    };
+    renderWithProviders(
+      <OnboardingGuide
+        onboarding={onboarding}
+        variant="compact"
+        view={onboardingView(onboarding)}
+      />
+    );
+    expect(
+      screen.getByRole("region", { name: "Comece por aqui · 3 de 4" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Comece por aqui · 3 de 4" })
+    ).toBeVisible();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByText("Cadastre sua chave PIX.")).toBeNull();
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: PIX_STEP })).toHaveAttribute(
+      "href",
+      "/settings"
+    );
+    expect(
+      screen.getByRole("button", { name: "dispensar guia" })
+    ).toBeVisible();
   });
 });

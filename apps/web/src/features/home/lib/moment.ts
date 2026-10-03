@@ -46,7 +46,7 @@ export function momentMilestone(home: Home): MomentMilestone | null {
     : null;
 }
 
-/** The lime card's two lines, in `locale`. Same messages as the strip, so both always agree. */
+/** The lime card's two lines, in `locale`. The strip's cells read their text from here too, so both always agree. */
 export function momentView(
   moment: MomentMilestone,
   locale: Locale

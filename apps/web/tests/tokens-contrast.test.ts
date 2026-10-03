@@ -42,6 +42,7 @@ const TEXT_PAIRS: [string, string][] = [
   ["brand", "surface"],
   ["brand", "brand-subtle"],
   ["brand", "surface-raised"],
+  ["brand", "surface-sunken"],
   ["ink-inverse", "brand"],
   ["on-brand", "brand-surface"],
   ["on-brand-muted", "brand-surface"],

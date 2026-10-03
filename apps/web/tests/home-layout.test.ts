@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
-import { homeFixture, installmentAction } from "./home-fixtures";
+import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
   hasContract: false,
@@ -75,6 +75,26 @@ describe("homeLayout", () => {
       onboarding: { ...notStarted, dismissedAt: "2026-10-02T10:00:00.000Z" },
     });
     expect(homeLayout(home)).toMatchObject({ empty: true, showChips: false });
+  });
+
+  it("só um convite, sem contrato: não é o vazio nem o Nada pendente, e os chips aparecem", () => {
+    const dismissed = {
+      ...notStarted,
+      dismissedAt: "2026-10-02T10:00:00.000Z",
+    };
+    for (const onboarding of [notStarted, dismissed]) {
+      const home = homeFixture({ actions: [inviteAction()], onboarding });
+      expect(homeLayout(home)).toMatchObject({
+        empty: false,
+        allClear: false,
+        heroGuide: false,
+        showChips: true,
+        compactGuide: onboarding.dismissedAt === null,
+      });
+      expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
+        "1 coisa pede sua atenção"
+      );
+    }
   });
 
   it("subtítulo no plural", () => {

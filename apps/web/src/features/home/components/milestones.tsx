@@ -2,8 +2,6 @@ import type { Locale } from "@quitto/shared";
 import { useId } from "react";
 import { Money } from "@/components/ui/money";
 import { Tag } from "@/components/ui/tag";
-import { formatMonthName } from "@/lib/locale-format";
-import { pluralForm } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -12,6 +10,7 @@ import {
   milestoneCells,
   stripCells,
 } from "../lib/milestones";
+import { momentView } from "../lib/moment";
 import type { HomeMilestones } from "../types";
 
 const BAR =
@@ -26,38 +25,26 @@ function Labeled({ cents, label }: { cents: number; label: string }) {
   );
 }
 
+/** Title and detail come from momentView, the lime card's text: the strip and the sidebar always say the same. */
 function CellView({ cell, locale }: { cell: MilestoneCell; locale: Locale }) {
   switch (cell.id) {
-    case "all_clear":
+    case "all_clear": {
+      const view = momentView(cell, locale);
       return (
         <>
           <Tag className="whitespace-nowrap" tone="highlight">
-            {m.home_milestone_all_clear({
-              month: formatMonthName(cell.month, locale),
-            })}
+            {view.title}
           </Tag>
-          <span className="text-sm">
-            {pluralForm(cell.paidCount, locale) === "one"
-              ? m.home_milestone_all_clear_detail_one()
-              : m.home_milestone_all_clear_detail_other({
-                  count: cell.paidCount,
-                })}
-          </span>
+          <span className="text-sm">{view.detail}</span>
         </>
       );
-    case "closest":
+    }
+    case "closest": {
+      const view = momentView(cell, locale);
       return (
         <>
-          <span className="text-ink-muted text-xs">
-            {m.home_milestone_closest()}
-          </span>
-          <span className="font-medium text-sm">
-            {m.home_milestone_closest_value({
-              title: cell.title,
-              paid: cell.paidCount,
-              total: cell.totalCount,
-            })}
-          </span>
+          <span className="text-ink-muted text-xs">{view.title}</span>
+          <span className="font-medium text-sm">{view.detail}</span>
           <progress
             aria-label={m.home_milestone_closest_progress({
               percent: cell.percent,
@@ -68,23 +55,11 @@ function CellView({ cell, locale }: { cell: MilestoneCell; locale: Locale }) {
           />
         </>
       );
+    }
     case "received":
-      return (
-        <Labeled
-          cents={cell.cents}
-          label={m.home_milestone_received({
-            month: formatMonthName(cell.month, locale),
-          })}
-        />
-      );
     case "paid":
       return (
-        <Labeled
-          cents={cell.cents}
-          label={m.home_milestone_paid({
-            month: formatMonthName(cell.month, locale),
-          })}
-        />
+        <Labeled cents={cell.cents} label={momentView(cell, locale).title} />
       );
     case "settled_paid":
       return (

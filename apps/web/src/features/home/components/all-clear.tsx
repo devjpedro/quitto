@@ -4,10 +4,17 @@ import { formatMoney, formatRelativeDays } from "@/lib/locale-format";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { UpcomingItem } from "../types";
+import { UPCOMING_SECTION_ID } from "./upcoming-list";
 
-/** Same-page jump: no fragment in the URL, so the router neither reloads nor restores scroll. */
-function scrollToUpcoming() {
-  document.getElementById("upcoming")?.scrollIntoView({ block: "start" });
+/**
+ * Same-page jump: no fragment in the URL, so the router neither reloads nor
+ * restores scroll. The focus goes along, so the next Tab and the screen
+ * reader continue from the list.
+ */
+function jumpToUpcoming() {
+  const section = document.getElementById(UPCOMING_SECTION_ID);
+  section?.scrollIntoView({ block: "start" });
+  section?.focus({ preventScroll: true });
 }
 
 /** "Agora" with nothing pending: says so and names the next installment. Milestones and the next 30 days still follow. */
@@ -46,7 +53,7 @@ export function AllClear({
         // A row of its own on a phone: next to the text it would squeeze it to ~80 px.
         <Button
           className="w-full md:w-auto"
-          onClick={scrollToUpcoming}
+          onClick={jumpToUpcoming}
           size="sm"
           variant="secondary"
         >
