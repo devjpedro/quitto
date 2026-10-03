@@ -220,6 +220,41 @@ describe("HomePage", () => {
     expect(screen.queryByRole("region", { name: "Marcos" })).toBeNull();
   });
 
+  it("sem contrato e com o guia dispensado: o vazio tem a única ação, e o + Novo contrato do cabeçalho sai", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        onboarding: {
+          ...homeFixture().onboarding,
+          hasContract: false,
+          dismissedAt: "2026-10-02T10:00:00.000Z",
+        },
+      }),
+      error: null,
+    });
+    renderHome();
+    await screen.findByRole("heading", {
+      name: "Suas pendências aparecem aqui",
+    });
+    const header = screen.getByRole("heading", { level: 1 }).parentElement;
+    const shortcut = within(header as HTMLElement).getByRole("link", {
+      name: "Novo contrato",
+    });
+    // By CSS, so the server HTML and the hydration agree: the page hides the
+    // shortcut once the empty state (marked data-home-empty) is in it.
+    expect(shortcut).toHaveClass("group-has-[[data-home-empty]]/home:hidden");
+    const page = shortcut.closest("[class~='group/home']");
+    expect(page?.querySelector("[data-home-empty]")).toContainElement(
+      screen.getByRole("heading", { name: "Suas pendências aparecem aqui" })
+    );
+  });
+
+  it("com contrato, nada marca a home como vazia: o + Novo contrato do cabeçalho fica", async () => {
+    getHome.mockResolvedValue({ data: homeFixture(), error: null });
+    renderHome();
+    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    expect(document.querySelector("[data-home-empty]")).toBeNull();
+  });
+
   it("sem contrato, com um convite e o guia por terminar: o guia compacto vem embaixo, e a coluna lateral leva só as Notificações recentes", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({

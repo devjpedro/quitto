@@ -45,6 +45,14 @@ test("primeiro acesso: o guia mostra o próximo passo e dispensar fica guardado"
     page.getByRole("heading", { name: "Suas pendências aparecem aqui" })
   ).toBeVisible();
   await expect(page.getByText("Comece por aqui")).toHaveCount(0);
+  // One sentence and one action: on desktop the header's shortcut steps aside
+  // (the phone's tab bar ＋ is the shell's, outside the page).
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("link", { name: "Novo contrato" })
+      .filter({ visible: true })
+  ).toHaveCount(1);
 });
 
 test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de recarregar", async ({

@@ -21,7 +21,7 @@ export function HomePage() {
   const greeting = useGreeting();
   return (
     <div className="lateral:p-8 p-4 md:p-6">
-      <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-4 md:gap-5">
+      <div className="group/home mx-auto flex w-full max-w-[1840px] flex-col gap-4 md:gap-5">
         <div className="flex items-center justify-between gap-3">
           {/* The SSR and the browser may sit on either side of an hour boundary. */}
           <h1
@@ -30,8 +30,13 @@ export function HomePage() {
           >
             {greeting}
           </h1>
-          {/* Desktop has no tab bar ＋ and no sidebar shortcut (mockups 02 and 08). */}
-          <Button asChild className="hidden md:inline-flex">
+          {/* Desktop has no tab bar ＋ and no sidebar shortcut (mockups 02 and 08).
+              The empty home brings its own single action, so this one steps
+              aside by CSS once that state streams in (SSR and hydration agree). */}
+          <Button
+            asChild
+            className="hidden group-has-[[data-home-empty]]/home:hidden md:inline-flex"
+          >
             <Link to="/contracts/new">
               <Plus aria-hidden="true" size={16} weight="bold" />
               {m.nav_new_contract()}
