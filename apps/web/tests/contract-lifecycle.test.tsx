@@ -26,7 +26,7 @@ function wrap(client: ReturnType<typeof makeTestQueryClient>) {
 }
 
 describe("contract lifecycle mutations", () => {
-  it("deleteContract invalidates the dashboard", async () => {
+  it("deleteContract invalidates the home", async () => {
     const client = makeTestQueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useDeleteContractMutation(), {
@@ -34,11 +34,11 @@ describe("contract lifecycle mutations", () => {
     });
     await result.current.mutateAsync("c1");
     await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
   });
 
-  it("leaveContract invalidates the dashboard", async () => {
+  it("leaveContract invalidates the home", async () => {
     const client = makeTestQueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useLeaveContractMutation("c1"), {
@@ -46,7 +46,7 @@ describe("contract lifecycle mutations", () => {
     });
     await result.current.mutateAsync();
     await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
   });
 });

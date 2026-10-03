@@ -28,7 +28,7 @@ function wrap(client: ReturnType<typeof makeTestQueryClient>) {
 }
 
 describe("cache coherence", () => {
-  it("createContract invalidates the dashboard", async () => {
+  it("createContract invalidates the home", async () => {
     const client = makeTestQueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useCreateContractMutation(), {
@@ -46,11 +46,11 @@ describe("cache coherence", () => {
       },
     });
     await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
   });
 
-  it("updateInstallment invalidates the dashboard", async () => {
+  it("updateInstallment invalidates the home", async () => {
     const client = makeTestQueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useUpdateInstallmentMutation("c1"), {
@@ -61,7 +61,7 @@ describe("cache coherence", () => {
       body: { amountCents: 500 },
     });
     await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
   });
 });
