@@ -1,7 +1,7 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { notification } from "../db/schema";
+import { contract, installment, notification } from "../db/schema";
 import { NotFoundError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
 
@@ -13,8 +13,21 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
     async ({ request }) => {
       const { user } = await requireAuth(request.headers);
       const rows = await db
-        .select()
+        .select({
+          id: notification.id,
+          type: notification.type,
+          contractId: notification.contractId,
+          installmentId: notification.installmentId,
+          metadata: notification.metadata,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt,
+          contractTitle: contract.title,
+          installmentsCount: contract.installmentsCount,
+          installmentSequence: installment.sequence,
+        })
         .from(notification)
+        .innerJoin(contract, eq(notification.contractId, contract.id))
+        .leftJoin(installment, eq(notification.installmentId, installment.id))
         .where(eq(notification.userId, user.id))
         .orderBy(desc(notification.createdAt))
         .limit(LIST_LIMIT);
@@ -26,6 +39,9 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
         metadata: r.metadata as Record<string, unknown> | null,
         readAt: r.readAt ? r.readAt.toISOString() : null,
         createdAt: r.createdAt.toISOString(),
+        contractTitle: r.contractTitle,
+        installmentsCount: r.installmentsCount,
+        installmentSequence: r.installmentSequence ?? null,
       }));
     },
     {
@@ -38,6 +54,9 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
           metadata: t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
           readAt: t.Union([t.String(), t.Null()]),
           createdAt: t.String(),
+          contractTitle: t.String(),
+          installmentsCount: t.Integer(),
+          installmentSequence: t.Union([t.Integer(), t.Null()]),
         })
       ),
     }

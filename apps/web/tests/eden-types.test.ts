@@ -74,12 +74,19 @@ it("infers the Fase-3a installment endpoints cross-package (eden#215 mitigation)
     objectKey: string;
   }>();
 
-  // POST confirm — response is { status }.
+  // POST confirm — response is the updated installment (Fase 1, Task 5).
   const confirm = api.api.installments({ installmentId: "i" }).confirm.post;
   type ConfirmResponse = Awaited<ReturnType<typeof confirm>>["data"];
   expectTypeOf<ConfirmResponse>().not.toBeAny();
   expectTypeOf<NonNullable<ConfirmResponse>>().toEqualTypeOf<{
+    id: string;
+    contractId: string;
+    sequence: number;
+    amountCents: number;
+    dueDate: string;
     status: string;
+    paidAt: string | null;
+    confirmedAt: string | null;
   }>();
 });
 
