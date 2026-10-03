@@ -7,13 +7,60 @@ import type {
 
 export const TODAY = "2026-10-02";
 
+type ContractSummary = InstallmentAction["contract"];
+type BarStatus = NonNullable<ContractSummary["statuses"]>[number];
+type CardWithoutContract = Omit<InstallmentAction, "contract">;
+
+/** The API's BAR_SEGMENTS_MAX: above it, statuses is null. */
+const BAR_SEGMENTS_MAX = 24;
+
+/** The card's own segment, by the API's precedence (home-progress barStatus). */
+function cardStatus(card: CardWithoutContract): BarStatus {
+  if (card.kind === "review" || card.status === "awaiting_confirmation") {
+    return "review";
+  }
+  if (card.kind === "overdue" || card.dueDate < TODAY) {
+    return "overdue";
+  }
+  return card.dueDate === TODAY ? "today" : "open";
+}
+
+/**
+ * A contract summary that follows the card: what comes before its oldest
+ * installment is paid, its own installments (one, or a group's) have the
+ * card's status, and the rest is open. The default card (7 of 12, due
+ * tomorrow) is 6 paid and 6 open.
+ */
+function contractFor(card: CardWithoutContract): ContractSummary {
+  const own = new Set([card.sequence, ...card.sequences]);
+  const first = Math.min(...own);
+  const statuses = Array.from(
+    { length: card.installmentsCount },
+    (_, index): BarStatus => {
+      const sequence = index + 1;
+      if (own.has(sequence)) {
+        return cardStatus(card);
+      }
+      return sequence < first ? "paid" : "open";
+    }
+  );
+  const paidCount = statuses.filter((status) => status === "paid").length;
+  return {
+    paidCount,
+    overdueCount: statuses.filter((status) => status === "overdue").length,
+    remainingCents: (card.installmentsCount - paidCount) * card.amountCents,
+    statuses: card.installmentsCount <= BAR_SEGMENTS_MAX ? statuses : null,
+  };
+}
+
 export function installmentAction(
   over: Partial<InstallmentAction> = {}
 ): InstallmentAction {
-  const installmentId = over.installmentId ?? "i1";
-  const sequence = over.sequence ?? 7;
-  const amountCents = over.amountCents ?? 125_000;
-  return {
+  const { contract, ...rest } = over;
+  const installmentId = rest.installmentId ?? "i1";
+  const sequence = rest.sequence ?? 7;
+  const amountCents = rest.amountCents ?? 125_000;
+  const card: CardWithoutContract = {
     id: `installment:${installmentId}`,
     kind: "due_soon",
     installmentId,
@@ -33,28 +80,9 @@ export function installmentAction(
     installmentIds: [installmentId],
     sequences: [sequence],
     totalCents: amountCents,
-    contract: {
-      paidCount: 6,
-      overdueCount: 0,
-      remainingCents: 6 * amountCents,
-      statuses: [
-        "paid",
-        "paid",
-        "paid",
-        "paid",
-        "paid",
-        "paid",
-        // Installment 7 is due tomorrow (dueDate 2026-10-03, TODAY 2026-10-02): open, not today.
-        "open",
-        "open",
-        "open",
-        "open",
-        "open",
-        "open",
-      ],
-    },
-    ...over,
+    ...rest,
   };
+  return { ...card, contract: contract ?? contractFor(card) };
 }
 
 export function inviteAction(over: Partial<InviteAction> = {}): InviteAction {

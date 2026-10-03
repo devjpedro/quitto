@@ -179,4 +179,16 @@ it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
     paidCents: number;
     receivedCents: number;
   }>();
+  // Every installment card carries its contract's summary; statuses is null
+  // above 24 installments, never optional (planner's decision 4: no undefined).
+  type HomeInstallmentAction = Exclude<
+    NonNullable<HomeData>["actions"][number],
+    { kind: "invite" }
+  >;
+  expectTypeOf<HomeInstallmentAction["contract"]>().toEqualTypeOf<{
+    paidCount: number;
+    overdueCount: number;
+    remainingCents: number;
+    statuses: ("paid" | "overdue" | "review" | "today" | "open")[] | null;
+  }>();
 });

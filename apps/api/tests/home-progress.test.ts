@@ -91,24 +91,31 @@ describe("contractSummary", () => {
   });
 
   it(`até ${BAR_SEGMENTS_MAX} parcelas há um status por parcela; acima disso, só as contagens`, () => {
+    // 4 paid and 2 overdue (all 6 past due), then open ones.
     const many = (count: number) =>
       Array.from({ length: count }, (_, i) =>
         inst({
           id: `i${i + 1}`,
           sequence: i + 1,
           status: i < 4 ? "paid" : "pending",
+          dueDate: i < 6 ? "2026-09-30" : "2026-10-30",
         })
       );
-    expect(contractSummary(many(24), TODAY).statuses).toHaveLength(24);
-    expect(contractSummary(many(25), TODAY)).toMatchObject({
+    expect(
+      contractSummary(many(BAR_SEGMENTS_MAX), TODAY).statuses
+    ).toHaveLength(BAR_SEGMENTS_MAX);
+    // The counts are what draws the zones: they must hold when statuses is null.
+    expect(contractSummary(many(BAR_SEGMENTS_MAX + 1), TODAY)).toEqual({
       paidCount: 4,
+      overdueCount: 2,
+      remainingCents: (BAR_SEGMENTS_MAX + 1 - 4) * 35_000,
       statuses: null,
     });
   });
 });
 
 describe("buildAgenda: o progresso no cartão", () => {
-  it("o cartão traz o contrato inteiro, e o grupo de atrasadas também", () => {
+  it("o grupo de atrasadas e o cartão simples do mesmo contrato trazem o mesmo resumo do contrato inteiro", () => {
     const contract: HomeContractRow = {
       id: "c",
       title: "Notebook da Marina",
@@ -126,7 +133,8 @@ describe("buildAgenda: o progresso no cartão", () => {
         inst({ id: "1", sequence: 1, status: "paid", dueDate: "2026-07-30" }),
         inst({ id: "2", sequence: 2, dueDate: "2026-08-30" }),
         inst({ id: "3", sequence: 3, dueDate: "2026-09-30" }),
-        inst({ id: "4", sequence: 4, dueDate: "2026-10-30" }),
+        // Within the 7 days of "due soon": a single card next to the group.
+        inst({ id: "4", sequence: 4, dueDate: "2026-10-08" }),
       ],
       participants: [
         {
@@ -144,14 +152,20 @@ describe("buildAgenda: o progresso no cartão", () => {
       ],
       users: [],
     });
-    const [card] = buildAgenda(parties, [], TODAY)
+    const cards = buildAgenda(parties, [], TODAY)
       .actions as InstallmentAction[];
-    expect(card?.count).toBe(2);
-    expect(card?.contract).toEqual({
+    expect(cards.map((card) => [card.kind, card.count])).toEqual([
+      ["overdue", 2],
+      ["due_soon", 1],
+    ]);
+    const [group, single] = cards;
+    expect(group?.contract).toEqual({
       paidCount: 1,
       overdueCount: 2,
       remainingCents: 105_000,
       statuses: ["paid", "overdue", "overdue", "open"],
     });
+    // One summary per contract, shared by every card of it.
+    expect(single?.contract).toBe(group?.contract);
   });
 });
