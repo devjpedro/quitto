@@ -1,40 +1,31 @@
 import type { CSSProperties } from "react";
+import { cn } from "@/lib/utils";
+import { LOGO_ARC, RING, TRACK_MIX } from "./ring-geometry";
 
 type LogoVariant = "brand" | "inverted";
 
-const RING = {
-  box: 24,
-  center: 12,
-  radius: 9,
-  strokeWidth: 4,
-  // ~70% do anel fechado (circunferência ≈ 56.5)
-  dashArray: "40 57",
-  // gira a abertura pro canto inferior-direito (relógio quase cheio)
-  rotation: 125,
-} as const;
-
-// brand: token-driven pra adaptar ao dark (arco segue --primary, track é o
-// mesmo teal em baixa opacidade). inverted: anel branco fixo sobre o painel de
-// marca (bg-brand-panel) — não precisa reagir a tema, já é sempre escuro/teal.
-const RING_COLORS: Record<LogoVariant, { track: string; arc: string }> = {
+// brand: Floresta from the tokens, so it follows the dark theme (#7CC495),
+// with the track at 22% of it (DIRECAO › Logo). inverted: the white ring on
+// the legacy brand panel (sign-in), which is always dark.
+const RING_COLORS: Record<LogoVariant, { arc: string; track: string }> = {
   brand: {
-    track: "color-mix(in oklab, var(--primary) 22%, transparent)",
-    arc: "var(--primary)",
+    track: `color-mix(in oklab, var(--brand) ${TRACK_MIX}%, transparent)`,
+    arc: "var(--brand)",
   },
   inverted: { track: "rgba(255,255,255,0.35)", arc: "#ffffff" },
 };
 
-// cor do texto do wordmark por variante; inverted herda currentColor (branco do painel)
+// The word's color; inverted inherits currentColor (the panel's white).
 const TEXT_COLOR: Record<LogoVariant, string> = {
-  brand: "text-primary",
+  brand: "text-brand",
   inverted: "",
 };
 
 const WORDMARK = {
   defaultSize: 20,
-  // diâmetro do anel como fração do font-size (casa com o tamanho do "o")
+  // The ring's diameter as a share of the font size (it matches the "o").
   ringToFontRatio: 0.72,
-  // empurrão vertical (× font-size) pro anel assentar na linha de base
+  // Vertical nudge (× font size) that seats the ring on the baseline.
   baselineShiftRatio: -0.13,
 } as const;
 
@@ -44,8 +35,8 @@ export function LogoMark({
   style,
 }: {
   size?: number;
-  variant?: LogoVariant;
   style?: CSSProperties;
+  variant?: LogoVariant;
 }) {
   const { track, arc } = RING_COLORS[variant];
   return (
@@ -53,8 +44,8 @@ export function LogoMark({
       aria-hidden="true"
       focusable="false"
       height={size}
-      // inline-block contraria o reset do Tailwind (svg { display: block }),
-      // pro anel fluir como o "o" final e o vertical-align valer
+      // inline-block undoes Tailwind's reset (svg { display: block }), so the
+      // ring flows as the word's last "o" and vertical-align applies.
       style={{ display: "inline-block", ...style }}
       viewBox={`0 0 ${RING.box} ${RING.box}`}
       width={size}
@@ -73,35 +64,35 @@ export function LogoMark({
         fill="none"
         r={RING.radius}
         stroke={arc}
-        strokeDasharray={RING.dashArray}
+        strokeDasharray={LOGO_ARC.dashArray}
         strokeLinecap="round"
         strokeWidth={RING.strokeWidth}
-        transform={`rotate(${RING.rotation} ${RING.center} ${RING.center})`}
+        transform={`rotate(${LOGO_ARC.rotation} ${RING.center} ${RING.center})`}
       />
     </svg>
   );
 }
 
+/** The Quitto wordmark: "quitt" and the ring for the "o". 24 px in the sidebar, 22 px on the phone's top bar. */
 export function Logo({
+  className,
   size = WORDMARK.defaultSize,
   variant = "brand",
 }: {
+  className?: string;
   size?: number;
   variant?: LogoVariant;
 }) {
-  const className = [
-    "select-none font-bold font-display tracking-tight",
-    TEXT_COLOR[variant],
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
     <span
       aria-label="Quitto"
-      className={className}
+      className={cn(
+        "select-none whitespace-nowrap font-bold font-display leading-none tracking-[-0.03em]",
+        TEXT_COLOR[variant],
+        className
+      )}
       role="img"
-      style={{ fontSize: size, whiteSpace: "nowrap" }}
+      style={{ fontSize: size }}
     >
       <span aria-hidden="true">quitt</span>
       <LogoMark

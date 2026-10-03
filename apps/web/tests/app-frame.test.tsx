@@ -294,6 +294,16 @@ describe("AppFrame", () => {
     );
   });
 
+  it("shows the Quitto logo in the sidebar and the top bar, never a placeholder", async () => {
+    await renderAt("/");
+    const logos = screen.getAllByRole("img", { name: "Quitto" });
+    expect(logos).toHaveLength(2);
+    for (const logo of logos) {
+      expect(logo).toHaveClass("text-brand");
+    }
+    expect(document.querySelector(".rounded-full.bg-brand-surface")).toBeNull();
+  });
+
   it("has a skip link to the main content", async () => {
     await renderAt("/");
     expect(

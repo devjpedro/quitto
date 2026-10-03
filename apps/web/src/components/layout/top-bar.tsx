@@ -1,11 +1,11 @@
 import { Bell, MagnifyingGlass } from "@phosphor-icons/react";
+import { Logo } from "@/components/logo";
 import { IconButton } from "@/components/ui/icon-button";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
 import type { ShellProps } from "./app-frame";
 import { notificationsLabel } from "./notifications-label";
 import { notificationsTrigger } from "./notifications-trigger";
-import { Wordmark } from "./wordmark";
 
 export function TopBar({
   identity,
@@ -16,7 +16,7 @@ export function TopBar({
 }: ShellProps) {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between bg-surface-sunken/90 px-4 pt-[calc(0.375rem+env(safe-area-inset-top))] pb-1.5 backdrop-blur md:hidden">
-      <Wordmark />
+      <Logo size={22} />
       <div className="flex items-center gap-0.5">
         <IconButton
           icon={MagnifyingGlass}
