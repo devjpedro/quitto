@@ -302,6 +302,15 @@ describe("AppFrame", () => {
       expect(logo).toHaveClass("text-brand");
     }
     expect(document.querySelector(".rounded-full.bg-brand-surface")).toBeNull();
+    // DIRECAO › Logo: 24 px in the sidebar, 22 px on the phone's top bar.
+    expect(
+      within(screen.getByRole("complementary")).getByRole("img", {
+        name: "Quitto",
+      })
+    ).toHaveStyle({ fontSize: "24px" });
+    expect(
+      within(screen.getByRole("banner")).getByRole("img", { name: "Quitto" })
+    ).toHaveStyle({ fontSize: "22px" });
   });
 
   it("has a skip link to the main content", async () => {

@@ -28,7 +28,9 @@ export function AuthBrandPanel({ mode }: { mode: AuthMode }) {
         <span className="absolute top-24 left-10 h-24 w-24 rounded-full border border-white/10" />
       </div>
 
-      <Logo size={20} variant="inverted" />
+      {/* The logo is leading-none: below md the panel doesn't stretch, the
+          headline's mt-auto is 0 and only this margin spaces them. */}
+      <Logo className="mb-6 md:mb-0" size={20} variant="inverted" />
 
       <div className="mt-auto min-w-0">
         <h2 className="max-w-[14ch] text-balance font-bold text-2xl leading-[1.12] tracking-tight md:max-w-none md:text-4xl md:leading-[1.08]">
