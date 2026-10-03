@@ -171,3 +171,40 @@
   --surface-inset: var(--page-inset);
   --divider: var(--page-divider);
 }
+
+/*
+ * Installment bar (DIRECAO › Progresso): an overdue segment, a proof
+ * waiting, and the same two on the green card. The status is in the
+ * pattern, never only in the color.
+ */
+@utility stripes-danger {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--danger) 0 2px,
+    color-mix(in srgb, var(--danger) 30%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-warning {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--warning) 0 2px,
+    color-mix(in srgb, var(--warning) 28%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-on-brand {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--on-brand) 0 2px,
+    color-mix(in srgb, var(--on-brand) 32%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-on-brand-alert {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--on-brand-alert) 0 2px,
+    color-mix(in srgb, var(--on-brand-alert) 32%, transparent) 2px 4px
+  );
+}
