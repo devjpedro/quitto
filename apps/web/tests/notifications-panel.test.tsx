@@ -129,12 +129,14 @@ describe("NotificationsPanel", () => {
     expect(screen.getAllByText("Nova")).toHaveLength(1);
   });
 
-  it("com mais de uma, o plural", () => {
+  it("com mais de uma, o plural", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderPanel(2);
     expect(
       screen.getByRole("dialog", { name: "Notificações" })
     ).toHaveAccessibleDescription("2 não lidas");
+    // The list suspends until its fetch resolves: let it land inside the test.
+    expect(await screen.findByText("Nada novo por aqui")).toBeVisible();
   });
 
   it("não lida tem o título em semibold; lida, em peso normal", async () => {
