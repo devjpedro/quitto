@@ -36,7 +36,7 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
       </span>
       {item.status === INSTALLMENT_STATUS.awaitingConfirmation ? (
         <Tag
-          className="col-start-1 row-start-3 mt-1 justify-self-start whitespace-nowrap md:col-start-2 md:row-span-2 md:row-start-1 md:mt-0 md:self-center"
+          className="col-start-1 row-start-3 mt-1 justify-self-start md:col-start-2 md:row-span-2 md:row-start-1 md:mt-0 md:self-center"
           tone="warning"
         >
           {m.home_upcoming_awaiting()}

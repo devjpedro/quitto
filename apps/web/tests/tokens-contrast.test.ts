@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contrastRatio } from "@/lib/contrast";
+import { contrastRatio, relativeLuminance } from "@/lib/contrast";
 
 const css = readFileSync(
   resolve(import.meta.dirname, "../src/styles/tokens.css"),
@@ -71,6 +71,10 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink-muted", "nav-hover"],
   ["on-brand", "brand-hover"],
   ["on-brand-muted", "brand-hover"],
+  // A hovered card keeps its status text as legible as at rest.
+  ["brand", "surface-card-hover"],
+  ["danger", "surface-card-hover"],
+  ["warning", "surface-card-hover"],
   // The phone (page-surfaces, mockup 13 lines 487-488): what sits inside a
   // white card and the hover step, on the phone's own tokens.
   ["ink", "page-card-hover"],
@@ -103,6 +107,7 @@ const NON_TEXT_PAIRS: [string, string][] = [
   ["warning", "track"],
   ["ink", "track"],
   ["on-brand-alert", "brand-surface"],
+  ["on-brand-alert", "brand-hover"],
   // The overdue mark on a sidebar ring, at rest and on hover.
   ["danger", "canvas"],
   ["danger", "nav-hover"],
@@ -208,5 +213,71 @@ describe("page-surfaces", () => {
     expect(dark["page-card-hover"]).toBe("#2a2b26");
     expect(dark["page-inset"]).toBe(dark["surface-raised"]);
     expect(dark["page-divider"]).toBe("#1f201c");
+  });
+});
+
+// The panel's tokens, [light, dark], as the Global Constraints table has them
+// (mockup13-report §4). Pinned by value: a wrong one can pass every contrast
+// pair and still swap the layers (an inset lighter than the card in dark).
+const PANEL_TOKENS: Record<string, [string, string]> = {
+  "surface-card": ["#f1f0eb", "#2e2f2a"],
+  "surface-card-hover": ["#eae8e1", "#31322c"],
+  "surface-inset": ["#ffffff", "#242521"],
+  divider: ["#e3e1da", "#262723"],
+  track: ["#d5d3cc", "#45463f"],
+  "nav-hover": ["#efede7", "#1f201c"],
+  "brand-hover": ["#174a28", "#24503a"],
+  "on-brand-alert": ["#ffb3a6", "#ffb3a6"],
+};
+
+function luminance(tokens: Record<string, string>, name: string): number {
+  return relativeLuminance(tokens[name] as string);
+}
+
+describe("surface layers", () => {
+  for (const [name, [lightHex, darkHex]] of Object.entries(PANEL_TOKENS)) {
+    it(`--${name} is the table's value in light and dark`, () => {
+      expect(light[name]).toBe(lightHex);
+      expect(dark[name]).toBe(darkHex);
+    });
+  }
+
+  it("in the panel, what sits inside a card steps back toward the white panel; hover steps the other way", () => {
+    // Light: inset (the panel's white) > card > hover.
+    expect(light["surface-inset"]).toBe(light.surface);
+    expect(luminance(light, "surface-inset")).toBeGreaterThan(
+      luminance(light, "surface-card")
+    );
+    expect(luminance(light, "surface-card")).toBeGreaterThan(
+      luminance(light, "surface-card-hover")
+    );
+    // Dark: inset (the panel itself) < card < hover.
+    expect(dark["surface-inset"]).toBe(dark.surface);
+    expect(luminance(dark, "surface-inset")).toBeLessThan(
+      luminance(dark, "surface-card")
+    );
+    expect(luminance(dark, "surface-card")).toBeLessThan(
+      luminance(dark, "surface-card-hover")
+    );
+  });
+
+  it("on a phone (page-surfaces), the card is the surface and what sits inside it is one step away from it", () => {
+    // Light: white card > hover > inset.
+    expect(luminance(light, "surface")).toBeGreaterThan(
+      luminance(light, "page-card-hover")
+    );
+    expect(luminance(light, "page-card-hover")).toBeGreaterThan(
+      luminance(light, "page-inset")
+    );
+    // Dark: three layers, page < card < inset, and the hover steps up too.
+    expect(luminance(dark, "surface-sunken")).toBeLessThan(
+      luminance(dark, "surface")
+    );
+    expect(luminance(dark, "surface")).toBeLessThan(
+      luminance(dark, "page-inset")
+    );
+    expect(luminance(dark, "surface")).toBeLessThan(
+      luminance(dark, "page-card-hover")
+    );
   });
 });

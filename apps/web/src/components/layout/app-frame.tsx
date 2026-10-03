@@ -24,7 +24,8 @@ export interface ShellProps {
  * frame follows the screen with 12 px of canvas around the panel, and the
  * content grows by columns (DIRECAO › Layout). Mobile: top bar + tab bar.
  * Below md there is no panel: `page-surfaces` makes a card the surface and
- * what sits inside it the sunken one.
+ * what sits inside it the phone's inset step (`--page-inset`: the sunken
+ * surface in light, the raised one in dark).
  *
  * viewport-fit=cover draws to the physical edges. A phone on its side is md+
  * with the notch at the left or the right: the frame keeps out of it (the

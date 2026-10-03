@@ -33,9 +33,7 @@ function CellView({ cell, locale }: { cell: MilestoneCell; locale: Locale }) {
       const view = momentView(cell, locale);
       return (
         <>
-          <Tag className="whitespace-nowrap" tone="highlight">
-            {view.title}
-          </Tag>
+          <Tag tone="highlight">{view.title}</Tag>
           <span className="text-sm">{view.detail}</span>
         </>
       );
