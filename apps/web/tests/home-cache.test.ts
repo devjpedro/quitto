@@ -66,14 +66,34 @@ describe("home-cache", () => {
     const next = withPendingWrites(home, {
       actionIds: ["invite:tok1"],
       dismissedAt: "2026-10-02T10:00:00.000Z",
+      unreadCap: null,
     });
     expect(next.actions.map((a) => a.id)).toEqual(["installment:i1"]);
     expect(next.onboarding.dismissedAt).toBe("2026-10-02T10:00:00.000Z");
     expect(home.actions).toHaveLength(2);
     // Nothing in flight: the server's read stands as it is.
-    expect(withPendingWrites(home, { actionIds: [], dismissedAt: null })).toBe(
-      home
-    );
+    expect(
+      withPendingWrites(home, {
+        actionIds: [],
+        dismissedAt: null,
+        unreadCap: null,
+      })
+    ).toBe(home);
+  });
+
+  it("withPendingWrites: com leitura de aviso em voo, o contador não passa do que o cache mostra", () => {
+    const home = homeFixture({ unreadCount: 3 });
+    const pending = { actionIds: [], dismissedAt: null };
+    // The read was not applied yet on the server: keep the optimistic count.
+    expect(
+      withPendingWrites(home, { ...pending, unreadCap: 2 }).unreadCount
+    ).toBe(2);
+    // The server already counts fewer (it applied the read): its count stands.
+    expect(
+      withPendingWrites(home, { ...pending, unreadCap: 5 }).unreadCount
+    ).toBe(3);
+    // No read in flight: the server's read stands as it is.
+    expect(withPendingWrites(home, { ...pending, unreadCap: null })).toBe(home);
   });
 
   it("withPendingWrites não troca a hora de uma dispensa que o servidor já gravou", () => {
@@ -85,6 +105,7 @@ describe("home-cache", () => {
       withPendingWrites(home, {
         actionIds: [],
         dismissedAt: "2026-10-02T10:00:00.000Z",
+        unreadCap: null,
       }).onboarding.dismissedAt
     ).toBe("2026-10-02T09:00:00.000Z");
   });

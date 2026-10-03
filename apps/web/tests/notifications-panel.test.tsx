@@ -1,7 +1,9 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, skipToken, useQuery } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Home } from "@/features/home/types";
 import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
@@ -58,7 +60,38 @@ const readNote: NotificationItem = {
   readAt: new Date().toISOString(),
 };
 
-function renderPanel(unreadCount = 1) {
+/** As the shell does (Task 13): a button opens the panel, and the count is the cached home's. */
+function Harness({
+  initiallyOpen,
+  onOpenChange,
+}: {
+  initiallyOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: queryKeys.home,
+    queryFn: skipToken,
+    select: (home: Home) => home.unreadCount,
+  });
+  return (
+    <>
+      <button onClick={() => setOpen(true)} type="button">
+        Abrir notificações
+      </button>
+      <NotificationsPanel
+        onOpenChange={(next) => {
+          onOpenChange(next);
+          setOpen(next);
+        }}
+        open={open}
+        unreadCount={unreadCount}
+      />
+    </>
+  );
+}
+
+function renderPanel(unreadCount = 1, { open = true } = {}) {
   const onOpenChange = vi.fn();
   const client = new QueryClient({
     defaultOptions: {
@@ -68,11 +101,7 @@ function renderPanel(unreadCount = 1) {
   });
   client.setQueryData(queryKeys.home, homeFixture({ unreadCount }));
   renderWithProviders(
-    <NotificationsPanel
-      onOpenChange={onOpenChange}
-      open
-      unreadCount={unreadCount}
-    />,
+    <Harness initiallyOpen={open} onOpenChange={onOpenChange} />,
     { client }
   );
   return { onOpenChange };
@@ -100,6 +129,23 @@ describe("NotificationsPanel", () => {
     expect(screen.getAllByText("Nova")).toHaveLength(1);
   });
 
+  it("com mais de uma, o plural", () => {
+    getList.mockResolvedValue({ data: [], error: null });
+    renderPanel(2);
+    expect(
+      screen.getByRole("dialog", { name: "Notificações" })
+    ).toHaveAccessibleDescription("2 não lidas");
+  });
+
+  it("não lida tem o título em semibold; lida, em peso normal", async () => {
+    getList.mockResolvedValue({ data: [unreadNote, readNote], error: null });
+    renderPanel();
+    expect(await screen.findByText("Pagamento confirmado")).toHaveClass(
+      "font-semibold"
+    );
+    expect(screen.getByText("Convite aceito")).toHaveClass("font-normal");
+  });
+
   it("abrir um aviso marca como lido, fecha o painel e vai para a parcela", async () => {
     getList.mockResolvedValue({ data: [unreadNote], error: null });
     postRead.mockResolvedValue({ data: { ok: true }, error: null });
@@ -114,6 +160,46 @@ describe("NotificationsPanel", () => {
       params: { id: "c1" },
       search: { installment: "i1" },
     });
+  });
+
+  it("abrir um aviso já lido não chama a API, mas vai até ele", async () => {
+    getList.mockResolvedValue({ data: [readNote], error: null });
+    renderPanel(0);
+    await userEvent.click(
+      await screen.findByRole("button", { name: INVITE_ACCEPTED_ROW })
+    );
+    expect(postRead).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/contracts/$id",
+      params: { id: "c1" },
+      search: { installment: undefined },
+    });
+  });
+
+  it("Esc fecha o painel e devolve o foco a quem o abriu", async () => {
+    getList.mockResolvedValue({ data: [unreadNote], error: null });
+    renderPanel(1, { open: false });
+    const opener = screen.getByRole("button", { name: "Abrir notificações" });
+    await userEvent.click(opener);
+    await screen.findByRole("button", { name: CONFIRMED_ROW });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(opener).toHaveFocus();
+  });
+
+  it("Marcar todas aparece quando o sino conta não lidas fora das 50 carregadas", async () => {
+    getList.mockResolvedValue({ data: [readNote], error: null });
+    postReadAll.mockResolvedValue({ data: { ok: true }, error: null });
+    renderPanel(3);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Marcar todas como lidas" })
+    );
+    expect(postReadAll).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Marcar todas como lidas" })
+      ).toBeNull()
+    );
   });
 
   it("Marcar todas como lidas some quando não há mais não lidas", async () => {
@@ -131,11 +217,22 @@ describe("NotificationsPanel", () => {
     expect(screen.queryAllByText("Nova")).toHaveLength(0);
   });
 
-  it("vazio: a versão compacta", async () => {
+  it("vazio: a versão compacta, com o sino no quadrado das linhas e sem ação", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderPanel(0);
+    const heading = await screen.findByRole("heading", {
+      name: "Nada novo por aqui",
+    });
+    expect(heading).toBeVisible();
+    // Mockup 10: the bell sits in the same 32 px brand tile as the rows' icons.
     expect(
-      await screen.findByRole("heading", { name: "Nada novo por aqui" })
-    ).toBeVisible();
+      heading.parentElement?.querySelector("[aria-hidden='true']")
+    ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");
+    expect(
+      screen.queryByRole("button", { name: "Marcar todas como lidas" })
+    ).toBeNull();
+    expect(
+      screen.getByRole("dialog", { name: "Notificações" })
+    ).not.toHaveAccessibleDescription();
   });
 });

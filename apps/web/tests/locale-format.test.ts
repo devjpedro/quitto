@@ -206,7 +206,7 @@ describe("formatRelativeTime", () => {
       "há 23 h"
     );
     expect(formatRelativeTime(ago(6.5 * 86_400), now, "pt-BR")).toBe(
-      "há 1 sem."
+      "há 1 semana"
     );
   });
 
@@ -216,24 +216,46 @@ describe("formatRelativeTime", () => {
   it("semana, mês e ano dizem tempo decorrido, nunca 'semana/mês/ano passado'", () => {
     // 13 days (Sat Sep 19, two calendar weeks back): trunc(1.86 wk) = 1.
     expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "pt-BR")).toBe(
-      "há 1 sem."
+      "há 1 semana"
     );
     expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "en-US")).toBe(
-      "1 wk. ago"
+      "1 week ago"
     );
     // Aug 5 read on Oct 2 is 58 days: trunc(1.91 mo) = 1, so "há 1 mês".
     expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "pt-BR")).toBe(
       "há 1 mês"
     );
     expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "en-US")).toBe(
-      "1 mo. ago"
+      "1 month ago"
     );
     // November 2024 is 699 days: trunc(1.91 yr) = 1.
     expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "pt-BR")).toBe(
       "há 1 ano"
     );
     expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "en-US")).toBe(
-      "1 yr. ago"
+      "1 year ago"
+    );
+  });
+
+  // Mockup 10 writes weeks, months and years in full ("há 1 semana"); the
+  // smaller units stay short ("há 2 h", "2 hr. ago").
+  it("semana, mês e ano por extenso; horas e minutos curtos", () => {
+    // Sep 12 read on Oct 2 is 20 days: trunc(2.86 wk) = 2.
+    expect(formatRelativeTime("2026-09-12T12:00:00Z", now, "pt-BR")).toBe(
+      "há 2 semanas"
+    );
+    expect(formatRelativeTime("2026-09-12T12:00:00Z", now, "en-US")).toBe(
+      "2 weeks ago"
+    );
+    // Jun 2 read on Oct 2 is 122 days: trunc(4.01 mo) = 4.
+    expect(formatRelativeTime("2026-06-02T12:00:00Z", now, "pt-BR")).toBe(
+      "há 4 meses"
+    );
+    expect(formatRelativeTime("2026-10-02T11:30:00Z", now, "pt-BR")).toBe(
+      "há 30 min."
+    );
+    expect(formatRelativeTime("2026-10-02T11:30:00Z", now, "en-US")).toBe(
+      "30 min. ago"
     );
   });
 });

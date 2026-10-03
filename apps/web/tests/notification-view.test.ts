@@ -64,6 +64,15 @@ describe("notificationView", () => {
     expect(view.meta).toBe("Aluguel do apê · ana@example.com · ontem");
   });
 
+  it("motivo vazio ou só com espaços não vira linha de motivo", () => {
+    const view = notificationView(
+      item({ type: "payment_disputed", metadata: { reason: "   " } }),
+      NOW,
+      "pt-BR"
+    );
+    expect(view.reason).toBeNull();
+  });
+
   it("comprovante é aviso; tipo desconhecido cai no genérico", () => {
     expect(
       notificationView(item({ type: "proof_submitted" }), NOW, "pt-BR")
@@ -77,6 +86,15 @@ describe("notificationView", () => {
       title: "Notificação",
       tone: "neutral",
     });
+  });
+
+  it("aviso de mais de uma semana diz a semana por extenso, como no mockup 10", () => {
+    const view = notificationView(
+      item({ createdAt: "2026-09-24T12:00:00.000Z" }),
+      NOW,
+      "pt-BR"
+    );
+    expect(view.meta).toBe("Aluguel do apê · parcela 7 de 12 · há 1 semana");
   });
 
   it("no idioma pedido", () => {

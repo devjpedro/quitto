@@ -34,7 +34,10 @@ export function NotificationsPanel({
       title={m.notifications_title()}
     >
       <SectionBoundary fallback={<NotificationsSkeleton />}>
-        <NotificationsList onNavigate={() => onOpenChange(false)} />
+        <NotificationsList
+          onNavigate={() => onOpenChange(false)}
+          unreadCount={unreadCount}
+        />
       </SectionBoundary>
     </ResponsiveSheet>
   );

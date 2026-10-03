@@ -6,7 +6,7 @@ import {
   useReducedMotion,
 } from "motion/react";
 import { Dialog } from "radix-ui";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { MD_UP, useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,34 @@ function useSheetMotion() {
   };
 }
 
+/**
+ * The sheet opens from state (the bell, a sidebar row), with no Dialog.Trigger,
+ * so Radix has nothing to give the focus back to on close and drops it on
+ * <body>. Remember what had the focus when it opened and return it there,
+ * as long as it is still in the page (WCAG 2.4.3). Without a live target,
+ * Radix's own handling stays.
+ */
+function useReturnFocus() {
+  const returnTo = useRef<HTMLElement | null>(null);
+  return {
+    onOpenAutoFocus: () => {
+      const active = document.activeElement;
+      returnTo.current =
+        active instanceof HTMLElement && active !== document.body
+          ? active
+          : null;
+    },
+    onCloseAutoFocus: (event: Event) => {
+      const target = returnTo.current;
+      returnTo.current = null;
+      if (target?.isConnected) {
+        event.preventDefault();
+        target.focus();
+      }
+    },
+  };
+}
+
 /** Side panel from md up, draggable bottom sheet below. Same content in both. */
 export function ResponsiveSheet({
   open,
@@ -54,6 +82,7 @@ export function ResponsiveSheet({
 }) {
   const { variant, canDrag, hidden, shown, transition, dragControls } =
     useSheetMotion();
+  const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus();
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -71,6 +100,8 @@ export function ResponsiveSheet({
             <Dialog.Content
               asChild
               forceMount
+              onCloseAutoFocus={onCloseAutoFocus}
+              onOpenAutoFocus={onOpenAutoFocus}
               {...(description ? {} : { "aria-describedby": undefined })}
             >
               <motion.div

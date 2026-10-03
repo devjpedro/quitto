@@ -38,13 +38,17 @@ export interface PendingHomeWrites {
   actionIds: readonly string[];
   /** The optimistic dismissal time while the dismissal is in flight, else null. */
   dismissedAt: string | null;
+  /** The cached (optimistic) unread count while a notification read is in flight, else null. */
+  unreadCap: number | null;
 }
 
 /**
  * Keeps the effect of the writes still in flight on a home just read from the
- * server, which may predate them: their actions stay out and a pending
- * dismissal stays dismissed. Once a write settles, its own rollback or
- * refetch decides.
+ * server, which may predate them: their actions stay out, a pending
+ * dismissal stays dismissed and a pending notification read keeps the unread
+ * count from going back up. The count takes the lower of the two, so a read
+ * the server already applied is not taken off twice. Once a write settles,
+ * its own rollback or refetch decides.
  */
 export function withPendingWrites(
   home: Home,
@@ -60,6 +64,9 @@ export function withPendingWrites(
   }
   if (pending.dismissedAt !== null && next.onboarding.dismissedAt === null) {
     next = withOnboardingDismissed(next, pending.dismissedAt);
+  }
+  if (pending.unreadCap !== null && next.unreadCount > pending.unreadCap) {
+    next = { ...next, unreadCount: pending.unreadCap };
   }
   return next;
 }

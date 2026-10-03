@@ -206,9 +206,20 @@ const CALENDAR_WORD_UNITS = new Set<Intl.RelativeTimeFormatUnit>([
 ]);
 
 /**
- * "há 2 h", "ontem", "há 3 dias", "há 1 mês" for a past instant (ISO
- * timestamp). `nowMs` is injectable. A timestamp a few seconds ahead (client
- * clock behind the server's) reads as "agora", never "em 3 s".
+ * Units written in full, as in mockup 10 ("há 1 semana", "1 week ago"): their
+ * short forms ("há 1 sem.", "1 wk. ago") read as clipped. Seconds, minutes and
+ * hours stay short ("há 2 h").
+ */
+const LONG_UNITS = new Set<Intl.RelativeTimeFormatUnit>([
+  "week",
+  "month",
+  "year",
+]);
+
+/**
+ * "há 2 h", "ontem", "há 3 dias", "há 1 semana", "há 1 mês" for a past instant
+ * (ISO timestamp). `nowMs` is injectable. A timestamp a few seconds ahead
+ * (client clock behind the server's) reads as "agora", never "em 3 s".
  */
 export function formatRelativeTime(
   isoTimestamp: string,
@@ -217,10 +228,11 @@ export function formatRelativeTime(
 ): string {
   const { unit, value } = elapsedAmount(Date.parse(isoTimestamp), nowMs);
   const numeric = CALENDAR_WORD_UNITS.has(unit) ? "auto" : "always";
+  const style = LONG_UNITS.has(unit) ? "long" : "short";
   const formatter = cached(
     timeFormatters,
-    `${locale}|${numeric}`,
-    () => new Intl.RelativeTimeFormat(locale, { numeric, style: "short" })
+    `${locale}|${numeric}|${style}`,
+    () => new Intl.RelativeTimeFormat(locale, { numeric, style })
   );
   return normalizeSpaces(formatter.format(-value, unit));
 }

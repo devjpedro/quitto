@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
+import { NOTIFICATION_READ_KEY } from "@/features/notifications/api";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
@@ -26,13 +27,14 @@ const HOME_DISMISS_KEY = ["home-dismiss"] as const;
 
 function pendingHomeWrites(client: QueryClient): PendingHomeWrites {
   const dismissing = client.isMutating({ mutationKey: HOME_DISMISS_KEY }) > 0;
+  const reading = client.isMutating({ mutationKey: NOTIFICATION_READ_KEY }) > 0;
+  const cached = client.getQueryData<Home>(queryKeys.home);
   return {
     actionIds: pendingHomeActionIds(client),
     // The cache holds the optimistic time while the dismissal is in flight.
-    dismissedAt: dismissing
-      ? (client.getQueryData<Home>(queryKeys.home)?.onboarding.dismissedAt ??
-        null)
-      : null,
+    dismissedAt: dismissing ? (cached?.onboarding.dismissedAt ?? null) : null,
+    // And the optimistic count while a notification read is in flight.
+    unreadCap: reading ? (cached?.unreadCount ?? null) : null,
   };
 }
 

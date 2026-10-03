@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
 
@@ -20,6 +21,21 @@ function renderSheet(onOpenChange = vi.fn()) {
     </ResponsiveSheet>
   );
   return onOpenChange;
+}
+
+/** Opened by state, as the bell opens the notifications panel: no Dialog.Trigger. */
+function SheetWithOpener() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} type="button">
+        Abrir
+      </button>
+      <ResponsiveSheet onOpenChange={setOpen} open={open} title="Parcela">
+        <button type="button">Enviar comprovante</button>
+      </ResponsiveSheet>
+    </>
+  );
 }
 
 describe("ResponsiveSheet", () => {
@@ -59,6 +75,27 @@ describe("ResponsiveSheet", () => {
       "data-variant",
       "bottom"
     );
+  });
+
+  it("gives the focus back to the button that opened it, on Escape and on Close", async () => {
+    render(<SheetWithOpener />);
+    const opener = screen.getByRole("button", { name: "Abrir" });
+    await userEvent.click(opener);
+    expect(
+      screen.getByRole("button", { name: "Enviar comprovante" })
+    ).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(opener).toHaveFocus();
+
+    await userEvent.click(opener);
+    await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(opener).toHaveFocus();
   });
 
   it("closes from the Close button", async () => {
