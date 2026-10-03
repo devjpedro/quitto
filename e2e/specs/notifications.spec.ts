@@ -3,13 +3,15 @@ import { expect, test } from "@playwright/test";
 import {
   getContract,
   newUser,
+  openNotifications,
   PROOF_PDF,
   seedContract,
   seedInvite,
+  signup,
 } from "../fixtures";
 
 const ACCEPT_INVITE = /Aceitar convite/i;
-const BELL_UNREAD = /Notificações, \d+ não lidas/i;
+const BELL_ONE_UNREAD = "Notificações, 1 não lida";
 const PROOF_NOTIF = "Novo comprovante para confirmar";
 
 interface NotifSetup {
@@ -48,24 +50,30 @@ async function setupWithProof(browser: Browser): Promise<NotifSetup> {
   return { a, b, id, installmentId };
 }
 
-test("comprovante gera notificação com deep-link para a parcela", async ({
+test("comprovante gera notificação no painel do sino, com deep-link para a parcela", async ({
   browser,
 }) => {
   const { a, b, installmentId } = await setupWithProof(browser);
   try {
     await b.page.goto("/");
-    await expect(b.page.getByRole("link", { name: BELL_UNREAD })).toBeVisible();
-
-    await b.page.goto("/notifications");
-    await expect(b.page.getByText(PROOF_NOTIF)).toBeVisible();
-
-    const res = await b.page.request.get("/api/notifications");
-    const list = (await res.json()) as Array<{ id: string }>;
-    const notifId = list[0].id;
-
-    await b.page.getByTestId(`notification-${notifId}`).click();
+    await expect(
+      b.page
+        .getByRole("button", { name: BELL_ONE_UNREAD })
+        .filter({ visible: true })
+    ).toBeVisible();
+    const panel = await openNotifications(b.page);
+    await panel.getByRole("button", { name: PROOF_NOTIF }).click();
     await expect(b.page).toHaveURL(new RegExp(`installment=${installmentId}`));
     await expect(b.page.getByLabel("Parcela")).toBeVisible();
+    // The installment drawer is modal (the shell is hidden from the tree
+    // meanwhile): close it, then the bell no longer counts the read one.
+    await b.page.keyboard.press("Escape");
+    await expect(b.page.getByLabel("Parcela")).toBeHidden();
+    await expect(
+      b.page
+        .getByRole("button", { name: "Notificações", exact: true })
+        .filter({ visible: true })
+    ).toBeVisible();
   } finally {
     await a.close();
     await b.close();
@@ -75,19 +83,28 @@ test("comprovante gera notificação com deep-link para a parcela", async ({
 test("marcar todas como lidas zera o contador", async ({ browser }) => {
   const { a, b } = await setupWithProof(browser);
   try {
-    await b.page.goto("/notifications");
-    await expect(b.page.getByText(PROOF_NOTIF)).toBeVisible();
-    await b.page
+    await b.page.goto("/");
+    const panel = await openNotifications(b.page);
+    await expect(panel.getByText(PROOF_NOTIF)).toBeVisible();
+    await panel
       .getByRole("button", { name: "Marcar todas como lidas" })
       .click();
-    await expect(b.page.getByRole("link", { name: BELL_UNREAD })).toHaveCount(
-      0
-    );
+    await expect(panel.getByText("Nova", { exact: true })).toHaveCount(0);
+    await b.page.keyboard.press("Escape");
     await expect(
-      b.page.getByRole("link", { name: "Notificações", exact: true })
+      b.page
+        .getByRole("button", { name: "Notificações", exact: true })
+        .filter({ visible: true })
     ).toBeVisible();
   } finally {
     await a.close();
     await b.close();
   }
+});
+
+test("o endereço antigo /notifications leva ao Agora", async ({ page }) => {
+  await signup(page);
+  await page.goto("/notifications");
+  await page.waitForURL((url) => url.pathname === "/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });

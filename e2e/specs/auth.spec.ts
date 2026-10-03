@@ -6,6 +6,8 @@ import {
   waitForHydrated,
 } from "../fixtures";
 
+const GREETING = /^(Bom dia|Boa tarde|Boa noite), Usuário$/;
+
 const LOGOUT = /Sair/i;
 const SIGNIN_SUBMIT = /^Entrar$/;
 /**
@@ -17,9 +19,11 @@ const SIGNIN_SUBMIT = /^Entrar$/;
 const SIGNIN_FAIL = /E-mail ou senha incorretos/i;
 const LOGIN_URL = /\/login/;
 
-test("signup leva ao dashboard", async ({ page }) => {
+test("signup leva ao Agora", async ({ page }) => {
   await signup(page);
-  await expect(page.getByRole("heading", { name: "Painel" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: GREETING })
+  ).toBeVisible();
 });
 
 test("logout volta ao login e a rota protegida exige sessão", async ({

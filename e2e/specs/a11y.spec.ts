@@ -1,9 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Browser, expect, type Page, test } from "@playwright/test";
 import {
+  brDaysFromToday,
   getContract,
   isoDaysFromToday,
   newUser,
+  openNotifications,
   seedContract,
   seedInvite,
   signup,
@@ -81,8 +83,10 @@ test("rotas autenticadas não têm violações de a11y", async ({
   );
   await scan(page);
 
-  await page.goto("/notifications");
+  await page.goto("/");
+  await openNotifications(page);
   await scan(page);
+  await page.keyboard.press("Escape");
   await page.goto("/settings");
   await scan(page);
   await page.goto("/"); // dashboard com contrato
@@ -128,7 +132,7 @@ test("modo mensal (wizard + detalhe) não tem violações de a11y", async ({
   await page.getByRole("button", { name: "Mensal" }).click();
   await page.locator("#monthly-amount").fill("800,00");
   await page.locator("#months").fill("12");
-  await page.locator("#monthly-first").fill("10/09/2026");
+  await page.locator("#monthly-first").fill(brDaysFromToday(10));
   await scan(page);
 
   // detalhe com o selo da intenção

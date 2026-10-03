@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { APIRequestContext, Browser, Page } from "@playwright/test";
+import type {
+  APIRequestContext,
+  Browser,
+  Locator,
+  Page,
+} from "@playwright/test";
 import { expect } from "@playwright/test";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -53,6 +58,35 @@ export function isoDaysFromToday(days: number): string {
   const mo = String(today.getMonth() + 1).padStart(2, "0");
   const d = String(today.getDate()).padStart(2, "0");
   return `${y}-${mo}-${d}`;
+}
+
+/** isoDaysFromToday typed the way the date fields expect it (dd/mm/yyyy). */
+export function brDaysFromToday(days: number): string {
+  const [year, month, day] = isoDaysFromToday(days).split("-");
+  return `${day}/${month}/${year}`;
+}
+
+/** Opens the notifications panel from the bell (mobile top bar) or the sidebar row (desktop). */
+export async function openNotifications(page: Page): Promise<Locator> {
+  // A click before hydration lands on the server HTML and is lost.
+  await waitForHydrated(page);
+  await page
+    .getByRole("button", { name: "Notificações" })
+    .filter({ visible: true })
+    .first()
+    .click();
+  const panel = page.getByRole("dialog", { name: "Notificações" });
+  await expect(panel).toBeVisible();
+  // The sheet slides in on a spring: wait until it rests, so axe and clicks see the final frame.
+  await expect
+    .poll(() =>
+      panel.evaluate((el) => {
+        const transform = getComputedStyle(el).transform;
+        return transform === "none" || transform === "matrix(1, 0, 0, 1, 0, 0)";
+      })
+    )
+    .toBe(true);
+  return panel;
 }
 
 /** Opens the account menu (desktop sidebar or mobile top bar — whichever is visible). */
