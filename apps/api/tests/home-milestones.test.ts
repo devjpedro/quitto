@@ -95,6 +95,101 @@ describe("buildMilestones", () => {
     expect(result.settled).toEqual({ paidCents: 5 * 10_000, receivedCents: 0 });
   });
 
+  describe("mais perto de quitar: o percentual fica entre 1% e 99% em contrato em aberto", () => {
+    const base = {
+      contracts: [contractRow({ id: "c", title: "Carro" })],
+      participants: [
+        { contractId: "c", role: "buyer", linkedUserId: ME, displayName: "Eu" },
+      ],
+    };
+
+    it("R$ 40,00 em aberto de R$ 10.000,00 (99,6%) mostra 99%, nunca 100%", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            status: "paid",
+            amountCents: 996_000,
+          }),
+          inst({ id: "b", contractId: "c", amountCents: 4000 }),
+        ],
+      });
+      expect(result.closestToPayoff?.percent).toBe(99);
+    });
+
+    it("R$ 1,00 pago de R$ 100.000,00 mostra 1%, nunca 0%", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({ id: "a", contractId: "c", status: "paid", amountCents: 100 }),
+          inst({ id: "b", contractId: "c", amountCents: 9_999_900 }),
+        ],
+      });
+      expect(result.closestToPayoff?.percent).toBe(1);
+    });
+  });
+
+  it("pago no mês: quem paga conta pelo comprovante, quem recebe pela confirmação", () => {
+    const result = milestones({
+      contracts: [
+        contractRow({ id: "pay", requiresConfirmation: true }),
+        contractRow({
+          id: "recv",
+          ownerRole: "seller",
+          requiresConfirmation: true,
+        }),
+      ],
+      participants: [
+        {
+          contractId: "pay",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+        {
+          contractId: "recv",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+      ],
+      installments: [
+        // Proof sent in September, confirmed in October: the payer paid in September.
+        inst({
+          id: "p1",
+          contractId: "pay",
+          status: "confirmed",
+          lastProofAt: new Date("2026-09-30T15:00:00Z"),
+          paidAt: new Date("2026-10-01T15:00:00Z"),
+        }),
+        inst({
+          id: "p2",
+          contractId: "pay",
+          status: "confirmed",
+          lastProofAt: new Date("2026-10-01T15:00:00Z"),
+          paidAt: new Date("2026-10-02T15:00:00Z"),
+          amountCents: 2500,
+        }),
+        // Same dates on the receiving side: received when it was confirmed, in October.
+        inst({
+          id: "r1",
+          contractId: "recv",
+          status: "confirmed",
+          lastProofAt: new Date("2026-09-30T15:00:00Z"),
+          paidAt: new Date("2026-10-01T15:00:00Z"),
+          amountCents: 7000,
+        }),
+      ],
+    });
+    expect(result.monthToDate).toEqual({
+      month: "2026-10",
+      paidCents: 2500,
+      receivedCents: 7000,
+    });
+  });
+
   it("pago e recebido no mês pela data do pagamento em São Paulo", () => {
     const result = milestones({
       contracts: [
@@ -281,6 +376,77 @@ describe("buildMilestones", () => {
       });
       expect(result.previousMonthAllClear).toBeNull();
     });
+
+    it("pago à meia-noite do dia seguinte, no relógio de São Paulo, já não conta", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          // 2026-09-11T03:00Z is 00:00 of 11/09 in São Paulo: one day late.
+          inst({
+            id: "a",
+            contractId: "c",
+            dueDate: "2026-09-10",
+            status: "paid",
+            paidAt: new Date("2026-09-11T03:00:00Z"),
+          }),
+        ],
+      });
+      expect(result.previousMonthAllClear).toBeNull();
+    });
+
+    it("confirmada sem comprovante (dado antigo) cai no paidAt: no prazo conta", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            dueDate: "2026-09-10",
+            status: "confirmed",
+            lastProofAt: null,
+            paidAt: new Date("2026-09-10T12:00:00Z"),
+          }),
+        ],
+      });
+      expect(result.previousMonthAllClear).toEqual({
+        month: "2026-09",
+        paidCount: 1,
+      });
+    });
+
+    it("confirmada sem comprovante (dado antigo) cai no paidAt: depois do vencimento não conta", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            dueDate: "2026-09-10",
+            status: "confirmed",
+            lastProofAt: null,
+            paidAt: new Date("2026-09-12T12:00:00Z"),
+          }),
+        ],
+      });
+      expect(result.previousMonthAllClear).toBeNull();
+    });
+
+    it("comprovante esperando confirmação não fecha o mês em dia", () => {
+      const result = milestones({
+        ...base,
+        contracts: [contractRow({ id: "c", requiresConfirmation: true })],
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            dueDate: "2026-09-10",
+            status: "awaiting_confirmation",
+            lastProofAt: new Date("2026-09-09T15:00:00Z"),
+          }),
+        ],
+      });
+      expect(result.previousMonthAllClear).toBeNull();
+    });
   });
 });
 
@@ -426,6 +592,76 @@ describe("onboardingFacts", () => {
       hasContract: true,
       hasCounterparty: true,
       // The guest owns no contract: "invite the other party" leads to a new one.
+      counterpartyContractId: null,
+    });
+  });
+
+  it("só um espectador além de mim não é a outra parte", () => {
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [contractRow({ id: "mine" })],
+        installments: [],
+        participants: [
+          {
+            contractId: "mine",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "mine",
+            role: "viewer",
+            linkedUserId: null,
+            displayName: "Pai",
+          },
+        ],
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts).toMatchObject({
+      hasContract: true,
+      hasCounterparty: false,
+      counterpartyContractId: "mine",
+    });
+  });
+
+  it("quem só acompanha o contrato de outra pessoa tem contrato, mas não tem outra parte", () => {
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [contractRow({ id: "watched", ownerId: "u-owner" })],
+        installments: [],
+        participants: [
+          {
+            contractId: "watched",
+            role: "buyer",
+            linkedUserId: "u-owner",
+            displayName: "Ana",
+          },
+          {
+            contractId: "watched",
+            role: "seller",
+            linkedUserId: "u-seller",
+            displayName: "Bruno",
+          },
+          {
+            contractId: "watched",
+            role: "viewer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+        ],
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts).toMatchObject({
+      hasContract: true,
+      hasCounterparty: false,
       counterpartyContractId: null,
     });
   });

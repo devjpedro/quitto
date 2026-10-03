@@ -1,5 +1,6 @@
 import {
   DIRECTION,
+  type Direction,
   INSTALLMENT_STATUS,
   isoDateInTimeZone,
   isPaidStatus,
@@ -66,6 +67,11 @@ function isCloser(
   return candidate.title.localeCompare(best.value.title) < 0;
 }
 
+/** Paid share of an open contract: 1 to 99, so it never reads as done (100%) or untouched (0%). */
+function openPercent(paidCents: number, totalCents: number): number {
+  return Math.min(99, Math.max(1, Math.round((paidCents / totalCents) * 100)));
+}
+
 /** Open contract with the largest paid share (ties: fewer installments left, then title). Never-paid ones don't count. */
 function closestToPayoff(parties: PartyContract[]): ClosestToPayoff | null {
   let best: { remaining: number; value: ClosestToPayoff } | null = null;
@@ -83,7 +89,7 @@ function closestToPayoff(parties: PartyContract[]): ClosestToPayoff | null {
       title: party.contract.title,
       paidCount: t.paidCount,
       totalCount: t.totalCount,
-      percent: Math.round((t.paidCents / t.totalCents) * 100),
+      percent: openPercent(t.paidCents, t.totalCents),
     };
     const remaining = t.totalCount - t.paidCount;
     if (!best || isCloser(value, remaining, best)) {
@@ -91,32 +97,6 @@ function closestToPayoff(parties: PartyContract[]): ClosestToPayoff | null {
     }
   }
   return best?.value ?? null;
-}
-
-/** Paid and received this month, by when the money moved (paidAt in São Paulo). */
-function monthToDate(
-  parties: PartyContract[],
-  month: string
-): HomeMilestones["monthToDate"] {
-  let paidCents = 0;
-  let receivedCents = 0;
-  for (const party of parties) {
-    for (const it of party.installments) {
-      const movedThisMonth =
-        isPaidStatus(it.status) &&
-        it.paidAt !== null &&
-        isoDateInTimeZone(it.paidAt).startsWith(month);
-      if (!movedThisMonth) {
-        continue;
-      }
-      if (party.direction === DIRECTION.pay) {
-        paidCents += it.amountCents;
-      } else {
-        receivedCents += it.amountCents;
-      }
-    }
-  }
-  return { month, paidCents, receivedCents };
 }
 
 /**
@@ -130,6 +110,42 @@ function payerActedAt(it: HomeInstallmentRow): Date | null {
     return it.lastProofAt ?? it.paidAt;
   }
   return it.paidAt;
+}
+
+/**
+ * When a paid installment counts as money moved for the caller. Paying, when
+ * the payer acted (the same date "tudo em dia" uses), so a late confirmation
+ * never moves a payment to the next month. Receiving, paidAt: the
+ * confirmation, when the contract asks for one.
+ */
+function movedAt(direction: Direction, it: HomeInstallmentRow): Date | null {
+  if (!isPaidStatus(it.status)) {
+    return null;
+  }
+  return direction === DIRECTION.pay ? payerActedAt(it) : it.paidAt;
+}
+
+/** Paid and received this month, by when the money moved, on São Paulo's calendar. */
+function monthToDate(
+  parties: PartyContract[],
+  month: string
+): HomeMilestones["monthToDate"] {
+  let paidCents = 0;
+  let receivedCents = 0;
+  for (const party of parties) {
+    for (const it of party.installments) {
+      const at = movedAt(party.direction, it);
+      if (at === null || !isoDateInTimeZone(at).startsWith(month)) {
+        continue;
+      }
+      if (party.direction === DIRECTION.pay) {
+        paidCents += it.amountCents;
+      } else {
+        receivedCents += it.amountCents;
+      }
+    }
+  }
+  return { month, paidCents, receivedCents };
 }
 
 /** Paid by its due date, on São Paulo's calendar. A paid row without any date (legacy) is not on time. */
