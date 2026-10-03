@@ -379,6 +379,82 @@ describe("buildAgenda: ordem das ações", () => {
       "installment:soon-1",
     ]);
   });
+
+  it("o grupo se ordena pela mais antiga: vem antes de uma atrasada única mais nova que ela, mesmo chegando depois", () => {
+    const data = rows({
+      contracts: [RENT.contract, NOTEBOOK.contract],
+      participants: [...RENT.people, ...NOTEBOOK.people],
+      installments: [
+        inst({
+          id: "al-5",
+          contractId: "al",
+          sequence: 5,
+          dueDate: "2026-09-01",
+        }),
+        inst({
+          id: "nb-2",
+          contractId: "nb",
+          sequence: 2,
+          dueDate: "2026-10-01",
+        }),
+        inst({
+          id: "nb-1",
+          contractId: "nb",
+          sequence: 1,
+          dueDate: "2026-08-01",
+        }),
+      ],
+    });
+    expect(agenda(data).actions.map((a) => a.id)).toEqual([
+      "overdue:nb:receive",
+      "installment:al-5",
+    ]);
+  });
+
+  it("empate de data, título e sequência entre contratos: a ordem não depende da entrada", () => {
+    const rent = (id: string) =>
+      contractRow({ id, title: "Aluguel", ownerRole: "buyer" });
+    const people = ["x", "y"].map((id) => person(id, "buyer", ME, "Eu"));
+    const tied = ["x", "y"].flatMap((id) => [
+      // Overdue: an action. Past the 7 days: a line of "Próximos 30 dias".
+      inst({
+        id: `${id}-3`,
+        contractId: id,
+        sequence: 3,
+        dueDate: "2026-09-10",
+      }),
+      inst({
+        id: `${id}-4`,
+        contractId: id,
+        sequence: 4,
+        dueDate: "2026-10-20",
+      }),
+    ]);
+    const forward = agenda(
+      rows({
+        contracts: [rent("x"), rent("y")],
+        participants: people,
+        installments: tied,
+      })
+    );
+    const backward = agenda(
+      rows({
+        contracts: [rent("y"), rent("x")],
+        participants: [...people].reverse(),
+        installments: [...tied].reverse(),
+      })
+    );
+    for (const result of [forward, backward]) {
+      expect(result.actions.map((a) => a.id)).toEqual([
+        "installment:x-3",
+        "installment:y-3",
+      ]);
+      expect(result.upcoming.items.map((it) => it.installmentId)).toEqual([
+        "x-4",
+        "y-4",
+      ]);
+    }
+  });
 });
 
 describe("buildAgenda: total em atraso", () => {
@@ -422,5 +498,55 @@ describe("buildAgenda: total em atraso", () => {
     });
     expect(result.upcoming.toPayCents).toBe(180_000);
     expect(result.upcoming.toReceiveCents).toBe(0);
+  });
+
+  it("contestada vencida: quem paga vê o cartão 'Contestada' e ela fica fora do atraso; quem recebe a soma no atraso (decisão 21)", () => {
+    const data = rows({
+      contracts: [
+        // I pay; the seller (linked) disputed my proof.
+        contractRow({
+          id: "pg",
+          ownerRole: "buyer",
+          requiresConfirmation: true,
+        }),
+        // I receive; I disputed the buyer's proof.
+        contractRow({
+          id: "rc",
+          ownerId: OTHER,
+          ownerRole: "buyer",
+          requiresConfirmation: true,
+        }),
+      ],
+      participants: [
+        person("pg", "buyer", ME, "Eu"),
+        person("pg", "seller", OTHER, "Outro"),
+        person("rc", "buyer", OTHER, "Outro"),
+        person("rc", "seller", ME, "Eu"),
+      ],
+      installments: [
+        inst({
+          id: "pg-2",
+          contractId: "pg",
+          sequence: 2,
+          status: "disputed",
+          dueDate: "2026-09-15",
+          amountCents: 50_000,
+        }),
+        inst({
+          id: "rc-2",
+          contractId: "rc",
+          sequence: 2,
+          status: "disputed",
+          dueDate: "2026-09-20",
+          amountCents: 80_000,
+        }),
+      ],
+    });
+    const result = agenda(data);
+    expect(result.actions.map((a) => [a.id, a.kind])).toEqual([
+      ["installment:rc-2", "overdue"],
+      ["installment:pg-2", "disputed"],
+    ]);
+    expect(result.overdue).toEqual({ toPayCents: 0, toReceiveCents: 80_000 });
   });
 });

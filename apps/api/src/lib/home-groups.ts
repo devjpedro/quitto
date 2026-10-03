@@ -5,12 +5,17 @@ import type {
   UpcomingItem,
 } from "./home-types";
 
-/** Earliest due date first; then title and sequence, so the order never depends on the input. */
+/**
+ * Earliest due date first; then title and sequence; the installment id (unique)
+ * breaks what is left, such as two "Aluguel" contracts with the same sequence
+ * due the same day, so the order never depends on the input.
+ */
 export function byDueDate(a: UpcomingItem, b: UpcomingItem): number {
   return (
     a.dueDate.localeCompare(b.dueDate) ||
     a.contractTitle.localeCompare(b.contractTitle) ||
-    a.sequence - b.sequence
+    a.sequence - b.sequence ||
+    a.installmentId.localeCompare(b.installmentId)
   );
 }
 
@@ -69,8 +74,14 @@ function rank(action: InstallmentAction, todayISO: string): number {
       return 2;
     case "disputed":
       return 3;
-    default:
+    case "due_soon":
       return action.dueDate === todayISO ? 1 : 5;
+    default: {
+      // A new kind must get its rank here: one left out would fall to the end
+      // in silence, and rank 4 (the invites') would drop it from the list.
+      const unranked: never = action.kind;
+      return unranked;
+    }
   }
 }
 
