@@ -43,7 +43,7 @@ describe("HomeSkeleton", () => {
     expect(
       bones.some(
         (bone) =>
-          bone.classList.contains("h-60") &&
+          bone.classList.contains("h-[267px]") &&
           bone.classList.contains("bg-surface-card")
       )
     ).toBe(true);
@@ -54,5 +54,33 @@ describe("HomeSkeleton", () => {
           bone.classList.contains("bg-surface-card")
       )
     ).toBe(true);
+  });
+
+  it("o osso do cartão tem a altura do cartão em repouso: 267 px no celular (botões de 44 px), 259 a partir de md", () => {
+    const { container } = render(<HomeSkeleton />);
+    const cards = [
+      ...container.querySelectorAll<HTMLElement>("[class~='h-[267px]']"),
+    ];
+    expect(cards).toHaveLength(5);
+    for (const bone of cards) {
+      expect(bone).toHaveClass(
+        "md:h-[259px]",
+        "rounded-card",
+        "bg-surface-card"
+      );
+    }
+  });
+
+  it("no celular todo osso aparece: nenhum usa o surface-sunken, que é a cor da página ali", () => {
+    const { container } = render(<HomeSkeleton />);
+    // The notifications skeleton changes its own fill in Task 17.
+    const bones = [
+      ...container.querySelectorAll<HTMLElement>("div[aria-hidden='true']"),
+    ].filter((bone) => !bone.closest("ul"));
+    expect(bones.length).toBeGreaterThan(10);
+    for (const bone of bones) {
+      expect(bone).toHaveClass("bg-surface-card");
+      expect(bone).not.toHaveClass("bg-surface-sunken");
+    }
   });
 });

@@ -16,10 +16,22 @@ function buttonVariant(first: boolean, index: number): CardButtonVariant {
 }
 
 /**
+ * Below the content width two buttons need side by side (the wider locale,
+ * gap included), each takes a whole row: never one left alone (decision 16).
+ * Most pairs fit in 240 px; below md a group's "Ver parcelas" is a 44 px icon.
+ */
+const STACK_BELOW: Record<string, string> = {
+  "whatsapp,mark_received": "@max-[23rem]:w-full", // 362 px
+  "whatsapp,see_installments": "@max-[15rem]:w-full md:@max-[21rem]:w-full", // 331 px
+  "pay_oldest,see_installments": "@max-[15rem]:w-full md:@max-[17rem]:w-full", // 267 px
+};
+
+/**
  * One thing to do (mockup 13). The first card is the green "Faça primeiro";
  * the rest are filled with the warm card tone, never outlined (DIRECAO ›
- * Forma). Hover steps the fill down. A narrow card (1024 px, three per row)
- * stacks its buttons full width instead of leaving one half a row.
+ * Forma). Hover steps the fill down. A card too narrow for its two buttons
+ * (1024 px, three per row; a phone for the longer pairs) stacks them full
+ * width instead of leaving one alone on a row.
  */
 export function ActionCard({
   action,
@@ -37,6 +49,8 @@ export function ActionCard({
   const locale = getLocale();
   const titleId = useId();
   const view = describeAction(action, { first, locale, today });
+  const buttons = actionButtons(action);
+  const stack = STACK_BELOW[buttons.join()] ?? "@max-[15rem]:w-full";
   const { busy, run } = useActionHandlers(action, tryLock, () =>
     onActionStart(action.id)
   );
@@ -62,11 +76,11 @@ export function ActionCard({
         />
       )}
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        {actionButtons(action).map((kind, index) => (
+        {buttons.map((kind, index) => (
           <ActionButton
             action={action}
             busy={busy}
-            className="@max-[15rem]:w-full"
+            className={stack}
             key={kind}
             kind={kind}
             locale={locale}

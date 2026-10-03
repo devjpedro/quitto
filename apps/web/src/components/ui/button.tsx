@@ -12,8 +12,7 @@ export const buttonVariants = cva(
         secondary:
           "border border-line bg-surface text-ink hover:bg-surface-sunken",
         // Inside a card (DIRECAO › Forma): one step lighter than the card, no border.
-        inset:
-          "bg-surface-inset text-ink hover:bg-[color-mix(in_srgb,var(--surface-inset)_94%,var(--ink))]",
+        inset: "bg-surface-inset text-ink hover:bg-surface-inset-hover",
         ghost: "text-ink hover:bg-surface-sunken",
         // Dark: light button with dark text on the green card, as in mockup 08.
         // The dark:hover keeps the hover from falling back to the graphite one.

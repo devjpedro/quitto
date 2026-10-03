@@ -67,6 +67,13 @@ describe("Button", () => {
     expect(button).toHaveClass("bg-surface-inset");
     expect(button).not.toHaveClass("border");
   });
+
+  it("inset hover: its own token, a step away from the hovered card in light, dark and on a phone", () => {
+    render(<Button variant="inset">Já paguei</Button>);
+    expect(screen.getByRole("button", { name: "Já paguei" })).toHaveClass(
+      "hover:bg-surface-inset-hover"
+    );
+  });
 });
 
 describe("IconButton", () => {

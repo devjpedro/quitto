@@ -64,6 +64,9 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink-muted", "surface-card-hover"],
   ["ink", "surface-inset"],
   ["ink-muted", "surface-inset"],
+  // The inset (secondary) button's hover, in the panel and on a phone.
+  ["ink", "surface-inset-hover"],
+  ["ink", "page-inset-hover"],
   ["brand", "surface-card"],
   ["brand", "surface-inset"],
   ["danger", "surface-card"],
@@ -232,6 +235,7 @@ describe("page-surfaces", () => {
     expect(body).toContain("--surface-card: var(--surface);");
     expect(body).toContain("--surface-card-hover: var(--page-card-hover);");
     expect(body).toContain("--surface-inset: var(--page-inset);");
+    expect(body).toContain("--surface-inset-hover: var(--page-inset-hover);");
     expect(body).toContain("--divider: var(--page-divider);");
   });
 
@@ -242,6 +246,8 @@ describe("page-surfaces", () => {
     expect(dark["page-card-hover"]).toBe("#2a2b26");
     expect(dark["page-inset"]).toBe(dark["surface-raised"]);
     expect(dark["page-divider"]).toBe("#1f201c");
+    expect(light["page-inset-hover"]).toBe("#e6e5e0");
+    expect(dark["page-inset-hover"]).toBe("#363731");
   });
 });
 
@@ -252,6 +258,7 @@ const PANEL_TOKENS: Record<string, [string, string]> = {
   "surface-card": ["#f1f0eb", "#2e2f2a"],
   "surface-card-hover": ["#eae8e1", "#31322c"],
   "surface-inset": ["#ffffff", "#242521"],
+  "surface-inset-hover": ["#f4f3ef", "#1c1d1a"],
   divider: ["#e3e1da", "#262723"],
   track: ["#d5d3cc", "#45463f"],
   "nav-hover": ["#efede7", "#1f201c"],
@@ -307,6 +314,67 @@ describe("surface layers", () => {
     );
     expect(luminance(dark, "surface")).toBeLessThan(
       luminance(dark, "page-card-hover")
+    );
+  });
+
+  // With the pointer on a card's secondary button the card is hovered too: the
+  // button's hover must stay a step away from the hovered card, or its shape
+  // melts into it and only the label is left (review of Task 13, I2).
+  const INSET_HOVER_CONTEXTS: [
+    string,
+    Record<string, string>,
+    string,
+    string,
+    string,
+  ][] = [
+    [
+      "panel, light",
+      light,
+      "surface-inset",
+      "surface-inset-hover",
+      "surface-card-hover",
+    ],
+    [
+      "panel, dark",
+      dark,
+      "surface-inset",
+      "surface-inset-hover",
+      "surface-card-hover",
+    ],
+    [
+      "phone, light",
+      light,
+      "page-inset",
+      "page-inset-hover",
+      "page-card-hover",
+    ],
+    ["phone, dark", dark, "page-inset", "page-inset-hover", "page-card-hover"],
+  ];
+  for (const [
+    context,
+    tokens,
+    rest,
+    hover,
+    cardHover,
+  ] of INSET_HOVER_CONTEXTS) {
+    it(`${context}: the inset button's hover is a visible step and never melts into the hovered card`, () => {
+      const at = (name: string) => tokens[name] as string;
+      expect(contrastRatio(at(hover), at(rest))).toBeGreaterThanOrEqual(1.05);
+      expect(contrastRatio(at(hover), at(cardHover))).toBeGreaterThanOrEqual(
+        1.08
+      );
+    });
+  }
+
+  it("the inset hover steps away from the card where it can: darker in the dark panel, lighter in the dark phone, darker on the light phone", () => {
+    expect(luminance(dark, "surface-inset-hover")).toBeLessThan(
+      luminance(dark, "surface-inset")
+    );
+    expect(luminance(dark, "page-inset-hover")).toBeGreaterThan(
+      luminance(dark, "page-inset")
+    );
+    expect(luminance(light, "page-inset-hover")).toBeLessThan(
+      luminance(light, "page-inset")
     );
   });
 });

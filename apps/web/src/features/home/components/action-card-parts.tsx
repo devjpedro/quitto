@@ -86,8 +86,7 @@ export function InstallmentBody({
             paidCount={action.contract.paidCount}
             statuses={action.contract.statuses}
           />
-          {/* Each half on one line; in a narrow card (1024 px) the second
-              wraps to the right instead of spilling past the card. */}
+          {/* A narrow card (1024 px) wraps "falta" to the right, never past the card. */}
           <p
             className={cn(
               "mt-2 flex flex-wrap justify-between gap-x-2 whitespace-nowrap text-xs tabular-nums",
@@ -146,7 +145,12 @@ export function InviteBody({
             {view.terms.amount}
           </b>
           {view.terms.from ? (
-            <> {m.home_dot_after({ text: view.terms.from })}</>
+            <>
+              {" "}
+              <span className="whitespace-nowrap">
+                {m.home_dot_after({ text: view.terms.from })}
+              </span>
+            </>
           ) : null}
         </p>
       ) : null}

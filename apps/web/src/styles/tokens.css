@@ -51,6 +51,7 @@
   --color-surface-card: var(--surface-card);
   --color-surface-card-hover: var(--surface-card-hover);
   --color-surface-inset: var(--surface-inset);
+  --color-surface-inset-hover: var(--surface-inset-hover);
   --color-divider: var(--divider);
   --color-track: var(--track);
   --color-nav-hover: var(--nav-hover);
@@ -92,6 +93,8 @@
   --surface-card: #f1f0eb;
   --surface-card-hover: #eae8e1;
   --surface-inset: #ffffff;
+  /* The inset button's hover: a step away from the hovered card, never onto it. */
+  --surface-inset-hover: #f4f3ef;
   --divider: #e3e1da;
   --track: #d5d3cc;
   --nav-hover: #efede7;
@@ -100,6 +103,7 @@
   /* The phone (page-surfaces): a white card on the sunken page (mockup 13). */
   --page-card-hover: #f7f6f2;
   --page-inset: #f1f0eb;
+  --page-inset-hover: #e6e5e0;
   --page-divider: #eceae4;
   /* People: 8 warm tones, white initials; no teal, blue or brand green. */
   --on-avatar: #ffffff;
@@ -138,6 +142,8 @@
   --surface-card: #2e2f2a;
   --surface-card-hover: #31322c;
   --surface-inset: #242521;
+  /* Darker still: the hovered card is lighter, so a lighter hover would meet it. */
+  --surface-inset-hover: #1c1d1a;
   --divider: #262723;
   --track: #45463f;
   --nav-hover: #1f201c;
@@ -146,6 +152,7 @@
   /* The phone: card #242521 on the page #1a1b18, what sits inside one step up. */
   --page-card-hover: #2a2b26;
   --page-inset: #2e2f2a;
+  --page-inset-hover: #363731;
   --page-divider: #1f201c;
   --on-avatar: #ffffff;
   --avatar-clay: #a4502e;
@@ -169,6 +176,7 @@
   --surface-card: var(--surface);
   --surface-card-hover: var(--page-card-hover);
   --surface-inset: var(--page-inset);
+  --surface-inset-hover: var(--page-inset-hover);
   --divider: var(--page-divider);
 }
 

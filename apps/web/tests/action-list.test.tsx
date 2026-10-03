@@ -627,6 +627,10 @@ describe("ActionList", () => {
     expect(within(card).getByText("A")).toHaveClass("size-7");
     expect(within(card).getByText("4 parcelas de R$ 300,00")).toBeVisible();
     expect(card).toHaveTextContent("a partir de 10/11");
+    // A narrow card (1024 px) wraps before "· a partir de 10/11", never inside it.
+    expect(within(card).getByText("· a partir de 10/11")).toHaveClass(
+      "whitespace-nowrap"
+    );
   });
 
   it("cartão estreito: os botões empilham na largura toda, sem meia linha (O2, 1024 px)", () => {
@@ -641,16 +645,88 @@ describe("ActionList", () => {
     }
   });
 
+  it("par a receber (Cobrar no WhatsApp + Marcar como recebida, 362 px): empilha abaixo de 368 px, nunca um botão sozinho na linha", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction({ installmentId: "r1", direction: "receive" }),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    for (const control of [
+      within(card).getByRole("link", { name: WHATSAPP_NAME }),
+      within(card).getByRole("button", { name: MARK_RECEIVED_NAME }),
+    ]) {
+      expect(control).toHaveClass("@max-[23rem]:w-full");
+      expect(control).not.toHaveClass("@max-[15rem]:w-full");
+    }
+  });
+
+  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem (331 e 267 px); no celular o ícone de 44 px cabe", () => {
+    const group = {
+      kind: "overdue",
+      pixCode: null,
+      canMarkPaid: false,
+      count: 2,
+    } as const;
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction({
+        ...group,
+        id: "overdue:nb:receive",
+        direction: "receive",
+        installmentId: "nb-3",
+        contractId: "nb",
+        contractTitle: "Notebook da Marina",
+        sequence: 3,
+        installmentIds: ["nb-3", "nb-4"],
+        sequences: [3, 4],
+      }),
+      installmentAction({
+        ...group,
+        id: "overdue:al:pay",
+        installmentId: "al-5",
+        contractId: "al",
+        sequence: 5,
+        installmentIds: ["al-5", "al-6"],
+        sequences: [5, 6],
+      }),
+    ]);
+    const [, receive, pay] = screen.getAllByRole("article") as HTMLElement[];
+    for (const control of [
+      within(receive as HTMLElement).getByRole("link", { name: WHATSAPP_NAME }),
+      within(receive as HTMLElement).getByRole("link", {
+        name: "Ver parcelas",
+      }),
+    ]) {
+      expect(control).toHaveClass(
+        "@max-[15rem]:w-full",
+        "md:@max-[21rem]:w-full"
+      );
+    }
+    for (const control of [
+      within(pay as HTMLElement).getByRole("link", {
+        name: "Pagar a mais antiga",
+      }),
+      within(pay as HTMLElement).getByRole("link", { name: "Ver parcelas" }),
+    ]) {
+      expect(control).toHaveClass(
+        "@max-[15rem]:w-full",
+        "md:@max-[17rem]:w-full"
+      );
+    }
+  });
+
   it("12 px entre os cartões, no carrossel e na grade", () => {
     renderList(overdue(3));
     expect(itemOf(1)?.parentElement).toHaveClass("gap-3");
   });
 
   it("Já paguei ao lado de um grupo: a falha devolve só o cartão simples, no mesmo lugar, e a contagem volta", async () => {
-    markPaid.mockResolvedValue({
-      data: null,
-      error: { status: 422, value: null },
-    });
+    let respond: (value: unknown) => void = () => undefined;
+    markPaid.mockReturnValue(
+      new Promise((resolve) => {
+        respond = resolve;
+      })
+    );
     const group = installmentAction({
       id: "overdue:nb:receive",
       kind: "overdue",
@@ -666,20 +742,43 @@ describe("ActionList", () => {
       sequences: [3, 4],
       totalCents: 70_000,
     });
-    const client = makeClient([
-      group,
-      installmentAction({ installmentId: "i2", sequence: 2, pixCode: null }),
-    ]);
+    const single = installmentAction({
+      installmentId: "i2",
+      sequence: 2,
+      pixCode: null,
+    });
+    // A card after the single one: putting it back at the end would show.
+    const review = installmentAction({
+      id: "installment:r3",
+      kind: "review",
+      installmentId: "r3",
+      contractId: "mr",
+      contractTitle: "Moto do Rafa",
+      sequence: 3,
+      installmentsCount: 10,
+      canConfirm: true,
+    });
+    const client = makeClient([group, single, review]);
+    const cachedIds = () =>
+      client
+        .getQueryData<Home>(queryKeys.home)
+        ?.actions.map((action) => action.id);
     renderWithProviders(<LiveList />, { client });
     await userEvent.click(screen.getByRole("button", { name: "Já paguei" }));
     await waitFor(() => expect(markPaid).toHaveBeenCalledWith("i2"));
-    // The refusal brings back only the single card, where it was: the group stays first.
+    // In flight the card has already left, from the screen and the cache.
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
-    const [first, second] = screen.getAllByRole("article");
+    expect(cachedIds()).toEqual([group.id, review.id]);
+    respond({ data: null, error: { status: 422, value: null } });
+    // The refusal brings back only the single card, where it was: between the
+    // group and the next card, not at the end.
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
+    const [first, second, third] = screen.getAllByRole("article");
     expect(first).toHaveTextContent("Notebook da Marina");
     expect(second).toHaveTextContent("Aluguel do apê · parcela 2 de 12");
+    expect(third).toHaveTextContent("Moto do Rafa");
     // And the count goes back with it: pending counts are cards, read from the cache.
-    expect(client.getQueryData<Home>(queryKeys.home)?.actions).toHaveLength(2);
+    expect(cachedIds()).toEqual([group.id, single.id, review.id]);
   });
 });
 
