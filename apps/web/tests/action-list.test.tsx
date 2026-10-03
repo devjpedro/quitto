@@ -114,6 +114,38 @@ function renderLive(actions: HomeAction[]) {
 const WHATSAPP_NAME = /Cobrar no WhatsApp/;
 const MARK_RECEIVED_NAME = /Marcar como recebida/;
 
+/** "Venda do terreno": `sequences` of 60 overdue, Diego owes me. */
+const terrenoGroup = (sequences: number[]) => {
+  const oldest = Math.min(...sequences);
+  return installmentAction({
+    id: "overdue:vt:receive",
+    kind: "overdue",
+    direction: "receive",
+    installmentId: `vt-${oldest}`,
+    contractId: "vt",
+    contractTitle: "Venda do terreno",
+    sequence: oldest,
+    installmentsCount: 60,
+    amountCents: 200_000,
+    dueDate: "2024-10-28",
+    counterpartyName: "Diego Martins",
+    pixCode: null,
+    canMarkPaid: false,
+    count: sequences.length,
+    installmentIds: sequences.map((n) => `vt-${n}`),
+    sequences,
+    totalCents: sequences.length * 200_000,
+  });
+};
+
+/** The decoded text of the card's "Cobrar no WhatsApp" link. */
+const whatsappText = () =>
+  decodeURIComponent(
+    screen
+      .getByRole("link", { name: "Cobrar no WhatsApp (abre o WhatsApp)" })
+      .getAttribute("href") ?? ""
+  );
+
 const twoToPay = () => [
   installmentAction({ installmentId: "i1", sequence: 1 }),
   installmentAction({ installmentId: "i2", sequence: 2 }),
@@ -484,6 +516,66 @@ describe("ActionList", () => {
       screen.getByRole("link", { name: "Pagar a mais antiga" })
     ).toHaveAttribute("href", "/contracts/al?installment=al-5");
     expect(screen.queryByRole("button", { name: "Já paguei" })).toBeNull();
+  });
+
+  it("grupo que você paga: Pagar a mais antiga e Ver parcelas (ícone de 44 px no celular), nada que dispare mutação", () => {
+    renderList([
+      installmentAction({
+        id: "overdue:al:pay",
+        kind: "overdue",
+        installmentId: "al-5",
+        contractId: "al",
+        sequence: 5,
+        dueDate: "2026-09-01",
+        pixCode: null,
+        canMarkPaid: false,
+        count: 2,
+        installmentIds: ["al-5", "al-6"],
+        sequences: [5, 6],
+        totalCents: 250_000,
+      }),
+    ]);
+    const card = screen.getByRole("article", {
+      name: "Aluguel do apê · parcelas 5 e 6 de 12",
+    });
+    expect(within(card).getByText("Faça primeiro · 2 atrasadas")).toBeVisible();
+    expect(
+      within(card).getByText("para Maria Souza · desde 01/09")
+    ).toBeVisible();
+    expect(
+      within(card).getByRole("link", { name: "Pagar a mais antiga" })
+    ).toHaveAttribute("href", "/contracts/al?installment=al-5");
+    const seeAll = within(card).getByRole("link", { name: "Ver parcelas" });
+    expect(seeAll).toHaveAttribute("href", "/contracts/al");
+    // On a phone a square icon button (h-11 from size sm, w-11 here), named by aria-label.
+    expect(seeAll).toHaveClass("max-md:w-11", "max-md:px-0");
+    expect(within(card).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("grupo com lacuna: o nome do cartão e o WhatsApp dizem as faixas", () => {
+    renderList([
+      terrenoGroup([5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20]),
+    ]);
+    expect(
+      screen.getByRole("article", {
+        name: "Venda do terreno · parcelas 5 a 12 e 14 a 20 de 60",
+      })
+    ).toBeVisible();
+    expect(whatsappText()).toContain(
+      "As parcelas 5 a 12 e 14 a 20 de “Venda do terreno” estão em aberto"
+    );
+  });
+
+  it("grupo com mais de 3 itens: o nome do cartão e o WhatsApp dizem quantas e entre quais", () => {
+    renderList([terrenoGroup([3, 5, 7, 9, 10, 11, 12])]);
+    expect(
+      screen.getByRole("article", {
+        name: "Venda do terreno · 7 parcelas entre 3 e 12 de 60",
+      })
+    ).toBeVisible();
+    expect(whatsappText()).toContain(
+      "7 parcelas de “Venda do terreno”, entre a 3 e a 12, estão em aberto"
+    );
   });
 });
 

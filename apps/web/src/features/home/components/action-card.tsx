@@ -59,12 +59,12 @@ export function ActionCard({
           view.person?.text
         )}
       </p>
-      {action.kind === "invite" ? (
+      {view.amountCents === null ? (
         <p className="font-display font-semibold text-xl tracking-[-0.02em]">
-          {action.contractTitle}
+          {view.title}
         </p>
       ) : (
-        <Money cents={action.totalCents} size="card" />
+        <Money cents={view.amountCents} size="card" />
       )}
       {view.person && action.kind !== "invite" ? (
         <p className={cn("text-xs", muted)}>{view.person.text}</p>

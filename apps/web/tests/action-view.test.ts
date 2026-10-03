@@ -120,12 +120,31 @@ describe("describeAction: cartão simples", () => {
         text: "Maria Souza contestou o comprovante",
       },
     });
+    expect(
+      describeAction(
+        installmentAction({ kind: "disputed", counterpartyName: null }),
+        ctx
+      ).person
+    ).toEqual({ name: null, text: "Reenvie o comprovante" });
   });
 
   it("sem outra parte, a linha diz quando vence", () => {
     expect(
       describeAction(installmentAction({ counterpartyName: null }), ctx).person
     ).toEqual({ name: null, text: "Vence em 03/10" });
+  });
+
+  it("atrasada sem outra parte: em atraso desde quando, nunca 'vence em' uma data passada", () => {
+    expect(
+      describeAction(
+        installmentAction({
+          kind: "overdue",
+          dueDate: "2026-09-28",
+          counterpartyName: null,
+        }),
+        ctx
+      ).person
+    ).toEqual({ name: null, text: "Em atraso desde 28/09" });
   });
 
   it("no idioma pedido: as mensagens seguem o locale, não só as datas", () => {
@@ -141,6 +160,9 @@ describe("describeAction: cartão simples", () => {
       person: { text: "to Maria Souza" },
       legend: { done: "6 of 12 paid" },
     });
+    expect(
+      describeAction(inviteAction(), { ...ctx, locale: "en-US" }).person
+    ).toEqual({ name: "Ana", text: "Ana invited you as the payee" });
   });
 });
 
@@ -189,6 +211,80 @@ describe("describeAction: grupo de atrasadas", () => {
       text: "para Helena Duarte · desde 30/08",
     });
   });
+
+  it("que você paga, inteiro: a tag, as parcelas, o total e as pagas", () => {
+    expect(
+      describeAction(
+        marinaGroup({
+          id: "overdue:al:pay",
+          direction: "pay",
+          installmentId: "al-5",
+          contractId: "al",
+          sequence: 5,
+          installmentIds: ["al-5", "al-6"],
+          contractTitle: "Aluguel do apê",
+          counterpartyName: "Maria Souza",
+          dueDate: "2026-09-01",
+          sequences: [5, 6],
+          totalCents: 250_000,
+          contract: {
+            paidCount: 4,
+            overdueCount: 2,
+            remainingCents: 1_000_000,
+            statuses: null,
+          },
+        }),
+        { ...ctx, first: true }
+      )
+    ).toEqual({
+      tone: "highlight",
+      tag: "Faça primeiro · 2 atrasadas",
+      title: "Aluguel do apê",
+      sequence: "parcelas 5 e 6 de 12",
+      amountCents: 250_000,
+      person: { name: "Maria Souza", text: "para Maria Souza · desde 01/09" },
+      terms: null,
+      legend: { done: "4 de 12 pagas", remaining: "falta R$ 10.000,00" },
+    });
+  });
+
+  it("com lacuna: cada trecho vira faixa; com mais de 3 itens, quantas e entre quais", () => {
+    const terreno = (sequences: number[]) =>
+      describeAction(
+        marinaGroup({
+          contractTitle: "Venda do terreno",
+          installmentsCount: 60,
+          count: sequences.length,
+          sequences,
+        }),
+        ctx
+      ).sequence;
+    expect(terreno([5, 6, 7, 8, 9, 11, 12, 13])).toBe(
+      "parcelas 5 a 9 e 11 a 13 de 60"
+    );
+    expect(terreno([3, 5, 7, 9, 10, 11])).toBe("6 parcelas entre 3 e 11 de 60");
+  });
+
+  it("no idioma pedido", () => {
+    expect(
+      describeAction(marinaGroup(), { ...ctx, locale: "en-US" })
+    ).toMatchObject({
+      tag: "2 overdue · since 08/30",
+      sequence: "installments 3 and 4 of 12",
+      person: { text: "Marina Pires owes you · since 08/30" },
+      legend: { done: "2 of 12 received", remaining: "R$3,500.00 left" },
+    });
+    expect(
+      describeAction(marinaGroup(), { ...ctx, first: true, locale: "en-US" })
+        .tag
+    ).toBe("Do first · 2 overdue");
+    expect(
+      describeAction(marinaGroup({ direction: "pay" }), {
+        ...ctx,
+        locale: "en-US",
+      }).person
+    ).toEqual({ name: "Marina Pires", text: "to Marina Pires · since 08/30" });
+  });
 });
 
 describe("describeAction: grupo sem outra parte", () => {
@@ -214,9 +310,12 @@ describe("describeAction: convite", () => {
       terms: { amount: "4 parcelas de R$ 300,00", from: "a partir de 10/11" },
       legend: null,
     });
-    expect(describeAction(inviteAction(), { ...ctx, first: true }).tag).toBe(
-      "Faça primeiro · convite"
-    );
+    expect(
+      describeAction(inviteAction(), { ...ctx, first: true })
+    ).toMatchObject({
+      tone: "highlight",
+      tag: "Faça primeiro · convite",
+    });
   });
 
   it("parcelas de valores diferentes: o total; uma parcela só: no singular", () => {
@@ -269,6 +368,9 @@ describe("actionButtons", () => {
     expect(
       actionButtons(installmentAction({ kind: "review", canConfirm: true }))
     ).toEqual(["review", "confirm"]);
+    expect(actionButtons(installmentAction({ kind: "review" }))).toEqual([
+      "review",
+    ]);
     expect(actionButtons(installmentAction({ kind: "disputed" }))).toEqual([
       "resend_proof",
     ]);

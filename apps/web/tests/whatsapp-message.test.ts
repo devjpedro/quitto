@@ -70,6 +70,51 @@ describe("chargeMessage", () => {
       "Oi! As parcelas 3 e 4 de “Notebook da Marina” estão em aberto, somando R$ 700,00. A mais antiga venceu em 30/08/2026. Consegue ver isso pra mim?",
     ]);
   });
+
+  it("grupo com lacuna: as faixas; com mais de 3 itens, quantas e entre quais", () => {
+    const group = {
+      contractTitle: "Venda do terreno",
+      dueDate: "2024-10-28",
+      totalCents: 4_600_000,
+    };
+    expect(
+      groupChargeMessage(
+        {
+          ...group,
+          sequences: [5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18],
+        },
+        "pt-BR"
+      )[0]
+    ).toBe(
+      "Oi! As parcelas 5 a 12 e 14 a 18 de “Venda do terreno” estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
+    );
+    expect(
+      groupChargeMessage(
+        { ...group, sequences: [3, 5, 7, 9, 10, 11] },
+        "pt-BR"
+      )[0]
+    ).toBe(
+      "Oi! 6 parcelas de “Venda do terreno”, entre a 3 e a 11, estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
+    );
+  });
+
+  it("grupo no idioma de quem envia", () => {
+    const group = {
+      contractTitle: "Notebook da Marina",
+      dueDate: "2026-08-30",
+      totalCents: 70_000,
+    };
+    expect(
+      groupChargeMessage({ ...group, sequences: [3, 4] }, "en-US")[0]
+    ).toBe(
+      "Hi! Installments 3 and 4 of “Notebook da Marina” are still open, R$700.00 in all. The oldest was due on 08/30/2026. Could you look into it?"
+    );
+    expect(
+      groupChargeMessage({ ...group, sequences: [1, 3, 5, 7] }, "en-US")[0]
+    ).toBe(
+      "Hi! 4 installments of “Notebook da Marina”, between 1 and 7, are still open, R$700.00 in all. The oldest was due on 08/30/2026. Could you look into it?"
+    );
+  });
 });
 
 describe("whatsappUrl", () => {

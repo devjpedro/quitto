@@ -96,12 +96,13 @@ export function personLine(
   }
   const date = sinceDate(action.dueDate, today, locale);
   if (!name) {
-    // No one to name (the owner alone in the contract). A group is late:
-    // say since when, never "Vence em" a date that is already past.
+    // No one to name (the owner alone in the contract). An overdue card, one
+    // installment or a group, is late: say since when, never "Vence em" a
+    // date that is already past.
     return {
       name: null,
       text:
-        action.count > 1
+        action.kind === "overdue"
           ? m.home_detail_overdue_since({ date }, options)
           : m.home_detail_due_on(
               { date: formatDate(action.dueDate, locale, "dayMonth") },
