@@ -13,8 +13,13 @@ import type { HomeAction } from "../types";
  * Runs a card's mutation buttons. `busy` disables them while one is in
  * flight; the ref also stops a second tap that lands before the re-render,
  * and `tryLock` (one per list) stops the tap that lands on the next card.
+ * `onStart` tells the list that this card is about to leave.
  */
-export function useActionHandlers(action: HomeAction, tryLock: () => boolean) {
+export function useActionHandlers(
+  action: HomeAction,
+  tryLock: () => boolean,
+  onStart: () => void
+) {
   const markPaid = useMarkPaidFromHome();
   const markReceived = useMarkReceivedFromHome();
   const confirm = useConfirmFromHome();
@@ -38,6 +43,7 @@ export function useActionHandlers(action: HomeAction, tryLock: () => boolean) {
       return false;
     }
     inFlight.current = true;
+    onStart();
     return true;
   }
 

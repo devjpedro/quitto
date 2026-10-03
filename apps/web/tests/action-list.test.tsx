@@ -1,7 +1,7 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
 import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
@@ -15,8 +15,10 @@ import {
 } from "./home-fixtures";
 import { renderWithProviders } from "./test-utils";
 
-const { markPaid, decline } = vi.hoisted(() => ({
+const { markPaid, confirm, accept, decline } = vi.hoisted(() => ({
   markPaid: vi.fn(),
+  confirm: vi.fn(),
+  accept: vi.fn(),
   decline: vi.fn(),
 }));
 
@@ -25,11 +27,11 @@ vi.mock("@/lib/api", () => ({
     api: {
       installments: ({ installmentId }: { installmentId: string }) => ({
         "mark-paid": { post: () => markPaid(installmentId) },
-        confirm: { post: () => markPaid(installmentId) },
+        confirm: { post: () => confirm(installmentId) },
       }),
-      invites: () => ({
-        accept: { post: () => decline() },
-        decline: { post: () => decline() },
+      invites: ({ token }: { token: string }) => ({
+        accept: { post: () => accept(token) },
+        decline: { post: () => decline(token) },
       }),
     },
   },
@@ -38,6 +40,7 @@ vi.mock("@/lib/api", () => ({
 interface LinkProps {
   children: ReactNode;
   className?: string;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
   params?: { id: string };
   search?: { installment?: string };
   to: string;
@@ -45,10 +48,11 @@ interface LinkProps {
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children, className, params, search, to }: LinkProps) => (
+  Link: ({ children, className, onClick, params, search, to }: LinkProps) => (
     <a
       className={className}
       href={`${to.replace("$id", params?.id ?? "")}?installment=${search?.installment ?? ""}`}
+      onClick={onClick}
     >
       {children}
     </a>
@@ -115,8 +119,53 @@ const itemOf = (n: number) =>
     .getByRole("article", { name: `Aluguel do apê · ${n}/12` })
     .closest("li");
 
+/** The card "Aluguel do apê · n/12", or null once it left the list. */
+const articleOf = (n: number) =>
+  screen.queryByRole("article", { name: `Aluguel do apê · ${n}/12` });
+
+/** Freezes the lock's clock (`Date.now`), so only `advance` moves it on. */
+function frozenClock() {
+  let now = Date.now();
+  const spy = vi.spyOn(Date, "now").mockImplementation(() => now);
+  return {
+    advance: (ms: number) => {
+      now += ms;
+    },
+    restore: () => spy.mockRestore(),
+  };
+}
+
+/**
+ * Records, per click on a link, whether the list cancelled it. Listens on
+ * the document, after React's root listener, and then cancels the click
+ * itself so jsdom never navigates.
+ */
+function watchLinkClicks() {
+  const cancelled: boolean[] = [];
+  const listener = (event: MouseEvent) => {
+    if (event.target instanceof Element && event.target.closest("a")) {
+      cancelled.push(event.defaultPrevented);
+      event.preventDefault();
+    }
+  };
+  document.addEventListener("click", listener);
+  return {
+    cancelled,
+    stop: () => document.removeEventListener("click", listener),
+  };
+}
+
+/** 1/12 has only "Já paguei" (no Pix); 2/12 is to receive (WhatsApp); 3/12 has "Pagar com PIX". */
+const markPaidThenLinks = () => [
+  installmentAction({ installmentId: "i1", sequence: 1, pixCode: null }),
+  installmentAction({ installmentId: "i2", sequence: 2, direction: "receive" }),
+  installmentAction({ installmentId: "i3", sequence: 3 }),
+];
+
 beforeEach(() => {
   markPaid.mockReset();
+  confirm.mockReset();
+  accept.mockReset();
   decline.mockReset();
 });
 
@@ -125,6 +174,9 @@ describe("ActionList", () => {
     renderList();
     const card = screen.getByRole("article", { name: "Aluguel do apê · 7/12" });
     expect(card).toBeVisible();
+    // Same 1 px border as the white cards, in the card's own green (mockup 11):
+    // the content lines up across the row.
+    expect(card).toHaveClass("border", "border-brand-surface");
     expect(screen.getByText("Faça primeiro · amanhã")).toBeVisible();
     expect(screen.getByText("R$ 1.250,00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Pagar com PIX" })).toHaveAttribute(
@@ -173,40 +225,79 @@ describe("ActionList", () => {
 
   it("toque duplo: o segundo toque não age no cartão que deslizou para o lugar", async () => {
     markPaid.mockReturnValue(new Promise(() => undefined));
-    renderLive(twoToPay());
-    await userEvent.click(firstMarkPaid());
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("article", { name: "Aluguel do apê · 1/12" })
-      ).toBeNull()
-    );
-    // The card 2/12 is now first, green, with its own "Já paguei" under the finger.
-    await userEvent.click(firstMarkPaid());
-    expect(markPaid).toHaveBeenCalledTimes(1);
-    expect(markPaid).toHaveBeenCalledWith("i1");
+    // Frozen: the second tap stays inside the window however slow the machine is.
+    const clock = frozenClock();
+    try {
+      renderLive(twoToPay());
+      await userEvent.click(firstMarkPaid());
+      await waitFor(() => expect(articleOf(1)).toBeNull());
+      // The card 2/12 is now first, green, with its own "Já paguei" under the finger.
+      await userEvent.click(firstMarkPaid());
+      expect(markPaid).toHaveBeenCalledTimes(1);
+      expect(markPaid).toHaveBeenCalledWith("i1");
+    } finally {
+      clock.restore();
+    }
   });
 
   it("um toque deliberado depois da janela da trava funciona", async () => {
     markPaid.mockReturnValue(new Promise(() => undefined));
-    const realNow = Date.now.bind(Date);
-    let skew = 0;
-    const now = vi
-      .spyOn(Date, "now")
-      .mockImplementation(() => realNow() + skew);
+    const clock = frozenClock();
     try {
       renderLive(twoToPay());
       await userEvent.click(firstMarkPaid());
-      await waitFor(() =>
-        expect(
-          screen.queryByRole("article", { name: "Aluguel do apê · 1/12" })
-        ).toBeNull()
-      );
-      skew = ACTION_LOCK_MS + 100;
+      await waitFor(() => expect(articleOf(1)).toBeNull());
+      clock.advance(ACTION_LOCK_MS + 100);
       await userEvent.click(firstMarkPaid());
       await waitFor(() => expect(markPaid).toHaveBeenCalledTimes(2));
       expect(markPaid).toHaveBeenLastCalledWith("i2");
     } finally {
-      now.mockRestore();
+      clock.restore();
+    }
+  });
+
+  it("toque duplo: o segundo toque não abre o link do cartão que deslizou (WhatsApp e PIX)", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    const clock = frozenClock();
+    const links = watchLinkClicks();
+    try {
+      renderLive(markPaidThenLinks());
+      await userEvent.click(firstMarkPaid());
+      await waitFor(() => expect(articleOf(1)).toBeNull());
+      // 2/12 slid into the place: its WhatsApp link, then 3/12's Pix link.
+      await userEvent.click(
+        screen.getByRole("link", {
+          name: "Cobrar no WhatsApp (abre o WhatsApp)",
+        })
+      );
+      await userEvent.click(
+        screen.getByRole("link", { name: "Pagar com PIX" })
+      );
+      expect(links.cancelled).toEqual([true, true]);
+    } finally {
+      links.stop();
+      clock.restore();
+    }
+  });
+
+  it("depois da janela da trava, o link funciona", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    const clock = frozenClock();
+    const links = watchLinkClicks();
+    try {
+      renderLive(markPaidThenLinks());
+      await userEvent.click(firstMarkPaid());
+      await waitFor(() => expect(articleOf(1)).toBeNull());
+      clock.advance(ACTION_LOCK_MS + 100);
+      await userEvent.click(
+        screen.getByRole("link", {
+          name: "Cobrar no WhatsApp (abre o WhatsApp)",
+        })
+      );
+      expect(links.cancelled).toEqual([false]);
+    } finally {
+      links.stop();
+      clock.restore();
     }
   });
 
@@ -295,7 +386,94 @@ describe("ActionList", () => {
     renderList([inviteAction()]);
     expect(screen.getByText("Faça primeiro · convite")).toBeVisible();
     expect(screen.getByText("Moto da Ana")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Aceitar" })).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: "Recusar" }));
-    await waitFor(() => expect(decline).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(decline).toHaveBeenCalledWith("tok1"));
+    expect(decline).toHaveBeenCalledTimes(1);
+    expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("Aguarda você: Conferir abre a parcela e Confirmar confirma ali mesmo", async () => {
+    confirm.mockReturnValue(new Promise(() => undefined));
+    renderList([installmentAction({ kind: "review", canConfirm: true })]);
+    expect(screen.getByRole("link", { name: "Conferir" })).toHaveAttribute(
+      "href",
+      "/contracts/c1?installment=i1"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(confirm).toHaveBeenCalledWith("i1"));
+    expect(markPaid).not.toHaveBeenCalled();
+  });
+});
+
+describe("ActionList · foco depois da ação", () => {
+  const region = () =>
+    screen.getByRole("region", { name: "O que fazer agora" });
+
+  it("pelo teclado: o foco vai para o 1º botão do cartão que ficou no mesmo lugar", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    renderLive(twoToPay());
+    await userEvent.tab(); // "Pagar com PIX" of 1/12
+    await userEvent.tab(); // "Já paguei" of 1/12
+    const card = articleOf(1) as HTMLElement;
+    expect(document.activeElement).toBe(
+      within(card).getByRole("button", { name: "Já paguei" })
+    );
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(articleOf(1)).toBeNull());
+    expect(document.activeElement).toBe(
+      within(articleOf(2) as HTMLElement).getByRole("link", {
+        name: "Pagar com PIX",
+      })
+    );
+  });
+
+  it("pelo teclado: quando sai o último cartão, o foco vai para o anterior", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    renderLive(twoToPay());
+    for (let i = 0; i < 4; i++) {
+      await userEvent.tab(); // Pix and "Já paguei" of 1/12, then of 2/12
+    }
+    expect(document.activeElement).toBe(
+      within(articleOf(2) as HTMLElement).getByRole("button", {
+        name: "Já paguei",
+      })
+    );
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(articleOf(2)).toBeNull());
+    expect(document.activeElement).toBe(
+      within(articleOf(1) as HTMLElement).getByRole("link", {
+        name: "Pagar com PIX",
+      })
+    );
+  });
+
+  it("pelo teclado: sem cartão sobrando, o foco vai para a lista", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    renderLive([installmentAction()]);
+    await userEvent.tab();
+    await userEvent.tab();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(articleOf(7)).toBeNull());
+    expect(document.activeElement).toBe(region());
+    expect(region()).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("um link não tira o cartão, e o foco fica nele", async () => {
+    const links = watchLinkClicks();
+    try {
+      renderLive(twoToPay());
+      await userEvent.tab();
+      await userEvent.keyboard("{Enter}");
+      expect(links.cancelled).toEqual([false]);
+      expect(articleOf(1)).not.toBeNull();
+      expect(document.activeElement).toBe(
+        within(articleOf(1) as HTMLElement).getByRole("link", {
+          name: "Pagar com PIX",
+        })
+      );
+    } finally {
+      links.stop();
+    }
   });
 });

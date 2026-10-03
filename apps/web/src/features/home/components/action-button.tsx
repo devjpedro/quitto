@@ -5,6 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
+import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   chargeMessage,
@@ -49,6 +50,7 @@ export function ActionButton({
   locale,
   onRun,
   today,
+  tryLock,
   variant,
 }: {
   action: HomeAction;
@@ -57,16 +59,29 @@ export function ActionButton({
   locale: Locale;
   onRun: (kind: ActionButtonKind) => void;
   today: string;
+  tryLock: () => boolean;
   variant: CardButtonVariant;
 }) {
   const label = LABEL[kind]();
+  // A link runs no mutation, but it still answers to the list's lock: the
+  // second hit of a double tap must not open the card that slid into place.
+  const guard = (event: MouseEvent) => {
+    if (!tryLock()) {
+      event.preventDefault();
+    }
+  };
   if (action.kind !== "invite" && kind === "whatsapp") {
     const href = whatsappUrl(
       chargeMessage({ ...action, todayISO: today }, locale)
     );
     return (
       <Button asChild size="sm" variant={variant}>
-        <a href={href} rel="noopener noreferrer" target="_blank">
+        <a
+          href={href}
+          onClick={guard}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
           <ButtonIcon kind={kind} />
           {label}
           {/* The space lives outside the span: the name computation trims an
@@ -80,6 +95,7 @@ export function ActionButton({
     return (
       <Button asChild size="sm" variant={variant}>
         <Link
+          onClick={guard}
           params={{ id: action.contractId }}
           search={{ installment: action.installmentId }}
           to="/contracts/$id"

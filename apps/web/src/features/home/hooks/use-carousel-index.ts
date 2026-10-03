@@ -4,7 +4,9 @@ import { indexFromScroll } from "../lib/carousel";
 /**
  * Which card leads the horizontal list, for the "1 de N" counter. Measured
  * on scroll and again whenever the list goes back to a carousel: collapsing
- * "Ver todas" lands on the first card without any scroll event.
+ * "Ver todas" brings the carousel back at whatever offset the browser keeps
+ * (Chrome restores the old one, others may start over), without any scroll
+ * event.
  */
 export function useCarouselIndex(count: number, expanded: boolean) {
   const ref = useRef<HTMLUListElement>(null);

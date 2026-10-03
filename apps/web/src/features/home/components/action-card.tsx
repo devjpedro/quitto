@@ -19,27 +19,33 @@ function buttonVariant(first: boolean, index: number): CardButtonVariant {
 export function ActionCard({
   action,
   first,
+  onActionStart,
   today,
   tryLock,
 }: {
   action: HomeAction;
   first: boolean;
+  onActionStart: (id: string) => void;
   today: string;
   tryLock: () => boolean;
 }) {
   const locale = getLocale();
   const titleId = useId();
   const view = describeAction(action, { first, locale, today });
-  const { busy, run } = useActionHandlers(action, tryLock);
+  const { busy, run } = useActionHandlers(action, tryLock, () =>
+    onActionStart(action.id)
+  );
   const muted = first ? "text-on-brand-muted" : "text-ink-muted";
   return (
     <article
       aria-labelledby={titleId}
       className={cn(
-        "flex h-full flex-col gap-1.5 rounded-card p-4",
+        // Every card has the 1 px border (the green one in its own color, as
+        // in mockup 11), so the content lines up across the row.
+        "flex h-full flex-col gap-1.5 rounded-card border p-4",
         first
-          ? "bg-brand-surface text-on-brand"
-          : "border border-line bg-surface-raised text-ink"
+          ? "border-brand-surface bg-brand-surface text-on-brand"
+          : "border-line bg-surface-raised text-ink"
       )}
     >
       <Tag tone={view.tone}>{view.tag}</Tag>
@@ -70,6 +76,7 @@ export function ActionCard({
             locale={locale}
             onRun={run}
             today={today}
+            tryLock={tryLock}
             variant={buttonVariant(first, index)}
           />
         ))}

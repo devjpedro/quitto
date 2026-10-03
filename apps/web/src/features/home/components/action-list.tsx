@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
+import { useActionFocus } from "../hooks/use-action-focus";
 import { useActionLock } from "../hooks/use-action-lock";
 import { useCarouselIndex } from "../hooks/use-carousel-index";
 import type { HomeAction } from "../types";
@@ -52,12 +53,16 @@ export function ActionList({
   const [expanded, setExpanded] = useState(false);
   const { ref, index } = useCarouselIndex(actions.length, expanded);
   const tryLock = useActionLock();
+  const { sectionRef, onActionStart } = useActionFocus(actions);
   const single = actions.length === 1;
   const toggle = () => setExpanded((value) => !value);
   return (
     <section
       aria-label={m.home_actions_title()}
-      className="flex flex-col gap-2"
+      className="flex flex-col gap-2 focus:outline-none"
+      ref={sectionRef}
+      // With no card left, the list itself takes the focus of the last action.
+      tabIndex={actions.length === 0 ? -1 : undefined}
     >
       <ul
         className={cn(
@@ -88,6 +93,7 @@ export function ActionList({
             <ActionCard
               action={action}
               first={i === 0}
+              onActionStart={onActionStart}
               today={today}
               tryLock={tryLock}
             />
