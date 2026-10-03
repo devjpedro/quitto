@@ -91,7 +91,9 @@ export function HomeContent() {
           <div className={LOWER_COLUMN}>
             {layout.hasContract ? (
               <UpcomingList
-                hasActions={home.actions.length > 0}
+                hasInstallmentActions={home.actions.some(
+                  (action) => action.kind !== "invite"
+                )}
                 upcoming={home.upcoming}
               />
             ) : null}

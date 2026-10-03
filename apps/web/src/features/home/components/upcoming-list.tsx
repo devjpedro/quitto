@@ -59,22 +59,24 @@ export const UPCOMING_SECTION_ID = "upcoming";
 
 /** "Próximos 30 dias": what is coming that is not an action yet. */
 export function UpcomingList({
-  hasActions,
+  hasInstallmentActions,
   upcoming,
 }: {
-  /** Action cards are on screen above the list. */
-  hasActions: boolean;
+  /** Installment cards are on screen above the list (an invite card is not one). */
+  hasInstallmentActions: boolean;
   upcoming: Home["upcoming"];
 }) {
   const locale = getLocale();
   const titleId = useId();
   const total = upcoming.items.length + upcoming.moreCount;
   const one = (count: number) => pluralForm(count, locale) === "one";
-  // Nothing listed, yet there are cards above (overdue ones count, though the
-  // window total leaves them out) or money due in the window: it is in the cards.
+  // Nothing listed, yet there are installment cards above (overdue ones count,
+  // though the window total leaves them out) or money due in the window: it is
+  // in the cards.
   const allInCards =
     upcoming.items.length === 0 &&
-    (hasActions || upcoming.toPayCents + upcoming.toReceiveCents > 0);
+    (hasInstallmentActions ||
+      upcoming.toPayCents + upcoming.toReceiveCents > 0);
   return (
     <section
       aria-labelledby={titleId}

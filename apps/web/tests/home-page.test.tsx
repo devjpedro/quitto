@@ -134,6 +134,29 @@ describe("HomePage", () => {
     ).toBeNull();
   });
 
+  it("só convite nos cartões e nada na janela: os 30 dias dizem que nada vence (convite não é vencimento)", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [inviteAction()] }),
+      error: null,
+    });
+    renderHome();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Nada vence nos próximos 30 dias",
+      })
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "Cada parcela aparece aqui quando faltar um mês para o vencimento."
+      )
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", {
+        name: "Nada mais vence nos próximos 30 dias",
+      })
+    ).toBeNull();
+  });
+
   it("sem ação e com contrato: Nada pendente agora, e os 30 dias continuam", async () => {
     getHome.mockResolvedValue({ data: homeFixture(), error: null });
     renderHome();

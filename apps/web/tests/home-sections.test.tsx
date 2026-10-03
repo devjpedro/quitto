@@ -85,7 +85,7 @@ describe("seções do home", () => {
   it("próximos 30 dias: linhas com + recebe / − paga, comprovante enviado e o que sobrou", () => {
     renderWithProviders(
       <UpcomingList
-        hasActions={false}
+        hasInstallmentActions={false}
         upcoming={{
           items: [
             upcomingItem(),
@@ -125,7 +125,10 @@ describe("seções do home", () => {
 
   it("próximos 30 dias vazio: versão compacta", () => {
     renderWithProviders(
-      <UpcomingList hasActions={false} upcoming={homeFixture().upcoming} />
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={homeFixture().upcoming}
+      />
     );
     expect(
       screen.getByRole("heading", { name: "Nada vence nos próximos 30 dias" })
@@ -135,7 +138,7 @@ describe("seções do home", () => {
   it("próximos 30 dias vazio porque tudo já virou cartão: não diz que nada vence", () => {
     renderWithProviders(
       <UpcomingList
-        hasActions
+        hasInstallmentActions
         upcoming={{
           items: [],
           moreCount: 0,
@@ -159,7 +162,7 @@ describe("seções do home", () => {
 
   it("com cartões acima e nada na janela (ex.: só atrasadas): o resto já está nos cartões, mesmo com total zero", () => {
     renderWithProviders(
-      <UpcomingList hasActions upcoming={homeFixture().upcoming} />
+      <UpcomingList hasInstallmentActions upcoming={homeFixture().upcoming} />
     );
     expect(
       screen.getByRole("heading", {
@@ -341,7 +344,7 @@ describe("seções do home", () => {
           today={TODAY}
         />
         <UpcomingList
-          hasActions={false}
+          hasInstallmentActions={false}
           upcoming={{
             items: [upcomingItem()],
             moreCount: 0,
