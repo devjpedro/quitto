@@ -91,7 +91,10 @@ export function HomeContent() {
         <div className={cn("flex flex-col gap-4 md:gap-5", WITH_SIDE)}>
           <div className={COLUMN}>
             {layout.hasContract ? (
-              <UpcomingList upcoming={home.upcoming} />
+              <UpcomingList
+                hasActions={home.actions.length > 0}
+                upcoming={home.upcoming}
+              />
             ) : null}
             {phoneOnlyMilestones ? milestones : null}
             {layout.compactGuide ? (

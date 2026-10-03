@@ -113,6 +113,26 @@ describe("HomePage", () => {
     expect(document.title).toBe("Quitto · Agora");
   });
 
+  it("só parcelas atrasadas nos cartões e nada mais na janela: os 30 dias não dizem que nada vence", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction({ kind: "overdue", dueDate: "2026-09-20" }),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Nada mais vence nos próximos 30 dias",
+      })
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Nada vence nos próximos 30 dias" })
+    ).toBeNull();
+  });
+
   it("sem ação e com contrato: Nada pendente agora, e os 30 dias continuam", async () => {
     getHome.mockResolvedValue({ data: homeFixture(), error: null });
     renderHome();
