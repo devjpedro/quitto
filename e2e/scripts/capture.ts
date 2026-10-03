@@ -25,6 +25,7 @@ function arg(name: string, fallback?: string): string {
 const account = arg("account");
 const out = arg("out");
 const path = arg("path", "/");
+const expectedPath = new URL(path, WEB).pathname;
 const sizes = arg("sizes", DEFAULT_SIZES)
   .split(",")
   .map((size) => {
@@ -83,9 +84,32 @@ try {
       await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => document.fonts.ready);
+      // A session the app refused lands on /login: never save that as the page.
+      const landed = new URL(page.url()).pathname;
+      if (landed !== expectedPath) {
+        throw new Error(
+          `${account} caiu em ${landed}, não em ${expectedPath}: rodou o seed:demo?`
+        );
+      }
       const file = join(out, `${account}-${size.name}-${theme}`);
       await page.screenshot({ path: `${file}.png` });
-      await page.screenshot({ path: `${file}-pagina.png`, fullPage: true });
+      if (size.mobile) {
+        // A fullPage shot paints the phone's fixed tab bar where the first
+        // screen left it, over the list. Stretch the viewport to the document
+        // instead, so the bar lands at the bottom, as in the reference
+        // (mockup13-shots/D-390-claro-pagina.png). Not from md up: the
+        // sidebar is sticky at 100dvh and would grow with a stretched viewport.
+        const height = await page.evaluate(
+          () => document.documentElement.scrollHeight
+        );
+        await page.setViewportSize({ width: size.width, height });
+        await page.evaluate(
+          () => new Promise((resolve) => requestAnimationFrame(resolve))
+        );
+        await page.screenshot({ path: `${file}-pagina.png` });
+      } else {
+        await page.screenshot({ path: `${file}-pagina.png`, fullPage: true });
+      }
       await context.close();
     }
   }
