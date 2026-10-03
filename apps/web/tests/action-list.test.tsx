@@ -282,6 +282,14 @@ describe("ActionList", () => {
     expect(screen.queryByRole("button", { name: "Ver todas (3)" })).toBeNull();
   });
 
+  it("o carrossel contém os sr-only: o ul é relative", () => {
+    // The sr-only texts (Money's full amount, "(abre o WhatsApp)") are
+    // absolutely positioned: without a positioned ancestor inside the
+    // carousel they escape its overflow-x and widen the whole page.
+    renderList(overdue(5));
+    expect(itemOf(1)?.parentElement).toHaveClass("relative", "overflow-x-auto");
+  });
+
   it("convite: Aceitar e Recusar no próprio cartão", async () => {
     decline.mockResolvedValue({ data: { ok: true }, error: null });
     renderList([inviteAction()]);

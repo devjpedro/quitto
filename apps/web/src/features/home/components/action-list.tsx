@@ -61,7 +61,10 @@ export function ActionList({
     >
       <ul
         className={cn(
-          "flex gap-2",
+          // relative: the cards' sr-only texts are absolute, and without a
+          // positioned ancestor here they escape the carousel's overflow-x
+          // and widen the whole page.
+          "relative flex gap-2",
           expanded
             ? "flex-col"
             : "-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 [scrollbar-width:none] md:-mx-6 md:scroll-px-6 md:px-6",
