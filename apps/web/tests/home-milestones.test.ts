@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { milestoneCells, stripCells } from "@/features/home/lib/milestones";
+import {
+  milestoneCells,
+  onlyMomentStrip,
+  stripCells,
+} from "@/features/home/lib/milestones";
 import { homeFixture } from "./home-fixtures";
 
 describe("milestoneCells", () => {
@@ -81,5 +85,44 @@ describe("stripCells", () => {
       ["paid", false, false],
       ["settled_paid", false, false],
     ]);
+  });
+});
+
+describe("onlyMomentStrip", () => {
+  const closest = {
+    contractId: "c3",
+    title: "Celular da Ana",
+    paidCount: 9,
+    totalCount: 10,
+    percent: 90,
+  };
+
+  it("só o marco do momento: a faixa é só do celular (no desktop a sidebar o mostra)", () => {
+    const milestones = {
+      ...homeFixture().milestones,
+      closestToPayoff: closest,
+    };
+    expect(onlyMomentStrip(milestones, "closest")).toBe(true);
+  });
+
+  it("com outro marco além do momento, a faixa aparece também no desktop", () => {
+    const milestones = {
+      ...homeFixture().milestones,
+      closestToPayoff: closest,
+      settled: { paidCents: 1_250_000, receivedCents: 0 },
+    };
+    expect(onlyMomentStrip(milestones, "closest")).toBe(false);
+  });
+
+  it("um marco que não é o do momento não é só do celular", () => {
+    const milestones = {
+      ...homeFixture().milestones,
+      closestToPayoff: closest,
+    };
+    expect(onlyMomentStrip(milestones, "guide")).toBe(false);
+  });
+
+  it("sem marco nenhum não há faixa", () => {
+    expect(onlyMomentStrip(homeFixture().milestones, null)).toBe(false);
   });
 });

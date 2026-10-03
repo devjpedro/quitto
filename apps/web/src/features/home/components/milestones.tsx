@@ -8,6 +8,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 import {
   type MilestoneCell,
   milestoneCells,
+  onlyMomentStrip,
   stripCells,
 } from "../lib/milestones";
 import { momentView } from "../lib/moment";
@@ -97,7 +98,7 @@ export function Milestones({
   if (strip.length === 0) {
     return null;
   }
-  const onlyMoment = strip.every((item) => item.moment);
+  const onlyMoment = onlyMomentStrip(milestones, momentId);
   return (
     <section
       aria-labelledby={headingId}

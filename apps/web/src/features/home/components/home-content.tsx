@@ -5,6 +5,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "../api";
 import { useFocusAfterLastAction } from "../hooks/use-focus-after-last-action";
 import { homeLayout, homeSubtitle } from "../lib/home-layout";
+import { onlyMomentStrip } from "../lib/milestones";
 import { momentMilestone } from "../lib/moment";
 import { ActionList } from "./action-list";
 import { AllClear } from "./all-clear";
@@ -22,8 +23,9 @@ const COLUMN =
  * The lower part with a side column (mockup 12): 3fr/2fr from lateral; from
  * wide 2fr for the list and 1fr per side block. auto-fit collapses the track
  * of a side block that is not on screen, instead of leaving a 300 px hole.
- * A column left empty (no milestones and "Notificações recentes" gone with a
- * failed list) turns the grid into a block, so no 2fr track stays blank.
+ * A column left empty (no milestones for the desktop and "Notificações
+ * recentes" gone with a failed list) turns the grid into a block, so no 2fr
+ * track stays blank.
  */
 const WITH_SIDE =
   "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-6 lateral:gap-y-5 wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))] lateral:has-[>:empty]:block";
@@ -40,6 +42,14 @@ export function HomeContent() {
   const summaryRef = useFocusAfterLastAction(home.actions.length);
   const layout = homeLayout(home);
   const lower = layout.hasContract || layout.compactGuide;
+  const momentId = momentMilestone(home)?.id ?? null;
+  const milestones = layout.hasContract ? (
+    // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
+    <Milestones milestones={home.milestones} momentId={momentId} />
+  ) : null;
+  // A strip with only that milestone is phone-only (md:hidden): it stays out of
+  // the side column, which is then empty when "Notificações recentes" is gone.
+  const phoneOnlyMilestones = onlyMomentStrip(home.milestones, momentId);
   return (
     <div className="flex flex-col gap-4 md:gap-5">
       <p
@@ -83,6 +93,7 @@ export function HomeContent() {
             {layout.hasContract ? (
               <UpcomingList upcoming={home.upcoming} />
             ) : null}
+            {phoneOnlyMilestones ? milestones : null}
             {layout.compactGuide ? (
               // Last below lateral (after the milestones), under the list from lateral.
               <div className="lateral:order-none order-last">
@@ -95,13 +106,7 @@ export function HomeContent() {
             ) : null}
           </div>
           <div className={cn(COLUMN, "wide:contents")}>
-            {layout.hasContract ? (
-              // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
-              <Milestones
-                milestones={home.milestones}
-                momentId={momentMilestone(home)?.id ?? null}
-              />
-            ) : null}
+            {phoneOnlyMilestones ? null : milestones}
             {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
             <RecentNotifications />
           </div>

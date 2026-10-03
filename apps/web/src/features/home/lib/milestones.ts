@@ -81,3 +81,15 @@ export function stripCells(
     })),
   ];
 }
+
+/**
+ * True when the strip would hold only the milestone of the moment: then it is
+ * a phone-only strip, because from md the sidebar's lime card shows that one.
+ */
+export function onlyMomentStrip(
+  milestones: HomeMilestones,
+  momentId: string | null
+): boolean {
+  const strip = stripCells(milestoneCells(milestones), momentId);
+  return strip.length > 0 && strip.every((item) => item.moment);
+}

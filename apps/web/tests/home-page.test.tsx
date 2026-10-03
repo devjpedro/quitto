@@ -251,8 +251,8 @@ describe("HomePage", () => {
     // In the side column; from wide it takes a column of its own.
     const side = recent.parentElement;
     expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
-    // The block keeps the side column filled, so the grid is on (the case
-    // without milestones is the one with no contract, above).
+    // This fixture has a contract but no milestones on screen: the block alone
+    // keeps the side column filled, so the grid is on.
     expect(side?.parentElement).toHaveClass("lateral:grid");
     // jsdom is 1024 px wide: below lateral nothing is fetched.
     expect(getNotifications).not.toHaveBeenCalled();
@@ -321,6 +321,42 @@ describe("HomePage", () => {
       expect(lower?.matches(":has(> :empty)")).toBe(true);
     }
   );
+
+  it("a 1440 px, só com o marco do momento e a lista falhando: a faixa do celular fica na coluna da esquerda e a lateral vazia desliga a grade", async () => {
+    setScreenWidth(1440);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        milestones: {
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c1",
+            title: "Celular da Ana",
+            paidCount: 1,
+            totalCount: 3,
+            percent: 33,
+          },
+        },
+      }),
+      error: null,
+    });
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    renderHome({ likeTheApp: true });
+    await waitFor(() => expect(lowerPart()).not.toBeNull());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    // The strip with only the milestone of the moment is for phones (from md
+    // the sidebar's lime card shows it): it lives in the left column, so the
+    // side column is left empty and the grid turns into a block.
+    const strip = screen.getByRole("region", { name: "Marcos" });
+    expect(strip).toHaveClass("md:hidden");
+    const lower = lowerPart();
+    expect(lower?.firstElementChild).toContainElement(strip);
+    expect(lower?.lastElementChild).toBeEmptyDOMElement();
+    expect(lower?.matches(":has(> :empty)")).toBe(true);
+  });
 
   it("primeiro acesso: o guia verde lidera", async () => {
     getHome.mockResolvedValue({
