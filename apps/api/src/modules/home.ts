@@ -1,16 +1,6 @@
 import { CONTRACT_STATUS, todayISO } from "@quitto/shared";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  max,
-  or,
-} from "drizzle-orm";
-import { Elysia, t } from "elysia";
+import { and, count, desc, eq, gt, inArray, isNull, max } from "drizzle-orm";
+import { Elysia } from "elysia";
 import { db } from "../db/client";
 import {
   contract,
@@ -21,6 +11,7 @@ import {
   proof,
   user as userTable,
 } from "../db/schema";
+import { visibleContractsWhere } from "../lib/contract-visibility";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { buildAgenda, type HomeInviteRow } from "../lib/home";
@@ -28,6 +19,7 @@ import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
 import { type HomeContractRows, partyContracts } from "../lib/home-parties";
 import { requireAuth } from "../lib/session";
+import { homeSchema } from "./home-schema";
 
 const EMPTY_ROWS: HomeContractRows = {
   contracts: [],
@@ -36,13 +28,8 @@ const EMPTY_ROWS: HomeContractRows = {
   users: [],
 };
 
-/** Contracts the user owns or is linked to, with every row the home needs. 4 sequential round trips at most. */
+/** Contracts the user sees (owned or linked), with every row the home needs. 3 sequential round trips at most. */
 async function loadContractRows(userId: string): Promise<HomeContractRows> {
-  const linked = await db
-    .select({ contractId: participant.contractId })
-    .from(participant)
-    .where(eq(participant.linkedUserId, userId));
-  const linkedIds = linked.map((l) => l.contractId);
   const contracts = await db
     .select({
       id: contract.id,
@@ -56,11 +43,7 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
       createdAt: contract.createdAt,
     })
     .from(contract)
-    .where(
-      linkedIds.length > 0
-        ? or(eq(contract.ownerId, userId), inArray(contract.id, linkedIds))
-        : eq(contract.ownerId, userId)
-    );
+    .where(visibleContractsWhere(userId));
   if (contracts.length === 0) {
     return EMPTY_ROWS;
   }
@@ -187,101 +170,6 @@ async function loadUnreadCount(userId: string): Promise<number> {
     .where(and(eq(notification.userId, userId), isNull(notification.readAt)));
   return row?.value ?? 0;
 }
-
-const directionSchema = t.Union([t.Literal("pay"), t.Literal("receive")]);
-const nullableString = t.Union([t.String(), t.Null()]);
-
-const upcomingItemSchema = t.Object({
-  installmentId: t.String(),
-  contractId: t.String(),
-  contractTitle: t.String(),
-  sequence: t.Integer(),
-  installmentsCount: t.Integer(),
-  amountCents: t.Integer(),
-  dueDate: t.String(),
-  direction: directionSchema,
-  status: t.String(),
-});
-
-const installmentActionSchema = t.Object({
-  id: t.String(),
-  kind: t.Union([
-    t.Literal("overdue"),
-    t.Literal("review"),
-    t.Literal("disputed"),
-    t.Literal("due_soon"),
-  ]),
-  installmentId: t.String(),
-  contractId: t.String(),
-  contractTitle: t.String(),
-  sequence: t.Integer(),
-  installmentsCount: t.Integer(),
-  amountCents: t.Integer(),
-  dueDate: t.String(),
-  direction: directionSchema,
-  status: t.String(),
-  counterpartyName: nullableString,
-  pixCode: nullableString,
-  canMarkPaid: t.Boolean(),
-  canConfirm: t.Boolean(),
-});
-
-const inviteActionSchema = t.Object({
-  id: t.String(),
-  kind: t.Literal("invite"),
-  token: t.String(),
-  contractTitle: t.String(),
-  role: t.String(),
-  inviterName: t.String(),
-});
-
-const homeSchema = t.Object({
-  today: t.String(),
-  actions: t.Array(t.Union([installmentActionSchema, inviteActionSchema])),
-  upcoming: t.Object({
-    items: t.Array(upcomingItemSchema),
-    moreCount: t.Integer(),
-    toPayCents: t.Integer(),
-    toReceiveCents: t.Integer(),
-  }),
-  nextDue: t.Union([upcomingItemSchema, t.Null()]),
-  milestones: t.Object({
-    closestToPayoff: t.Union([
-      t.Object({
-        contractId: t.String(),
-        title: t.String(),
-        paidCount: t.Integer(),
-        totalCount: t.Integer(),
-        percent: t.Integer(),
-      }),
-      t.Null(),
-    ]),
-    monthToDate: t.Object({
-      month: t.String(),
-      paidCents: t.Integer(),
-      receivedCents: t.Integer(),
-    }),
-    previousMonthAllClear: t.Union([
-      t.Object({ month: t.String(), paidCount: t.Integer() }),
-      t.Null(),
-    ]),
-    settled: t.Object({
-      paidCents: t.Integer(),
-      receivedCents: t.Integer(),
-    }),
-  }),
-  onboarding: t.Object({
-    hasContract: t.Boolean(),
-    hasPixKey: t.Boolean(),
-    hasCounterparty: t.Boolean(),
-    remindersOn: t.Boolean(),
-    remindersAvailable: t.Boolean(),
-    counterpartyContractId: nullableString,
-    dismissedAt: nullableString,
-  }),
-  unreadCount: t.Integer(),
-  activeContractsCount: t.Integer(),
-});
 
 export const homeModule = new Elysia({ prefix: "/api" }).get(
   "/home",
