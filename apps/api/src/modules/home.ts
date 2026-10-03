@@ -121,7 +121,7 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
   return { contracts, installments, participants, users };
 }
 
-/** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot. */
+/** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot, and its latest copy decides. */
 async function loadInvites(email: string): Promise<HomeInviteRow[]> {
   const rows = await db
     .select({
@@ -129,6 +129,7 @@ async function loadInvites(email: string): Promise<HomeInviteRow[]> {
       token: invite.token,
       contractId: invite.contractId,
       createdAt: invite.createdAt,
+      declinedAt: invite.declinedAt,
       contractTitle: contract.title,
       role: participant.role,
       inviterName: userTable.name,
@@ -141,21 +142,22 @@ async function loadInvites(email: string): Promise<HomeInviteRow[]> {
       and(
         eq(invite.email, normalizeEmail(email)),
         isNull(invite.acceptedAt),
-        isNull(invite.declinedAt),
         gt(invite.expiresAt, new Date()),
         // Someone else already took the slot: accepting would fail with 422.
         isNull(participant.linkedUserId)
       )
     )
     .orderBy(desc(invite.createdAt));
-  // The owner may have invited the same slot twice: show only the latest.
+  // The owner may have invited the same slot twice: only the latest copy
+  // counts. If it was declined, the slot is gone, even when an older copy is
+  // still pending (the decline used to mark just the copy it was called with).
   const seen = new Set<string>();
-  return rows.flatMap(({ participantId, ...row }) => {
+  return rows.flatMap(({ participantId, declinedAt, ...row }) => {
     if (seen.has(participantId)) {
       return [];
     }
     seen.add(participantId);
-    return [row];
+    return declinedAt === null ? [row] : [];
   });
 }
 

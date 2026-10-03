@@ -82,10 +82,9 @@ async function createContract(
   return ((await res.json()) as { id: string }).id;
 }
 
-async function inviteTo(
+async function addSlot(
   ownerCookie: string,
   contractId: string,
-  email: string,
   role: "seller" | "viewer"
 ): Promise<string> {
   const added = await post(
@@ -96,13 +95,31 @@ async function inviteTo(
       role,
     }
   );
-  const { id } = (await added.json()) as { id: string };
+  return ((await added.json()) as { id: string }).id;
+}
+
+async function inviteSlot(
+  ownerCookie: string,
+  contractId: string,
+  slot: string,
+  email: string
+): Promise<string> {
   const inv = await post(
     ownerCookie,
-    `/api/contracts/${contractId}/participants/${id}/invite`,
+    `/api/contracts/${contractId}/participants/${slot}/invite`,
     { email }
   );
   return ((await inv.json()) as { token: string }).token;
+}
+
+async function inviteTo(
+  ownerCookie: string,
+  contractId: string,
+  email: string,
+  role: "seller" | "viewer"
+): Promise<string> {
+  const slot = await addSlot(ownerCookie, contractId, role);
+  return inviteSlot(ownerCookie, contractId, slot, email);
 }
 
 async function userIdOf(email: string): Promise<string> {
@@ -170,6 +187,9 @@ describe("GET /api/home", () => {
       await signUpCookie(uniqueEmail("home-stranger"))
     );
     expect(stranger.actions).toEqual([]);
+    expect(stranger.upcoming.items).toEqual([]);
+    expect(stranger.activeContractsCount).toBe(0);
+    expect(stranger.onboarding.hasContract).toBe(false);
   });
 
   it("vendedor vinculado: a outra parte vem da linha do dono e o PIX do pagador vem do perfil do vendedor", async () => {
@@ -375,6 +395,45 @@ describe("GET /api/home", () => {
     expect(after.actions.filter((a) => a.kind === "invite")).toEqual([]);
   });
 
+  it("recusar não derruba o convite que a mesma vaga mandou para outro e-mail", async () => {
+    const owner = await signUpCookie(uniqueEmail("home-other-owner"));
+    const declinerEmail = uniqueEmail("home-other-x");
+    const decliner = await signUpCookie(declinerEmail);
+    const keeperEmail = uniqueEmail("home-other-y");
+    const keeper = await signUpCookie(keeperEmail);
+    const id = await createContract(owner, "Mesma vaga", addDays(today, 10));
+    const slot = await addSlot(owner, id, "seller");
+    const declined = await inviteSlot(owner, id, slot, declinerEmail);
+    const kept = await inviteSlot(owner, id, slot, keeperEmail);
+    expect(
+      (await post(decliner, `/api/invites/${declined}/decline`)).status
+    ).toBe(200);
+    const home = await getHome(keeper);
+    expect(
+      home.actions.filter((a) => a.kind === "invite").map((a) => a.token)
+    ).toEqual([kept]);
+    expect((await post(keeper, `/api/invites/${kept}/accept`)).status).toBe(
+      200
+    );
+  });
+
+  it("a cópia mais recente decide: recusada antes do decline de todas as cópias, a mais velha não volta", async () => {
+    const owner = await signUpCookie(uniqueEmail("home-legacy-owner"));
+    const guestEmail = uniqueEmail("home-legacy-guest");
+    const guest = await signUpCookie(guestEmail);
+    const id = await createContract(owner, "Recusa antiga", addDays(today, 10));
+    const slot = await addSlot(owner, id, "seller");
+    await inviteSlot(owner, id, slot, guestEmail);
+    const newest = await inviteSlot(owner, id, slot, guestEmail);
+    // The old decline only marked the copy it was called with.
+    await db
+      .update(invite)
+      .set({ declinedAt: new Date() })
+      .where(eq(invite.token, newest));
+    const home = await getHome(guest);
+    expect(home.actions.filter((a) => a.kind === "invite")).toEqual([]);
+  });
+
   it("tudo em dia do mês passado usa a hora do comprovante, não a da confirmação", async () => {
     const cookie = await signUpCookie(uniqueEmail("home-on-time"));
     const lastMonth = previousMonth(today.slice(0, 7));
@@ -437,21 +496,57 @@ describe("GET /api/home", () => {
     expect(home.unreadCount).toBe(2);
   });
 
-  it("consulta em lote: o número de consultas não cresce com o número de contratos", async () => {
-    const cookie = await signUpCookie(uniqueEmail("home-batch"));
-    await createContract(cookie, "Lote 1", addDays(today, -3));
+  it("consulta em lote: o número de consultas não cresce com contratos, partes vinculadas, comprovantes e convites", async () => {
+    const email = uniqueEmail("home-batch");
+    const cookie = await signUpCookie(email);
+    // Each round adds a contract with a linked seller and a proof, plus a
+    // pending invite from someone else's contract.
+    const grow = async (round: number) => {
+      const id = await createContract(
+        cookie,
+        `Lote ${round}`,
+        addDays(today, -3)
+      );
+      const sellerEmail = uniqueEmail(`home-batch-seller-${round}`);
+      const seller = await signUpCookie(sellerEmail);
+      const token = await inviteTo(cookie, id, sellerEmail, "seller");
+      expect((await post(seller, `/api/invites/${token}/accept`)).status).toBe(
+        200
+      );
+      const [first] = await db
+        .select({ id: installment.id })
+        .from(installment)
+        .where(eq(installment.contractId, id));
+      await db.insert(proof).values({
+        installmentId: first?.id as string,
+        objectKey: `proofs/${id}/batch.pdf`,
+        fileName: "batch.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 1,
+      });
+      const other = await signUpCookie(
+        uniqueEmail(`home-batch-other-${round}`)
+      );
+      const otherId = await createContract(
+        other,
+        `Convite ${round}`,
+        addDays(today, 10)
+      );
+      await inviteTo(other, otherId, email, "seller");
+    };
+    await grow(1);
     const select = spyOn(db, "select");
     try {
       await getHome(cookie);
       const withOne = select.mock.calls.length;
-      await Promise.all(
-        ["Lote 2", "Lote 3", "Lote 4"].map((title) =>
-          createContract(cookie, title, addDays(today, -3))
-        )
-      );
+      expect(withOne).toBeGreaterThan(0);
+      for (const round of [2, 3, 4]) {
+        await grow(round);
+      }
       select.mockClear();
       const home = await getHome(cookie);
-      expect(home.actions).toHaveLength(4);
+      expect(home.actions.filter((a) => a.kind === "overdue")).toHaveLength(4);
+      expect(home.actions.filter((a) => a.kind === "invite")).toHaveLength(4);
       expect(home.activeContractsCount).toBe(4);
       expect(select.mock.calls.length).toBe(withOne);
     } finally {
