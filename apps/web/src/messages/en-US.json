@@ -155,6 +155,7 @@
   "notifications_unread_other": "{count} unread",
   "notifications_mark_all": "Mark all as read",
   "notifications_new": "New",
+  "notifications_count_overflow": "{max}+",
   "notifications_empty_title": "Nothing new here",
   "notifications_empty_description": "We'll let you know here when someone sends a payment proof, confirms a payment or accepts an invite.",
   "notification_installment": "installment {sequence} of {count}",

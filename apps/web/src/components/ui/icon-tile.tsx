@@ -1,5 +1,9 @@
 import type { Icon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
+
+/** Above this, the corner shows "99+": three characters still fit the tile. */
+const MAX_COUNT = 99;
 
 export type IconTileTone = "brand" | "warning" | "danger" | "neutral";
 
@@ -35,7 +39,9 @@ export function IconTile({
       <IconComponent size={19} />
       {count !== undefined && count > 1 ? (
         <span className="absolute -top-[5px] -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-[5px] font-semibold text-[11px] text-ink-inverse tabular-nums ring-2 ring-surface-card">
-          {count > 99 ? "99+" : count}
+          {count > MAX_COUNT
+            ? m.notifications_count_overflow({ max: MAX_COUNT })
+            : count}
         </span>
       ) : null}
     </span>

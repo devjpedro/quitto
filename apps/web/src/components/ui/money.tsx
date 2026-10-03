@@ -22,7 +22,11 @@ const DISPLAY = {
   },
 } as const;
 
-/** BRL amount. `inline` is plain text; the other sizes set "R$" and the cents back. `sign` ("+" money in, "−" money out) sits in the small "R$". */
+/**
+ * BRL amount. `inline` is plain text; the other sizes set "R$" and the cents
+ * back. `sign` ("+" money in, "−" money out) sits in the small "R$"; with it,
+ * `cents` is read as a size, so a negative amount never shows two signs.
+ */
 export function Money({
   cents,
   className,
@@ -35,7 +39,8 @@ export function Money({
   size?: "inline" | keyof typeof DISPLAY;
 }) {
   const locale = getLocale();
-  const full = formatMoney(cents, locale);
+  const amount = sign ? Math.abs(cents) : cents;
+  const full = formatMoney(amount, locale);
   const spoken = sign ? `${sign} ${full}` : full;
   if (size === "inline") {
     return (
@@ -44,7 +49,7 @@ export function Money({
       </span>
     );
   }
-  const parts = moneyParts(cents, locale);
+  const parts = moneyParts(amount, locale);
   const look = DISPLAY[size];
   return (
     <span

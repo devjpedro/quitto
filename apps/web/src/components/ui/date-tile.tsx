@@ -12,7 +12,7 @@ export function DateTile({ iso, locale }: { iso: string; locale: Locale }) {
       <span className="sr-only">{formatDate(iso, locale, "long")}</span>
       <span
         aria-hidden="true"
-        className="font-display font-semibold text-lg tabular-nums tracking-[-0.02em]"
+        className="font-display font-semibold text-lg tabular-nums leading-none tracking-[-0.02em]"
       >
         {dayOfMonth(iso)}
       </span>

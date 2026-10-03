@@ -11,6 +11,13 @@ describe("Money sizes", () => {
       "tabular-nums"
     );
     expect(screen.getByText("R$ 48.000,00")).toHaveClass("sr-only");
+    const [currency, centsPart] = container.querySelectorAll(
+      "[aria-hidden] > span"
+    );
+    expect(currency).toHaveTextContent("R$");
+    expect(currency).toHaveClass("text-[13px]", "align-top");
+    expect(centsPart).toHaveTextContent(",00");
+    expect(centsPart).toHaveClass("text-[0.56em]");
   });
 
   it("milestone 24 px and list 17 px", () => {
@@ -28,8 +35,21 @@ describe("Money sizes", () => {
     );
   });
 
-  it("inline stays plain text", () => {
+  it("a sign never doubles: with one, a negative amount reads as its size", () => {
+    const list = render(<Money cents={-32_000} sign="−" size="list" />);
+    expect(screen.getByText("− R$ 320,00")).toHaveClass("sr-only");
+    expect(list.container.querySelector("[aria-hidden]")?.textContent).toBe(
+      "− R$320,00"
+    );
+    list.unmount();
+    render(<Money cents={-32_000} sign="−" />);
+    expect(screen.getByText("− R$ 320,00")).toBeVisible();
+  });
+
+  it("inline stays plain text, with the sign when there is one", () => {
     render(<Money cents={230_000} />);
     expect(screen.getByText("R$ 2.300,00")).toBeVisible();
+    render(<Money cents={32_000} sign="+" />);
+    expect(screen.getByText("+ R$ 320,00")).toBeVisible();
   });
 });

@@ -17,6 +17,19 @@ describe("DateTile", () => {
       "bg-surface-inset"
     );
   });
+
+  it("the visible day and month are hidden, so the date is read once", () => {
+    render(<DateTile iso="2026-10-13" locale="pt-BR" />);
+    expect(screen.getByText("13")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("out")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("the day keeps a line of its own size, so the pair stays centered", () => {
+    // text-lg brings its own 28 px line (Tailwind 4's --tw-leading does not
+    // inherit), which pushed the month 5 px down, against the tile's edge.
+    render(<DateTile iso="2026-10-13" locale="pt-BR" />);
+    expect(screen.getByText("13")).toHaveClass("text-lg", "leading-none");
+  });
 });
 
 describe("IconTile", () => {
@@ -42,5 +55,16 @@ describe("IconTile", () => {
       <IconTile count={240} icon={WarningCircle} tone="danger" />
     );
     expect(many.container).toHaveTextContent("99+");
+  });
+
+  it("the count is exact up to 99 and caps at 99+ from 100", () => {
+    const most = render(
+      <IconTile count={99} icon={WarningCircle} tone="danger" />
+    );
+    expect(most.container.textContent).toBe("99");
+    const over = render(
+      <IconTile count={100} icon={WarningCircle} tone="danger" />
+    );
+    expect(over.container.textContent).toBe("99+");
   });
 });
