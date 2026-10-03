@@ -55,6 +55,39 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink", "danger-subtle"],
   ["ink-muted", "danger-subtle"],
   ["ink-inverse", "danger"],
+  // Fill, not outline (mockup 13): the card on the panel, what sits inside
+  // it, the hover step, the green card's hover and the sidebar's hover.
+  ["ink", "surface-card"],
+  ["ink-muted", "surface-card"],
+  ["ink", "surface-card-hover"],
+  ["ink-muted", "surface-card-hover"],
+  ["ink", "surface-inset"],
+  ["ink-muted", "surface-inset"],
+  ["brand", "surface-card"],
+  ["brand", "surface-inset"],
+  ["danger", "surface-card"],
+  ["warning", "surface-card"],
+  ["ink", "nav-hover"],
+  ["ink-muted", "nav-hover"],
+  ["on-brand", "brand-hover"],
+  ["on-brand-muted", "brand-hover"],
+  // The phone (page-surfaces, mockup 13 lines 487-488): what sits inside a
+  // white card and the hover step, on the phone's own tokens.
+  ["ink", "page-card-hover"],
+  ["ink-muted", "page-card-hover"],
+  ["brand", "page-card-hover"],
+  ["ink", "page-inset"],
+  ["ink-muted", "page-inset"],
+  ["brand", "page-inset"],
+  // People have faces: white initials on every avatar tone.
+  ["on-avatar", "avatar-clay"],
+  ["on-avatar", "avatar-ochre"],
+  ["on-avatar", "avatar-plum"],
+  ["on-avatar", "avatar-olive"],
+  ["on-avatar", "avatar-cocoa"],
+  ["on-avatar", "avatar-rose"],
+  ["on-avatar", "avatar-wine"],
+  ["on-avatar", "avatar-graphite"],
 ];
 
 // [foreground, background] pairs of non-text UI (WCAG 1.4.11, 3:1). From md
@@ -63,6 +96,16 @@ const TEXT_PAIRS: [string, string][] = [
 const NON_TEXT_PAIRS: [string, string][] = [
   ["brand", "canvas"],
   ["ink", "canvas"],
+  // The installment bar's segments on its track, and the green card's
+  // overdue stripe (WCAG 1.4.11).
+  ["brand", "track"],
+  ["danger", "track"],
+  ["warning", "track"],
+  ["ink", "track"],
+  ["on-brand-alert", "brand-surface"],
+  // The overdue mark on a sidebar ring, at rest and on hover.
+  ["danger", "canvas"],
+  ["danger", "nav-hover"],
 ];
 
 // [foreground, background, alpha] text drawn with opacity on a token: the
@@ -144,5 +187,26 @@ describe("contrastRatio", () => {
 
   it("rejects malformed hex", () => {
     expect(() => contrastRatio("#FFF", "#000000")).toThrow("invalid hex");
+  });
+});
+
+describe("page-surfaces", () => {
+  it("on a phone the card is the surface and what sits inside it is the phone's inset", () => {
+    const start = css.indexOf("@utility page-surfaces {");
+    expect(start).toBeGreaterThan(-1);
+    const body = css.slice(start, css.indexOf("}", start));
+    expect(body).toContain("--surface-card: var(--surface);");
+    expect(body).toContain("--surface-card-hover: var(--page-card-hover);");
+    expect(body).toContain("--surface-inset: var(--page-inset);");
+    expect(body).toContain("--divider: var(--page-divider);");
+  });
+
+  it("the phone's values are the mockup's (lines 487-488), three layers in dark", () => {
+    expect(light["page-card-hover"]).toBe("#f7f6f2");
+    expect(light["page-inset"]).toBe(light["surface-sunken"]);
+    expect(light["page-divider"]).toBe("#eceae4");
+    expect(dark["page-card-hover"]).toBe("#2a2b26");
+    expect(dark["page-inset"]).toBe(dark["surface-raised"]);
+    expect(dark["page-divider"]).toBe("#1f201c");
   });
 });

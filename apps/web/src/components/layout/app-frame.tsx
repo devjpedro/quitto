@@ -23,6 +23,8 @@ export interface ShellProps {
  * to the left edge, and only the content is a white panel. No max width: the
  * frame follows the screen with 12 px of canvas around the panel, and the
  * content grows by columns (DIRECAO › Layout). Mobile: top bar + tab bar.
+ * Below md there is no panel: `page-surfaces` makes a card the surface and
+ * what sits inside it the sunken one.
  *
  * viewport-fit=cover draws to the physical edges. A phone on its side is md+
  * with the notch at the left or the right: the frame keeps out of it (the
@@ -49,7 +51,7 @@ export function AppFrame({
       <div className="flex">
         <Sidebar {...shell} />
         <main
-          className="min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] focus:outline-none md:min-h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] md:rounded-panel md:bg-surface md:pb-0"
+          className="max-md:page-surfaces min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] focus:outline-none md:min-h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] md:rounded-panel md:bg-surface md:pb-0"
           id="conteudo"
           tabIndex={-1}
         >

@@ -240,6 +240,13 @@ describe("AppFrame", () => {
     );
   });
 
+  it("below md the content uses the phone's surfaces (no white panel)", async () => {
+    await renderAt("/");
+    expect(document.getElementById("conteudo")).toHaveClass(
+      "max-md:page-surfaces"
+    );
+  });
+
   it("Agora and Contratos show their counts, hidden from AT and read in the link name", async () => {
     await renderAt("/contracts", { navCounts: { contracts: 2, now: 3 } });
     const [sidebarNav, tabBar] = screen.getAllByRole("navigation", {

@@ -48,6 +48,23 @@
   --color-warning-subtle: var(--warning-subtle);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
+  --color-surface-card: var(--surface-card);
+  --color-surface-card-hover: var(--surface-card-hover);
+  --color-surface-inset: var(--surface-inset);
+  --color-divider: var(--divider);
+  --color-track: var(--track);
+  --color-nav-hover: var(--nav-hover);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand-alert: var(--on-brand-alert);
+  --color-on-avatar: var(--on-avatar);
+  --color-avatar-clay: var(--avatar-clay);
+  --color-avatar-ochre: var(--avatar-ochre);
+  --color-avatar-plum: var(--avatar-plum);
+  --color-avatar-olive: var(--avatar-olive);
+  --color-avatar-cocoa: var(--avatar-cocoa);
+  --color-avatar-rose: var(--avatar-rose);
+  --color-avatar-wine: var(--avatar-wine);
+  --color-avatar-graphite: var(--avatar-graphite);
 }
 
 :root {
@@ -71,6 +88,29 @@
   --warning-subtle: #fdf3d8;
   --danger: #b42318;
   --danger-subtle: #fdecea;
+  /* Fill, not outline (mockup 13, report §4). */
+  --surface-card: #f1f0eb;
+  --surface-card-hover: #eae8e1;
+  --surface-inset: #ffffff;
+  --divider: #e3e1da;
+  --track: #d5d3cc;
+  --nav-hover: #efede7;
+  --brand-hover: #174a28;
+  --on-brand-alert: #ffb3a6;
+  /* The phone (page-surfaces): a white card on the sunken page (mockup 13). */
+  --page-card-hover: #f7f6f2;
+  --page-inset: #f1f0eb;
+  --page-divider: #eceae4;
+  /* People: 8 warm tones, white initials; no teal, blue or brand green. */
+  --on-avatar: #ffffff;
+  --avatar-clay: #a4502e;
+  --avatar-ochre: #8a5b00;
+  --avatar-plum: #7d3c68;
+  --avatar-olive: #5b6620;
+  --avatar-cocoa: #6b4a3a;
+  --avatar-rose: #9c4257;
+  --avatar-wine: #7a2e3a;
+  --avatar-graphite: #55544e;
 }
 
 .dark {
@@ -94,4 +134,40 @@
   --warning-subtle: #3a3120;
   --danger: #ff8a7a;
   --danger-subtle: #3d2420;
+  /* The card one step above the panel; what sits inside it one step below. */
+  --surface-card: #2e2f2a;
+  --surface-card-hover: #31322c;
+  --surface-inset: #242521;
+  --divider: #262723;
+  --track: #45463f;
+  --nav-hover: #1f201c;
+  --brand-hover: #24503a;
+  --on-brand-alert: #ffb3a6;
+  /* The phone: card #242521 on the page #1a1b18, what sits inside one step up. */
+  --page-card-hover: #2a2b26;
+  --page-inset: #2e2f2a;
+  --page-divider: #1f201c;
+  --on-avatar: #ffffff;
+  --avatar-clay: #a4502e;
+  --avatar-ochre: #8a5b00;
+  --avatar-plum: #7d3c68;
+  --avatar-olive: #5b6620;
+  --avatar-cocoa: #6b4a3a;
+  --avatar-rose: #9c4257;
+  --avatar-wine: #7a2e3a;
+  --avatar-graphite: #55544e;
+}
+
+/*
+ * Phone (DIRECAO › Forma, mockup 13 lines 487-488): there is no white panel
+ * and the page is the sunken surface, so a card is the surface and what sits
+ * inside it takes the phone's own step: three layers in light and in dark.
+ * The shell's main applies it below md, and components keep the same classes
+ * (planner's decision 8).
+ */
+@utility page-surfaces {
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--page-card-hover);
+  --surface-inset: var(--page-inset);
+  --divider: var(--page-divider);
 }

@@ -86,6 +86,22 @@ describe("Tag", () => {
     render(<Tag tone="danger">Atrasada</Tag>);
     expect(screen.getByText("Atrasada")).toBeVisible();
   });
+
+  it("neutral sits inside a card: one step lighter (surface-inset), never the sunken surface", () => {
+    render(<Tag>opcional</Tag>);
+    expect(screen.getByText("opcional")).toHaveClass(
+      "bg-surface-inset",
+      "text-ink-muted"
+    );
+  });
+
+  it("ink is the black of action: the 'Vence hoje' tag", () => {
+    render(<Tag tone="ink">Vence hoje</Tag>);
+    expect(screen.getByText("Vence hoje")).toHaveClass(
+      "bg-ink",
+      "text-ink-inverse"
+    );
+  });
 });
 
 function Segmented() {
