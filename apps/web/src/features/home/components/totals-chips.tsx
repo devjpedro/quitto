@@ -16,14 +16,29 @@ const CHIP =
   "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13.5px]";
 
 /**
- * Below md the strip is one line that scrolls sideways (mockup 13, frame D):
- * it bleeds to the screen edge so the next chip shows cut as a hint, and the
- * gutter padding lets the last one scroll fully into view. From md it wraps.
- * The focus ring sits outside: an inset one paints under the chips, which
- * would cover it.
+ * The frame around the strip: below md it bleeds to the screen edge, and it
+ * draws the strip's focus ring, outside. Not the list's own ring: the fade's
+ * mask clips whatever the list paints past its box, and an inset ring would
+ * paint under the chips.
+ */
+const FRAME =
+  "min-w-0 rounded-control has-focus-visible:ring-2 has-focus-visible:ring-brand max-md:-mx-4";
+
+/**
+ * Below md the strip is one line that scrolls sideways (mockup 13, frame D);
+ * the gutter padding lets the last chip scroll fully into view. From md it
+ * wraps.
  */
 const STRIP =
-  "flex min-w-0 gap-1.5 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:-mx-4 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none] md:flex-wrap";
+  "flex gap-1.5 focus-visible:outline-none max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none] md:flex-wrap";
+
+/**
+ * While a chip is past the right edge, that edge fades (decision 23): a hint
+ * that does not depend on where a chip happens to end. A mask, not a color,
+ * so it works on any background, light or dark; gone at the end of the scroll.
+ */
+const FADE_RIGHT =
+  "max-md:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)]";
 
 function MoneyChip({
   cents,
@@ -131,19 +146,24 @@ export function TotalsChips({
     );
   }
   // Before the early return (a hook on every render); the count re-measures when chips come or go.
-  const scrolls = useScrollsSideways(stripRef, chips.length);
+  const { moreToTheRight, scrolls } = useScrollsSideways(
+    stripRef,
+    chips.length
+  );
   if (chips.length === 0) {
     return null;
   }
   return (
-    <ul
-      aria-label={m.home_chips_label()}
-      className={STRIP}
-      ref={stripRef}
-      // A tab stop only while it scrolls (useScrollsSideways).
-      tabIndex={scrolls ? 0 : undefined}
-    >
-      {chips}
-    </ul>
+    <div className={FRAME}>
+      <ul
+        aria-label={m.home_chips_label()}
+        className={cn(STRIP, moreToTheRight && FADE_RIGHT)}
+        ref={stripRef}
+        // A tab stop only while it scrolls (useScrollsSideways).
+        tabIndex={scrolls ? 0 : undefined}
+      >
+        {chips}
+      </ul>
+    </div>
   );
 }

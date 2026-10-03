@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { capitalize } from "@/lib/format";
 import { formatDate } from "@/lib/locale-format";
@@ -8,6 +8,7 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "../api";
 import { useFocusAfterLastAction } from "../hooks/use-focus-after-last-action";
+import { useSeeAll } from "../hooks/use-see-all";
 import { homeLayout, homeSubtitle } from "../lib/home-layout";
 import { onlyMomentStrip } from "../lib/milestones";
 import { momentMilestone } from "../lib/moment";
@@ -39,8 +40,7 @@ export function HomeContent() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
   const locale = getLocale();
   const listId = useId();
-  const [expanded, setExpanded] = useState(false);
-  const toggle = () => setExpanded((value) => !value);
+  const { expanded, toggle } = useSeeAll(home.actions.length);
   const summaryRef = useFocusAfterLastAction(home.actions.length);
   const layout = homeLayout(home);
   const lower = layout.hasContract || layout.compactGuide;

@@ -618,4 +618,31 @@ describe("HomePage", () => {
     expect(await screen.findByText("Nada pendente agora")).toBeVisible();
     expect(document.activeElement).toBe(document.body);
   });
+
+  it("um Ver todas aberto fecha quando a lista esvazia: os cartões seguintes voltam como carrossel, não como lista aberta", async () => {
+    const five = [1, 2, 3, 4, 5].map((n) =>
+      installmentAction({ installmentId: `i${n}`, sequence: n })
+    );
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: five }),
+      error: null,
+    });
+    const { client } = renderHome();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Ver todas (5)" })
+    );
+    expect(screen.getAllByRole("button", { name: "Ver menos" })).toHaveLength(
+      2
+    );
+    // Paid elsewhere: the list empties...
+    client.setQueryData(queryKeys.home, homeFixture());
+    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    // ...and a refetch brings five cards again.
+    client.setQueryData(queryKeys.home, homeFixture({ actions: five }));
+    expect(await screen.findByText("1 de 5")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Ver todas (5)" })
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Ver menos" })).toBeNull();
+  });
 });

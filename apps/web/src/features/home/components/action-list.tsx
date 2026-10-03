@@ -7,6 +7,7 @@ import { useActionLock } from "../hooks/use-action-lock";
 import { useCarouselIndex } from "../hooks/use-carousel-index";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";
+import { pastTheRow } from "./cards-per-row";
 
 /**
  * A held Enter or Space repeats its keydown, and every repeat would activate
@@ -19,21 +20,6 @@ function swallowKeyRepeat(event: KeyboardEvent) {
   if (event.repeat && (event.key === "Enter" || event.key === " ")) {
     event.preventDefault();
   }
-}
-
-/**
- * Hides a card past the desktop row, by CSS only: every card is in the HTML,
- * so the SSR and the hydration pass agree at any width. 3 per row from lg,
- * 4 from 2xl (1536 px), 5 from wide (1840 px).
- */
-function pastTheRow(index: number): string | false {
-  if (index === 3) {
-    return "lg:hidden 2xl:block";
-  }
-  if (index === 4) {
-    return "lg:hidden wide:block";
-  }
-  return index > 4 && "lg:hidden";
 }
 
 /**

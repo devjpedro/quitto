@@ -1,20 +1,8 @@
 import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
-
-/** Cards in the desktop row at lg; 2xl fits a fourth and wide a fifth. */
-const DESKTOP_VISIBLE = 3;
-
-/** Shown while some card is past the row: N > 3 below 2xl, N > 4 below wide, N > 5 from wide. */
-function seeAllClasses(count: number): string {
-  return cn(
-    "hidden shrink-0 justify-end lg:flex",
-    count <= 4 && "2xl:hidden",
-    count <= 5 && "wide:hidden"
-  );
-}
+import { seeAllClasses } from "./cards-per-row";
 
 /** The desktop's "Ver todas (N)" for the action cards; the phone's lives under the carousel. */
 export function SeeAllButton({
@@ -28,12 +16,13 @@ export function SeeAllButton({
   listId: string;
   onToggle: () => void;
 }) {
-  if (count <= DESKTOP_VISIBLE) {
+  const classes = seeAllClasses(count);
+  if (!classes) {
     return null;
   }
   const Caret = expanded ? CaretUp : CaretDown;
   return (
-    <div className={seeAllClasses(count)}>
+    <div className={classes}>
       <Button
         aria-controls={listId}
         aria-expanded={expanded}

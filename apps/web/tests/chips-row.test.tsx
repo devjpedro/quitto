@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ChipsRow, SeeAllButton } from "@/features/home/components/chips-row";
@@ -9,6 +9,66 @@ import { homeFixture, installmentAction } from "./home-fixtures";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex).
 const OVERDUE_CHIP = /em atraso/;
+
+/** The fade on the strip's right edge while a chip is still past it (decision 23). */
+const FADE_RIGHT =
+  "max-md:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)]";
+
+/**
+ * A ResizeObserver that records what it watches, so a test can resize one
+ * element (the setup's stub never calls back).
+ */
+const observers = new Set<RecordingResizeObserver>();
+class RecordingResizeObserver {
+  readonly callback: ResizeObserverCallback;
+  readonly targets = new Set<Element>();
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+    observers.add(this);
+  }
+  observe(target: Element) {
+    this.targets.add(target);
+  }
+  unobserve(target: Element) {
+    this.targets.delete(target);
+  }
+  disconnect() {
+    this.targets.clear();
+    observers.delete(this);
+  }
+}
+
+function resize(target: Element) {
+  for (const observer of observers) {
+    if (observer.targets.has(target)) {
+      observer.callback([], observer as unknown as ResizeObserver);
+    }
+  }
+}
+
+/** The strip's measures, as on a 390 px phone; returns the restore. */
+function measureStrip(sizes: {
+  clientWidth: number;
+  scrollLeft?: () => number;
+  scrollWidth: () => number;
+}) {
+  const spies = [
+    vi
+      .spyOn(HTMLElement.prototype, "scrollWidth", "get")
+      .mockImplementation(sizes.scrollWidth),
+    vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockReturnValue(sizes.clientWidth),
+    vi
+      .spyOn(Element.prototype, "scrollLeft", "get")
+      .mockImplementation(sizes.scrollLeft ?? (() => 0)),
+  ];
+  return () => {
+    for (const spy of spies) {
+      spy.mockRestore();
+    }
+  };
+}
 
 const ALL = {
   pendingCount: 5,
@@ -62,26 +122,92 @@ describe("TotalsChips", () => {
     expect(strip).toHaveClass(
       "max-md:flex-nowrap",
       "max-md:overflow-x-auto",
-      "max-md:-mx-4",
       "max-md:px-4",
       "md:flex-wrap"
     );
+    // The frame around the list bleeds to the screen edge.
+    expect(strip.parentElement).toHaveClass("max-md:-mx-4");
     for (const item of within(strip).getAllByRole("listitem")) {
       expect(item).toHaveClass("shrink-0");
     }
-    // Nothing overflows here (jsdom measures 0): no tab stop that scrolls nothing.
+    // Nothing overflows here (jsdom measures 0): no tab stop that scrolls nothing, and no fade.
     expect(strip).not.toHaveAttribute("tabindex");
+    expect(strip).not.toHaveClass(FADE_RIGHT);
   });
 
-  it("o foco da faixa é um anel por fora: por dentro, ele ficaria sob os chips", () => {
+  it("o foco da faixa é um anel por fora, na moldura: a máscara do esmaecido cortaria um anel da própria lista", () => {
     render(<TotalsChips {...ALL} />);
     const strip = screen.getByRole("list", { name: "Resumo" });
-    expect(strip).toHaveClass(
-      "focus-visible:ring-2",
-      "focus-visible:ring-brand"
+    expect(strip.parentElement).toHaveClass(
+      "has-focus-visible:ring-2",
+      "has-focus-visible:ring-brand",
+      "rounded-control"
     );
-    // An inset box-shadow paints under the children: the chips would cover it.
+    // A mask clips whatever the list paints outside its box, a ring included;
+    // an inset ring would paint under the chips.
+    expect(strip).not.toHaveClass("focus-visible:ring-2");
     expect(strip).not.toHaveClass("focus-visible:ring-inset");
+  });
+
+  it("no celular, a borda direita esmaece enquanto há chip à direita, e o esmaecido some no fim da rolagem", () => {
+    // 620 px of chips in a 358 px box: the end is at scrollLeft 262.
+    let scrollLeft = 0;
+    const restore = measureStrip({
+      clientWidth: 358,
+      scrollLeft: () => scrollLeft,
+      scrollWidth: () => 620,
+    });
+    try {
+      render(<TotalsChips {...ALL} />);
+      const strip = screen.getByRole("list", { name: "Resumo" });
+      // The start: chips past the right edge.
+      expect(strip).toHaveClass(FADE_RIGHT);
+      // The middle.
+      scrollLeft = 131;
+      fireEvent.scroll(strip);
+      expect(strip).toHaveClass(FADE_RIGHT);
+      // The end: the last chip is in full view, and nothing fades.
+      scrollLeft = 262;
+      fireEvent.scroll(strip);
+      expect(strip).not.toHaveClass(FADE_RIGHT);
+      // Back towards the start: the fade returns.
+      scrollLeft = 200;
+      fireEvent.scroll(strip);
+      expect(strip).toHaveClass(FADE_RIGHT);
+    } finally {
+      restore();
+    }
+  });
+
+  it("um chip que toma o lugar de outro (a mesma contagem) também é medido quando cresce", async () => {
+    vi.stubGlobal("ResizeObserver", RecordingResizeObserver);
+    let contentWidth = 300;
+    const restore = measureStrip({
+      clientWidth: 358,
+      scrollWidth: () => contentWidth,
+    });
+    try {
+      const { rerender } = render(
+        <TotalsChips {...ALL} overdueToReceiveCents={0} toReceiveCents={0} />
+      );
+      // The same refetch clears the overdue to pay and brings "a receber · 30d": still 3 chips.
+      rerender(
+        <TotalsChips {...ALL} overdueToPayCents={0} overdueToReceiveCents={0} />
+      );
+      // The new chip arrives as a DOM mutation (delivered in a microtask).
+      await act(async () => {
+        await Promise.resolve();
+      });
+      const strip = screen.getByRole("list", { name: "Resumo" });
+      expect(strip).not.toHaveAttribute("tabindex");
+      // A later refetch grows that chip's amount: the strip now scrolls.
+      contentWidth = 620;
+      act(() => resize(screen.getByText("a receber · 30d")));
+      expect(strip).toHaveAttribute("tabindex", "0");
+    } finally {
+      restore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("mede de novo quando os chips mudam: a faixa que passa a rolar vira parada de Tab", () => {
@@ -201,5 +327,22 @@ describe("SectionTitle", () => {
       "text-ink"
     );
     expect(title).not.toHaveClass("text-ink-muted");
+  });
+
+  it("o aux fica à direita, em 13 px ink-muted; o título com −0,02 em", () => {
+    render(
+      <SectionTitle aux="5 parcelas" id="t">
+        Próximos 30 dias
+      </SectionTitle>
+    );
+    const title = screen.getByRole("heading", { name: "Próximos 30 dias" });
+    expect(title).toHaveClass("tracking-[-0.02em]");
+    const aux = screen.getByText("5 parcelas");
+    expect(aux).toBeVisible();
+    expect(aux).toHaveClass("text-[13px]", "text-ink-muted", "tabular-nums");
+    // Beside the title, not inside it: the heading's name stays the title alone.
+    expect(title).not.toContainElement(aux);
+    expect(aux.parentElement).toBe(title.parentElement);
+    expect(title.parentElement).toHaveClass("justify-between");
   });
 });
