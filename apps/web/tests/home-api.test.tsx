@@ -5,18 +5,22 @@ import {
 } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Home } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
 import { makeQueryClient } from "../src/lib/query";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
-const { markPaid, accept, dismiss, getHome } = vi.hoisted(() => ({
+const { markPaid, accept, dismiss, getHome, toastError } = vi.hoisted(() => ({
   markPaid: vi.fn(),
   accept: vi.fn(),
   dismiss: vi.fn(),
   getHome: vi.fn(),
+  toastError: vi.fn(),
 }));
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: toastError } }));
 
 vi.mock("@/lib/api", () => ({
   api: {
@@ -36,6 +40,7 @@ vi.mock("@/lib/api", () => ({
 }));
 
 import {
+  homeQueryOptions,
   useAcceptInviteFromHome,
   useDismissOnboarding,
   useMarkPaidFromHome,
@@ -80,6 +85,7 @@ beforeEach(() => {
   accept.mockReset();
   dismiss.mockReset();
   getHome.mockReset();
+  toastError.mockReset();
 });
 
 describe("ações otimistas do home", () => {
@@ -320,10 +326,43 @@ describe("useUnreadCount", () => {
     client.setDefaultOptions({
       queries: { ...client.getDefaultOptions().queries, retry: false },
     });
+    const onBoundaryError = vi.fn();
     const { result } = renderHook(() => useUnreadCount(), {
-      wrapper: wrapper(client),
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>
+          <ErrorBoundary fallback={null} onError={onBoundaryError}>
+            {children}
+          </ErrorBoundary>
+        </QueryClientProvider>
+      ),
     });
-    await waitFor(() => expect(getHome).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(client.getQueryState(queryKeys.home)?.status).toBe("error")
+    );
+    // The observer re-renders with the error on the notifyManager's next tick:
+    // that render is the one that would throw to the boundary.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(onBoundaryError).not.toHaveBeenCalled();
     expect(result.current).toBe(0);
+  });
+});
+
+describe("refetch de fundo do home", () => {
+  it("falha sem toast: ele roda a cada foco, em qualquer tela", async () => {
+    getHome.mockResolvedValue({
+      data: null,
+      error: {
+        status: 503,
+        value: { error: { code: "INTERNAL", message: "cold" } },
+      },
+    });
+    // The production client toasts a failed background refetch with data on screen.
+    const client = makeQueryClient();
+    client.setQueryData(queryKeys.home, homeFixture());
+    await client
+      .fetchQuery({ ...homeQueryOptions, staleTime: 0, retry: false })
+      .catch(() => undefined);
+    expect(client.getQueryState(queryKeys.home)?.status).toBe("error");
+    expect(toastError).not.toHaveBeenCalled();
   });
 });

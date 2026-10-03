@@ -13,6 +13,8 @@ import { isTimeoutError } from "./with-timeout";
 declare module "@tanstack/react-query" {
   interface Register {
     mutationMeta: { successMessage?: string };
+    /** silentRefetchError: a failed background refetch of this query never toasts. */
+    queryMeta: { silentRefetchError?: boolean };
   }
 }
 
@@ -80,8 +82,13 @@ export function makeQueryClient(): QueryClient {
         }
         // Initial-load failures are shown inline (SectionBoundary or the route
         // ErrorBoundary), so toasting them too would report the error twice.
-        // Only a failed background refetch, with data still on screen, toasts.
-        if (query.state.data !== undefined && shouldToast(error)) {
+        // Only a failed background refetch, with data still on screen, toasts,
+        // unless the query opted out (the home refetches on every focus).
+        if (
+          query.state.data !== undefined &&
+          !query.meta?.silentRefetchError &&
+          shouldToast(error)
+        ) {
           toast.error(errorMessage(error));
         }
       },

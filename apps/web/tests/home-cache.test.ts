@@ -4,6 +4,7 @@ import {
   withAction,
   withOnboardingDismissed,
   withoutAction,
+  withPendingWrites,
 } from "@/features/home/lib/home-cache";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
@@ -46,6 +47,46 @@ describe("home-cache", () => {
       ...home.onboarding,
       dismissedAt: "2026-10-02T10:00:00.000Z",
     });
+  });
+
+  it("withOnboardingDismissed com null traz o guia de volta", () => {
+    const dismissed = withOnboardingDismissed(
+      homeFixture(),
+      "2026-10-02T10:00:00.000Z"
+    );
+    expect(withOnboardingDismissed(dismissed, null).onboarding).toEqual(
+      homeFixture().onboarding
+    );
+  });
+
+  it("withPendingWrites mantém fora as ações em voo e o guia dispensado em voo", () => {
+    const home = homeFixture({
+      actions: [installmentAction(), inviteAction()],
+    });
+    const next = withPendingWrites(home, {
+      actionIds: ["invite:tok1"],
+      dismissedAt: "2026-10-02T10:00:00.000Z",
+    });
+    expect(next.actions.map((a) => a.id)).toEqual(["installment:i1"]);
+    expect(next.onboarding.dismissedAt).toBe("2026-10-02T10:00:00.000Z");
+    expect(home.actions).toHaveLength(2);
+    // Nothing in flight: the server's read stands as it is.
+    expect(withPendingWrites(home, { actionIds: [], dismissedAt: null })).toBe(
+      home
+    );
+  });
+
+  it("withPendingWrites não troca a hora de uma dispensa que o servidor já gravou", () => {
+    const home = withOnboardingDismissed(
+      homeFixture(),
+      "2026-10-02T09:00:00.000Z"
+    );
+    expect(
+      withPendingWrites(home, {
+        actionIds: [],
+        dismissedAt: "2026-10-02T10:00:00.000Z",
+      }).onboarding.dismissedAt
+    ).toBe("2026-10-02T09:00:00.000Z");
   });
 
   it("applyInstallment troca o status da parcela no contrato em cache", () => {

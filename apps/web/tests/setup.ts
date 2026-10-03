@@ -32,6 +32,10 @@ const elementProto = Element.prototype as unknown as {
 };
 elementProto.scrollIntoView ??= noop;
 
+// jsdom defines `window.scrollTo` only to log "Not implemented" on every call
+// (sheets and dialogs lock the scroll); `??=` would keep that stub.
+window.scrollTo = noop as typeof window.scrollTo;
+
 /** Só `(min-width: Npx)` — o único formato que o app usa. */
 const MIN_WIDTH_RE = /\(min-width:\s*(\d+)px\)/;
 
