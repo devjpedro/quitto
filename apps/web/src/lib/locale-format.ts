@@ -99,13 +99,13 @@ function dateFormatter(
 
 const monthFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const dayFormatters = new Map<Locale, Intl.RelativeTimeFormat>();
-const timeFormatters = new Map<Locale, Intl.RelativeTimeFormat>();
+const timeFormatters = new Map<string, Intl.RelativeTimeFormat>();
 
-function cached<T>(cache: Map<Locale, T>, locale: Locale, make: () => T): T {
-  let value = cache.get(locale);
+function cached<K, T>(cache: Map<K, T>, key: K, make: () => T): T {
+  let value = cache.get(key);
   if (!value) {
     value = make();
-    cache.set(locale, value);
+    cache.set(key, value);
   }
   return value;
 }
@@ -196,9 +196,19 @@ function elapsedAmount(
 }
 
 /**
- * "há 2 h", "ontem", "há 3 dias" for a past instant (ISO timestamp). `nowMs`
- * is injectable. A timestamp a few seconds ahead (client clock behind the
- * server's) reads as "agora", never "em 3 s".
+ * Units whose "auto" words are right here: "agora", and "ontem"/"anteontem"
+ * (days count São Paulo midnights). Weeks, months and years are elapsed
+ * blocks, so they read "há 1 mês", never the calendar "mês passado".
+ */
+const CALENDAR_WORD_UNITS = new Set<Intl.RelativeTimeFormatUnit>([
+  "second",
+  "day",
+]);
+
+/**
+ * "há 2 h", "ontem", "há 3 dias", "há 1 mês" for a past instant (ISO
+ * timestamp). `nowMs` is injectable. A timestamp a few seconds ahead (client
+ * clock behind the server's) reads as "agora", never "em 3 s".
  */
 export function formatRelativeTime(
   isoTimestamp: string,
@@ -206,11 +216,11 @@ export function formatRelativeTime(
   locale: Locale
 ): string {
   const { unit, value } = elapsedAmount(Date.parse(isoTimestamp), nowMs);
+  const numeric = CALENDAR_WORD_UNITS.has(unit) ? "auto" : "always";
   const formatter = cached(
     timeFormatters,
-    locale,
-    () =>
-      new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" })
+    `${locale}|${numeric}`,
+    () => new Intl.RelativeTimeFormat(locale, { numeric, style: "short" })
   );
   return normalizeSpaces(formatter.format(-value, unit));
 }

@@ -206,7 +206,34 @@ describe("formatRelativeTime", () => {
       "há 23 h"
     );
     expect(formatRelativeTime(ago(6.5 * 86_400), now, "pt-BR")).toBe(
-      "semana passada"
+      "há 1 sem."
+    );
+  });
+
+  // Weeks, months and years are elapsed blocks, not calendar periods: they
+  // never use "semana passada" / "mês passado" / "ano passado". Amounts are
+  // truncated, with a month of 30.44 days (2_629_800 s).
+  it("semana, mês e ano dizem tempo decorrido, nunca 'semana/mês/ano passado'", () => {
+    // 13 days (Sat Sep 19, two calendar weeks back): trunc(1.86 wk) = 1.
+    expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 sem."
+    );
+    expect(formatRelativeTime("2026-09-19T12:00:00Z", now, "en-US")).toBe(
+      "1 wk. ago"
+    );
+    // Aug 5 read on Oct 2 is 58 days: trunc(1.91 mo) = 1, so "há 1 mês".
+    expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 mês"
+    );
+    expect(formatRelativeTime("2026-08-05T12:00:00Z", now, "en-US")).toBe(
+      "1 mo. ago"
+    );
+    // November 2024 is 699 days: trunc(1.91 yr) = 1.
+    expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "pt-BR")).toBe(
+      "há 1 ano"
+    );
+    expect(formatRelativeTime("2024-11-02T12:00:00Z", now, "en-US")).toBe(
+      "1 yr. ago"
     );
   });
 });
@@ -252,10 +279,13 @@ describe("formatadores em cache", () => {
 
   it("não cria outro Intl.RelativeTimeFormat a cada aviso da lista (tempo relativo)", () => {
     const now = Date.parse("2026-10-02T12:00:00Z");
+    // Warms both formatters: hours read as elapsed time, days as calendar words.
     formatRelativeTime("2026-10-02T10:00:00Z", now, "en-US");
+    formatRelativeTime("2026-10-01T12:00:00Z", now, "en-US");
     const spy = vi.spyOn(Intl, "RelativeTimeFormat");
     formatRelativeTime("2026-10-02T11:00:00Z", now, "en-US");
     formatRelativeTime("2026-09-30T12:00:00Z", now, "en-US");
+    formatRelativeTime("2026-08-05T12:00:00Z", now, "en-US");
     expect(spy).toHaveBeenCalledTimes(0);
   });
 });
