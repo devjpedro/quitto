@@ -121,8 +121,7 @@ export function ActionButton({
           aria-label={label}
           onClick={guard}
           params={{ id: action.contractId }}
-          // The route still requires the key (Task 12b makes it optional and filters).
-          search={{ installment: undefined }}
+          search={{ status: "overdue" }}
           to="/contracts/$id"
         >
           <ListBullets aria-hidden="true" className="md:hidden" size={18} />

@@ -87,14 +87,22 @@ describe("contract-detail deep-link", () => {
     expect(screen.getByTestId("installment-drawer")).toBeInTheDocument();
   });
 
-  it("clears the ?installment param when the drawer closes", async () => {
+  it("clears the ?installment param when the drawer closes, keeping the filter", async () => {
     render(<ContractDetailPage />);
     await userEvent.click(screen.getByRole("button", { name: CLOSE_BUTTON }));
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/contracts/$id",
-      params: { id: "c1" },
-      search: { installment: undefined },
-      replace: true,
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "/contracts/$id",
+        params: { id: "c1" },
+        replace: true,
+      })
+    );
+    const options = navigate.mock.calls[0]?.[0] as
+      | { search: (prev: Record<string, unknown>) => Record<string, unknown> }
+      | undefined;
+    expect(options?.search({ installment: "i1", status: "overdue" })).toEqual({
+      installment: undefined,
+      status: "overdue",
     });
   });
 });

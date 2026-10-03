@@ -461,7 +461,7 @@ describe("ActionList", () => {
     expect(markPaid).not.toHaveBeenCalled();
   });
 
-  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato", () => {
+  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato filtrado", () => {
     renderList([
       installmentAction({
         id: "overdue:nb:receive",
@@ -485,10 +485,9 @@ describe("ActionList", () => {
     expect(decodeURIComponent(whatsapp.getAttribute("href") ?? "")).toContain(
       "As parcelas 3 e 4 de “Notebook da Marina” estão em aberto, somando R$ 700,00"
     );
-    // The filter (?status=overdue) comes with Task 12b.
     expect(screen.getByRole("link", { name: "Ver parcelas" })).toHaveAttribute(
       "href",
-      "/contracts/nb"
+      "/contracts/nb?status=overdue"
     );
     expect(
       screen.queryByRole("button", { name: MARK_RECEIVED_NAME })
@@ -546,7 +545,7 @@ describe("ActionList", () => {
       within(card).getByRole("link", { name: "Pagar a mais antiga" })
     ).toHaveAttribute("href", "/contracts/al?installment=al-5");
     const seeAll = within(card).getByRole("link", { name: "Ver parcelas" });
-    expect(seeAll).toHaveAttribute("href", "/contracts/al");
+    expect(seeAll).toHaveAttribute("href", "/contracts/al?status=overdue");
     // On a phone a square icon button (h-11 from size sm, w-11 here), named by aria-label.
     expect(seeAll).toHaveClass("max-md:w-11", "max-md:px-0");
     expect(within(card).queryAllByRole("button")).toEqual([]);

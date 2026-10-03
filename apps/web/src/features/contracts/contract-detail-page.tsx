@@ -108,7 +108,7 @@ function ContractPixSection({
 export function ContractDetailPage() {
   useDocumentTitle(PAGE_TITLE.contractDetail);
   const { id } = useParams({ from: "/_app/contracts/$id" });
-  const { installment } = useSearch({ from: "/_app/contracts/$id" });
+  const { installment, status } = useSearch({ from: "/_app/contracts/$id" });
   const navigate = useNavigate();
   const { data, isPending } = useContractQuery(id);
   const [openId, setOpenId] = useState<string | null>(installment ?? null);
@@ -126,7 +126,7 @@ export function ContractDetailPage() {
       navigate({
         to: "/contracts/$id",
         params: { id },
-        search: { installment: undefined },
+        search: (prev) => ({ ...prev, installment: undefined }),
         replace: true,
       });
     }
@@ -280,7 +280,11 @@ export function ContractDetailPage() {
         </ul>
       </section>
 
-      <InstallmentsSection installments={installments} onSelect={setOpenId} />
+      <InstallmentsSection
+        initialFilter={status}
+        installments={installments}
+        onSelect={setOpenId}
+      />
 
       <InstallmentDrawer
         capabilities={{ isPayer: data.isPayer, isApprover: data.isApprover }}

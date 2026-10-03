@@ -122,6 +122,34 @@ describe("InstallmentsSection", () => {
     expect(screen.queryByRole("button", { name: LOAD_MORE })).toBeNull();
   });
 
+  it("abre já no filtro pedido: 'Ver parcelas' de um grupo mostra só as atrasadas", () => {
+    render(
+      <InstallmentsSection
+        initialFilter="overdue"
+        installments={[
+          {
+            id: "a",
+            sequence: 1,
+            amountCents: 1000,
+            dueDate: "2020-01-10",
+            status: "pending",
+          },
+          {
+            id: "b",
+            sequence: 2,
+            amountCents: 1000,
+            dueDate: "2099-01-10",
+            status: "pending",
+          },
+        ]}
+        onSelect={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByRole("button", { name: "Atrasadas (1)" })
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("chama onSelect com o id ao clicar numa linha", () => {
     const onSelect = vi.fn();
     render(
