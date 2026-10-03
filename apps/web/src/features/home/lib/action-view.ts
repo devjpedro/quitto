@@ -1,8 +1,17 @@
 import type { Locale } from "@quitto/shared";
 import type { TagTone } from "@/components/ui/tag";
-import { formatDate, formatRelativeDays } from "@/lib/locale-format";
+import { sequencesLabel } from "@/lib/sequences-label";
 import { m } from "@/paraglide/messages.js";
 import type { HomeAction, InstallmentAction } from "../types";
+import {
+  inviteTerms,
+  kindTag,
+  legendOf,
+  type PersonLine,
+  personLine,
+} from "./action-text";
+
+export type { PersonLine } from "./action-text";
 
 export type ActionButtonKind =
   | "pix"
@@ -14,16 +23,33 @@ export type ActionButtonKind =
   | "confirm"
   | "resend_proof"
   | "accept"
-  | "decline";
+  | "decline"
+  | "pay_oldest"
+  | "see_installments";
 
-/** Buttons that open the installment in its contract (the legacy drawer until Fase 2). */
+/** Buttons that open the installment in its contract (the legacy drawer until Fase 2): on a group, the oldest one. */
 export const LINK_BUTTONS: ReadonlySet<ActionButtonKind> =
-  new Set<ActionButtonKind>(["pix", "send_proof", "review", "resend_proof"]);
+  new Set<ActionButtonKind>([
+    "pix",
+    "send_proof",
+    "review",
+    "resend_proof",
+    "pay_oldest",
+  ]);
 
 export interface ActionView {
-  detail: string | null;
-  meta: string;
+  /** The card's amount: the group's total, or the installment's; null on an invite. */
+  amountCents: number | null;
+  /** Installment cards: "4 de 12 pagas" and "falta R$ 14.400,00", under the bar. */
+  legend: { done: string; remaining: string } | null;
+  person: PersonLine | null;
+  /** "parcela 5 de 12" / "parcelas 3 e 4 de 12"; null on an invite. */
+  sequence: string | null;
   tag: string;
+  /** Invite only: "4 parcelas de R$ 300,00" and "a partir de 10/11". */
+  terms: { amount: string; from: string | null } | null;
+  /** The contract's title: with `sequence`, the card's accessible name. */
+  title: string;
   tone: TagTone;
 }
 
@@ -39,67 +65,7 @@ const ROLE_NAME: Record<string, Message> = {
   viewer: m.home_role_viewer,
 };
 
-interface KindTag {
-  long: string;
-  short: string;
-  tone: TagTone;
-}
-
-function kindTag(
-  action: InstallmentAction,
-  when: string,
-  locale: Locale
-): KindTag {
-  const options = { locale };
-  switch (action.kind) {
-    case "overdue":
-      return {
-        tone: "danger",
-        long: m.home_tag_overdue({ when }, options),
-        short: m.home_first_overdue({}, options),
-      };
-    case "review":
-      return {
-        tone: "warning",
-        long: m.home_tag_review({}, options),
-        short: m.home_first_review({}, options),
-      };
-    case "disputed":
-      return {
-        tone: "danger",
-        long: m.home_tag_disputed({}, options),
-        short: m.home_first_disputed({}, options),
-      };
-    default:
-      return {
-        tone: "neutral",
-        long: m.home_tag_due({ when }, options),
-        short: when,
-      };
-  }
-}
-
-function counterpartyLine(action: InstallmentAction, locale: Locale): string {
-  const options = { locale };
-  if (action.kind === "review") {
-    return m.home_detail_review({}, options);
-  }
-  if (action.kind === "disputed") {
-    return m.home_detail_disputed({}, options);
-  }
-  const name = action.counterpartyName;
-  if (!name) {
-    return m.home_detail_due_on(
-      { date: formatDate(action.dueDate, locale, "dayMonth") },
-      options
-    );
-  }
-  return action.direction === "pay"
-    ? m.home_detail_pay_to({ name }, options)
-    : m.home_detail_owes_you({ name }, options);
-}
-
-/** Text of an action card, all in `locale`: the tag and its tone, the line above the amount, the line below it. */
+/** Everything a card says, in `locale`. */
 export function describeAction(
   action: HomeAction,
   { first, locale, today }: { first: boolean; locale: Locale; today: string }
@@ -112,27 +78,31 @@ export function describeAction(
       tag: first
         ? m.home_tag_first({ label: m.home_first_invite({}, options) }, options)
         : m.home_tag_invite({}, options),
-      meta: m.home_detail_invite({ name: action.inviterName, role }, options),
-      detail: null,
+      title: action.contractTitle,
+      sequence: null,
+      amountCents: null,
+      person: {
+        name: action.inviterName,
+        text: m.home_detail_invite({ name: action.inviterName, role }, options),
+      },
+      terms: inviteTerms(action, locale),
+      legend: null,
     };
   }
-  const tag = kindTag(
-    action,
-    formatRelativeDays(action.dueDate, today, locale),
-    locale
-  );
+  const tag = kindTag(action, today, locale);
   return {
     tone: first ? "highlight" : tag.tone,
     tag: first ? m.home_tag_first({ label: tag.short }, options) : tag.long,
-    meta: m.home_card_meta(
-      {
-        title: action.contractTitle,
-        sequence: action.sequence,
-        count: action.installmentsCount,
-      },
-      options
+    title: action.contractTitle,
+    sequence: sequencesLabel(
+      action.sequences,
+      action.installmentsCount,
+      locale
     ),
-    detail: counterpartyLine(action, locale),
+    amountCents: action.totalCents,
+    person: personLine(action, today, locale),
+    terms: null,
+    legend: legendOf(action, locale),
   };
 }
 
@@ -144,7 +114,11 @@ function payButtons(action: InstallmentAction): ActionButtonKind[] {
   return action.pixCode ? ["pix"] : ["send_proof"];
 }
 
-/** A card's direct actions, primary first (at most two). */
+/**
+ * A card's direct actions, primary first (at most two). A group of overdue
+ * installments only has links (owner's decision 6): no optimistic "Já paguei"
+ * over many installments at once.
+ */
 export function actionButtons(action: HomeAction): ActionButtonKind[] {
   switch (action.kind) {
     case "invite":
@@ -154,6 +128,11 @@ export function actionButtons(action: HomeAction): ActionButtonKind[] {
     case "disputed":
       return ["resend_proof"];
     default:
+      if (action.count > 1) {
+        return action.direction === "pay"
+          ? ["pay_oldest", "see_installments"]
+          : ["whatsapp", "see_installments"];
+      }
       if (action.direction === "pay") {
         return payButtons(action);
       }

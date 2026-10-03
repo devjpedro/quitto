@@ -1,5 +1,6 @@
 import type { Locale } from "@quitto/shared";
 import { formatDate, formatMoney } from "@/lib/locale-format";
+import { sequencesList } from "@/lib/sequences-label";
 import { m } from "@/paraglide/messages.js";
 
 export interface ChargeMessageInput {
@@ -36,6 +37,36 @@ export function chargeMessage(
   return input.pixCode
     ? [opening, m.whatsapp_pix_intro({}, { locale }), input.pixCode]
     : [opening];
+}
+
+export interface GroupChargeInput {
+  contractTitle: string;
+  /** The oldest overdue installment's due date. */
+  dueDate: string;
+  sequences: number[];
+  totalCents: number;
+}
+
+/**
+ * "Cobrar no WhatsApp" for a group of overdue installments: every one of
+ * them, the total and the oldest's due date. No Pix code: a code carries one
+ * amount, and the group is many.
+ */
+export function groupChargeMessage(
+  input: GroupChargeInput,
+  locale: Locale
+): string[] {
+  return [
+    m.whatsapp_charge_group(
+      {
+        list: sequencesList(input.sequences, locale),
+        title: input.contractTitle,
+        total: formatMoney(input.totalCents, locale),
+        date: formatDate(input.dueDate, locale, "short"),
+      },
+      { locale }
+    ),
+  ];
 }
 
 /** wa.me without a number: the sender picks the contact inside WhatsApp. One blank line between paragraphs. */

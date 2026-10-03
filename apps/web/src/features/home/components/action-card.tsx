@@ -2,6 +2,7 @@ import { useId } from "react";
 import { Money } from "@/components/ui/money";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { useActionHandlers } from "../hooks/use-action-handlers";
 import { actionButtons, describeAction } from "../lib/action-view";
@@ -50,17 +51,23 @@ export function ActionCard({
     >
       <Tag tone={view.tone}>{view.tag}</Tag>
       <p className={cn("text-xs", muted)} id={titleId}>
-        {view.meta}
+        {view.sequence ? (
+          <>
+            {view.title} {m.home_dot_after({ text: view.sequence })}
+          </>
+        ) : (
+          view.person?.text
+        )}
       </p>
       {action.kind === "invite" ? (
         <p className="font-display font-semibold text-xl tracking-[-0.02em]">
           {action.contractTitle}
         </p>
       ) : (
-        <Money cents={action.amountCents} size="card" />
+        <Money cents={action.totalCents} size="card" />
       )}
-      {view.detail ? (
-        <p className={cn("text-xs", muted)}>{view.detail}</p>
+      {view.person && action.kind !== "invite" ? (
+        <p className={cn("text-xs", muted)}>{view.person.text}</p>
       ) : null}
       <div className="mt-auto flex flex-wrap gap-2 pt-2">
         {actionButtons(action).map((kind, index) => (

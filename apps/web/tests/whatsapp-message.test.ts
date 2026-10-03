@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type ChargeMessageInput,
   chargeMessage,
+  groupChargeMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
 
@@ -52,6 +53,22 @@ describe("chargeMessage", () => {
 
   it("PIX vazio não entra na mensagem", () => {
     expect(chargeMessage({ ...base, pixCode: "" }, "pt-BR")).toHaveLength(1);
+  });
+
+  it("grupo: cita todas as parcelas, o total e a mais antiga, sem PIX (um código é um valor)", () => {
+    expect(
+      groupChargeMessage(
+        {
+          contractTitle: "Notebook da Marina",
+          dueDate: "2026-08-30",
+          sequences: [3, 4],
+          totalCents: 70_000,
+        },
+        "pt-BR"
+      )
+    ).toEqual([
+      "Oi! As parcelas 3 e 4 de “Notebook da Marina” estão em aberto, somando R$ 700,00. A mais antiga venceu em 30/08/2026. Consegue ver isso pra mim?",
+    ]);
   });
 });
 

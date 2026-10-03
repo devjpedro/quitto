@@ -107,7 +107,9 @@ describe("HomePage", () => {
       error: null,
     });
     expect(
-      await screen.findByRole("article", { name: "Aluguel do apê · 7/12" })
+      await screen.findByRole("article", {
+        name: "Aluguel do apê · parcela 7 de 12",
+      })
     ).toBeVisible();
     expect(screen.getByText("1 coisa pede sua atenção")).toBeVisible();
     expect(document.title).toBe("Quitto · Agora");
@@ -549,7 +551,9 @@ describe("HomePage", () => {
       // The focus is already lost, with the card still on screen.
       expect(document.activeElement).toBe(document.body);
       expect(
-        screen.getByRole("article", { name: "Aluguel do apê · 7/12" })
+        screen.getByRole("article", {
+          name: "Aluguel do apê · parcela 7 de 12",
+        })
       ).toBeVisible();
       release();
       expect(await screen.findByText("Nada pendente agora")).toBeVisible();
@@ -567,7 +571,9 @@ describe("HomePage", () => {
       error: null,
     });
     const { client } = renderHome();
-    await screen.findByRole("article", { name: "Aluguel do apê · 7/12" });
+    await screen.findByRole("article", {
+      name: "Aluguel do apê · parcela 7 de 12",
+    });
     await userEvent.tab();
     const shortcut = screen.getByRole("link", { name: "Novo contrato" });
     expect(document.activeElement).toBe(shortcut);
@@ -582,7 +588,9 @@ describe("HomePage", () => {
       error: null,
     });
     const { client } = renderHome();
-    await screen.findByRole("article", { name: "Aluguel do apê · 7/12" });
+    await screen.findByRole("article", {
+      name: "Aluguel do apê · parcela 7 de 12",
+    });
     expect(document.activeElement).toBe(document.body);
     // A refetch on returning to the tab: the other party already paid.
     client.setQueryData(queryKeys.home, homeFixture());

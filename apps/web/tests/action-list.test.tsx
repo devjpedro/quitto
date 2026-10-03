@@ -38,25 +38,42 @@ vi.mock("@/lib/api", () => ({
 }));
 
 interface LinkProps {
+  "aria-label"?: string;
   children: ReactNode;
   className?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   params?: { id: string };
-  search?: { installment?: string };
+  search?: { installment?: string; status?: string };
   to: string;
 }
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children, className, onClick, params, search, to }: LinkProps) => (
-    <a
-      className={className}
-      href={`${to.replace("$id", params?.id ?? "")}?installment=${search?.installment ?? ""}`}
-      onClick={onClick}
-    >
-      {children}
-    </a>
-  ),
+  Link: ({
+    children,
+    className,
+    onClick,
+    params,
+    search,
+    to,
+    ...rest
+  }: LinkProps) => {
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+      )
+    ).toString();
+    return (
+      <a
+        aria-label={rest["aria-label"]}
+        className={className}
+        href={`${to.replace("$id", params?.id ?? "")}${query ? `?${query}` : ""}`}
+        onClick={onClick}
+      >
+        {children}
+      </a>
+    );
+  },
 }));
 
 function makeClient(actions: HomeAction[]) {
@@ -94,6 +111,9 @@ function renderLive(actions: HomeAction[]) {
   return renderWithProviders(<LiveList />, { client: makeClient(actions) });
 }
 
+const WHATSAPP_NAME = /Cobrar no WhatsApp/;
+const MARK_RECEIVED_NAME = /Marcar como recebida/;
+
 const twoToPay = () => [
   installmentAction({ installmentId: "i1", sequence: 1 }),
   installmentAction({ installmentId: "i2", sequence: 2 }),
@@ -113,15 +133,17 @@ const overdue = (count: number) =>
     })
   );
 
-/** The grid cell (`li`) of the card "Aluguel do apê · n/12". */
+/** The grid cell (`li`) of the card "Aluguel do apê · parcela n de 12". */
 const itemOf = (n: number) =>
   screen
-    .getByRole("article", { name: `Aluguel do apê · ${n}/12` })
+    .getByRole("article", { name: `Aluguel do apê · parcela ${n} de 12` })
     .closest("li");
 
-/** The card "Aluguel do apê · n/12", or null once it left the list. */
+/** The card "Aluguel do apê · parcela n de 12", or null once it left the list. */
 const articleOf = (n: number) =>
-  screen.queryByRole("article", { name: `Aluguel do apê · ${n}/12` });
+  screen.queryByRole("article", {
+    name: `Aluguel do apê · parcela ${n} de 12`,
+  });
 
 /** Freezes the lock's clock (`Date.now`), so only `advance` moves it on. */
 function frozenClock() {
@@ -172,7 +194,9 @@ beforeEach(() => {
 describe("ActionList", () => {
   it("o primeiro cartão é o verde 'Faça primeiro', com Pagar com PIX e Já paguei", () => {
     renderList();
-    const card = screen.getByRole("article", { name: "Aluguel do apê · 7/12" });
+    const card = screen.getByRole("article", {
+      name: "Aluguel do apê · parcela 7 de 12",
+    });
     expect(card).toBeVisible();
     // Same 1 px border as the white cards, in the card's own green (mockup 11):
     // the content lines up across the row.
@@ -304,7 +328,7 @@ describe("ActionList", () => {
   it("1 ação: largura toda no celular e 2 colunas no desktop", () => {
     renderList([installmentAction()]);
     const item = screen
-      .getByRole("article", { name: "Aluguel do apê · 7/12" })
+      .getByRole("article", { name: "Aluguel do apê · parcela 7 de 12" })
       .closest("li");
     expect(item).toHaveClass("w-full", "lg:col-span-2");
     expect(item).not.toHaveClass("w-[calc(100%-2.75rem)]");
@@ -403,6 +427,63 @@ describe("ActionList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await waitFor(() => expect(confirm).toHaveBeenCalledWith("i1"));
     expect(markPaid).not.toHaveBeenCalled();
+  });
+
+  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato", () => {
+    renderList([
+      installmentAction({
+        id: "overdue:nb:receive",
+        kind: "overdue",
+        direction: "receive",
+        installmentId: "nb-3",
+        contractId: "nb",
+        contractTitle: "Notebook da Marina",
+        sequence: 3,
+        dueDate: "2026-08-30",
+        counterpartyName: "Marina Pires",
+        pixCode: null,
+        canMarkPaid: false,
+        count: 2,
+        installmentIds: ["nb-3", "nb-4"],
+        sequences: [3, 4],
+        totalCents: 70_000,
+      }),
+    ]);
+    const whatsapp = screen.getByRole("link", { name: WHATSAPP_NAME });
+    expect(decodeURIComponent(whatsapp.getAttribute("href") ?? "")).toContain(
+      "As parcelas 3 e 4 de “Notebook da Marina” estão em aberto, somando R$ 700,00"
+    );
+    // The filter (?status=overdue) comes with Task 12b.
+    expect(screen.getByRole("link", { name: "Ver parcelas" })).toHaveAttribute(
+      "href",
+      "/contracts/nb"
+    );
+    expect(
+      screen.queryByRole("button", { name: MARK_RECEIVED_NAME })
+    ).toBeNull();
+  });
+
+  it("grupo que você paga: Pagar a mais antiga abre a parcela mais antiga", () => {
+    renderList([
+      installmentAction({
+        id: "overdue:al:pay",
+        kind: "overdue",
+        installmentId: "al-5",
+        contractId: "al",
+        sequence: 5,
+        dueDate: "2026-09-01",
+        pixCode: null,
+        canMarkPaid: false,
+        count: 2,
+        installmentIds: ["al-5", "al-6"],
+        sequences: [5, 6],
+        totalCents: 250_000,
+      }),
+    ]);
+    expect(
+      screen.getByRole("link", { name: "Pagar a mais antiga" })
+    ).toHaveAttribute("href", "/contracts/al?installment=al-5");
+    expect(screen.queryByRole("button", { name: "Já paguei" })).toBeNull();
   });
 });
 
