@@ -72,7 +72,7 @@
   "home_detail_invite": "{name} invited you as {role}",
   "home_installment_one": "installment\u00a0{sequence}\u00a0of\u00a0{count}",
   "home_installments_of": "installments\u00a0{list}\u00a0of\u00a0{count}",
-  "home_installments_spread": "{n} installments between {first}\u00a0and\u00a0{last}\u00a0of\u00a0{count}",
+  "home_installments_spread": "{n}\u00a0installments between {first}\u00a0and\u00a0{last}\u00a0of\u00a0{count}",
   "home_sequence_range": "{from}\u00a0to\u00a0{to}",
   "home_first_overdue_many": "{count} overdue",
   "home_tag_overdue_many": "{count} overdue · since {date}",

@@ -267,7 +267,7 @@ describe("describeAction: grupo de atrasadas", () => {
       nb("parcelas~5~a~9 e 11~a~13~de~60")
     );
     expect(terreno([3, 5, 7, 9, 10, 11])).toBe(
-      nb("6 parcelas entre 3~e~11~de~60")
+      nb("6~parcelas entre 3~e~11~de~60")
     );
   });
 

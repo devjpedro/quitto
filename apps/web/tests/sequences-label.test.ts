@@ -68,13 +68,13 @@ describe("sequencesLabel", () => {
       )
     ).toBe(nb("parcelas~1~a~4, 6~a~9 e 11~a~14~de~24"));
     expect(sequencesLabel([3, 5, 7, ...span(9, 28)], 60, "pt-BR")).toBe(
-      nb("23 parcelas entre 3~e~28~de~60")
+      nb("23~parcelas entre 3~e~28~de~60")
     );
     expect(sequencesLabel([7, 5, 3, 1], 12, "pt-BR")).toBe(
-      nb("4 parcelas entre 1~e~7~de~12")
+      nb("4~parcelas entre 1~e~7~de~12")
     );
     expect(sequencesLabel([1, 3, 5, 7], 12, "en-US")).toBe(
-      nb("4 installments between 1~and~7~of~12")
+      nb("4~installments between 1~and~7~of~12")
     );
   });
 });

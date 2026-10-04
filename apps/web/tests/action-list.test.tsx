@@ -605,7 +605,7 @@ describe("ActionList", () => {
     renderList([terrenoGroup([3, 5, 7, 9, 10, 11, 12])]);
     expect(
       screen.getByRole("article", {
-        name: nb("Venda do terreno · 7 parcelas entre 3~e~12~de~60"),
+        name: nb("Venda do terreno · 7~parcelas entre 3~e~12~de~60"),
       })
     ).toBeVisible();
     expect(whatsappText()).toContain(
