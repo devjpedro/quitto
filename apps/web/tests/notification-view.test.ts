@@ -7,6 +7,9 @@ import type { NotificationItem } from "@/features/notifications/types";
 import { notificationItem } from "./notification-fixtures";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
+const NBSP = String.fromCharCode(0xa0);
+/** Writes "~" for the no-break space, so an expected line stays readable. */
+const nb = (text: string) => text.replaceAll("~", NBSP);
 
 function item(over: Partial<NotificationItem> = {}): NotificationItem {
   return notificationItem({
@@ -29,7 +32,7 @@ describe("notificationView", () => {
     expect(notificationView(item(), NOW, "pt-BR")).toEqual({
       title: "Pagamento confirmado",
       tone: "brand",
-      meta: "Aluguel do apê · parcela 7 de 12 · há 2 h",
+      meta: nb("Aluguel do apê~· parcela~7~de~12~· há~2~h"),
       reason: null,
       unread: true,
       count: 1,
@@ -66,7 +69,7 @@ describe("notificationView", () => {
       NOW,
       "pt-BR"
     );
-    expect(view.meta).toBe("Aluguel do apê · ana@example.com · ontem");
+    expect(view.meta).toBe(nb("Aluguel do apê~· ana@example.com~· ontem"));
   });
 
   it("motivo vazio ou só com espaços não vira linha de motivo", () => {
@@ -99,13 +102,15 @@ describe("notificationView", () => {
       NOW,
       "pt-BR"
     );
-    expect(view.meta).toBe("Aluguel do apê · parcela 7 de 12 · há 1 semana");
+    expect(view.meta).toBe(
+      nb("Aluguel do apê~· parcela~7~de~12~· há~1~semana")
+    );
   });
 
   it("no idioma pedido", () => {
     expect(notificationView(item(), NOW, "en-US")).toMatchObject({
       title: "Payment confirmed",
-      meta: "Aluguel do apê · installment 7 of 12 · 2 hr. ago",
+      meta: nb("Aluguel do apê~· installment~7~of~12~· 2~hr.~ago"),
     });
   });
 
@@ -123,19 +128,84 @@ describe("notificationView", () => {
     );
     expect(view).toMatchObject({
       title: "24 parcelas a receber estão vencidas",
-      meta: "Venda do terreno · parcelas 5 a 28 de 60 · há 2 h",
+      meta: nb("Venda do terreno~· parcelas~5~a~28~de~60~· há~2~h"),
       tone: "danger",
       count: 24,
     });
   });
 
-  it("grupo de um tipo sem plural: o título de sempre, a contagem no tile", () => {
-    const view = notificationView(
-      item({ type: "invite_accepted", count: 2, sequences: [] }),
+  it("todo grupo diz a contagem no título, para o leitor de tela ouvir quantos são", () => {
+    const title = (type: string, count: number) =>
+      notificationView(item({ type, count, sequences: [] }), NOW, "pt-BR")
+        .title;
+    expect(title("invite_accepted", 2)).toBe("2 convites aceitos");
+    expect(title("invite_declined", 2)).toBe("2 convites recusados");
+    expect(title("participant_left", 3)).toBe(
+      "3 participantes saíram do contrato"
+    );
+    expect(title("algo_novo", 2)).toBe("2 notificações");
+    expect(
+      notificationView(
+        item({ type: "invite_accepted", count: 2, sequences: [] }),
+        NOW,
+        "en-US"
+      ).title
+    ).toBe("2 invites accepted");
+  });
+
+  it("num grupo, o e-mail e o motivo de um aviso só não aparecem (leriam como de todos)", () => {
+    const disputes = notificationView(
+      item({
+        type: "payment_disputed",
+        count: 3,
+        sequences: [5, 6, 7],
+        metadata: { reason: "valor diferente do combinado" },
+      }),
       NOW,
       "pt-BR"
     );
-    expect(view).toMatchObject({ title: "Convite aceito", count: 2 });
+    expect(disputes.reason).toBeNull();
+    const invites = notificationView(
+      item({
+        type: "invite_accepted",
+        count: 2,
+        installmentId: null,
+        installmentSequence: null,
+        sequences: [],
+        metadata: { email: "ana@example.com" },
+      }),
+      NOW,
+      "pt-BR"
+    );
+    expect(invites.meta).toBe(nb("Aluguel do apê~· há~2~h"));
+  });
+
+  it("o metadado só quebra onde lê bem: nenhum '·' abre linha, e os números e o tempo ficam inteiros", () => {
+    const metas = [
+      item(),
+      item({
+        contractTitle: "Venda do terreno",
+        installmentsCount: 60,
+        count: 24,
+        sequences: Array.from({ length: 24 }, (_, i) => i + 5),
+      }),
+      item({ createdAt: "2026-09-29T12:00:00.000Z" }),
+      item({
+        type: "invite_accepted",
+        installmentId: null,
+        installmentSequence: null,
+        sequences: [],
+        metadata: { email: "ana@example.com" },
+      }),
+    ].map((one) => notificationView(one, NOW, "pt-BR").meta);
+    for (const meta of metas) {
+      // The ordinary spaces are the only places the line can break.
+      for (const piece of meta.split(" ")) {
+        expect(piece.startsWith("·"), meta).toBe(false);
+      }
+    }
+    expect(metas[1]).toContain(nb("5~a~28~de~60"));
+    expect(metas[2]).toContain(nb("há~3~dias"));
   });
 
   it("aonde a linha leva: um grupo abre o contrato filtrado pelo que conta; um aviso, a parcela", () => {

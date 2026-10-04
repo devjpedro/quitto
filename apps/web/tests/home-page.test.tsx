@@ -7,6 +7,10 @@ import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
+const NBSP = String.fromCharCode(0xa0);
+/** Writes "~" for the no-break space the installment messages keep between numbers. */
+const nb = (text: string) => text.replaceAll("~", NBSP);
+
 const { getHome, getNotifications, markPaid } = vi.hoisted(() => ({
   getHome: vi.fn(),
   getNotifications: vi.fn(),
@@ -110,7 +114,7 @@ describe("HomePage", () => {
     });
     expect(
       await screen.findByRole("article", {
-        name: "Aluguel do apê · parcela 7 de 12",
+        name: nb("Aluguel do apê · parcela~7~de~12"),
       })
     ).toBeVisible();
     expect(screen.getByText("1 coisa pede sua atenção")).toBeVisible();
@@ -573,7 +577,7 @@ describe("HomePage", () => {
       expect(document.activeElement).toBe(document.body);
       expect(
         screen.getByRole("article", {
-          name: "Aluguel do apê · parcela 7 de 12",
+          name: nb("Aluguel do apê · parcela~7~de~12"),
         })
       ).toBeVisible();
       release();
@@ -593,7 +597,7 @@ describe("HomePage", () => {
     });
     const { client } = renderHome();
     await screen.findByRole("article", {
-      name: "Aluguel do apê · parcela 7 de 12",
+      name: nb("Aluguel do apê · parcela~7~de~12"),
     });
     await userEvent.tab();
     const shortcut = screen.getByRole("link", { name: "Novo contrato" });
@@ -610,7 +614,7 @@ describe("HomePage", () => {
     });
     const { client } = renderHome();
     await screen.findByRole("article", {
-      name: "Aluguel do apê · parcela 7 de 12",
+      name: nb("Aluguel do apê · parcela~7~de~12"),
     });
     expect(document.activeElement).toBe(document.body);
     // A refetch on returning to the tab: the other party already paid.

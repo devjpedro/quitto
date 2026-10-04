@@ -151,14 +151,14 @@ describe("RecentNotifications", () => {
     });
   });
 
-  it("sem aviso: o vazio compacto do painel, com o sino no quadrado das linhas", async () => {
+  it("sem aviso: o vazio compacto do painel, com o sino num quadrado pequeno da marca", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderRecent();
     const heading = await within(region()).findByRole("heading", {
       name: "Nada novo por aqui",
     });
     expect(heading).toBeVisible();
-    // The same empty as the panel (mockup 10): the bell in the 32 px brand tile.
+    // The same empty as the panel (mockup 10): the bell on a small (32 px) brand tile.
     expect(
       heading.parentElement?.querySelector("[aria-hidden='true']")
     ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");
@@ -245,7 +245,10 @@ describe("RecentNotifications", () => {
     expect(row).toHaveTextContent("Nova");
     expect(row.querySelectorAll("svg").length).toBeGreaterThanOrEqual(2);
     // On hover the badge's ring takes the line's fill, never a halo of the resting one.
-    expect(row).toHaveClass("hover:**:ring-surface-card-hover");
+    expect(row).toHaveClass("group/row");
+    expect(within(row).getByText("24", { exact: true })).toHaveClass(
+      "group-hover/row:ring-surface-card-hover"
+    );
     expect(row.closest("ul")).toHaveClass("bg-surface-card", "divide-divider");
     expect(row.closest("ul")).not.toHaveClass("border");
     // The block clips its corners: the row inherits them, so the inset focus

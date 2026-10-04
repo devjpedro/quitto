@@ -242,14 +242,14 @@ describe("NotificationsPanel", () => {
     expect(screen.queryAllByText("Nova")).toHaveLength(0);
   });
 
-  it("vazio: a versão compacta, com o sino no quadrado das linhas e sem ação", async () => {
+  it("vazio: a versão compacta, com o sino num quadrado pequeno da marca e sem ação", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderPanel(0);
     const heading = await screen.findByRole("heading", {
       name: "Nada novo por aqui",
     });
     expect(heading).toBeVisible();
-    // Mockup 10: the bell sits in the same 32 px brand tile as the rows' icons.
+    // Mockup 10: the bell on a small (32 px) brand tile; the rows' tiles are 40 px.
     expect(
       heading.parentElement?.querySelector("[aria-hidden='true']")
     ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");

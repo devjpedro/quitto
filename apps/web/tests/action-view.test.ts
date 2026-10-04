@@ -7,6 +7,10 @@ import {
 import type { InstallmentAction } from "@/features/home/types";
 import { installmentAction, inviteAction, TODAY } from "./home-fixtures";
 
+const NBSP = String.fromCharCode(0xa0);
+/** Writes "~" for the no-break space the installment messages keep between numbers. */
+const nb = (text: string) => text.replaceAll("~", NBSP);
+
 const ctx = { first: false, locale: "pt-BR" as const, today: TODAY };
 
 /** "Notebook da Marina": 3 and 4 of 12 overdue since 30/08, Marina owes me. */
@@ -55,7 +59,7 @@ describe("describeAction: cartão simples", () => {
       tone: "highlight",
       tag: "Faça primeiro · amanhã",
       title: "Aluguel do apê",
-      sequence: "parcela 7 de 12",
+      sequence: nb("parcela~7~de~12"),
       amountCents: 125_000,
       person: { name: "Maria Souza", text: "para Maria Souza" },
       terms: null,
@@ -156,7 +160,7 @@ describe("describeAction: cartão simples", () => {
       })
     ).toMatchObject({
       tag: "Do first · tomorrow",
-      sequence: "installment 7 of 12",
+      sequence: nb("installment~7~of~12"),
       person: { text: "to Maria Souza" },
       legend: { done: "6 of 12 paid" },
     });
@@ -172,7 +176,7 @@ describe("describeAction: grupo de atrasadas", () => {
       tone: "danger",
       tag: "2 atrasadas · desde 30/08",
       title: "Notebook da Marina",
-      sequence: "parcelas 3 e 4 de 12",
+      sequence: nb("parcelas~3 e 4~de~12"),
       amountCents: 70_000,
       person: {
         name: "Marina Pires",
@@ -197,7 +201,7 @@ describe("describeAction: grupo de atrasadas", () => {
       ctx
     );
     expect(view.tag).toBe("24 atrasadas · desde 28/10/2024");
-    expect(view.sequence).toBe("parcelas 5 a 28 de 60");
+    expect(view.sequence).toBe(nb("parcelas~5~a~28~de~60"));
   });
 
   it("que você paga: para quem, desde quando", () => {
@@ -240,7 +244,7 @@ describe("describeAction: grupo de atrasadas", () => {
       tone: "highlight",
       tag: "Faça primeiro · 2 atrasadas",
       title: "Aluguel do apê",
-      sequence: "parcelas 5 e 6 de 12",
+      sequence: nb("parcelas~5 e 6~de~12"),
       amountCents: 250_000,
       person: { name: "Maria Souza", text: "para Maria Souza · desde 01/09" },
       terms: null,
@@ -260,9 +264,11 @@ describe("describeAction: grupo de atrasadas", () => {
         ctx
       ).sequence;
     expect(terreno([5, 6, 7, 8, 9, 11, 12, 13])).toBe(
-      "parcelas 5 a 9 e 11 a 13 de 60"
+      nb("parcelas~5~a~9 e 11~a~13~de~60")
     );
-    expect(terreno([3, 5, 7, 9, 10, 11])).toBe("6 parcelas entre 3 e 11 de 60");
+    expect(terreno([3, 5, 7, 9, 10, 11])).toBe(
+      nb("6 parcelas entre 3~e~11~de~60")
+    );
   });
 
   it("no idioma pedido", () => {
@@ -270,7 +276,7 @@ describe("describeAction: grupo de atrasadas", () => {
       describeAction(marinaGroup(), { ...ctx, locale: "en-US" })
     ).toMatchObject({
       tag: "2 overdue · since 08/30",
-      sequence: "installments 3 and 4 of 12",
+      sequence: nb("installments~3 and 4~of~12"),
       person: { text: "Marina Pires owes you · since 08/30" },
       legend: { done: "2 of 12 received", remaining: "R$3,500.00 left" },
     });

@@ -28,7 +28,9 @@ describe("HomeSkeleton", () => {
     // The side blocks only from lateral, like the content's.
     const [milestones, recent] = Array.from(side?.children ?? []);
     expect(milestones).toHaveClass("hidden", "lateral:flex");
-    expect(recent).toHaveClass("hidden", "lateral:flex");
+    expect(recent).toHaveClass("hidden", "lateral:block");
+    // Its title bone in the SectionTitle's shape, as the loaded section has.
+    expect(recent?.firstElementChild).toHaveClass("mb-3", "h-5");
     // "Notificações recentes" with its own loading rows: 4 on the filled block.
     const rows = recent?.querySelector("ul");
     expect(rows).toHaveClass("bg-surface-card");

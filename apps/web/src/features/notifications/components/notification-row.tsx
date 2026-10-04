@@ -37,9 +37,8 @@ const ICON: Record<string, Icon> = {
  * (with the group's count), the title (semibold while unread, plus "Nova":
  * never color alone), the contract and installments, and a chevron on a
  * group, which opens its contract. The text wraps, never cut (mockup 10):
- * in the phone's sheet a cut group title loses what it says. On hover the
- * count's ring takes the line's fill with it, so no halo of the resting fill
- * is left around it.
+ * in the phone's sheet a cut group title loses what it says. The line is
+ * the tile's `group/row`, so on hover the count's ring takes its fill.
  */
 export function NotificationRow({
   item,
@@ -52,7 +51,7 @@ export function NotificationRow({
 }) {
   return (
     <button
-      className="flex min-h-[58px] w-full items-center gap-3.5 rounded-[inherit] py-[9px] pr-4 pl-2.5 text-left transition-colors hover:bg-surface-card-hover hover:**:ring-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+      className="group/row flex min-h-[58px] w-full items-center gap-3.5 rounded-[inherit] py-[9px] pr-4 pl-2.5 text-left transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
       onClick={() => onOpen(item)}
       type="button"
     >

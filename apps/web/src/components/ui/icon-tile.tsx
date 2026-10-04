@@ -17,7 +17,9 @@ const TONE: Record<IconTileTone, string> = {
 /**
  * The anchor of a notification row: its icon on a tile tinted by the kind.
  * A grouped line (DIRECAO › "Agrupe o que se repete") shows its count in the
- * corner, ringed in the list's color. Decorative: the row's title says it.
+ * corner, ringed in the list's color; inside a line marked `group/row`, the
+ * ring follows its hover fill, so no halo of the resting fill is left.
+ * Decorative: the row's title says it (a group's title says the count).
  */
 export function IconTile({
   count,
@@ -38,7 +40,7 @@ export function IconTile({
     >
       <IconComponent size={19} />
       {count !== undefined && count > 1 ? (
-        <span className="absolute -top-[5px] -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-[5px] font-semibold text-[11px] text-ink-inverse tabular-nums ring-2 ring-surface-card">
+        <span className="absolute -top-[5px] -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-[5px] font-semibold text-[11px] text-ink-inverse tabular-nums ring-2 ring-surface-card group-hover/row:ring-surface-card-hover">
           {count > MAX_COUNT
             ? m.notifications_count_overflow({ max: MAX_COUNT })
             : count}

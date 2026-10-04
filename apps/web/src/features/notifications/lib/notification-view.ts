@@ -7,6 +7,9 @@ import type { NotificationItem } from "../types";
 
 export type NotificationTone = "brand" | "warning" | "danger" | "neutral";
 
+/** A space a line never breaks at (no backslash escapes in this file). */
+const NBSP = String.fromCharCode(0xa0);
+
 export interface NotificationView {
   count: number;
   meta: string;
@@ -54,7 +57,11 @@ type GroupMessage = (
   options: { locale: Locale }
 ) => string;
 
-/** A grouped line's title (DIRECAO › "Agrupe o que se repete"); other types keep the singular, the count goes on the tile. */
+/**
+ * A grouped line's title (DIRECAO › "Agrupe o que se repete"): every group
+ * says its count in words, so a screen reader hears it too (the tile with
+ * the count is decorative).
+ */
 const GROUP_TITLE: Record<string, GroupMessage> = {
   [NOTIFICATION_TYPE.proofSubmitted]: m.notification_group_proof_submitted,
   [NOTIFICATION_TYPE.paymentConfirmed]: m.notification_group_payment_confirmed,
@@ -68,6 +75,9 @@ const GROUP_TITLE: Record<string, GroupMessage> = {
     m.notification_group_installment_due_soon_receivable,
   [NOTIFICATION_TYPE.installmentOverdueReceivable]:
     m.notification_group_installment_overdue_receivable,
+  [NOTIFICATION_TYPE.participantLeft]: m.notification_group_participant_left,
+  [NOTIFICATION_TYPE.inviteAccepted]: m.notification_group_invite_accepted,
+  [NOTIFICATION_TYPE.inviteDeclined]: m.notification_group_invite_declined,
 };
 
 /** The contract filter a grouped line opens on: the list already cut to what the line counts. */
@@ -96,14 +106,33 @@ export function notificationTarget(item: NotificationItem): {
   return item.installmentId ? { installment: item.installmentId } : {};
 }
 
+/**
+ * The meta line's parts. The e-mail and the reason are one notice's: a group
+ * would read as if all of it had them, so it shows neither.
+ */
 function metaParts(item: NotificationItem, locale: Locale): string[] {
   const parts = [item.contractTitle];
   if (item.sequences.length > 0) {
     parts.push(sequencesLabel(item.sequences, item.installmentsCount, locale));
-  } else if (typeof item.metadata?.email === "string") {
+  } else if (item.count === 1 && typeof item.metadata?.email === "string") {
     parts.push(item.metadata.email);
   }
   return parts;
+}
+
+/**
+ * "A · B · C" that wraps only where it reads well: each "·" holds on to what
+ * comes before it (never opens a line), and the relative time stays whole
+ * ("há 3 dias"). The installment label holds in its messages ("parcela
+ * 4 de 12", "5 a 28"), so the line breaks after a "·".
+ */
+function metaLine(parts: string[], when: string, locale: Locale): string {
+  const [first = "", ...rest] = [...parts, when.replaceAll(" ", NBSP)];
+  return rest.reduce(
+    (line, part) =>
+      `${line}${NBSP}${m.home_dot_after({ text: part }, { locale })}`,
+    first
+  );
 }
 
 /** What a notification row says. The text is built here, in the reader's language (§9). */
@@ -114,20 +143,24 @@ export function notificationView(
 ): NotificationView {
   const rawReason = item.metadata?.reason;
   const reason =
-    typeof rawReason === "string" && rawReason.trim() !== ""
+    item.count === 1 && typeof rawReason === "string" && rawReason.trim() !== ""
       ? m.notification_reason({ reason: rawReason }, { locale })
       : null;
-  const group = item.count > 1 ? GROUP_TITLE[item.type] : undefined;
-  const title = group
-    ? group({ count: item.count }, { locale })
-    : (TITLE[item.type] ?? m.notification_type_fallback)({}, { locale });
+  const title =
+    item.count > 1
+      ? (GROUP_TITLE[item.type] ?? m.notification_group_fallback)(
+          { count: item.count },
+          { locale }
+        )
+      : (TITLE[item.type] ?? m.notification_type_fallback)({}, { locale });
   return {
     title,
     tone: TONE[item.type] ?? "neutral",
-    meta: [
-      ...metaParts(item, locale),
+    meta: metaLine(
+      metaParts(item, locale),
       formatRelativeTime(item.createdAt, nowMs, locale),
-    ].join(" · "),
+      locale
+    ),
     reason,
     unread: item.readAt === null,
     count: item.count,

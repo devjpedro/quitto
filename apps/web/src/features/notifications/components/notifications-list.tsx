@@ -2,7 +2,6 @@ import { Bell, Checks } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useNotificationsList } from "../hooks/use-notifications-list";
 import { NotificationRow } from "./notification-row";
@@ -13,20 +12,11 @@ import { NotificationRow } from "./notification-row";
  * color in light). `rows` lets a list with another length (the home's
  * "Notificações recentes") keep its shape when the data lands.
  */
-export function NotificationsSkeleton({
-  className,
-  rows = 3,
-}: {
-  className?: string;
-  rows?: number;
-}) {
+export function NotificationsSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <ul
       aria-hidden="true"
-      className={cn(
-        "divide-y divide-divider overflow-hidden rounded-card bg-surface-card",
-        className
-      )}
+      className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card"
     >
       {Array.from({ length: rows }, (_, row) => `row-${row}`).map((key) => (
         <li
@@ -50,7 +40,7 @@ export function NotificationsSkeleton({
   );
 }
 
-/** Nothing to show yet (mockup 10): the bell in the rows' brand tile, a title and a sentence. */
+/** Nothing to show yet (mockup 10): the bell on a small brand tile, a title and a sentence. */
 export function NotificationsEmpty() {
   return (
     <EmptyState

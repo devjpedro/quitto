@@ -6,6 +6,10 @@ import {
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
 
+const NBSP = String.fromCharCode(0xa0);
+/** Writes "~" for the no-break space the installment messages keep between numbers. */
+const nb = (text: string) => text.replaceAll("~", NBSP);
+
 const base: ChargeMessageInput = {
   contractTitle: "Aluguel do apê",
   sequence: 7,
@@ -86,7 +90,9 @@ describe("chargeMessage", () => {
         "pt-BR"
       )[0]
     ).toBe(
-      "Oi! As parcelas 5 a 12 e 14 a 18 de “Venda do terreno” estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
+      nb(
+        "Oi! As parcelas 5~a~12 e 14~a~18 de “Venda do terreno” estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
+      )
     );
     expect(
       groupChargeMessage(

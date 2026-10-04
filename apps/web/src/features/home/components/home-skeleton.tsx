@@ -43,8 +43,9 @@ export function HomeSkeleton() {
             <Skeleton className="h-4 w-16 bg-surface-card" />
             <Skeleton className="h-36 rounded-card bg-surface-card" />
           </div>
-          <div className="lateral:flex hidden flex-col gap-2">
-            <Skeleton className="h-4 w-40 bg-surface-card" />
+          {/* The section's shape: a SectionTitle bone, as in "Próximos 30 dias". */}
+          <div className="lateral:block hidden">
+            <Skeleton className="mb-3 h-5 w-40 bg-surface-card" />
             <NotificationsSkeleton rows={RECENT_COUNT} />
           </div>
         </div>

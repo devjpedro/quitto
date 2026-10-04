@@ -16,6 +16,10 @@ import {
 } from "./home-fixtures";
 import { renderWithProviders } from "./test-utils";
 
+const NBSP = String.fromCharCode(0xa0);
+/** Writes "~" for the no-break space the installment messages keep between numbers. */
+const nb = (text: string) => text.replaceAll("~", NBSP);
+
 const { markPaid, confirm, accept, decline } = vi.hoisted(() => ({
   markPaid: vi.fn(),
   confirm: vi.fn(),
@@ -192,13 +196,13 @@ const overdue = (count: number) =>
 /** The grid cell (`li`) of the card "Aluguel do apê · parcela n de 12". */
 const itemOf = (n: number) =>
   screen
-    .getByRole("article", { name: `Aluguel do apê · parcela ${n} de 12` })
+    .getByRole("article", { name: nb(`Aluguel do apê · parcela~${n}~de~12`) })
     .closest("li");
 
 /** The card "Aluguel do apê · parcela n de 12", or null once it left the list. */
 const articleOf = (n: number) =>
   screen.queryByRole("article", {
-    name: `Aluguel do apê · parcela ${n} de 12`,
+    name: nb(`Aluguel do apê · parcela~${n}~de~12`),
   });
 
 /** Freezes the lock's clock (`Date.now`), so only `advance` moves it on. */
@@ -251,7 +255,7 @@ describe("ActionList", () => {
   it("o primeiro cartão é o verde 'Faça primeiro', com Pagar com PIX e Já paguei", () => {
     renderList();
     const card = screen.getByRole("article", {
-      name: "Aluguel do apê · parcela 7 de 12",
+      name: nb("Aluguel do apê · parcela~7~de~12"),
     });
     expect(card).toBeVisible();
     // Fill, not outline (mockup 13): the green card and its hover step.
@@ -384,7 +388,7 @@ describe("ActionList", () => {
   it("1 ação: largura toda no celular e 2 colunas no desktop", () => {
     renderList([installmentAction()]);
     const item = screen
-      .getByRole("article", { name: "Aluguel do apê · parcela 7 de 12" })
+      .getByRole("article", { name: nb("Aluguel do apê · parcela~7~de~12") })
       .closest("li");
     expect(item).toHaveClass("w-full", "lg:col-span-2");
     expect(item).not.toHaveClass("w-[calc(100%-2.75rem)]");
@@ -559,7 +563,7 @@ describe("ActionList", () => {
       }),
     ]);
     const card = screen.getByRole("article", {
-      name: "Aluguel do apê · parcelas 5 e 6 de 12",
+      name: nb("Aluguel do apê · parcelas~5 e 6~de~12"),
     });
     expect(within(card).getByText("Faça primeiro · 2 atrasadas")).toBeVisible();
     // The name is in bold inside the line (PersonText): the line reads as one.
@@ -582,11 +586,11 @@ describe("ActionList", () => {
     ]);
     expect(
       screen.getByRole("article", {
-        name: "Venda do terreno · parcelas 5 a 12 e 14 a 20 de 60",
+        name: nb("Venda do terreno · parcelas~5~a~12 e 14~a~20~de~60"),
       })
     ).toBeVisible();
     expect(whatsappText()).toContain(
-      "As parcelas 5 a 12 e 14 a 20 de “Venda do terreno” estão em aberto"
+      nb("As parcelas 5~a~12 e 14~a~20 de “Venda do terreno” estão em aberto")
     );
   });
 
@@ -594,7 +598,7 @@ describe("ActionList", () => {
     renderList([terrenoGroup([3, 5, 7, 9, 10, 11, 12])]);
     expect(
       screen.getByRole("article", {
-        name: "Venda do terreno · 7 parcelas entre 3 e 12 de 60",
+        name: nb("Venda do terreno · 7 parcelas entre 3~e~12~de~60"),
       })
     ).toBeVisible();
     expect(whatsappText()).toContain(
@@ -605,7 +609,7 @@ describe("ActionList", () => {
   it("cartão comum: preenchido no tom quente, sem contorno, e o hover desce um degrau", () => {
     renderList(twoToPay());
     const second = screen.getByRole("article", {
-      name: "Aluguel do apê · parcela 2 de 12",
+      name: nb("Aluguel do apê · parcela~2~de~12"),
     });
     expect(second).toHaveClass(
       "bg-surface-card",
@@ -799,6 +803,7 @@ describe("ActionList", () => {
     await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
     const [first, second, third] = screen.getAllByRole("article");
     expect(first).toHaveTextContent("Notebook da Marina");
+    // toHaveTextContent folds the no-break spaces into plain ones.
     expect(second).toHaveTextContent("Aluguel do apê · parcela 2 de 12");
     expect(third).toHaveTextContent("Moto do Rafa");
     // And the count goes back with it: pending counts are cards, read from the cache.

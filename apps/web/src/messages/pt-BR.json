@@ -65,10 +65,10 @@
   "home_detail_review": "Comprovante para conferir",
   "home_detail_disputed": "Reenvie o comprovante",
   "home_detail_invite": "{name} te convidou como {role}",
-  "home_installment_one": "parcela {sequence} de {count}",
-  "home_installments_of": "parcelas {list} de {count}",
-  "home_installments_spread": "{n} parcelas entre {first} e {last} de {count}",
-  "home_sequence_range": "{from} a {to}",
+  "home_installment_one": "parcela\u00a0{sequence}\u00a0de\u00a0{count}",
+  "home_installments_of": "parcelas\u00a0{list}\u00a0de\u00a0{count}",
+  "home_installments_spread": "{n} parcelas entre {first}\u00a0e\u00a0{last}\u00a0de\u00a0{count}",
+  "home_sequence_range": "{from}\u00a0a\u00a0{to}",
   "home_first_overdue_many": "{count} atrasadas",
   "home_tag_overdue_many": "{count} atrasadas · desde {date}",
   "home_detail_owes_you_since": "{name} te deve · desde {date}",
@@ -209,5 +209,9 @@
   "notification_group_installment_due_soon": "{count} parcelas vencendo em breve",
   "notification_group_installment_overdue": "{count} parcelas vencidas",
   "notification_group_installment_due_soon_receivable": "{count} parcelas a receber vencem em breve",
-  "notification_group_installment_overdue_receivable": "{count} parcelas a receber estão vencidas"
+  "notification_group_installment_overdue_receivable": "{count} parcelas a receber estão vencidas",
+  "notification_group_participant_left": "{count} participantes saíram do contrato",
+  "notification_group_invite_accepted": "{count} convites aceitos",
+  "notification_group_invite_declined": "{count} convites recusados",
+  "notification_group_fallback": "{count} notificações"
 }

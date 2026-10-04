@@ -65,10 +65,10 @@
   "home_detail_review": "Payment proof to check",
   "home_detail_disputed": "Send the proof again",
   "home_detail_invite": "{name} invited you as {role}",
-  "home_installment_one": "installment {sequence} of {count}",
-  "home_installments_of": "installments {list} of {count}",
-  "home_installments_spread": "{n} installments between {first} and {last} of {count}",
-  "home_sequence_range": "{from} to {to}",
+  "home_installment_one": "installment\u00a0{sequence}\u00a0of\u00a0{count}",
+  "home_installments_of": "installments\u00a0{list}\u00a0of\u00a0{count}",
+  "home_installments_spread": "{n} installments between {first}\u00a0and\u00a0{last}\u00a0of\u00a0{count}",
+  "home_sequence_range": "{from}\u00a0to\u00a0{to}",
   "home_first_overdue_many": "{count} overdue",
   "home_tag_overdue_many": "{count} overdue · since {date}",
   "home_detail_owes_you_since": "{name} owes you · since {date}",
@@ -209,5 +209,9 @@
   "notification_group_installment_due_soon": "{count} installments due soon",
   "notification_group_installment_overdue": "{count} installments overdue",
   "notification_group_installment_due_soon_receivable": "{count} installments to receive due soon",
-  "notification_group_installment_overdue_receivable": "{count} installments to receive are overdue"
+  "notification_group_installment_overdue_receivable": "{count} installments to receive are overdue",
+  "notification_group_participant_left": "{count} participants left the contract",
+  "notification_group_invite_accepted": "{count} invites accepted",
+  "notification_group_invite_declined": "{count} invites declined",
+  "notification_group_fallback": "{count} notifications"
 }

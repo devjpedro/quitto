@@ -47,6 +47,11 @@ describe("IconTile", () => {
       <IconTile count={24} icon={WarningCircle} tone="danger" />
     );
     expect(group.container).toHaveTextContent("24");
+    // Ringed in the list's color, and in its hover fill inside a group/row line.
+    expect(group.getByText("24")).toHaveClass(
+      "ring-surface-card",
+      "group-hover/row:ring-surface-card-hover"
+    );
     const single = render(
       <IconTile count={1} icon={WarningCircle} tone="danger" />
     );
