@@ -90,7 +90,7 @@ export function MomentCell({
           {view.title}
         </span>
         {view.detail ? (
-          <span className="block text-[12.5px]">{view.detail}</span>
+          <span className="block text-pretty text-[12.5px]">{view.detail}</span>
         ) : null}
       </span>
     </>

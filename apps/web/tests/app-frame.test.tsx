@@ -208,6 +208,10 @@ describe("AppFrame", () => {
     expect(card.querySelector("svg")).toHaveAttribute("width", "22");
     expect(within(card).getByText("Celular da Ana · 9/10")).toBeVisible();
     expect(within(card).getByText("Falta 1 parcela, em 13/10")).toBeVisible();
+    // A long detail wraps without leaving one word (the date) alone on the last line.
+    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toHaveClass(
+      "text-pretty"
+    );
   });
 
   it("um marco que não é progresso (pago no mês): sem anel e sem %", async () => {

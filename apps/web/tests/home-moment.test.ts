@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { momentMilestone, momentView } from "@/features/home/lib/moment";
 import { homeFixture, TODAY } from "./home-fixtures";
 
+/** A no-break space (U+00A0), by code: "desde" and the date never part at a line end. */
+const NBSP = String.fromCharCode(0xa0);
+
 const base = homeFixture();
 const closest = {
   contractId: "c3",
@@ -133,10 +136,10 @@ describe("momentView", () => {
       nextDueDate: "2026-09-13",
     };
     expect(momentView(late, "pt-BR", TODAY).detail).toBe(
-      "Falta 1 parcela · em atraso desde 13/09"
+      `Falta 1 parcela · em atraso desde${NBSP}13/09`
     );
     expect(momentView(late, "en-US", TODAY).detail).toBe(
-      "1 installment left · overdue since 09/13"
+      `1 installment left · overdue since${NBSP}09/13`
     );
     // More than one left, the oldest late: the delay is said too.
     expect(
@@ -145,14 +148,32 @@ describe("momentView", () => {
         "pt-BR",
         TODAY
       ).detail
-    ).toBe("Faltam 4 parcelas · em atraso desde 13/09");
+    ).toBe(`Faltam 4 parcelas · em atraso desde${NBSP}13/09`);
     // Another year: the year is written, as on the cards.
     expect(
       momentView({ ...late, nextDueDate: "2025-12-10" }, "pt-BR", TODAY).detail
-    ).toBe("Falta 1 parcela · em atraso desde 10/12/2025");
+    ).toBe(`Falta 1 parcela · em atraso desde${NBSP}10/12/2025`);
     // Due today is not late yet.
     expect(
       momentView({ ...late, nextDueDate: TODAY }, "pt-BR", TODAY).detail
     ).toBe("Falta 1 parcela, em 02/10");
+  });
+
+  it("'desde' e a data nunca se separam no fim da linha (espaço sem quebra), nos dois idiomas", () => {
+    const late = {
+      id: "closest" as const,
+      ...closest,
+      nextDueDate: "2026-09-13",
+    };
+    for (const locale of ["pt-BR", "en-US"] as const) {
+      for (const remainingCount of [1, 4]) {
+        const detail = momentView({ ...late, remainingCount }, locale, TODAY)
+          .detail as string;
+        const date = locale === "pt-BR" ? "13/09" : "09/13";
+        expect(detail.endsWith(`${NBSP}${date}`), detail).toBe(true);
+        // The only no-break space is the one before the date.
+        expect(detail.split(NBSP)).toHaveLength(2);
+      }
+    }
   });
 });

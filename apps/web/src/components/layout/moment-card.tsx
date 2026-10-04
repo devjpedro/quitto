@@ -35,7 +35,9 @@ export function MomentCard({ moment }: { moment: MomentCardView }) {
         {moment.title}
       </p>
       {moment.detail ? (
-        <p className="mt-px text-xs leading-[1.4]">{moment.detail}</p>
+        <p className="mt-px text-pretty text-xs leading-[1.4]">
+          {moment.detail}
+        </p>
       ) : null}
     </div>
   );

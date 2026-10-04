@@ -417,6 +417,10 @@ describe("seções do home", () => {
     const [moment] = screen.getAllByRole("listitem");
     expect(moment).toHaveClass("bg-highlight", "md:hidden");
     expect(moment).toHaveTextContent("Falta 1 parcela, em 13/10");
+    // A long detail wraps without leaving one word (the date) alone on the last line.
+    expect(screen.getByText("Falta 1 parcela, em 13/10")).toHaveClass(
+      "text-pretty"
+    );
     expect(container.querySelector("li svg")).toHaveAttribute("width", "44");
   });
 
