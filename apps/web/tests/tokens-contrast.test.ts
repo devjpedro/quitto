@@ -84,6 +84,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["ink", "page-card-hover"],
   ["ink-muted", "page-card-hover"],
   ["brand", "page-card-hover"],
+  ["danger", "page-card-hover"],
+  ["warning", "page-card-hover"],
   ["ink", "page-inset"],
   ["ink-muted", "page-inset"],
   ["brand", "page-inset"],
@@ -243,7 +245,9 @@ describe("page-surfaces", () => {
     expect(light["page-card-hover"]).toBe("#f7f6f2");
     expect(light["page-inset"]).toBe(light["surface-sunken"]);
     expect(light["page-divider"]).toBe("#eceae4");
-    expect(dark["page-card-hover"]).toBe("#2a2b26");
+    // The hover steps down, as in the panel (review of Task 15, I2): in
+    // dark it meets the divider, between the card and the page.
+    expect(dark["page-card-hover"]).toBe("#1f201c");
     expect(dark["page-inset"]).toBe(dark["surface-raised"]);
     expect(dark["page-divider"]).toBe("#1f201c");
     expect(light["page-inset-hover"]).toBe("#e6e5e0");
@@ -256,7 +260,7 @@ describe("page-surfaces", () => {
 // pair and still swap the layers (an inset lighter than the card in dark).
 const PANEL_TOKENS: Record<string, [string, string]> = {
   "surface-card": ["#f1f0eb", "#2e2f2a"],
-  "surface-card-hover": ["#eae8e1", "#31322c"],
+  "surface-card-hover": ["#eae8e1", "#282924"],
   "surface-inset": ["#ffffff", "#242521"],
   "surface-inset-hover": ["#f4f3ef", "#1c1d1a"],
   divider: ["#e3e1da", "#262723"],
@@ -278,7 +282,7 @@ describe("surface layers", () => {
     });
   }
 
-  it("in the panel, what sits inside a card steps back toward the white panel; hover steps the other way", () => {
+  it("in the panel, what sits inside a card steps back toward the panel; hover steps one down, in light and in dark", () => {
     // Light: inset (the panel's white) > card > hover.
     expect(light["surface-inset"]).toBe(light.surface);
     expect(luminance(light, "surface-inset")).toBeGreaterThan(
@@ -287,13 +291,15 @@ describe("surface layers", () => {
     expect(luminance(light, "surface-card")).toBeGreaterThan(
       luminance(light, "surface-card-hover")
     );
-    // Dark: inset (the panel itself) < card < hover.
+    // Dark: inset (the panel itself) < hover < card. Up from the card there
+    // is no room (ink-muted is at the AA floor there): the hover steps down,
+    // still a step above what sits inside the card.
     expect(dark["surface-inset"]).toBe(dark.surface);
     expect(luminance(dark, "surface-inset")).toBeLessThan(
-      luminance(dark, "surface-card")
-    );
-    expect(luminance(dark, "surface-card")).toBeLessThan(
       luminance(dark, "surface-card-hover")
+    );
+    expect(luminance(dark, "surface-card-hover")).toBeLessThan(
+      luminance(dark, "surface-card")
     );
   });
 
@@ -305,17 +311,44 @@ describe("surface layers", () => {
     expect(luminance(light, "page-card-hover")).toBeGreaterThan(
       luminance(light, "page-inset")
     );
-    // Dark: three layers, page < card < inset, and the hover steps up too.
+    // Dark: three layers, page < card < inset, and the hover steps down,
+    // between the page and the card.
     expect(luminance(dark, "surface-sunken")).toBeLessThan(
       luminance(dark, "surface")
     );
     expect(luminance(dark, "surface")).toBeLessThan(
       luminance(dark, "page-inset")
     );
-    expect(luminance(dark, "surface")).toBeLessThan(
+    expect(luminance(dark, "surface-sunken")).toBeLessThan(
       luminance(dark, "page-card-hover")
     );
+    expect(luminance(dark, "page-card-hover")).toBeLessThan(
+      luminance(dark, "surface")
+    );
   });
+
+  // The hover is a step you can see (DIRECAO › Estados): at 1.04:1 the dark
+  // panel's hovered row could not be told apart (review of Task 15, I2).
+  const CARD_HOVER_CONTEXTS: [
+    string,
+    Record<string, string>,
+    string,
+    string,
+  ][] = [
+    ["panel, light", light, "surface-card", "surface-card-hover"],
+    ["panel, dark", dark, "surface-card", "surface-card-hover"],
+    ["phone, light", light, "surface", "page-card-hover"],
+    ["phone, dark", dark, "surface", "page-card-hover"],
+  ];
+  for (const [context, tokens, card, hover] of CARD_HOVER_CONTEXTS) {
+    it(`${context}: the card's hover is a visible step down from it`, () => {
+      const at = (name: string) => tokens[name] as string;
+      expect(contrastRatio(at(card), at(hover))).toBeGreaterThanOrEqual(1.06);
+      expect(relativeLuminance(at(hover))).toBeLessThan(
+        relativeLuminance(at(card))
+      );
+    });
+  }
 
   // With the pointer on a card's secondary button the card is hovered too: the
   // button's hover must stay a step away from the hovered card, or its shape

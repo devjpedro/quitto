@@ -138,9 +138,11 @@
   --warning-subtle: #3a3120;
   --danger: #ff8a7a;
   --danger-subtle: #3d2420;
-  /* The card one step above the panel; what sits inside it one step below. */
+  /* The card one step above the panel; what sits inside it one step below.
+     The hover steps down too, as in light: up from the card there is no
+     room (ink-muted meets the AA floor at #32332d). */
   --surface-card: #2e2f2a;
-  --surface-card-hover: #31322c;
+  --surface-card-hover: #282924;
   --surface-inset: #242521;
   /* Darker still: the hovered card is lighter, so a lighter hover would meet it. */
   --surface-inset-hover: #1c1d1a;
@@ -149,8 +151,9 @@
   --nav-hover: #1f201c;
   --brand-hover: #24503a;
   --on-brand-alert: #ffb3a6;
-  /* The phone: card #242521 on the page #1a1b18, what sits inside one step up. */
-  --page-card-hover: #2a2b26;
+  /* The phone: card #242521 on the page #1a1b18, what sits inside one step
+     up, the hover one step down (between the card and the page). */
+  --page-card-hover: #1f201c;
   --page-inset: #2e2f2a;
   --page-inset-hover: #363731;
   --page-divider: #1f201c;
