@@ -4,10 +4,13 @@ import { m } from "@/paraglide/messages.js";
 import type { MomentCardView } from "./moment-card";
 import type { NavCounts } from "./nav-items";
 import { Sidebar } from "./sidebar";
+import type { SidebarContracts } from "./sidebar-contracts";
 import { TabBar } from "./tab-bar";
 import { TopBar } from "./top-bar";
 
 export interface ShellProps {
+  /** "Contratos ativos" in the sidebar: the 5 newest and the total; null while the home loads (a skeleton), none hides the group. */
+  activeContracts: SidebarContracts | null;
   identity: SessionIdentity | null;
   /** The milestone of the moment (lime card at the foot of the sidebar); null hides it. */
   moment: MomentCardView | null;

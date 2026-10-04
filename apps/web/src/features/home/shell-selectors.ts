@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHydrated } from "@tanstack/react-router";
 import type { NavCounts } from "@/components/layout/nav-items";
+import type { SidebarContracts } from "@/components/layout/sidebar-contracts";
 import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "./api";
 import {
@@ -12,7 +13,7 @@ import {
 import type { Home } from "./types";
 
 // What the shell reads from GET /api/home: the bell's count, the sidebar's
-// lime card and the sidebar's counts. Each one never throws (the shell must
+// lime card, the sidebar's counts and the sidebar's active contracts. Each one never throws (the shell must
 // not go down with the home) and shows nothing during SSR and the hydration
 // pass: the shell renders before the streamed home lands, so anything the
 // server HTML does not have would be a hydration mismatch.
@@ -35,6 +36,14 @@ const momentAndToday = (
 };
 
 const NO_COUNTS: NavCounts = { contracts: 0, now: 0 };
+
+/** The sidebar's active contracts: the 5 newest from the home, and how many there are. */
+const activeContracts = (home: Home): SidebarContracts => ({
+  items: home.activeContracts,
+  total: home.activeContractsCount,
+});
+
+const NO_CONTRACTS: SidebarContracts = { items: [], total: 0 };
 
 /** Unread count for the bell's badge; 0 until hydrated. */
 export function useUnreadCount(): number {
@@ -69,4 +78,25 @@ export function useNavCounts(): NavCounts {
     throwOnError: false,
   });
   return hydrated && data ? data : NO_COUNTS;
+}
+
+/**
+ * The sidebar's "Contratos ativos": null until hydrated (the server HTML has
+ * no home) and while the home loads, which the sidebar shows as a skeleton;
+ * none when the home fails, so the skeleton never stays for good.
+ */
+export function useActiveContracts(): SidebarContracts | null {
+  const hydrated = useHydrated();
+  const { data, isError } = useQuery({
+    ...homeQueryOptions,
+    select: activeContracts,
+    throwOnError: false,
+  });
+  if (!hydrated) {
+    return null;
+  }
+  if (data) {
+    return data;
+  }
+  return isError ? NO_CONTRACTS : null;
 }

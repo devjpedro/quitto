@@ -48,6 +48,7 @@ async function renderAt(
   const rootRoute = createRootRoute({
     component: () => (
       <AppFrame
+        activeContracts={{ items: [], total: 0 }}
         identity={maria}
         moment={null}
         navCounts={{ contracts: 0, now: 0 }}
@@ -267,13 +268,13 @@ describe("AppFrame", () => {
       "bg-surface",
       "border-transparent"
     );
-    // Hover tints with the panel's white; the active row stays black.
+    // Hover with nav-hover (one step on the canvas); the active row stays black.
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
     const nav = within(sidebarNav as HTMLElement);
     expect(nav.getByRole("link", { name: "Agora" })).toHaveClass(
-      "hover:bg-surface/60"
+      "hover:bg-nav-hover"
     );
     expect(nav.getByRole("link", { name: "Contratos" })).toHaveClass(
       "data-[status=active]:bg-ink",
@@ -397,5 +398,116 @@ describe("AppFrame", () => {
       "href",
       "/contracts/new"
     );
+  });
+});
+
+const SIX = {
+  total: 6,
+  items: [
+    {
+      contractId: "c6",
+      title: "Notebook da Marina",
+      paidCount: 2,
+      totalCount: 12,
+      hasOverdue: true,
+    },
+    {
+      contractId: "c5",
+      title: "Aluguel da sala",
+      paidCount: 4,
+      totalCount: 12,
+      hasOverdue: true,
+    },
+    {
+      contractId: "c4",
+      title: "Moto do Rafa",
+      paidCount: 2,
+      totalCount: 10,
+      hasOverdue: false,
+    },
+    {
+      contractId: "c3",
+      title: "Empréstimo do Carlos",
+      paidCount: 6,
+      totalCount: 10,
+      hasOverdue: false,
+    },
+    {
+      contractId: "c2",
+      title: "Celular da Ana",
+      paidCount: 9,
+      totalCount: 10,
+      hasOverdue: false,
+    },
+  ],
+};
+
+describe("Sidebar · Contratos ativos (mockup 13)", () => {
+  it("até 5, na ordem que chegam, cada um com o anel e a fração; Ver todos (N) quando há mais", async () => {
+    await renderAt("/", { activeContracts: SIX });
+    const list = screen.getByRole("list", { name: "Contratos ativos" });
+    const links = within(list).getAllByRole("link");
+    expect(links).toHaveLength(5);
+    expect(links[0]).toHaveTextContent("Notebook da Marina");
+    expect(links[0]).toHaveAttribute("href", "/contracts/c6");
+    expect(links[0]?.querySelector("svg")).toHaveAttribute("width", "16");
+    expect(links[2]).toHaveTextContent("2/10");
+    expect(screen.getByRole("link", { name: "Ver todos (6)" })).toHaveAttribute(
+      "href",
+      "/contracts"
+    );
+  });
+
+  it("a marca de atraso é dita ao leitor de tela; a fração também", async () => {
+    await renderAt("/", { activeContracts: SIX });
+    expect(
+      screen.getByRole("link", {
+        name: "Notebook da Marina em atraso, 2 de 12 quitadas",
+      })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Moto do Rafa 2 de 10 quitadas" })
+    ).toBeVisible();
+  });
+
+  it("antes do home: 3 linhas de esqueleto; com 0 contratos, nada", async () => {
+    await renderAt("/", { activeContracts: null });
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    // The group's shape while the home loads (decision 25): hidden from AT, no list yet.
+    const skeleton = (sidebarNav as HTMLElement).querySelector(
+      "[data-sidebar-contracts-skeleton]"
+    );
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    expect(skeleton?.querySelectorAll("[data-skeleton-row]")).toHaveLength(3);
+    expect(screen.queryByRole("list", { name: "Contratos ativos" })).toBeNull();
+  });
+
+  it("com 0 contratos (ou o home com erro), nem grupo nem esqueleto", async () => {
+    await renderAt("/", { activeContracts: { items: [], total: 0 } });
+    expect(screen.queryByRole("list", { name: "Contratos ativos" })).toBeNull();
+    expect(
+      document.querySelector("[data-sidebar-contracts-skeleton]")
+    ).toBeNull();
+  });
+
+  it("itens da sidebar: hover com nav-hover e foco por dentro, sem cortar no canto; com 5, sem Ver todos", async () => {
+    await renderAt("/", { activeContracts: { ...SIX, total: 5 } });
+    expect(screen.queryByRole("link", { name: "Ver todos (5)" })).toBeNull();
+    // The sidebar's own nav: the tab bar has a "Contratos" link too, in the DOM with it.
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    const contracts = nav.getByRole("link", { name: "Contratos" });
+    expect(contracts).toHaveClass(
+      "hover:bg-nav-hover",
+      "focus-visible:ring-inset"
+    );
+    const row = within(
+      nav.getByRole("list", { name: "Contratos ativos" })
+    ).getAllByRole("link")[0];
+    expect(row).toHaveClass("hover:bg-nav-hover", "focus-visible:ring-inset");
   });
 });

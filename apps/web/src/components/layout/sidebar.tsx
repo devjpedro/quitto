@@ -9,10 +9,11 @@ import { MomentCard } from "./moment-card";
 import { type NavItem, PRIMARY_NAV } from "./nav-items";
 import { notificationsLabel } from "./notifications-label";
 import { notificationsTrigger } from "./notifications-trigger";
+import { SidebarContractsGroup } from "./sidebar-contracts";
 
-// On the canvas (structure B): hover tints with the panel's white; the active row stays black.
+// On the canvas (structure B): hover with nav-hover, focus inside the row; the active row stays black.
 const LINK =
-  "flex min-h-10 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
+  "flex min-h-10 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
 
 /** The number at the end of a row. Hidden from AT: the row's name carries it. */
 function RowCount({ active, count }: { active: boolean; count: number }) {
@@ -54,6 +55,7 @@ function SidebarLink({ count, item }: { count: number; item: NavItem }) {
 }
 
 export function Sidebar({
+  activeContracts,
   identity,
   moment,
   navCounts,
@@ -77,7 +79,10 @@ export function Sidebar({
       >
         <MagnifyingGlass aria-hidden="true" size={16} />
         <span className="flex-1 text-left">{m.search_open()}</span>
-        <span aria-hidden="true" className="font-mono text-xs">
+        <span
+          aria-hidden="true"
+          className="rounded-md bg-surface-sunken px-1.5 py-1 font-mono text-[11px] text-ink-muted leading-none"
+        >
           ⌘K
         </span>
       </button>
@@ -112,6 +117,7 @@ export function Sidebar({
             <RowCount active={false} count={unreadCount} />
           ) : null}
         </button>
+        <SidebarContractsGroup contracts={activeContracts} />
       </nav>
       <div className="mt-auto flex flex-col gap-3">
         {moment ? <MomentCard moment={moment} /> : null}
