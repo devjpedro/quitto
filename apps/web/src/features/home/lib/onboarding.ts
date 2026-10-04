@@ -1,4 +1,5 @@
-import type { HomeOnboarding } from "../types";
+import { daysBetween } from "@/lib/locale-format";
+import type { Home, HomeOnboarding } from "../types";
 
 export type OnboardingStepId =
   | "account"
@@ -27,8 +28,38 @@ function isHeroStep(id: OnboardingStepId | undefined): id is HeroStepId {
   return id === "contract" || id === "pix" || id === "reminders";
 }
 
-/** "Comece por aqui": progress counts the required steps only; it hides once those are done or it is dismissed. */
-export function onboardingView(o: HomeOnboarding): OnboardingView {
+/** The guide hides itself once the account outgrew it (owner's decision 9): this many active contracts… */
+export const GUIDE_AUTO_HIDE_CONTRACTS = 3;
+/** …or this many days of account, whichever comes first. */
+export const GUIDE_AUTO_HIDE_DAYS = 30;
+
+export interface GuideContext {
+  activeContracts: number;
+  today: string;
+}
+
+/**
+ * Only contracts where the person pays or receives count (coordinator's rule):
+ * `activeContractsCount` (the sidebar's) also counts the ones they follow.
+ */
+export function guideContext(
+  home: Pick<Home, "onboarding" | "today">
+): GuideContext {
+  return {
+    activeContracts: home.onboarding.activePartyContracts,
+    today: home.today,
+  };
+}
+
+/**
+ * "Comece por aqui": progress counts the required steps only; it hides once
+ * those are done, it is dismissed, or the account outgrew it: 3 active
+ * contracts where the person is a party, or 30 days, whichever first.
+ */
+export function onboardingView(
+  o: HomeOnboarding,
+  context: GuideContext
+): OnboardingView {
   const steps: OnboardingStep[] = [
     { id: "account", done: true, optional: false },
     { id: "contract", done: o.hasContract, optional: false },
@@ -41,12 +72,15 @@ export function onboardingView(o: HomeOnboarding): OnboardingView {
   const required = steps.filter((s) => !s.optional);
   const doneCount = required.filter((s) => s.done).length;
   const next = required.find((s) => !s.done)?.id;
+  const outgrown =
+    context.activeContracts >= GUIDE_AUTO_HIDE_CONTRACTS ||
+    daysBetween(o.accountCreatedOn, context.today) >= GUIDE_AUTO_HIDE_DAYS;
   return {
     steps,
     doneCount,
     total: required.length,
     next: isHeroStep(next) ? next : null,
-    visible: o.dismissedAt === null && doneCount < required.length,
+    visible: o.dismissedAt === null && doneCount < required.length && !outgrown,
   };
 }
 

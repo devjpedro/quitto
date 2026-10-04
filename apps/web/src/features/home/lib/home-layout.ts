@@ -2,7 +2,11 @@ import type { Locale } from "@quitto/shared";
 import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
-import { type OnboardingView, onboardingView } from "./onboarding";
+import {
+  guideContext,
+  type OnboardingView,
+  onboardingView,
+} from "./onboarding";
 
 export interface HomeLayout {
   allClear: boolean;
@@ -21,7 +25,7 @@ export interface HomeLayout {
  * guide card: the guide already answers "what do I do now".
  */
 export function homeLayout(home: Home): HomeLayout {
-  const guide = onboardingView(home.onboarding);
+  const guide = onboardingView(home.onboarding, guideContext(home));
   const hasActions = home.actions.length > 0;
   const hasContract = home.onboarding.hasContract;
   const heroGuide = guide.visible && !hasActions;

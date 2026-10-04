@@ -5,7 +5,7 @@ import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
 import { sinceDate } from "./action-text";
 import type { MomentMilestoneCell } from "./milestones";
-import { onboardingView } from "./onboarding";
+import { guideContext, onboardingView } from "./onboarding";
 
 /** The one milestone worth showing right now. "guide" is not a strip cell: on a phone the guide itself is on the page. */
 export type MomentMilestone =
@@ -44,7 +44,7 @@ export function momentMilestone(home: Home): MomentMilestone | null {
   if (receivedCents > 0) {
     return { id: "received", month, cents: receivedCents };
   }
-  const guide = onboardingView(home.onboarding);
+  const guide = onboardingView(home.onboarding, guideContext(home));
   return guide.visible
     ? { id: "guide", done: guide.doneCount, total: guide.total }
     : null;

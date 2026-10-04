@@ -25,6 +25,7 @@ const { dismiss } = vi.hoisted(() => ({ dismiss: vi.fn() }));
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
+const PIX_ROW = /Cadastrar sua chave PIX/;
 const NINE_OF_TEN = /parcela 9 de 10/;
 
 vi.mock("@/lib/api", () => ({
@@ -515,7 +516,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="hero"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />,
       { client }
     );
@@ -540,6 +541,8 @@ describe("seções do home", () => {
     });
     expect(guide).toHaveClass("lg:grid-cols-[1fr_1.3fr]");
     expect(guide).not.toHaveClass("md:grid-cols-[1fr_1.3fr]");
+    // Beside the green card the list keeps its own height, not the card's.
+    expect(screen.getByRole("list")).toHaveClass("self-start");
     expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
     expect(screen.getByText("opcional")).toBeVisible();
     await userEvent.click(
@@ -562,7 +565,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="hero"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />
     );
     const pix = screen.getByRole("link", { name: "Cadastrar chave PIX" });
@@ -574,7 +577,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={fresh}
         variant="hero"
-        view={onboardingView(fresh)}
+        view={onboardingView(fresh, { activeContracts: 0, today: TODAY })}
       />
     );
     expect(
@@ -594,15 +597,16 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="compact"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />
     );
     expect(
-      screen.getByRole("region", { name: "Comece por aqui · 3 de 4" })
+      screen.getByRole("region", { name: "Comece por aqui" })
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Comece por aqui · 3 de 4" })
+      screen.getByRole("heading", { name: "Comece por aqui" })
     ).toBeVisible();
+    expect(screen.getByText("3 de 4")).toBeVisible();
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.queryByText("Cadastre sua chave PIX.")).toBeNull();
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
@@ -613,6 +617,38 @@ describe("seções do home", () => {
     expect(
       screen.getByRole("button", { name: "dispensar guia" })
     ).toBeVisible();
+  });
+
+  it("guia: cada passo tem o estado como âncora, e o próximo vem tingido com a ação", () => {
+    const onboarding = {
+      ...homeFixture().onboarding,
+      hasPixKey: false,
+      remindersOn: false,
+    };
+    renderWithProviders(
+      <OnboardingGuide
+        onboarding={onboarding}
+        variant="compact"
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
+      />
+    );
+    expect(
+      screen.getByRole("heading", { name: "Comece por aqui" })
+    ).toHaveClass("font-display");
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("bg-surface-card", "divide-divider");
+    expect(list).not.toHaveClass("border");
+    // Alone (a flex column), self-start would shrink the list to its words.
+    expect(list).not.toHaveClass("self-start");
+    const next = screen.getByRole("link", { name: PIX_ROW });
+    expect(next).toHaveClass("bg-surface-card-hover");
+    expect(next).toHaveTextContent("próximo passo");
+    expect(within(next).getByText("Cadastrar")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    );
+    expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
+    expect(screen.getByText("opcional")).not.toHaveClass("line-through");
   });
 });
 
