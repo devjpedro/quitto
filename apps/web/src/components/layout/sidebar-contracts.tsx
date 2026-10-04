@@ -23,10 +23,11 @@ export interface SidebarContracts {
 // pr-1.5: the mockup's 8 px measured from its 210 px sidebar, so the
 // fraction ends where the mockup's does and the title gets its 132 px.
 // The open contract (data-status=active, aria-current=page) is a tinted fill
-// on the whole row, never a side bar: the panel's surface, like the
-// Notificações row while its panel is open, one step past the hover.
+// on the whole row, never a side bar: the raised surface, one step past the
+// hover. In light it is the panel's white; in dark the panel's surface sat at
+// 1.06:1 from the hover and read as a stuck one, so it takes the raised step.
 const ROW =
-  "group flex h-8 items-center gap-2 rounded-control pr-1.5 pl-3 text-[13px] text-ink transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset data-[status=active]:bg-surface";
+  "group flex h-8 items-center gap-2 rounded-control pr-1.5 pl-3 text-[13px] text-ink transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset data-[status=active]:bg-surface-raised";
 
 function ContractRow({ contract }: { contract: SidebarContract }) {
   const { paidCount: paid, totalCount: total } = contract;
@@ -44,7 +45,7 @@ function ContractRow({ contract }: { contract: SidebarContract }) {
           // The halo is the row's own fill, so it follows the hover and the open row.
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-danger ring-2 ring-canvas transition-shadow group-hover:ring-nav-hover group-data-[status=active]:ring-surface"
+            className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-danger ring-2 ring-canvas transition-shadow group-hover:ring-nav-hover group-data-[status=active]:ring-surface-raised"
           />
         ) : null}
       </span>

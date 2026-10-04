@@ -494,7 +494,7 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     ).not.toHaveAttribute("aria-current");
   });
 
-  it("o contrato aberto: a linha inteira com o fundo do painel, o foco ainda por dentro", async () => {
+  it("o contrato aberto: a linha inteira com o fundo elevado, o foco ainda por dentro", async () => {
     await renderAt("/contracts/c6", { activeContracts: SIX });
     const [open, ...others] = within(
       screen.getByRole("list", { name: "Contratos ativos" })
@@ -502,15 +502,17 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     expect(open).toHaveAttribute("aria-current", "page");
     expect(open).toHaveAttribute("data-status", "active");
     // Selection is a tinted fill on the whole row (DIRECAO), never a colored
-    // side bar: the panel's own surface, like the Notificações row while its
-    // panel is open. The focus ring stays inside, as on every row.
+    // side bar: the raised surface, white in light and one step up in dark,
+    // where the panel's surface sat at 1.06:1 from the hover and read as a
+    // stuck hover. The focus ring stays inside, as on every row.
     expect(open).toHaveClass(
-      "data-[status=active]:bg-surface",
+      "data-[status=active]:bg-surface-raised",
       "focus-visible:ring-inset"
     );
+    expect(open).not.toHaveClass("data-[status=active]:bg-surface");
     // The overdue mark's halo takes the row's fill.
     expect(open?.querySelector(".bg-danger")).toHaveClass(
-      "group-data-[status=active]:ring-surface"
+      "group-data-[status=active]:ring-surface-raised"
     );
     for (const other of others) {
       expect(other).not.toHaveAttribute("aria-current");

@@ -114,9 +114,11 @@ const NON_TEXT_PAIRS: [string, string][] = [
   ["ink", "track"],
   ["on-brand-alert", "brand-surface"],
   ["on-brand-alert", "brand-hover"],
-  // The overdue mark on a sidebar ring, at rest and on hover.
+  // The overdue mark on a sidebar ring, at rest, on hover and on the open
+  // contract's row.
   ["danger", "canvas"],
   ["danger", "nav-hover"],
+  ["danger", "surface-raised"],
 ];
 
 // [foreground, background, alpha] text drawn with opacity on a token: the
@@ -325,6 +327,18 @@ describe("surface layers", () => {
     expect(luminance(dark, "page-card-hover")).toBeLessThan(
       luminance(dark, "surface")
     );
+  });
+
+  // The open contract's row in the sidebar (surface-raised) is a step past
+  // the other rows' hover (nav-hover), or in dark it reads as a stuck hover:
+  // the panel's surface sat at 1.06:1 there (review of Task 20, r1).
+  it("the sidebar's open row stands a step away from the hover, in light and in dark", () => {
+    for (const tokens of [light, dark]) {
+      const at = (name: string) => tokens[name] as string;
+      expect(
+        contrastRatio(at("surface-raised"), at("nav-hover"))
+      ).toBeGreaterThanOrEqual(1.1);
+    }
   });
 
   // The hover is a step you can see (DIRECAO › Estados): at 1.04:1 the dark
