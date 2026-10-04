@@ -863,7 +863,9 @@ describe("HomePage", () => {
     // No margin of its own is left at the end of the panel.
     const lower = lowerPart();
     expect(lower).toHaveClass("lateral:hidden");
-    expect(lower).not.toHaveClass("lateral:grid", "hidden");
+    // One class per line: with two, .not passes as soon as either is missing.
+    expect(lower).not.toHaveClass("lateral:grid");
+    expect(lower).not.toHaveClass("hidden");
   });
 
   it("3 → 2 ações pelo teclado: a lista não remonta, e o foco vai para o cartão que ficou no lugar", async () => {
