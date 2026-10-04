@@ -12,7 +12,7 @@ const DEFAULT_SIZES = "390x844,1512x860,1920x1080";
 const THEMES = ["light", "dark"] as const;
 /** Below md the app is the phone layout: emulate a phone there. */
 const MD = 768;
-/** From lateral (90rem) up the home shows "Notificações recentes". */
+/** From lateral (90rem) up the home can show "Notificações recentes". */
 const LATERAL = 1440;
 /**
  * Every loading state the app draws: the Skeleton pulses (ui and legacy), the
@@ -70,23 +70,8 @@ async function sessionCookies(): Promise<
   });
 }
 
-/**
- * Waits for the page to settle before a shot. networkidle is not enough: it
- * is met while the bundle still hydrates (no request for 500 ms), and only
- * then "Notificações recentes" asks for its list (useRecentNotifications waits
- * for hydration and a lateral screen). So, on the home from lateral up, wait
- * for that list or its empty state; then for no loading state on screen.
- */
-async function settle(page: Page, width: number): Promise<void> {
-  if (expectedPath === "/" && width >= LATERAL) {
-    const recent = page.getByRole("region", { name: "Notificações recentes" });
-    // The skeleton is aria-hidden, so neither of these matches it.
-    await recent
-      .getByRole("list")
-      .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
-      .first()
-      .waitFor();
-  }
+/** Waits until no loading state is on screen (the home's skeleton included). */
+async function noLoading(page: Page): Promise<void> {
   await page.waitForFunction(
     (selector) =>
       ![...document.querySelectorAll(selector)].some((element) =>
@@ -94,6 +79,31 @@ async function settle(page: Page, width: number): Promise<void> {
       ),
     LOADING
   );
+}
+
+/**
+ * Waits for the page to settle before a shot. networkidle is not enough: it
+ * is met while the bundle still hydrates (no request for 500 ms), and only
+ * then "Notificações recentes" asks for its list (useRecentNotifications waits
+ * for hydration and a lateral screen). So wait for no loading state; then, on
+ * the home from lateral up, for that list or its empty state, but only if the
+ * block is there: the first access has no lower part, and a failed list takes
+ * the block away. Never demand it.
+ */
+async function settle(page: Page, width: number): Promise<void> {
+  await noLoading(page);
+  if (expectedPath === "/" && width >= LATERAL) {
+    const recent = page.getByRole("region", { name: "Notificações recentes" });
+    if ((await recent.count()) > 0) {
+      // The skeleton is aria-hidden, so neither of these matches it.
+      await recent
+        .getByRole("list")
+        .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
+        .first()
+        .waitFor();
+    }
+  }
+  await noLoading(page);
   await page.evaluate(() => document.fonts.ready);
 }
 
