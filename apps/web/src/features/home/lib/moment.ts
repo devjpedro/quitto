@@ -4,15 +4,12 @@ import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
 import { sinceDate } from "./action-text";
-import type { MilestoneCell } from "./milestones";
+import type { MomentMilestoneCell } from "./milestones";
 import { onboardingView } from "./onboarding";
 
 /** The one milestone worth showing right now. "guide" is not a strip cell: on a phone the guide itself is on the page. */
 export type MomentMilestone =
-  | Extract<
-      MilestoneCell,
-      { id: "all_clear" | "closest" | "paid" | "received" }
-    >
+  | MomentMilestoneCell
   | { done: number; id: "guide"; total: number };
 
 export interface MomentView {

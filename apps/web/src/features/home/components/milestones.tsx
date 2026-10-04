@@ -1,9 +1,6 @@
 import type { Locale } from "@quitto/shared";
 import { useId } from "react";
-import { Money } from "@/components/ui/money";
-import { ProgressRing } from "@/components/ui/progress-ring";
 import { Tag } from "@/components/ui/tag";
-import { formatMoney } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -11,82 +8,23 @@ import {
   type MilestoneCell,
   milestoneCells,
   onlyMomentStrip,
-  sharePercent,
   stripCells,
 } from "../lib/milestones";
-import { type MomentMilestone, momentView } from "../lib/moment";
+import { momentView } from "../lib/moment";
 import type { HomeMilestones } from "../types";
+import { Bar, LabelRow, MomentCell, ValueCell } from "./milestone-cells";
 import { SectionTitle } from "./section-title";
 
-/** A milestone's bar: decorative, the % is written beside the label. */
-function Bar({ percent }: { percent: number }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="mt-3 block h-1.5 overflow-hidden rounded-full bg-track"
-    >
-      <span
-        className="block h-full min-w-1.5 rounded-full bg-brand"
-        style={{ width: `${percent}%` }}
-      />
-    </span>
-  );
-}
-
-function LabelRow({
-  label,
-  percent,
-}: {
-  label: string;
-  percent: number | null;
-}) {
-  return (
-    <span className="flex items-baseline justify-between gap-2 text-[12.5px] text-ink-muted">
-      <span>{label}</span>
-      {percent === null ? null : (
-        <b className="font-semibold text-[13px] text-ink tabular-nums">
-          {m.home_percent({ percent })}
-        </b>
-      )}
-    </span>
-  );
-}
-
-/** A value milestone (DIRECAO › Progresso): the value, "de R$ X", the % and a bar when there is a whole to measure against. */
-function ValueCell({
-  cents,
-  label,
+/** Label and title come from momentView, the lime card's text: the strip and the sidebar always say the same. */
+function CellView({
+  cell,
   locale,
-  totalCents,
+  today,
 }: {
-  cents: number;
-  label: string;
-  locale: Locale;
-  totalCents: number | null;
-}) {
-  const percent = totalCents ? sharePercent(cents, totalCents) : null;
-  return (
-    <>
-      <LabelRow label={label} percent={percent} />
-      <Money cents={cents} className="mt-1.5 block" size="milestone" />
-      {totalCents ? (
-        <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted tabular-nums">
-          {m.home_milestone_of({ amount: formatMoney(totalCents, locale) })}
-        </span>
-      ) : null}
-      {percent === null ? null : <Bar percent={percent} />}
-    </>
-  );
-}
-
-interface CellProps {
   cell: MilestoneCell;
   locale: Locale;
   today: string;
-}
-
-/** Label and title come from momentView, the lime card's text: the strip and the sidebar always say the same. */
-function CellView({ cell, locale, today }: CellProps) {
+}) {
   switch (cell.id) {
     case "all_clear": {
       const view = momentView(cell, locale, today);
@@ -140,27 +78,6 @@ function CellView({ cell, locale, today }: CellProps) {
         />
       );
   }
-}
-
-/** The milestone of the moment, opening the strip on a phone: lime, with the 44 px ring (mockup 13, frame D). */
-function MomentCell({ cell, locale, today }: CellProps) {
-  const view = momentView(cell as MomentMilestone, locale, today);
-  return (
-    <>
-      {view.percent === null ? null : (
-        <ProgressRing percent={view.percent} size={44} tone="onHighlight" />
-      )}
-      <span className="min-w-0">
-        <span className="block text-[12.5px]">{view.label}</span>
-        <span className="block font-semibold text-[15px] leading-[1.3]">
-          {view.title}
-        </span>
-        {view.detail ? (
-          <span className="block text-[12.5px]">{view.detail}</span>
-        ) : null}
-      </span>
-    </>
-  );
 }
 
 /**
