@@ -51,3 +51,12 @@ export const FEW_SPANS: Record<1 | 2, { actions: string; upcoming: string }> = {
 /** The lower part when the list went up: notifications (and the guide) left, milestones right, 3fr/2fr at every width from lateral. */
 export const LOWER_FEW =
   "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-7 lateral:gap-y-9";
+
+/**
+ * The lower part with few cards, always on that grid: a block alone takes the
+ * 3fr track, never the whole width. With nothing to show from lateral it is
+ * hidden there, so its margin leaves no gap at the end of the panel.
+ */
+export function lowerFew(shows: boolean): string {
+  return cn(LOWER_STACK, LOWER_FEW, !shows && "lateral:hidden");
+}

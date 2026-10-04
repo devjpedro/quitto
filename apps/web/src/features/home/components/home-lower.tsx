@@ -7,10 +7,10 @@ import { onlyMomentStrip, stripHasCells } from "../lib/milestones";
 import type { HomeMilestones } from "../types";
 import {
   LOWER_COLUMN,
-  LOWER_FEW,
   LOWER_STACK,
   LOWER_WITH_SIDE,
   lowerColumn,
+  lowerFew,
 } from "./home-grid";
 import { Milestones } from "./milestones";
 
@@ -20,9 +20,9 @@ import { Milestones } from "./milestones";
  * and guide on the left; milestones and "Notificações recentes" on the right;
  * from wide each takes a column of its own. With few cards the list went up
  * (ActionsRow): notifications and the guide left, milestones right (mockup
- * 13, frame E), or the guide right when there are no milestones. The side
- * column exists only with something in it, decided by the data
- * (`data-lower`): a block that fails leaves no 2fr track behind.
+ * 13, frame E), or the guide right when there are no milestones; a block
+ * alone keeps its 3fr track there. A column shows only with something in it,
+ * decided by the data (`data-lower`): a block that fails leaves no track behind.
  */
 export function HomeLower({
   few,
@@ -59,11 +59,10 @@ export function HomeLower({
       milestones: sideMilestones,
       notifications: !notificationsGone,
     });
-    const columns = left && right;
     return (
       <div
-        className={cn(LOWER_STACK, columns && LOWER_FEW)}
-        data-lower={columns ? "columns" : "stack"}
+        className={lowerFew(left || right)}
+        data-lower={left && right ? "columns" : "stack"}
       >
         <div className={lowerColumn(left)}>
           {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}

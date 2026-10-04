@@ -748,6 +748,8 @@ describe("HomePage", () => {
     expect(lower?.firstElementChild).toHaveClass("lateral:hidden");
     expect(lower?.lastElementChild).toContainElement(milestones);
     expect(lower?.lastElementChild).not.toHaveClass("lateral:hidden");
+    // The grid stays: alone, the milestones take the 3fr track, never the whole width.
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
   });
 
   it("só o marco do momento e a lista de notificações falhando: a 1440 a parte de baixo empilha, sem trilha em branco", async () => {
@@ -802,7 +804,7 @@ describe("HomePage", () => {
     expect(lower?.lastElementChild).toContainElement(guide);
   });
 
-  it("poucas ações sem marcos, com o guia e a lista de notificações falhando: sobra um bloco, e a parte de baixo empilha", async () => {
+  it("poucas ações sem marcos, com o guia e a lista de notificações falhando: sobra um bloco, na trilha de 3fr", async () => {
     setScreenWidth(1512);
     getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
     getHome.mockResolvedValue({
@@ -821,6 +823,50 @@ describe("HomePage", () => {
     expect(lowerPart()?.firstElementChild).toContainElement(
       screen.getByRole("button", { name: "dispensar guia" }).closest("section")
     );
+    expect(lowerPart()?.lastElementChild).toHaveClass("lateral:hidden");
+    expect(lowerPart()).toHaveClass(...LOWER_FEW.split(" "));
+  });
+
+  it("poucas ações sem marcos e sem guia: as notificações sozinhas ficam na trilha de 3fr, sem esticar na largura toda", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue({ data: [], error: null });
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction()] }),
+      error: null,
+    });
+    renderHome();
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    const lower = lowerPart();
+    // One block: no second column, but the grid stays, so the list keeps the
+    // width it has beside the milestones (3fr) instead of the whole content.
+    expect(lower).toHaveAttribute("data-lower", "stack");
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
+  });
+
+  it("poucas ações sem marcos, sem guia e com a lista de notificações falhando: nada a mostrar a partir de 1440, e a parte de baixo inteira some ali", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction()] }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("region", { name: "Próximos 30 dias" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    // Hidden from lateral only: below it a phone-only strip may live in it.
+    // No margin of its own is left at the end of the panel.
+    const lower = lowerPart();
+    expect(lower).toHaveClass("lateral:hidden");
+    expect(lower).not.toHaveClass("lateral:grid", "hidden");
   });
 
   it("3 → 2 ações pelo teclado: a lista não remonta, e o foco vai para o cartão que ficou no lugar", async () => {
