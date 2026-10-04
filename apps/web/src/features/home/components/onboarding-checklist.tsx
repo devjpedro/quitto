@@ -1,4 +1,4 @@
-import { CaretRight, Check } from "@phosphor-icons/react";
+import { CaretRight } from "@phosphor-icons/react";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -8,6 +8,7 @@ import {
   stepTarget,
 } from "../lib/onboarding";
 import type { HomeOnboarding } from "../types";
+import { StepAnchor, type StepState } from "./step-anchor";
 import { StepLink } from "./step-link";
 
 /**
@@ -45,40 +46,6 @@ const STEP_COPY: Record<
     cta: m.onboarding_step_reminders_cta,
   },
 };
-
-type StepState = "done" | "next" | "todo";
-
-/** The step's state is the row's anchor (mockup 13): filled with a check, a ring with a dot, a dashed circle. */
-function StepAnchor({ state }: { state: StepState }) {
-  if (state === "done") {
-    // ink-inverse, not on-brand: in dark the brand turns light green and a
-    // light check on it would read at 1.73:1.
-    return (
-      <span
-        aria-hidden="true"
-        className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand text-ink-inverse"
-      >
-        <Check size={13} weight="bold" />
-      </span>
-    );
-  }
-  if (state === "next") {
-    return (
-      <span
-        aria-hidden="true"
-        className="flex size-6 shrink-0 items-center justify-center rounded-full ring-2 ring-brand ring-inset"
-      >
-        <span className="size-2 rounded-full bg-brand" />
-      </span>
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="size-6 shrink-0 rounded-full border-[1.5px] border-ink-muted border-dashed"
-    />
-  );
-}
 
 function StepRow({
   next,
