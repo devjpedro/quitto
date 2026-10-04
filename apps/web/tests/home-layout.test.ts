@@ -174,21 +174,22 @@ describe("homeLayout: poucas ações", () => {
 
 describe("fewLowerColumns: a parte de baixo com poucas ações", () => {
   it.each([
-    // [milestones, notifications, guide] → [columns, guideRight]
-    [true, true, true, true, false],
-    [true, true, false, true, false],
-    [true, false, true, true, false],
-    [true, false, false, false, false],
-    [false, true, true, true, true],
-    [false, true, false, false, false],
-    [false, false, true, false, false],
-    [false, false, false, false, false],
+    // [milestones, notifications, guide] → [guideRight, left, right]
+    [true, true, true, false, true, true],
+    [true, true, false, false, true, true],
+    [true, false, true, false, true, true],
+    [true, false, false, false, false, true],
+    [false, true, true, true, true, true],
+    [false, true, false, false, true, false],
+    [false, false, true, false, true, false],
+    [false, false, false, false, false, false],
   ])(
-    "marcos %s, notificações %s, guia %s: colunas %s, guia à direita %s",
-    (milestones, notifications, guide, columns, guideRight) => {
+    "marcos %s, notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
+    (milestones, notifications, guide, guideRight, left, right) => {
       expect(fewLowerColumns({ guide, milestones, notifications })).toEqual({
-        columns,
         guideRight,
+        left,
+        right,
       });
     }
   );

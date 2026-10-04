@@ -5,6 +5,7 @@ import {
   onlyMomentStrip,
   sharePercent,
   stripCells,
+  stripHasCells,
 } from "@/features/home/lib/milestones";
 import { homeFixture } from "./home-fixtures";
 
@@ -211,5 +212,43 @@ describe("onlyMomentStrip", () => {
 
   it("sem marco nenhum não há faixa", () => {
     expect(onlyMomentStrip(homeFixture().milestones, null)).toBe(false);
+  });
+});
+
+describe("stripHasCells", () => {
+  const closest = {
+    contractId: "c3",
+    title: "Celular da Ana",
+    paidCount: 9,
+    totalCount: 10,
+    percent: 90,
+    remainingCount: 1,
+    nextDueDate: "2026-10-13",
+  };
+
+  it("sem célula nenhuma, a coluna lateral não tem marcos", () => {
+    expect(stripHasCells(homeFixture().milestones, null)).toBe(false);
+  });
+
+  it("só o marco do momento: a faixa é do celular, e a coluna lateral não tem marcos", () => {
+    const milestones = {
+      ...homeFixture().milestones,
+      closestToPayoff: closest,
+    };
+    expect(stripHasCells(milestones, "closest")).toBe(false);
+  });
+
+  it("o marco do momento e outra célula: a coluna lateral tem marcos", () => {
+    const milestones = {
+      ...homeFixture().milestones,
+      closestToPayoff: closest,
+      settled: {
+        paidCents: 1_250_000,
+        receivedCents: 0,
+        payableTotalCents: 1_250_000,
+        receivableTotalCents: 0,
+      },
+    };
+    expect(stripHasCells(milestones, "closest")).toBe(true);
   });
 });

@@ -10,6 +10,7 @@ import {
   LOWER_FEW,
   LOWER_STACK,
   LOWER_WITH_SIDE,
+  lowerColumn,
 } from "./home-grid";
 import { Milestones } from "./milestones";
 
@@ -53,22 +54,23 @@ export function HomeLower({
   const phoneOnly = onlyMomentStrip(milestones, momentId);
   const sideMilestones = hasContract && stripHasCells(milestones, momentId);
   if (few) {
-    const { columns, guideRight } = fewLowerColumns({
+    const { guideRight, left, right } = fewLowerColumns({
       guide: guide !== null,
       milestones: sideMilestones,
       notifications: !notificationsGone,
     });
+    const columns = left && right;
     return (
       <div
         className={cn(LOWER_STACK, columns && LOWER_FEW)}
         data-lower={columns ? "columns" : "stack"}
       >
-        <div className={LOWER_COLUMN}>
+        <div className={lowerColumn(left)}>
           {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
           <RecentNotifications />
           {guideRight ? null : guide}
         </div>
-        <div className={LOWER_COLUMN}>
+        <div className={lowerColumn(right)}>
           {strip}
           {guideRight ? guide : null}
         </div>
@@ -86,7 +88,7 @@ export function HomeLower({
         {phoneOnly ? strip : null}
         {guide}
       </div>
-      <div className={cn(LOWER_COLUMN, "wide:contents")}>
+      <div className={lowerColumn(columns, "wide:contents")}>
         {phoneOnly ? null : strip}
         {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
         <RecentNotifications />

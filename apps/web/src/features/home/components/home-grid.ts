@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 // The home's lower part (mockups 12 and 13), shared by the content and its
 // skeleton so the page keeps its shape when the home streams in. The rhythm is
 // mockup 13's: 28 px between blocks on a phone, 32 px from md, and from
@@ -9,6 +11,11 @@ export const LOWER_STACK = "mt-3 flex flex-col gap-7 md:mt-4 md:gap-8";
 /** A column of the lower part from lateral; below it, `contents` (its blocks join the page's single column). */
 export const LOWER_COLUMN =
   "contents lateral:flex lateral:min-w-0 lateral:flex-col lateral:gap-9";
+
+/** LOWER_COLUMN for the content: a column with nothing to show from lateral is hidden there, so it adds no gap. */
+export function lowerColumn(shows: boolean, className?: string): string {
+  return cn(LOWER_COLUMN, className, !shows && "lateral:hidden");
+}
 
 /**
  * The lower part with a side column: 3fr/2fr from lateral; from wide 2fr for

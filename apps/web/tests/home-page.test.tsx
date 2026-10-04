@@ -447,6 +447,9 @@ describe("HomePage", () => {
       // blank beside the list or the guide.
       expect(lower).toHaveAttribute("data-lower", "stack");
       expect(lower).not.toHaveClass("lateral:grid");
+      // And it takes no room from lateral: no 32 px gap under the last block.
+      expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
+      expect(lower?.firstElementChild).not.toHaveClass("lateral:hidden");
     }
   );
 
@@ -485,6 +488,7 @@ describe("HomePage", () => {
     const lower = lowerPart();
     expect(lower?.firstElementChild).toContainElement(strip);
     expect(lower?.lastElementChild).toBeEmptyDOMElement();
+    expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
     expect(lower).toHaveAttribute("data-lower", "stack");
   });
 
@@ -685,6 +689,9 @@ describe("HomePage", () => {
     const upcoming = await screen.findByRole("region", {
       name: "Próximos 30 dias",
     });
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
     const row = upcoming.parentElement?.parentElement;
     expect(row).toHaveClass("lateral:grid");
     expect(upcoming.parentElement).toHaveClass(
@@ -699,6 +706,48 @@ describe("HomePage", () => {
       "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
     );
     expect(lower).not.toContainElement(upcoming);
+    // Notifications on the left, milestones on the right (frame E), both shown.
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toContainElement(
+      screen.getByRole("region", { name: "Marcos" })
+    );
+    for (const column of Array.from(lower?.children ?? [])) {
+      expect(column).not.toHaveClass("lateral:hidden");
+    }
+  });
+
+  it("poucas ações com marcos e a lista de notificações falhando: a coluna da esquerda, vazia, some a partir de 1440, e Marcos não desce 32 px", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        milestones: {
+          ...homeFixture().milestones,
+          settled: {
+            paidCents: 1_020_000,
+            receivedCents: 0,
+            payableTotalCents: 2_660_000,
+            receivableTotalCents: 0,
+          },
+        },
+      }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    const milestones = await screen.findByRole("region", { name: "Marcos" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+    const lower = lowerPart();
+    // The left column has nothing to show from lateral (the list failed, no
+    // guide): hidden there, it adds no gap, so the milestones sit 36 px under
+    // the actions' row, not 68.
+    expect(lower?.firstElementChild).toBeEmptyDOMElement();
+    expect(lower?.firstElementChild).toHaveClass("lateral:hidden");
+    expect(lower?.lastElementChild).toContainElement(milestones);
+    expect(lower?.lastElementChild).not.toHaveClass("lateral:hidden");
   });
 
   it("só o marco do momento e a lista de notificações falhando: a 1440 a parte de baixo empilha, sem trilha em branco", async () => {
