@@ -64,8 +64,11 @@ export function EmptyState({
   variant?: "full" | "compact";
 }) {
   if (variant === "compact") {
+    // An empty state is the dashed outline of what will be there (DIRECAO ›
+    // Forma), the same as GhostCard's, with no fill: never a solid box inside
+    // the panel.
     return (
-      <div className="flex flex-col gap-1.5 rounded-card border border-line p-4">
+      <div className="flex flex-col gap-1.5 rounded-card border-[1.5px] border-line-strong border-dashed p-4">
         {iconTile ? (
           <span
             aria-hidden="true"

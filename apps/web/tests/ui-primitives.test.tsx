@@ -10,6 +10,9 @@ import { Money } from "@/components/ui/money";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tag } from "@/components/ui/tag";
 
+/** Any background utility in a class list (classes are space-separated). */
+const BACKGROUND_RE = /(^| )bg-/;
+
 describe("Button", () => {
   it("is a real button that fires onClick and respects disabled", async () => {
     const onClick = vi.fn();
@@ -192,5 +195,28 @@ describe("EmptyState", () => {
       screen.getByText("Cada contrato mostra quanto já foi quitado.")
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Novo contrato" })).toBeVisible();
+  });
+
+  it("compact: a dashed outline with no fill (DIRECAO › empty states), never a solid box", () => {
+    render(
+      <EmptyState
+        description="Avisamos aqui quando alguém enviar um comprovante."
+        icon={FileText}
+        title="Nada novo por aqui"
+        variant="compact"
+      />
+    );
+    const box = screen.getByRole("heading", {
+      name: "Nada novo por aqui",
+    }).parentElement;
+    // The same outline as GhostCard, the dashed shape of what will be there.
+    expect(box).toHaveClass(
+      "rounded-card",
+      "border-[1.5px]",
+      "border-dashed",
+      "border-line-strong"
+    );
+    expect(box).not.toHaveClass("border-line");
+    expect(box?.className).not.toMatch(BACKGROUND_RE);
   });
 });
