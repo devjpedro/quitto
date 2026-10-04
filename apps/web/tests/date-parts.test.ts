@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { dayOfMonth, monthShort, weekdayName } from "@/lib/date-parts";
-
-/**
- * The machine's timezone must never move the day, and the test pins it so it
- * proves that even on a CI runner in UTC: São Paulo (behind UTC) catches a
- * formatter without `timeZone: "UTC"`, Tokyo (ahead of it) catches the date
- * parsed as local midnight.
- */
-const ZONES = ["America/Sao_Paulo", "Asia/Tokyo"];
+import { importInZone, ZONES } from "./time-zones";
 
 describe("date parts", () => {
   afterEach(() => {
@@ -24,11 +17,7 @@ describe("date parts", () => {
   });
 
   it.each(ZONES)("nunca muda o dia pelo fuso (%s)", async (zone) => {
-    vi.stubEnv("TZ", zone);
-    // A fresh module: its formatters are cached from the first call.
-    vi.resetModules();
-    const parts = await import("@/lib/date-parts");
-    expect(new Intl.DateTimeFormat().resolvedOptions().timeZone).toBe(zone);
+    const parts = await importInZone(zone, () => import("@/lib/date-parts"));
     expect(parts.monthShort("2026-11-01", "pt-BR")).toBe("nov");
     expect(parts.weekdayName("2026-11-01", "pt-BR")).toBe("dom.");
     expect(parts.monthShort("2026-10-31", "en-US")).toBe("Oct");
