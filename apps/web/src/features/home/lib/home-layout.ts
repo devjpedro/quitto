@@ -46,6 +46,25 @@ export function homeLayout(home: Home): HomeLayout {
   };
 }
 
+/**
+ * The lower part's columns from lateral with few cards (mockup 13, frame E):
+ * notifications and the guide left, milestones right. Without milestones
+ * from md the guide takes their column, so neither block stretches across
+ * the content. Two columns only with a block in each: one block left stacks.
+ */
+export function fewLowerColumns(blocks: {
+  guide: boolean;
+  milestones: boolean;
+  notifications: boolean;
+}): { columns: boolean; guideRight: boolean } {
+  const { guide, milestones, notifications } = blocks;
+  const guideRight = !milestones && notifications && guide;
+  return {
+    columns: guideRight || (milestones && (notifications || guide)),
+    guideRight,
+  };
+}
+
 export function homeSubtitle(
   home: Home,
   layout: HomeLayout,

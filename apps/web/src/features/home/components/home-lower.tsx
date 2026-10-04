@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { useRecentNotifications } from "@/features/notifications/hooks/use-recent-notifications";
 import { cn } from "@/lib/utils";
+import { fewLowerColumns } from "../lib/home-layout";
 import { onlyMomentStrip, stripHasCells } from "../lib/milestones";
 import type { HomeMilestones } from "../types";
 import {
@@ -18,8 +19,9 @@ import { Milestones } from "./milestones";
  * and guide on the left; milestones and "Notificações recentes" on the right;
  * from wide each takes a column of its own. With few cards the list went up
  * (ActionsRow): notifications and the guide left, milestones right (mockup
- * 13, frame E). The side column exists only with something in it, decided by
- * the data (`data-lower`): a block that fails leaves no 2fr track behind.
+ * 13, frame E), or the guide right when there are no milestones. The side
+ * column exists only with something in it, decided by the data
+ * (`data-lower`): a block that fails leaves no 2fr track behind.
  */
 export function HomeLower({
   few,
@@ -51,7 +53,11 @@ export function HomeLower({
   const phoneOnly = onlyMomentStrip(milestones, momentId);
   const sideMilestones = hasContract && stripHasCells(milestones, momentId);
   if (few) {
-    const columns = sideMilestones && (!notificationsGone || guide !== null);
+    const { columns, guideRight } = fewLowerColumns({
+      guide: guide !== null,
+      milestones: sideMilestones,
+      notifications: !notificationsGone,
+    });
     return (
       <div
         className={cn(LOWER_STACK, columns && LOWER_FEW)}
@@ -60,9 +66,12 @@ export function HomeLower({
         <div className={LOWER_COLUMN}>
           {/* From lateral only: hidden below by CSS, and fetched only on a wide screen. */}
           <RecentNotifications />
-          {guide}
+          {guideRight ? null : guide}
         </div>
-        <div className={LOWER_COLUMN}>{strip}</div>
+        <div className={LOWER_COLUMN}>
+          {strip}
+          {guideRight ? guide : null}
+        </div>
       </div>
     );
   }

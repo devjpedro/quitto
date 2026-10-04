@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
+import {
+  fewLowerColumns,
+  homeLayout,
+  homeSubtitle,
+} from "@/features/home/lib/home-layout";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
@@ -166,4 +170,26 @@ describe("homeLayout: poucas ações", () => {
     });
     expect(homeLayout(inviteOnly).fewActions).toBe(false);
   });
+});
+
+describe("fewLowerColumns: a parte de baixo com poucas ações", () => {
+  it.each([
+    // [milestones, notifications, guide] → [columns, guideRight]
+    [true, true, true, true, false],
+    [true, true, false, true, false],
+    [true, false, true, true, false],
+    [true, false, false, false, false],
+    [false, true, true, true, true],
+    [false, true, false, false, false],
+    [false, false, true, false, false],
+    [false, false, false, false, false],
+  ])(
+    "marcos %s, notificações %s, guia %s: colunas %s, guia à direita %s",
+    (milestones, notifications, guide, columns, guideRight) => {
+      expect(fewLowerColumns({ guide, milestones, notifications })).toEqual({
+        columns,
+        guideRight,
+      });
+    }
+  );
 });

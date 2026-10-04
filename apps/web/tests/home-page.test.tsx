@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LOWER_STACK } from "@/features/home/components/home-grid";
+import { LOWER_FEW, LOWER_STACK } from "@/features/home/components/home-grid";
 import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
@@ -723,6 +723,54 @@ describe("HomePage", () => {
     await waitFor(() => expect(getNotifications).toHaveBeenCalled());
     await waitFor(() =>
       expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+  });
+
+  it("poucas ações sem marcos e com o guia: a partir de 1440 as notificações à esquerda e o guia à direita, nada na largura toda", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue({ data: [], error: null });
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        // The guide is unfinished, so it shows compact; no milestones from md.
+        onboarding: { ...homeFixture().onboarding, hasPixKey: false },
+      }),
+      error: null,
+    });
+    renderHome();
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    const guide = screen
+      .getByRole("button", { name: "dispensar guia" })
+      .closest("section");
+    const lower = lowerPart();
+    // The guide takes the milestones' column, so neither block stretches
+    // across the whole content.
+    expect(lower).toHaveAttribute("data-lower", "columns");
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toContainElement(guide);
+  });
+
+  it("poucas ações sem marcos, com o guia e a lista de notificações falhando: sobra um bloco, e a parte de baixo empilha", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        onboarding: { ...homeFixture().onboarding, hasPixKey: false },
+      }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("button", { name: "dispensar guia" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+    expect(lowerPart()?.firstElementChild).toContainElement(
+      screen.getByRole("button", { name: "dispensar guia" }).closest("section")
     );
   });
 
