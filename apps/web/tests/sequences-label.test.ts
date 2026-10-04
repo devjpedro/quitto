@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sequencesLabel, sequencesList } from "@/lib/sequences-label";
+import { sequencesLabel, sequencesText } from "@/lib/sequences-label";
 
 const NBSP = String.fromCharCode(0xa0);
 /** Writes "~" for the no-break space the installment messages keep between numbers. */
@@ -34,7 +34,10 @@ describe("sequencesLabel", () => {
     expect(sequencesLabel([3, 4], 12, "en-US")).toBe(
       nb("installments~3 and 4~of~12")
     );
-    expect(sequencesList([5, 6, 7], "en-US")).toBe(nb("5~to~7"));
+    expect(sequencesText([5, 6, 7], "en-US")).toEqual({
+      kind: "list",
+      text: nb("5~to~7"),
+    });
   });
 
   it("uma lacuna: cada trecho seguido de 3 ou mais vira faixa", () => {

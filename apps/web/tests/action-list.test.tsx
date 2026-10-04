@@ -551,29 +551,6 @@ describe("ActionList", () => {
     ).toBeNull();
   });
 
-  it("grupo que você paga: Pagar a mais antiga abre a parcela mais antiga", () => {
-    renderList([
-      installmentAction({
-        id: "overdue:al:pay",
-        kind: "overdue",
-        installmentId: "al-5",
-        contractId: "al",
-        sequence: 5,
-        dueDate: "2026-09-01",
-        pixCode: null,
-        canMarkPaid: false,
-        count: 2,
-        installmentIds: ["al-5", "al-6"],
-        sequences: [5, 6],
-        totalCents: 250_000,
-      }),
-    ]);
-    expect(
-      screen.getByRole("link", { name: "Pagar a mais antiga" })
-    ).toHaveAttribute("href", "/contracts/al?installment=al-5");
-    expect(screen.queryByRole("button", { name: "Já paguei" })).toBeNull();
-  });
-
   it("grupo que você paga: Pagar a mais antiga e Ver parcelas (ícone de 44 px no celular), nada que dispare mutação", () => {
     renderList([
       installmentAction({

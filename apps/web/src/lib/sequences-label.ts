@@ -43,15 +43,16 @@ function listItems(sequences: number[], locale: Locale): string[] {
   });
 }
 
+/** The list itself, or how many there are and between which. */
+export type SequencesText =
+  | { kind: "list"; text: string }
+  | { first: number; kind: "spread"; last: number; n: number };
+
 /**
  * A group's installment numbers, ready for a message: the list ("3 e 4",
  * "5 a 12 e 14 a 28") while it has at most 3 items, or how many there are and
  * between which ("7 parcelas entre 3 e 28") past that.
  */
-export type SequencesText =
-  | { kind: "list"; text: string }
-  | { first: number; kind: "spread"; last: number; n: number };
-
 export function sequencesText(
   sequences: number[],
   locale: Locale
@@ -66,15 +67,6 @@ export function sequencesText(
     };
   }
   return { kind: "list", text: listFormatter(locale).format(items) };
-}
-
-/**
- * "3 e 4", "5 a 28", "5 a 12 e 14 a 28": every number in order, each run of 3
- * or more as a range. It never summarizes: what a person reads goes through
- * `sequencesText` (or `sequencesLabel`).
- */
-export function sequencesList(sequences: number[], locale: Locale): string {
-  return listFormatter(locale).format(listItems(sequences, locale));
 }
 
 /** "parcela 5 de 12", "parcelas 3 e 4 de 12", "parcelas 5 a 12 e 14 a 28 de 60", "7 parcelas entre 3 e 28 de 60". */
