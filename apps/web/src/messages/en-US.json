@@ -125,8 +125,6 @@
   "home_upcoming_awaiting": "Proof sent",
   "home_upcoming_first": "first",
   "home_upcoming_last": "last",
-  "home_amount_in": "+ {amount}",
-  "home_amount_out": "− {amount}",
   "home_upcoming_more_one": "+ 1 more installment in the next 30 days",
   "home_upcoming_more_other": "+ {count} more installments in the next 30 days",
   "home_upcoming_empty_title": "Nothing due in the next 30 days",

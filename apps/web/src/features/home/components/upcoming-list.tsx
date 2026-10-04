@@ -41,7 +41,9 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
     >
       <DateTile iso={item.dueDate} locale={locale} />
       <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 items-center gap-2 font-medium text-sm">
+        {/* The tags never shrink: on a narrow row they wrap below the title
+            instead of eating it. */}
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-medium text-sm">
           <span className="truncate">{item.contractTitle}</span>
           {edge ? (
             <Tag className="self-center" tone="brand">

@@ -125,8 +125,6 @@
   "home_upcoming_awaiting": "Comprovante enviado",
   "home_upcoming_first": "primeira",
   "home_upcoming_last": "última",
-  "home_amount_in": "+ {amount}",
-  "home_amount_out": "− {amount}",
   "home_upcoming_more_one": "+ 1 parcela nos próximos 30 dias",
   "home_upcoming_more_other": "+ {count} parcelas nos próximos 30 dias",
   "home_upcoming_empty_title": "Nada vence nos próximos 30 dias",

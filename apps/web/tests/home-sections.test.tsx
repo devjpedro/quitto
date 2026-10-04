@@ -664,4 +664,36 @@ describe("UpcomingList (mockup 13)", () => {
       expect(within(item).getByRole("link")).toHaveClass("rounded-[inherit]");
     }
   });
+
+  it("no celular, a tag nunca come o nome do contrato: a linha do título quebra e as tags descem", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({ sequence: 10, status: "awaiting_confirmation" }),
+        ])}
+      />
+    );
+    // The tags never shrink (nowrap): on a narrow row they must wrap below
+    // the title, or the title shrinks to "Câm…" or to nothing (review, I1).
+    const line = screen.getByText("Celular da Ana")
+      .parentElement as HTMLElement;
+    expect(line).toHaveClass("flex-wrap", "gap-y-1");
+    expect(within(line).getByText("última")).toBeVisible();
+    expect(within(line).getAllByText("Comprovante enviado")).toHaveLength(1);
+  });
+
+  it("um contrato de uma parcela só (1 de 1) mostra 'última', não 'primeira': pagando esta, quita", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({ sequence: 1, installmentsCount: 1 }),
+        ])}
+      />
+    );
+    const row = screen.getByRole("link");
+    expect(within(row).getByText("última")).toBeVisible();
+    expect(within(row).queryByText("primeira")).toBeNull();
+  });
 });
