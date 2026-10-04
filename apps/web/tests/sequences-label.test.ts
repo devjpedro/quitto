@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sequencesLabel, sequencesText } from "@/lib/sequences-label";
-
-const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space the installment messages keep between numbers. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
+import { nb } from "./nbsp";
 
 /** from..to, both included. */
 const span = (from: number, to: number) =>

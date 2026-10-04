@@ -5,8 +5,7 @@ import {
   groupChargeMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
-
-const NBSP = String.fromCharCode(0xa0);
+import { NBSP } from "./nbsp";
 
 const base: ChargeMessageInput = {
   contractTitle: "Aluguel do apê",

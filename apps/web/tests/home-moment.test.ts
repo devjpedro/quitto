@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { momentMilestone, momentView } from "@/features/home/lib/moment";
 import { homeFixture, TODAY } from "./home-fixtures";
-
-/** A no-break space (U+00A0), by code: "desde" and the date never part at a line end. */
-const NBSP = String.fromCharCode(0xa0);
+import { NBSP } from "./nbsp";
 
 const base = homeFixture();
 const closest = {

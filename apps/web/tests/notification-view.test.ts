@@ -4,12 +4,10 @@ import {
   notificationView,
 } from "@/features/notifications/lib/notification-view";
 import type { NotificationItem } from "@/features/notifications/types";
+import { nb } from "./nbsp";
 import { notificationItem } from "./notification-fixtures";
 
 const NOW = Date.parse("2026-10-02T12:00:00Z");
-const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space, so an expected line stays readable. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
 
 function item(over: Partial<NotificationItem> = {}): NotificationItem {
   return notificationItem({

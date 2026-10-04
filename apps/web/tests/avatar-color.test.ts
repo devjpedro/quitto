@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AVATAR_TONES, avatarColor, normalizeName } from "@/lib/avatar-color";
+import { NBSP } from "./nbsp";
 
-const NBSP = String.fromCharCode(160);
 // Invisible: zero-width space, non-joiner, joiner and word joiner.
 const ZERO_WIDTH = [8203, 8204, 8205, 8288].map((code) =>
   String.fromCharCode(code)

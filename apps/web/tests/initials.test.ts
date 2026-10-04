@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initials } from "@/lib/initials";
+import { NBSP } from "./nbsp";
 
 describe("initials", () => {
   it("uses first and last names", () => {
@@ -14,7 +15,7 @@ describe("initials", () => {
 
   it("keeps the accent and ignores double spaces and NBSP", () => {
     expect(initials("Júlia  Nogueira")).toBe("JN");
-    expect(initials(`Érica${String.fromCharCode(160)}Silva`)).toBe("ÉS");
+    expect(initials(`Érica${NBSP}Silva`)).toBe("ÉS");
   });
 
   it("a name pasted decomposed (NFD) keeps the accented initial", () => {

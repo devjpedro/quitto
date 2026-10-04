@@ -6,11 +6,8 @@ import { LOWER_FEW, LOWER_STACK } from "@/features/home/components/home-grid";
 import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
+import { nb } from "./nbsp";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
-
-const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space the installment messages keep between numbers. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
 
 const { getHome, getNotifications, markPaid } = vi.hoisted(() => ({
   getHome: vi.fn(),

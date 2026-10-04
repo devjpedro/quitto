@@ -6,10 +6,7 @@ import {
 } from "@/features/home/lib/action-view";
 import type { InstallmentAction } from "@/features/home/types";
 import { installmentAction, inviteAction, TODAY } from "./home-fixtures";
-
-const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space the installment messages keep between numbers. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
+import { nb } from "./nbsp";
 
 const ctx = { first: false, locale: "pt-BR" as const, today: TODAY };
 

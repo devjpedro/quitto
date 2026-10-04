@@ -14,11 +14,8 @@ import {
   inviteAction,
   TODAY,
 } from "./home-fixtures";
+import { nb } from "./nbsp";
 import { renderWithProviders } from "./test-utils";
-
-const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space the installment messages keep between numbers. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
 
 const { markPaid, confirm, accept, decline } = vi.hoisted(() => ({
   markPaid: vi.fn(),
