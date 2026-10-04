@@ -397,6 +397,17 @@ describe("surface layers", () => {
         1.08
       );
     });
+
+    // Hovering the card leaves its secondary button and its neutral tag at
+    // rest on the hovered card: 1.052 in the dark panel (review of Task 15,
+    // r1). Only the order of luminances kept the hover off the inset; a floor
+    // keeps a future tweak from sinking one onto the other.
+    it(`${context}: at rest, the inset (secondary button, neutral tag) stays a step away from the hovered card`, () => {
+      const at = (name: string) => tokens[name] as string;
+      expect(contrastRatio(at(rest), at(cardHover))).toBeGreaterThanOrEqual(
+        1.05
+      );
+    });
   }
 
   it("the inset hover steps away from the card where it can: darker in the dark panel, lighter in the dark phone, darker on the light phone", () => {
