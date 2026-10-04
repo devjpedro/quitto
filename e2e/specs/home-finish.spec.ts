@@ -1,4 +1,10 @@
-import { expect, type Page, test } from "@playwright/test";
+import {
+  type Browser,
+  expect,
+  type Locator,
+  type Page,
+  test,
+} from "@playwright/test";
 import {
   getContract,
   isoDaysFromToday,
@@ -26,6 +32,8 @@ const STATUS_PAID = /status=paid/;
 const PAID_GROUP = /2 parcelas marcadas como pagas/;
 const INVITE_ACCEPTED = /Convite aceito/;
 const WA = "https://wa.me/?text=";
+/** The logo's ring (ProgressRing: viewBox 24, radius 9), never a Phosphor icon (viewBox 256). */
+const RING_SVG = 'svg[viewBox="0 0 24 24"]:has(circle[r="9"])';
 
 /** Three overdue installments of one contract: one card, "parcelas 1 a 3 de 3". */
 function seedOverdueGroup(
@@ -44,6 +52,76 @@ function seedOverdueGroup(
       })),
     },
   });
+}
+
+/**
+ * "Moto E2E", three installments you receive; the payer, linked by invite,
+ * marks the two past ones paid. 2 of 3 is 67%: the milestone of the moment
+ * is "Mais perto de quitar", with the ring. The bell gets two
+ * "installment_paid" in a row (one line) next to the accepted invite.
+ */
+async function seedCloseToPayoff(page: Page, browser: Browser) {
+  const { id } = await seedContract(page.request, {
+    title: "Moto E2E",
+    ownerRole: "seller",
+    schedule: {
+      mode: "custom",
+      installments: [-60, -30, 40].map((days) => ({
+        amountCents: 48_000,
+        dueDate: isoDaysFromToday(days),
+      })),
+    },
+  });
+  const payer = await newUser(browser);
+  const { token } = await seedInvite(page.request, id, {
+    displayName: "Rafael Prado",
+    role: "buyer",
+    email: payer.email,
+  });
+  expect(
+    (await payer.page.request.post(`/api/invites/${token}/accept`)).ok()
+  ).toBeTruthy();
+  const detail = await getContract(page.request, id);
+  const past = (
+    detail.installments as { id: string; sequence: number }[]
+  ).filter((it) => it.sequence < 3);
+  for (const installment of past) {
+    const marked = await payer.page.request.post(
+      `/api/installments/${installment.id}/mark-paid`
+    );
+    expect(marked.ok()).toBeTruthy();
+  }
+  await payer.close();
+}
+
+/**
+ * The milestone of the moment is "Mais perto de quitar": desktop's lime card
+ * (the ring and the % on the label's line), or the phone's first Marcos cell
+ * (the 44 px ring, no % beside it). Returns that ring.
+ */
+async function expectCloseToPayoff(
+  page: Page,
+  isMobile: boolean
+): Promise<Locator> {
+  if (isMobile) {
+    const cell = page
+      .getByRole("region", { name: "Marcos" })
+      .getByRole("listitem")
+      .first();
+    await expect(cell).toContainText("Mais perto de quitar");
+    await expect(cell).toContainText("Moto E2E · 2/3");
+    const ring = cell.locator(RING_SVG);
+    await expect(ring).toHaveAttribute("width", "44");
+    return ring;
+  }
+  const label = page
+    .getByRole("complementary")
+    .locator("p", { hasText: "Mais perto de quitar" });
+  await expect(label).toContainText("67%");
+  await expect(page.getByRole("complementary")).toContainText("Moto E2E · 2/3");
+  const ring = label.locator(RING_SVG);
+  await expect(ring).toHaveAttribute("width", "22");
+  return ring;
 }
 
 async function home(page: Page) {
@@ -210,8 +288,15 @@ test.describe("tela larga", () => {
     await home(page);
     const list = page.getByRole("list", { name: "Contratos ativos" });
     await expect(list.getByRole("link")).toHaveCount(5);
-    await expect(list.getByRole("link").first()).toContainText("Ativo E2E 6");
-    await expect(list.locator("svg").first()).toBeVisible();
+    const newest = list.getByRole("link").first();
+    await expect(newest).toContainText("Ativo E2E 6");
+    // Every row has the logo's ring. Nothing paid: the track alone (no arc)
+    // and the fraction beside it says the same, 0/1.
+    await expect(list.locator(RING_SVG)).toHaveCount(5);
+    const ring = newest.locator(RING_SVG);
+    await expect(ring).toBeVisible();
+    await expect(ring.locator("circle")).toHaveCount(1);
+    await expect(newest).toContainText("0/1");
     await expect(
       page.getByRole("link", { name: "Ver todos (6)" })
     ).toHaveAttribute("href", "/contracts");
@@ -286,10 +371,11 @@ test.describe("tela larga", () => {
     const received = await box(
       narrow.getByRole("button", { name: "Marcar como recebida" })
     );
-    if (received.y > whatsapp.y + 4) {
-      expect(Math.abs(whatsapp.width - received.width)).toBeLessThan(2);
-      expect(whatsapp.width).toBeGreaterThan((await box(narrow)).width - 40);
-    }
+    // The pair does not fit a ~200 px card (decision 16, O2): one under the
+    // other, each the card's full width.
+    expect(received.y).toBeGreaterThan(whatsapp.y + 4);
+    expect(Math.abs(whatsapp.width - received.width)).toBeLessThan(2);
+    expect(whatsapp.width).toBeGreaterThan((await box(narrow)).width - 40);
   });
 });
 
@@ -349,10 +435,11 @@ test("celular: os chips numa linha só, que rola de lado; a página não rola", 
   );
   // A strip that scrolls is a tab stop (useScrollsSideways), so axe passes.
   await expect(strip).toHaveAttribute("tabindex", "0");
-  // The last chip scrolls fully into view, inside the 16 px gutter.
+  // The last chip scrolls fully into view, inside the strip's 16 px end
+  // gutter (its padding scrolls with it).
   await chips.last().scrollIntoViewIfNeeded();
   const last = await box(chips.last());
-  expect(last.x + last.width).toBeLessThanOrEqual(390);
+  expect(last.x + last.width).toBeLessThanOrEqual(390 - 16);
   await expectNoPageScrollX(page);
   await scan(page);
   expect(hydrationErrors).toEqual([]);
@@ -403,22 +490,65 @@ test("celular: a última linha de Próximos 30 dias, focada pelo teclado, nunca 
   expect(row.y + row.height).toBeLessThanOrEqual(bar.y);
 });
 
+test("marco do momento: 2 de 3 pagas é Mais perto de quitar, com o anel da logo no tanto pago", async ({
+  browser,
+  page,
+}, testInfo) => {
+  await signup(page);
+  await seedCloseToPayoff(page, browser);
+  await home(page);
+  const isMobile = testInfo.project.name === "mobile";
+  const ring = await expectCloseToPayoff(page, isMobile);
+  // The ring is the paid share: the track and an arc of 67% of the circle
+  // (2 pi 9 = 56.55), from the top.
+  await expect(ring.locator("circle")).toHaveCount(2);
+  await expect(ring.locator("circle").last()).toHaveAttribute(
+    "stroke-dasharray",
+    "37.89 56.55"
+  );
+  // The detail says what is left, and the next date (40 days ahead).
+  await expect(
+    (isMobile
+      ? page.getByRole("region", { name: "Marcos" })
+      : page.getByRole("complementary")
+    ).getByText("Falta 1 parcela, em", { exact: false })
+  ).toBeVisible();
+});
+
 test("axe em claro e escuro com grupo, chips de atraso, marcos e notificações", async ({
+  browser,
   context,
   page,
-}) => {
+}, testInfo) => {
   await signup(page);
   await seedOverdueGroup(page, "Terreno E2E", "seller");
   await seedOneEach(page.request, "Aluguel E2E", [-2, 12], "buyer");
+  // Milestones (the lime one with the ring) and a grouped line in the bell.
+  await seedCloseToPayoff(page, browser);
+  const isMobile = testInfo.project.name === "mobile";
   await home(page);
-  await chipsMeasured(page);
-  await scan(page);
-  await context.addCookies([
-    { name: "theme", value: "dark", url: "http://localhost:3001" },
-  ]);
-  await page.reload();
-  await waitForHydrated(page);
-  await expect(page.locator("html.dark")).toBeVisible();
-  await chipsMeasured(page);
-  await scan(page);
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") {
+      await context.addCookies([
+        { name: "theme", value: "dark", url: "http://localhost:3001" },
+      ]);
+      await page.reload();
+      await waitForHydrated(page);
+      await expect(page.locator("html.dark")).toBeVisible();
+    }
+    await expect(page.getByRole("region", { name: "Marcos" })).toBeVisible();
+    await expectCloseToPayoff(page, isMobile);
+    await chipsMeasured(page);
+    await scan(page);
+    // The bell's panel over it, with the grouped line (the count on its tile)
+    // next to the invite's own line.
+    const panel = await openNotifications(page);
+    await expect(panel.getByRole("button", { name: PAID_GROUP })).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: INVITE_ACCEPTED })
+    ).toBeVisible();
+    await scan(page);
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+  }
 });
