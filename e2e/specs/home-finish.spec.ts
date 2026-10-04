@@ -55,20 +55,25 @@ function seedOverdueGroup(
 }
 
 /**
- * "Moto E2E", three installments you receive; the payer, linked by invite,
- * marks the two past ones paid. 2 of 3 is 67%: the milestone of the moment
- * is "Mais perto de quitar", with the ring. The bell gets two
- * "installment_paid" in a row (one line) next to the accepted invite.
+ * "Moto E2E", R$ 480,00 installments you receive, due `days` from today. The
+ * payer ("Rafael Prado", linked by invite) marks the first `paid` of them
+ * paid: one "installment_paid" each, in a row, beside the accepted invite.
+ * Returns the contract's id.
  */
-async function seedCloseToPayoff(page: Page, browser: Browser) {
+async function seedPaidByInvitee(
+  page: Page,
+  browser: Browser,
+  days: number[],
+  paid: number
+): Promise<string> {
   const { id } = await seedContract(page.request, {
     title: "Moto E2E",
     ownerRole: "seller",
     schedule: {
       mode: "custom",
-      installments: [-60, -30, 40].map((days) => ({
+      installments: days.map((offset) => ({
         amountCents: 48_000,
-        dueDate: isoDaysFromToday(days),
+        dueDate: isoDaysFromToday(offset),
       })),
     },
   });
@@ -82,16 +87,27 @@ async function seedCloseToPayoff(page: Page, browser: Browser) {
     (await payer.page.request.post(`/api/invites/${token}/accept`)).ok()
   ).toBeTruthy();
   const detail = await getContract(page.request, id);
-  const past = (
+  const toPay = (
     detail.installments as { id: string; sequence: number }[]
-  ).filter((it) => it.sequence < 3);
-  for (const installment of past) {
+  ).filter((it) => it.sequence <= paid);
+  for (const installment of toPay) {
     const marked = await payer.page.request.post(
       `/api/installments/${installment.id}/mark-paid`
     );
     expect(marked.ok()).toBeTruthy();
   }
   await payer.close();
+  return id;
+}
+
+/**
+ * Three installments of "Moto E2E", the two past ones paid by the payer. 2 of
+ * 3 is 67%: the milestone of the moment is "Mais perto de quitar", with the
+ * ring. The bell gets two "installment_paid" in a row (one line) next to the
+ * accepted invite.
+ */
+function seedCloseToPayoff(page: Page, browser: Browser) {
+  return seedPaidByInvitee(page, browser, [-60, -30, 40], 2);
 }
 
 /**
@@ -199,36 +215,9 @@ test("avisos iguais seguidos são uma linha; ler a linha lê o grupo", async ({
   page,
 }) => {
   await signup(page);
-  const { id } = await seedContract(page.request, {
-    title: "Moto E2E",
-    ownerRole: "seller",
-    schedule: {
-      mode: "custom",
-      installments: [5, 35].map((days) => ({
-        amountCents: 48_000,
-        dueDate: isoDaysFromToday(days),
-      })),
-    },
-  });
   // The payer, linked by invite, marks both installments paid: two
   // "installment_paid" in a row for the receiver.
-  const payer = await newUser(browser);
-  const { token } = await seedInvite(page.request, id, {
-    displayName: "Rafael Prado",
-    role: "buyer",
-    email: payer.email,
-  });
-  expect(
-    (await payer.page.request.post(`/api/invites/${token}/accept`)).ok()
-  ).toBeTruthy();
-  const detail = await getContract(page.request, id);
-  for (const installment of detail.installments as { id: string }[]) {
-    const marked = await payer.page.request.post(
-      `/api/installments/${installment.id}/mark-paid`
-    );
-    expect(marked.ok()).toBeTruthy();
-  }
-  await payer.close();
+  const id = await seedPaidByInvitee(page, browser, [5, 35], 2);
   await home(page);
   // The two "installment_paid" (one line) and the accepted invite (a line of
   // its own, another type): reading the group must leave the invite unread.
