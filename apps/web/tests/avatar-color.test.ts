@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { AVATAR_TONES, avatarColor, normalizeName } from "@/lib/avatar-color";
 
 const NBSP = String.fromCharCode(160);
+// Invisible: zero-width space, non-joiner, joiner and word joiner.
+const ZERO_WIDTH = [8203, 8204, 8205, 8288].map((code) =>
+  String.fromCharCode(code)
+);
 const WARM_TONE_RE =
   /^bg-avatar-(clay|ochre|plum|olive|cocoa|rose|wine|graphite)$/;
 
@@ -11,6 +15,14 @@ describe("normalizeName", () => {
     expect(normalizeName("JÚLIA NOGUEIRA")).toBe("julia nogueira");
     expect(normalizeName(`João${NBSP}Souza`)).toBe("joao souza");
     expect(normalizeName("   ")).toBe("");
+  });
+
+  it("ignora os caracteres de largura zero, em qualquer lugar do nome", () => {
+    for (const invisible of ZERO_WIDTH) {
+      expect(normalizeName(`Marina Pires${invisible}`)).toBe("marina pires");
+      expect(normalizeName(`Mari${invisible}na Pires`)).toBe("marina pires");
+      expect(normalizeName(`${invisible}Marina Pires`)).toBe("marina pires");
+    }
   });
 });
 
@@ -41,6 +53,8 @@ describe("avatarColor", () => {
       "MARINA PIRES",
       `Marina${NBSP}Pires`,
       " Marina Pires",
+      ...ZERO_WIDTH.map((invisible) => `Marina Pires${invisible}`),
+      ...ZERO_WIDTH.map((invisible) => `Marina Pi${invisible}res`),
     ]) {
       expect(avatarColor(variant)).toBe(tone);
     }

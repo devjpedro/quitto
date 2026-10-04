@@ -16,4 +16,11 @@ describe("initials", () => {
     expect(initials("Júlia  Nogueira")).toBe("JN");
     expect(initials(`Érica${String.fromCharCode(160)}Silva`)).toBe("ÉS");
   });
+
+  it("a name pasted decomposed (NFD) keeps the accented initial", () => {
+    const decomposed = "Érica Silva".normalize("NFD");
+    expect(decomposed).not.toBe("Érica Silva");
+    expect(initials(decomposed)).toBe("ÉS");
+    expect(initials(decomposed)).toBe(initials("Érica Silva"));
+  });
 });
