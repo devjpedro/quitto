@@ -6,6 +6,7 @@ import {
   createRouter,
   Outlet,
   RouterProvider,
+  useLocation,
 } from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -41,6 +42,12 @@ afterEach(() => {
   window.innerWidth = startWidth;
 });
 
+/** Each test page says where it is, so a dynamic route reads like the others. */
+function PathHeading() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  return <h1>page {pathname}</h1>;
+}
+
 async function renderAt(
   path: string,
   shell: Partial<Omit<ShellProps, "onOpenNotifications" | "onOpenSearch">> = {}
@@ -63,12 +70,13 @@ async function renderAt(
     ),
   });
   rootRoute.addChildren(
-    ["/", "/contracts", "/contracts/new", "/settings"].map((p) =>
-      createRoute({
-        getParentRoute: () => rootRoute,
-        path: p,
-        component: () => <h1>page {p}</h1>,
-      })
+    ["/", "/contracts", "/contracts/new", "/contracts/$id", "/settings"].map(
+      (p) =>
+        createRoute({
+          getParentRoute: () => rootRoute,
+          path: p,
+          component: PathHeading,
+        })
     )
   );
   const router = createRouter({
@@ -481,6 +489,32 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
 
   it("Ver todos (N) é a página atual só na lista, não na página de um contrato", async () => {
     await renderAt("/contracts/new", { activeContracts: SIX });
+    expect(
+      screen.getByRole("link", { name: "Ver todos (6)" })
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  it("o contrato aberto: a linha inteira com o fundo do painel, o foco ainda por dentro", async () => {
+    await renderAt("/contracts/c6", { activeContracts: SIX });
+    const [open, ...others] = within(
+      screen.getByRole("list", { name: "Contratos ativos" })
+    ).getAllByRole("link");
+    expect(open).toHaveAttribute("aria-current", "page");
+    expect(open).toHaveAttribute("data-status", "active");
+    // Selection is a tinted fill on the whole row (DIRECAO), never a colored
+    // side bar: the panel's own surface, like the Notificações row while its
+    // panel is open. The focus ring stays inside, as on every row.
+    expect(open).toHaveClass(
+      "data-[status=active]:bg-surface",
+      "focus-visible:ring-inset"
+    );
+    // The overdue mark's halo takes the row's fill.
+    expect(open?.querySelector(".bg-danger")).toHaveClass(
+      "group-data-[status=active]:ring-surface"
+    );
+    for (const other of others) {
+      expect(other).not.toHaveAttribute("aria-current");
+    }
     expect(
       screen.getByRole("link", { name: "Ver todos (6)" })
     ).not.toHaveAttribute("aria-current");
