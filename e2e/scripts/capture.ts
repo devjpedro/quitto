@@ -70,15 +70,39 @@ async function sessionCookies(): Promise<
   });
 }
 
-/** Waits until no loading state is on screen (the home's skeleton included). */
-async function noLoading(page: Page): Promise<void> {
-  await page.waitForFunction(
-    (selector) =>
-      ![...document.querySelectorAll(selector)].some((element) =>
-        element.checkVisibility()
-      ),
-    LOADING
-  );
+/** The first loading state still on screen, as a tag with its classes. */
+function stillLoading(page: Page): Promise<string> {
+  return page
+    .evaluate((selector) => {
+      const element = [...document.querySelectorAll(selector)].find((each) =>
+        each.checkVisibility()
+      );
+      return element
+        ? `<${element.tagName.toLowerCase()} class="${element.getAttribute("class") ?? ""}">`
+        : "nada visível agora";
+    }, LOADING)
+    .catch(() => "a página fechou");
+}
+
+/**
+ * Waits until no loading state is on screen (the home's skeleton included).
+ * On timeout, says which screen and what was still loading.
+ */
+async function noLoading(page: Page, where: string): Promise<void> {
+  try {
+    await page.waitForFunction(
+      (selector) =>
+        ![...document.querySelectorAll(selector)].some((element) =>
+          element.checkVisibility()
+        ),
+      LOADING
+    );
+  } catch (error) {
+    throw new Error(
+      `${where}: ainda carregando após 30 s: ${await stillLoading(page)}`,
+      { cause: error }
+    );
+  }
 }
 
 /**
@@ -90,20 +114,27 @@ async function noLoading(page: Page): Promise<void> {
  * block is there: the first access has no lower part, and a failed list takes
  * the block away. Never demand it.
  */
-async function settle(page: Page, width: number): Promise<void> {
-  await noLoading(page);
+async function settle(page: Page, width: number, where: string): Promise<void> {
+  await noLoading(page, where);
   if (expectedPath === "/" && width >= LATERAL) {
     const recent = page.getByRole("region", { name: "Notificações recentes" });
     if ((await recent.count()) > 0) {
-      // The skeleton is aria-hidden, so neither of these matches it.
-      await recent
-        .getByRole("list")
-        .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
-        .first()
-        .waitFor();
+      try {
+        // The skeleton is aria-hidden, so neither of these matches it.
+        await recent
+          .getByRole("list")
+          .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
+          .first()
+          .waitFor();
+      } catch (error) {
+        throw new Error(
+          `${where}: "Notificações recentes" não mostrou a lista nem o estado vazio em 30 s (a API de notificações falhou?)`,
+          { cause: error }
+        );
+      }
     }
   }
-  await noLoading(page);
+  await noLoading(page, where);
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -135,7 +166,8 @@ try {
         );
       }
       const file = join(out, `${account}-${size.name}-${theme}`);
-      await settle(page, size.width);
+      const where = `${account} ${size.width}x${size.height} ${theme} (${path})`;
+      await settle(page, size.width, where);
       await page.screenshot({ path: `${file}.png` });
       if (size.mobile) {
         // A fullPage shot paints the phone's fixed tab bar where the first
@@ -151,7 +183,7 @@ try {
           () => new Promise((resolve) => requestAnimationFrame(resolve))
         );
       }
-      await settle(page, size.width);
+      await settle(page, size.width, `${where}, página inteira`);
       await page.screenshot({
         path: `${file}-pagina.png`,
         fullPage: !size.mobile,
