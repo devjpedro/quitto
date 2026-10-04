@@ -139,3 +139,31 @@ describe("homeLayout", () => {
     );
   });
 });
+
+describe("homeLayout: poucas ações", () => {
+  it("fewActions só com contrato e 1 ou 2 ações", () => {
+    const one = homeFixture({ actions: [installmentAction()] });
+    const two = homeFixture({
+      actions: [
+        installmentAction(),
+        installmentAction({ installmentId: "i2" }),
+      ],
+    });
+    const three = homeFixture({
+      actions: [
+        installmentAction(),
+        installmentAction({ installmentId: "i2" }),
+        installmentAction({ installmentId: "i3" }),
+      ],
+    });
+    expect(homeLayout(one).fewActions).toBe(true);
+    expect(homeLayout(two).fewActions).toBe(true);
+    expect(homeLayout(three).fewActions).toBe(false);
+    expect(homeLayout(homeFixture()).fewActions).toBe(false);
+    const inviteOnly = homeFixture({
+      actions: [inviteAction()],
+      onboarding: { ...homeFixture().onboarding, hasContract: false },
+    });
+    expect(homeLayout(inviteOnly).fewActions).toBe(false);
+  });
+});

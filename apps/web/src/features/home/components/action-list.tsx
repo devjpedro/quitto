@@ -8,6 +8,7 @@ import { useCarouselIndex } from "../hooks/use-carousel-index";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";
 import { pastTheRow } from "./cards-per-row";
+import { FEW_SPANS } from "./home-grid";
 
 /**
  * A held Enter or Space repeats its keydown, and every repeat would activate
@@ -29,17 +30,20 @@ function swallowKeyRepeat(event: KeyboardEvent) {
  * columns, never by stretching a card (3, then 4 at 2xl and 5 at wide), with
  * "Ver todas (N)" for the rest on the chips row (ChipsRow), which shares
  * `expanded`. A single action takes the full width, and two columns of the
- * grid.
+ * grid. With few cards (`few`), from lateral the section is a subgrid of the
+ * home's actions row, so "Próximos 30 dias" can take the free tracks beside it.
  */
 export function ActionList({
   actions,
   expanded,
+  few = null,
   listId,
   onToggle,
   today,
 }: {
   actions: HomeAction[];
   expanded: boolean;
+  few?: 1 | 2 | null;
   listId: string;
   onToggle: () => void;
   today: string;
@@ -51,7 +55,13 @@ export function ActionList({
   return (
     <section
       aria-label={m.home_actions_title()}
-      className="flex flex-col gap-3 focus:outline-none"
+      className={cn(
+        "flex flex-col gap-3 focus:outline-none",
+        few && [
+          "lateral:grid lateral:grid-cols-subgrid",
+          FEW_SPANS[few].actions,
+        ]
+      )}
       onKeyDownCapture={swallowKeyRepeat}
       ref={sectionRef}
     >
@@ -65,7 +75,9 @@ export function ActionList({
             ? "flex-col"
             : "-mx-4 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 [scrollbar-width:none] md:-mx-6 md:scroll-px-6 md:px-6",
           "lg:mx-0 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] lg:overflow-visible lg:px-0",
-          "wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
+          few
+            ? "lateral:col-span-full lateral:grid-cols-subgrid"
+            : "wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
         )}
         id={listId}
         ref={ref}
@@ -77,7 +89,8 @@ export function ActionList({
                 ? "w-full"
                 : "w-[calc(100%-2.75rem)] shrink-0 snap-start",
               "lg:w-auto",
-              single && "lg:col-span-2",
+              single &&
+                (few ? "lateral:col-span-1 lg:col-span-2" : "lg:col-span-2"),
               !expanded && pastTheRow(i)
             )}
             key={action.id}

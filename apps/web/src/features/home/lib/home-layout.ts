@@ -12,11 +12,15 @@ export interface HomeLayout {
   allClear: boolean;
   compactGuide: boolean;
   empty: boolean;
+  fewActions: boolean;
   guide: OnboardingView;
   hasContract: boolean;
   heroGuide: boolean;
   showChips: boolean;
 }
+
+/** "Próximos 30 dias" joins the actions' row from lateral up to this many cards (planner's decision 9). */
+export const FEW_ACTIONS_MAX = 2;
 
 /**
  * Which blocks the home shows. The green guide card leads only when there is
@@ -36,6 +40,8 @@ export function homeLayout(home: Home): HomeLayout {
     compactGuide: guide.visible && hasActions,
     allClear: hasContract && !hasActions && !heroGuide,
     empty: !(hasContract || hasActions || guide.visible),
+    fewActions:
+      hasContract && hasActions && home.actions.length <= FEW_ACTIONS_MAX,
     showChips: hasContract || hasActions,
   };
 }

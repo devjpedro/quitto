@@ -133,6 +133,16 @@ export function onlyMomentStrip(
   return strip.length > 0 && strip.every((item) => item.moment);
 }
 
+/** True when the strip shows some cell from md (the side column has milestones to hold). */
+export function stripHasCells(
+  milestones: HomeMilestones,
+  momentId: string | null
+): boolean {
+  return stripCells(milestoneCells(milestones), momentId).some(
+    (item) => !item.moment
+  );
+}
+
 /**
  * What is paid of the whole, in percent: "Já recebeu … 40%". While something
  * is still open it stays between 1 and 99, like the API's openPercent: never

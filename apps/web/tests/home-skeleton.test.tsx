@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import {
   LOWER_COLUMN,
+  LOWER_STACK,
   LOWER_WITH_SIDE,
 } from "@/features/home/components/home-grid";
 import { HomeSkeleton } from "@/features/home/components/home-skeleton";
@@ -14,7 +15,11 @@ describe("HomeSkeleton", () => {
     const lower = container.querySelector<HTMLElement>(
       "[class~='lateral:grid']"
     );
-    expect(lower).toHaveClass(...classes(LOWER_WITH_SIDE));
+    // The content's grid and rhythm, so nothing shifts when the home streams in.
+    expect(lower).toHaveClass(
+      ...classes(LOWER_STACK),
+      ...classes(LOWER_WITH_SIDE)
+    );
     const [list, side] = Array.from(lower?.children ?? []);
     expect(list).toHaveClass(...classes(LOWER_COLUMN));
     // From wide each side block takes a column of its own, as in the content.
@@ -29,8 +34,11 @@ describe("HomeSkeleton", () => {
     const [milestones, recent] = Array.from(side?.children ?? []);
     expect(milestones).toHaveClass("hidden", "lateral:flex");
     expect(recent).toHaveClass("hidden", "lateral:block");
-    // Its title bone in the SectionTitle's shape, as the loaded section has.
-    expect(recent?.firstElementChild).toHaveClass("mb-3", "h-5");
+    // Every title bone in the SectionTitle's shape: its 23.75 px line box
+    // (19 px, leading-tight) and 12 px below, as the loaded sections have.
+    for (const block of [list?.firstElementChild, milestones, recent]) {
+      expect(block?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
+    }
     // "Notificações recentes" with its own loading rows: 4 on the filled block.
     const rows = recent?.querySelector("ul");
     expect(rows).toHaveClass("bg-surface-card");

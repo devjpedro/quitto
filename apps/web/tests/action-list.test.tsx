@@ -395,6 +395,35 @@ describe("ActionList", () => {
     expect(screen.queryByText("1 de 1")).toBeNull();
   });
 
+  it("poucas ações: a partir de lateral a lista é subgrid da linha e o cartão único ocupa 1 coluna", () => {
+    renderWithProviders(
+      <ActionList
+        actions={[installmentAction()]}
+        expanded={false}
+        few={1}
+        listId="acoes"
+        onToggle={vi.fn()}
+        today={TODAY}
+      />,
+      { client: makeClient([installmentAction()]) }
+    );
+    const item = screen.getByRole("article").closest("li");
+    const list = item?.parentElement;
+    expect(list).toHaveClass(
+      "lateral:grid-cols-subgrid",
+      "lateral:col-span-full"
+    );
+    expect(list).not.toHaveClass(
+      "2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
+    );
+    expect(list?.parentElement).toHaveClass(
+      "lateral:grid",
+      "lateral:grid-cols-subgrid",
+      "lateral:col-span-1"
+    );
+    expect(item).toHaveClass("lg:col-span-2", "lateral:col-span-1");
+  });
+
   it("5 ações: 1 de 5 no carrossel e Ver todas revela as escondidas no desktop", async () => {
     renderList(overdue(5));
     expect(screen.getByText("1 de 5")).toBeVisible();
