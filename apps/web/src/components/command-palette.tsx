@@ -154,6 +154,9 @@ export function CommandPalette({
     />
   );
 
+  // Both panels are opaque (bg-surface-raised over the translucent material):
+  // over the home's green card the material let the green through, and the
+  // group headings fell below AA. The scrim behind stays.
   if (isDesktop) {
     return (
       <Dialog onOpenChange={onOpenChange} open={open}>
@@ -162,7 +165,7 @@ export function CommandPalette({
           // que ela faz. `undefined` explícito é o escape hatch do Radix para
           // não apontar `aria-describedby` para um Description inexistente.
           aria-describedby={undefined}
-          className="max-w-xl"
+          className="max-w-xl bg-surface-raised"
           title="Buscar"
         >
           {commands}
@@ -175,7 +178,7 @@ export function CommandPalette({
     <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent
         aria-describedby={undefined}
-        className="max-w-full"
+        className="max-w-full bg-surface-raised"
         title="Buscar"
       >
         {commands}

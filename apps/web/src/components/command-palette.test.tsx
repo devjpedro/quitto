@@ -303,6 +303,20 @@ describe("CommandPalette", () => {
     expect(painel.className).toContain("-translate-x-1/2");
   });
 
+  it.each([
+    ["desktop", DESKTOP_WIDTH],
+    ["celular", MOBILE_WIDTH],
+  ])(
+    "no %s o painel é opaco: o texto não depende do que fica atrás (o cartão verde do Agora)",
+    (_, width) => {
+      // O material translúcido deixava o verde do cartão vazar por baixo, e o
+      // cabeçalho de grupo caía a 3,86:1 no claro.
+      setViewport(width);
+      renderPalette([ALUGUEL]);
+      expect(screen.getByRole("dialog")).toHaveClass("bg-surface-raised");
+    }
+  );
+
   it("Sair encerra a sessão e apaga o cookie de identidade antes de ir pro login", async () => {
     // biome-ignore lint/suspicious/noDocumentCookie: jsdom test setup, the hint written while signed in
     document.cookie = serializeIdentityCookie(
