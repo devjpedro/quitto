@@ -138,6 +138,17 @@
     color: var(--color-foreground);
     background-color: var(--color-background);
   }
+  /*
+   * Below md (48rem) the shell's tab bar is fixed at the bottom: a focused
+   * element scrolls above it, never under it. The same room the main keeps
+   * at its foot (app-frame.tsx): the bar, its raised plus button, a breath
+   * and the safe area.
+   */
+  @media (width < 48rem) {
+    html:has(#app-shell) {
+      scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    }
+  }
 }
 
 @layer components {
