@@ -45,10 +45,7 @@ export function HomeSkeleton() {
           </div>
           <div className="lateral:flex hidden flex-col gap-2">
             <Skeleton className="h-4 w-40 bg-surface-card" />
-            <NotificationsSkeleton
-              className="bg-surface-raised"
-              rows={RECENT_COUNT}
-            />
+            <NotificationsSkeleton rows={RECENT_COUNT} />
           </div>
         </div>
       </div>

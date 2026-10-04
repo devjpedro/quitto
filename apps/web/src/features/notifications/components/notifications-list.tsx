@@ -8,8 +8,9 @@ import { useNotificationsList } from "../hooks/use-notifications-list";
 import { NotificationRow } from "./notification-row";
 
 /**
- * The list's shape while it loads (mockup 10, "carregando"). `rows` and
- * `className` let a list with another length or background (the home's
+ * The list's shape while it loads (mockup 10, "carregando"): the filled
+ * block, with bones in inset (the default sunken bone is the block's own
+ * color in light). `rows` lets a list with another length (the home's
  * "Notificações recentes") keep its shape when the data lands.
  */
 export function NotificationsSkeleton({
@@ -23,21 +24,24 @@ export function NotificationsSkeleton({
     <ul
       aria-hidden="true"
       className={cn(
-        "divide-y divide-line overflow-hidden rounded-card border border-line",
+        "divide-y divide-divider overflow-hidden rounded-card bg-surface-card",
         className
       )}
     >
       {Array.from({ length: rows }, (_, row) => `row-${row}`).map((key) => (
-        <li className="flex items-start gap-3 px-3.5 py-3" key={key}>
-          <Skeleton className="size-8 shrink-0" />
-          {/* The row's line boxes (NotificationRow): a 20 px title and, 2 px
-              below, a 16 px meta line, so the row keeps its height on load. */}
+        <li
+          className="flex min-h-[58px] items-center gap-3.5 py-[9px] pr-4 pl-2.5"
+          key={key}
+        >
+          <Skeleton className="size-10 shrink-0 bg-surface-inset" />
+          {/* The row's line boxes (NotificationRow): an 18 px title and, 3 px
+              below, a 19 px meta line, so the row keeps its 58 px on load. */}
           <div className="flex flex-1 flex-col">
-            <div className="flex h-5 items-center">
-              <Skeleton className="h-3 w-2/3" />
+            <div className="flex h-[18px] items-center">
+              <Skeleton className="h-3 w-2/3 bg-surface-inset" />
             </div>
-            <div className="mt-0.5 flex h-4 items-center">
-              <Skeleton className="h-2.5 w-1/2" />
+            <div className="mt-[3px] flex h-[19px] items-center">
+              <Skeleton className="h-2.5 w-1/2 bg-surface-inset" />
             </div>
           </div>
         </li>
@@ -84,9 +88,15 @@ export function NotificationsList({
           </Button>
         </div>
       ) : null}
-      <ul className="divide-y divide-line overflow-hidden rounded-card border border-line">
+      <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
         {items.map((item) => (
-          <li key={item.id}>
+          // The first and last rows take the block's corners (the row
+          // inherits them), so the inset focus ring follows the curve
+          // instead of being clipped by it.
+          <li
+            className="first:rounded-t-card last:rounded-b-card"
+            key={item.groupKey}
+          >
             <NotificationRow item={item} onOpen={open} view={viewOf(item)} />
           </li>
         ))}

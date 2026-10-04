@@ -1,4 +1,6 @@
+import { CaretRight } from "@phosphor-icons/react";
 import { useId } from "react";
+import { SectionTitle } from "@/features/home/components/section-title";
 import { m } from "@/paraglide/messages.js";
 import { useNotificationRows } from "../hooks/use-notifications-list";
 import { useShowNotifications } from "../hooks/use-notifications-panel";
@@ -22,9 +24,15 @@ function RecentList({ items }: { items: NotificationItem[] }) {
     return <NotificationsEmpty />;
   }
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface-raised">
+    <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
       {items.map((item) => (
-        <li key={item.id}>
+        // The first and last rows take the block's corners (the row inherits
+        // them), so the inset focus ring follows the curve instead of being
+        // clipped by it.
+        <li
+          className="first:rounded-t-card last:rounded-b-card"
+          key={item.groupKey}
+        >
           <NotificationRow item={item} onOpen={open} view={viewOf(item)} />
         </li>
       ))}
@@ -47,31 +55,28 @@ export function RecentNotifications() {
     return null;
   }
   return (
-    <section
-      aria-labelledby={headingId}
-      className="lateral:flex hidden flex-col gap-2"
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-medium text-ink-muted text-sm" id={headingId}>
-          {m.home_recent_notifications()}
-        </h2>
-        <button
-          aria-haspopup="dialog"
-          className="rounded-control font-medium text-ink text-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          onClick={showAll}
-          type="button"
-        >
-          {m.home_recent_notifications_all()}
-        </button>
-      </div>
+    <section aria-labelledby={headingId} className="lateral:block hidden">
+      <SectionTitle
+        aux={
+          <button
+            aria-haspopup="dialog"
+            className="inline-flex items-center gap-1 rounded-control font-medium text-[13px] text-ink underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            onClick={showAll}
+            type="button"
+          >
+            {m.home_recent_notifications_all()}
+            <CaretRight aria-hidden="true" size={14} />
+          </button>
+        }
+        id={headingId}
+      >
+        {m.home_recent_notifications()}
+      </SectionTitle>
       {items ? (
         <RecentList items={items} />
       ) : (
-        // The loaded list's shape: up to 4 rows on the raised surface.
-        <NotificationsSkeleton
-          className="bg-surface-raised"
-          rows={RECENT_COUNT}
-        />
+        // The loaded list's shape: up to 4 rows on the filled block.
+        <NotificationsSkeleton rows={RECENT_COUNT} />
       )}
     </section>
   );

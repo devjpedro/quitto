@@ -29,9 +29,9 @@ describe("HomeSkeleton", () => {
     const [milestones, recent] = Array.from(side?.children ?? []);
     expect(milestones).toHaveClass("hidden", "lateral:flex");
     expect(recent).toHaveClass("hidden", "lateral:flex");
-    // "Notificações recentes" with its own loading rows: 4 on the raised surface.
+    // "Notificações recentes" with its own loading rows: 4 on the filled block.
     const rows = recent?.querySelector("ul");
-    expect(rows).toHaveClass("bg-surface-raised");
+    expect(rows).toHaveClass("bg-surface-card");
     expect(rows?.children).toHaveLength(4);
   });
 

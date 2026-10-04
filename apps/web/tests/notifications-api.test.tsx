@@ -19,6 +19,7 @@ vi.mock("@/lib/api", () => {
     (_params: { id: string }) => ({ read: { post: () => postRead() } }),
     {
       get: () => new Promise(() => undefined),
+      read: { post: (body: { ids: string[] }) => postRead(body) },
       "read-all": { post: () => postReadAll() },
     }
   );
@@ -106,7 +107,7 @@ describe("useMarkReadMutation", () => {
     postRead.mockReturnValue(new Promise(() => undefined));
     const { client, wrapper } = setup([note("n1"), note("n2")], 2);
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
-    act(() => result.current.mutate("n1"));
+    act(() => result.current.mutate(note("n1")));
     await waitFor(() => expect(readIds(client)).toEqual(["n1"]));
     expect(unread(client)).toBe(1);
   });
@@ -122,7 +123,7 @@ describe("useMarkReadMutation", () => {
     const { client, wrapper } = setup([note("n1")], 1);
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync("n1").catch(() => undefined);
+      await result.current.mutateAsync(note("n1")).catch(() => undefined);
     });
     expect(readIds(client)).toEqual([]);
     expect(unread(client)).toBe(1);
@@ -142,7 +143,7 @@ describe("useMarkReadMutation", () => {
     client.getQueryCache().build(client, { queryKey: queryKeys.home });
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync("n1").catch(() => undefined);
+      await result.current.mutateAsync(note("n1")).catch(() => undefined);
     });
     expect(
       client.getQueryCache().find({ queryKey: queryKeys.home })
@@ -157,7 +158,7 @@ describe("useMarkReadMutation", () => {
       1
     );
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
-    act(() => result.current.mutate("n1"));
+    act(() => result.current.mutate(note("n1")));
     await waitFor(() => expect(postRead).toHaveBeenCalled());
     expect(unread(client)).toBe(1);
   });
@@ -167,7 +168,7 @@ describe("useMarkReadMutation", () => {
     postRead.mockReturnValue(request.promise);
     const { client, wrapper } = setup([note("n1")], 1, [installmentAction()]);
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
-    act(() => result.current.mutate("n1"));
+    act(() => result.current.mutate(note("n1")));
     await waitFor(() => expect(unread(client)).toBe(0));
     clearActions(client);
     await act(async () => {
@@ -189,10 +190,10 @@ describe("useMarkReadMutation", () => {
       () => ({ one: useMarkReadMutation(), two: useMarkReadMutation() }),
       { wrapper }
     );
-    act(() => result.current.one.mutate("n1"));
+    act(() => result.current.one.mutate(note("n1")));
     await waitFor(() => expect(readIds(client)).toEqual(["n1"]));
     await act(async () => {
-      await result.current.two.mutateAsync("n2");
+      await result.current.two.mutateAsync(note("n2"));
     });
     await act(async () => {
       first.answer(SERVER_ERROR);
@@ -208,7 +209,7 @@ describe("useMarkReadMutation", () => {
     const spy = vi.spyOn(client, "invalidateQueries");
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync("n1").catch(() => undefined);
+      await result.current.mutateAsync(note("n1")).catch(() => undefined);
     });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["notifications"] });
   });
@@ -222,7 +223,7 @@ describe("useMarkReadMutation", () => {
     });
     const { client, wrapper } = setup([note("n1"), note("n2")], 2);
     const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
-    act(() => result.current.mutate("n1"));
+    act(() => result.current.mutate(note("n1")));
     await waitFor(() => expect(unread(client)).toBe(1));
     await act(async () => {
       await client.fetchQuery({ ...homeQueryOptions, staleTime: 0 });
@@ -240,6 +241,53 @@ describe("useMarkReadMutation", () => {
       await client.fetchQuery({ ...homeQueryOptions, staleTime: 0 });
     });
     expect(unread(client)).toBe(5);
+  });
+
+  it("ler um grupo manda todos os ids e desconta o unreadCount dele, não 1", async () => {
+    postRead.mockReturnValue(new Promise(() => undefined));
+    const ids = Array.from({ length: 24 }, (_, i) => `g${i + 1}`);
+    const group = notificationItem({
+      id: "g1",
+      ids,
+      count: 24,
+      unreadCount: 24,
+    });
+    const { client, wrapper } = setup([group, note("n2")], 25);
+    const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
+    act(() => result.current.mutate(group));
+    await waitFor(() => expect(readIds(client)).toEqual(["g1"]));
+    expect(unread(client)).toBe(1);
+    expect(postRead).toHaveBeenCalledWith({ ids });
+  });
+
+  it("se a leitura do grupo falhar, o sino volta exatamente o que tirou", async () => {
+    postRead.mockResolvedValue(SERVER_ERROR);
+    const group = notificationItem({
+      id: "g1",
+      ids: ["g1", "g2", "g3"],
+      count: 3,
+      unreadCount: 3,
+    });
+    const { client, wrapper } = setup([group], 3);
+    const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync(group).catch(() => undefined);
+    });
+    expect(readIds(client)).toEqual([]);
+    expect(unread(client)).toBe(3);
+  });
+
+  it("uma linha já lida não desconta nada do sino", async () => {
+    postRead.mockReturnValue(new Promise(() => undefined));
+    const read = notificationItem({
+      id: "r1",
+      readAt: "2026-10-02T09:00:00.000Z",
+    });
+    const { client, wrapper } = setup([read], 2);
+    const { result } = renderHook(() => useMarkReadMutation(), { wrapper });
+    act(() => result.current.mutate(read));
+    await waitFor(() => expect(postRead).toHaveBeenCalled());
+    expect(unread(client)).toBe(2);
   });
 });
 

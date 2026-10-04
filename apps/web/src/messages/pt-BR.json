@@ -189,7 +189,6 @@
   "notifications_count_overflow": "{max}+",
   "notifications_empty_title": "Nada novo por aqui",
   "notifications_empty_description": "Avisamos aqui quando alguém enviar um comprovante, confirmar um pagamento ou aceitar um convite.",
-  "notification_installment": "parcela {sequence} de {count}",
   "notification_reason": "Motivo: {reason}",
   "notification_type_proof_submitted": "Novo comprovante para confirmar",
   "notification_type_payment_confirmed": "Pagamento confirmado",
@@ -202,5 +201,13 @@
   "notification_type_participant_left": "Participante saiu do contrato",
   "notification_type_invite_accepted": "Convite aceito",
   "notification_type_invite_declined": "Convite recusado",
-  "notification_type_fallback": "Notificação"
+  "notification_type_fallback": "Notificação",
+  "notification_group_proof_submitted": "{count} comprovantes para confirmar",
+  "notification_group_payment_confirmed": "{count} pagamentos confirmados",
+  "notification_group_payment_disputed": "{count} pagamentos contestados",
+  "notification_group_installment_paid": "{count} parcelas marcadas como pagas",
+  "notification_group_installment_due_soon": "{count} parcelas vencendo em breve",
+  "notification_group_installment_overdue": "{count} parcelas vencidas",
+  "notification_group_installment_due_soon_receivable": "{count} parcelas a receber vencem em breve",
+  "notification_group_installment_overdue_receivable": "{count} parcelas a receber estão vencidas"
 }

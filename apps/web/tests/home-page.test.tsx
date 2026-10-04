@@ -353,7 +353,7 @@ describe("HomePage", () => {
     const recent = await screen.findByRole("region", {
       name: "Notificações recentes",
     });
-    expect(recent).toHaveClass("hidden", "lateral:flex");
+    expect(recent).toHaveClass("hidden", "lateral:block");
     // In the side column; from wide it takes a column of its own.
     const side = recent.parentElement;
     expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");

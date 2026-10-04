@@ -1,8 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ErrorBoundary } from "react-error-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NotificationsSkeleton } from "@/features/notifications/components/notifications-list";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { NotificationsPanelContext } from "@/features/notifications/hooks/use-notifications-panel";
 import type { NotificationItem } from "@/features/notifications/types";
@@ -12,6 +13,7 @@ import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const CONFIRMED_ROW = /Pagamento confirmado/;
+const OVERDUE_GROUP_ROW = /24 parcelas a receber estão vencidas/;
 
 const { getList, postRead, navigate, hydration } = vi.hoisted(() => ({
   getList: vi.fn(),
@@ -26,6 +28,7 @@ vi.mock("@/lib/api", () => {
     (_params: { id: string }) => ({ read: { post: () => postRead() } }),
     {
       get: () => getList(),
+      read: { post: () => postRead() },
       "read-all": {
         post: () => Promise.resolve({ data: { ok: true }, error: null }),
       },
@@ -120,7 +123,7 @@ describe("RecentNotifications", () => {
     });
     const { showAll } = renderRecent();
     // Hidden below lateral by CSS: the same HTML at any width.
-    expect(region()).toHaveClass("hidden", "lateral:flex");
+    expect(region()).toHaveClass("hidden", "lateral:block");
     await waitFor(() =>
       expect(
         within(region()).getAllByRole("button", { name: CONFIRMED_ROW })
@@ -165,7 +168,7 @@ describe("RecentNotifications", () => {
     getList.mockReturnValue(new Promise(() => undefined));
     renderRecent();
     const skeleton = region().querySelector("ul[aria-hidden='true']");
-    expect(skeleton).toHaveClass("bg-surface-raised");
+    expect(skeleton).toHaveClass("bg-surface-card");
     expect(skeleton?.children).toHaveLength(4);
   });
 
@@ -214,5 +217,53 @@ describe("RecentNotifications", () => {
     expect(
       within(region()).getByRole("button", { name: CONFIRMED_ROW })
     ).toBeVisible();
+  });
+
+  it("linha agrupada: o tile de ícone com a contagem, 'Nova' e o chevron; o bloco é preenchido", async () => {
+    getList.mockResolvedValue({
+      data: [
+        notificationItem({
+          id: "g1",
+          type: "installment_overdue_receivable",
+          contractTitle: "Venda do terreno",
+          installmentsCount: 60,
+          ids: Array.from({ length: 24 }, (_, i) => `g${i + 1}`),
+          count: 24,
+          sequences: Array.from({ length: 24 }, (_, i) => i + 5),
+          unreadCount: 24,
+          createdAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+        }),
+      ],
+      error: null,
+    });
+    renderRecent();
+    const row = await within(region()).findByRole("button", {
+      name: OVERDUE_GROUP_ROW,
+    });
+    // The tile's badge, not the "24" in the title.
+    expect(within(row).getByText("24", { exact: true })).toHaveClass("bg-ink");
+    expect(row).toHaveTextContent("Nova");
+    expect(row.querySelectorAll("svg").length).toBeGreaterThanOrEqual(2);
+    // On hover the badge's ring takes the line's fill, never a halo of the resting one.
+    expect(row).toHaveClass("hover:**:ring-surface-card-hover");
+    expect(row.closest("ul")).toHaveClass("bg-surface-card", "divide-divider");
+    expect(row.closest("ul")).not.toHaveClass("border");
+    // The block clips its corners: the row inherits them, so the inset focus
+    // ring follows the curve.
+    expect(row.closest("li")).toHaveClass(
+      "first:rounded-t-card",
+      "last:rounded-b-card"
+    );
+    expect(row).toHaveClass("rounded-[inherit]");
+  });
+
+  it("o esqueleto: o bloco preenchido e os ossos em inset, que não somem sobre ele", () => {
+    const { container } = render(<NotificationsSkeleton />);
+    expect(container.querySelector("ul")).toHaveClass("bg-surface-card");
+    const bones = container.querySelectorAll(".animate-pulse");
+    expect(bones.length).toBeGreaterThan(0);
+    for (const bone of bones) {
+      expect(bone).toHaveClass("bg-surface-inset");
+    }
   });
 });
