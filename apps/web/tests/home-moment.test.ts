@@ -64,6 +64,28 @@ describe("momentMilestone", () => {
     expect(momentMilestone(guide)).toEqual({ id: "guide", done: 2, total: 4 });
     expect(momentMilestone(base)).toBeNull();
   });
+
+  it("o marco do guia segue a regra de sumir: acompanhar contratos não conta; 30 dias de conta, sim", () => {
+    const pending = {
+      ...base.onboarding,
+      hasContract: false,
+      hasPixKey: false,
+      remindersOn: false,
+    };
+    const following = homeFixture({
+      activeContractsCount: 5,
+      onboarding: { ...pending, activePartyContracts: 0 },
+    });
+    expect(momentMilestone(following)).toEqual({
+      id: "guide",
+      done: 1,
+      total: 4,
+    });
+    const outgrown = homeFixture({
+      onboarding: { ...pending, accountCreatedOn: "2026-09-02" },
+    });
+    expect(momentMilestone(outgrown)).toBeNull();
+  });
 });
 
 describe("momentView", () => {

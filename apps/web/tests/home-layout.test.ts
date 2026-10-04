@@ -72,6 +72,27 @@ describe("homeLayout", () => {
     );
   });
 
+  it("acompanhar contratos não esconde o guia: só contam aqueles em que você é parte", () => {
+    // Coordinator's rule, end to end: 5 followed contracts (the sidebar's
+    // count), none where the person pays or receives.
+    const home = homeFixture({
+      activeContractsCount: 5,
+      onboarding: { ...notStarted, activePartyContracts: 0 },
+    });
+    expect(homeLayout(home)).toMatchObject({ heroGuide: true, empty: false });
+  });
+
+  it("30 dias de conta, sem contrato e sem ação: o guia sumiu sozinho e fica o estado vazio", () => {
+    const home = homeFixture({
+      onboarding: { ...notStarted, accountCreatedOn: "2026-09-02" },
+    });
+    expect(homeLayout(home)).toMatchObject({
+      heroGuide: false,
+      compactGuide: false,
+      empty: true,
+    });
+  });
+
   it("sem contrato e com o guia dispensado: estado vazio", () => {
     const home = homeFixture({
       onboarding: { ...notStarted, dismissedAt: "2026-10-02T10:00:00.000Z" },

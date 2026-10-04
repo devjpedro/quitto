@@ -67,11 +67,12 @@ export function OnboardingGuide({
         className={showHero ? "self-start" : undefined}
         next={view.next}
         onboarding={onboarding}
+        showNextAction={!showHero}
         steps={view.steps}
       />
       <p
         className={cn(
-          "text-ink-muted text-sm",
+          "text-[13px] text-ink-muted",
           showHero ? "lg:col-span-2 lg:text-right" : "mt-2.5"
         )}
       >

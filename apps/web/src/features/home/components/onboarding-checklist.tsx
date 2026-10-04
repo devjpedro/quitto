@@ -10,6 +10,11 @@ import {
 import type { HomeOnboarding } from "../types";
 import { StepLink } from "./step-link";
 
+/**
+ * Each step's words. The next step's `cta` is its button, aria-hidden because
+ * the row is the link: it must be words of the `title`, so the row's name
+ * holds the visible label (WCAG 2.5.3; a test checks both locales).
+ */
 const STEP_COPY: Record<
   OnboardingStepId,
   {
@@ -78,10 +83,12 @@ function StepAnchor({ state }: { state: StepState }) {
 function StepRow({
   next,
   onboarding,
+  showAction,
   step,
 }: {
   next: boolean;
   onboarding: HomeOnboarding;
+  showAction: boolean;
   step: OnboardingStep;
 }) {
   const copy = STEP_COPY[step.id];
@@ -92,6 +99,7 @@ function StepRow({
   } else if (next) {
     state = "next";
   }
+  const action = state === "next" && showAction ? copy.cta : null;
   const body = (
     <>
       <StepAnchor state={state} />
@@ -123,16 +131,16 @@ function StepRow({
           </span>
         ) : null}
       </span>
-      {state === "next" && copy.cta ? (
+      {action ? (
         // The row is the link: the "button" is its look, not a second control.
         <span
           aria-hidden="true"
           className="inline-flex h-8 shrink-0 items-center rounded-control bg-surface-inset px-3 font-medium text-[13px]"
         >
-          {copy.cta()}
+          {action()}
         </span>
       ) : null}
-      {state === "todo" && target ? (
+      {!(step.done || action) && target ? (
         <CaretRight
           aria-hidden="true"
           className="shrink-0 text-ink-muted"
@@ -161,16 +169,22 @@ function StepRow({
   );
 }
 
-/** The guide's steps in one filled block with straight dividers; the next one stands out with its action. */
+/**
+ * The guide's steps in one filled block with straight dividers; the next one
+ * stands out, with its action when `showNextAction` (off beside the green
+ * card, which already carries that action).
+ */
 export function OnboardingChecklist({
   className,
   next,
   onboarding,
+  showNextAction,
   steps,
 }: {
   className?: string;
   next: OnboardingStepId | null;
   onboarding: HomeOnboarding;
+  showNextAction: boolean;
   steps: OnboardingStep[];
 }) {
   return (
@@ -185,6 +199,7 @@ export function OnboardingChecklist({
           <StepRow
             next={step.id === next}
             onboarding={onboarding}
+            showAction={showNextAction}
             step={step}
           />
         </li>

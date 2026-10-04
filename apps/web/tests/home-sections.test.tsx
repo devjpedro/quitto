@@ -17,6 +17,7 @@ import { momentView } from "@/features/home/lib/moment";
 import { onboardingView } from "@/features/home/lib/onboarding";
 import type { Home } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
+import { overwriteGetLocale } from "@/paraglide/runtime.js";
 import { homeFixture, TODAY, upcomingItem } from "./home-fixtures";
 import { renderWithProviders } from "./test-utils";
 
@@ -26,6 +27,7 @@ const { dismiss } = vi.hoisted(() => ({ dismiss: vi.fn() }));
 const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
 const PIX_ROW = /Cadastrar sua chave PIX/;
+const CONTRACT_ROW = /^Criar o primeiro contrato/;
 const NINE_OF_TEN = /parcela 9 de 10/;
 
 vi.mock("@/lib/api", () => ({
@@ -543,6 +545,13 @@ describe("seções do home", () => {
     expect(guide).not.toHaveClass("md:grid-cols-[1fr_1.3fr]");
     // Beside the green card the list keeps its own height, not the card's.
     expect(screen.getByRole("list")).toHaveClass("self-start");
+    // The next row still reads as next (tint, ring), but the green card
+    // already carries its action: no second "Criar" beside it, a caret instead.
+    const nextRow = screen.getByRole("link", { name: CONTRACT_ROW });
+    expect(nextRow).toHaveClass("bg-surface-card-hover");
+    expect(nextRow).toHaveTextContent("próximo passo");
+    expect(within(nextRow).queryByText("Criar")).toBeNull();
+    expect(nextRow.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
     expect(screen.getByText("opcional")).toBeVisible();
     await userEvent.click(
@@ -614,9 +623,12 @@ describe("seções do home", () => {
       "href",
       "/settings"
     );
-    expect(
-      screen.getByRole("button", { name: "dispensar guia" })
-    ).toBeVisible();
+    const dismissButton = screen.getByRole("button", {
+      name: "dispensar guia",
+    });
+    expect(dismissButton).toBeVisible();
+    // Meta size (mockup 13's .gfoot): 13 px, below the rows' 14.
+    expect(dismissButton.parentElement).toHaveClass("text-[13px]");
   });
 
   it("guia: cada passo tem o estado como âncora, e o próximo vem tingido com a ação", () => {
@@ -649,6 +661,47 @@ describe("seções do home", () => {
     );
     expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
     expect(screen.getByText("opcional")).not.toHaveClass("line-through");
+  });
+
+  it("guia: o texto do botão do próximo passo está no nome acessível da linha, nos dois idiomas", () => {
+    // The button is aria-hidden (the row is the link), so its words reach
+    // voice control only through the row's name (WCAG 2.5.3, label in name).
+    const pendingSteps = [
+      { hasContract: false },
+      { hasPixKey: false },
+      { remindersOn: false },
+    ];
+    for (const locale of ["pt-BR", "en-US"] as const) {
+      overwriteGetLocale(() => locale);
+      try {
+        for (const pending of pendingSteps) {
+          const onboarding = { ...homeFixture().onboarding, ...pending };
+          const { unmount } = renderWithProviders(
+            <OnboardingGuide
+              onboarding={onboarding}
+              variant="compact"
+              view={onboardingView(onboarding, {
+                activeContracts: 0,
+                today: TODAY,
+              })}
+            />
+          );
+          const row = screen
+            .getAllByRole("link")
+            .find((link) => link.classList.contains("bg-surface-card-hover"));
+          const button = row?.querySelector(".rounded-control");
+          const label = button?.textContent ?? "";
+          expect(label).not.toBe("");
+          expect(button).toHaveAttribute("aria-hidden", "true");
+          expect(
+            screen.getByRole("link", { name: (name) => name.includes(label) })
+          ).toBe(row);
+          unmount();
+        }
+      } finally {
+        overwriteGetLocale(() => "pt-BR");
+      }
+    }
   });
 });
 

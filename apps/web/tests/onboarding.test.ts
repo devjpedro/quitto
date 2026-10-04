@@ -90,11 +90,19 @@ describe("o guia some sozinho (decisão 9 do dono)", () => {
     ).toBe(false);
   });
 
-  it("concluído ou dispensado continua sumindo, em qualquer idade", () => {
+  it("concluído ou dispensado some já no 1º dia, sem contratos (não é a idade que esconde)", () => {
+    const firstDay = { activeContracts: 0, today: "2026-09-10" };
+    expect(onboardingView(pending, firstDay).visible).toBe(true);
     expect(
       onboardingView(
-        { ...pending, dismissedAt: "2026-09-12T10:00:00.000Z" },
-        FRESH
+        { ...pending, hasContract: true, hasPixKey: true, remindersOn: true },
+        firstDay
+      ).visible
+    ).toBe(false);
+    expect(
+      onboardingView(
+        { ...pending, dismissedAt: "2026-09-10T10:00:00.000Z" },
+        firstDay
       ).visible
     ).toBe(false);
   });
