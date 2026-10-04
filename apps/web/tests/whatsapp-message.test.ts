@@ -7,8 +7,6 @@ import {
 } from "@/features/installments/lib/whatsapp-message";
 
 const NBSP = String.fromCharCode(0xa0);
-/** Writes "~" for the no-break space the installment messages keep between numbers. */
-const nb = (text: string) => text.replaceAll("~", NBSP);
 
 const base: ChargeMessageInput = {
   contractTitle: "Aluguel do apê",
@@ -90,9 +88,7 @@ describe("chargeMessage", () => {
         "pt-BR"
       )[0]
     ).toBe(
-      nb(
-        "Oi! As parcelas 5~a~12 e 14~a~18 de “Venda do terreno” estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
-      )
+      "Oi! As parcelas 5 a 12 e 14 a 18 de “Venda do terreno” estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
     );
     expect(
       groupChargeMessage(
@@ -102,6 +98,32 @@ describe("chargeMessage", () => {
     ).toBe(
       "Oi! 6 parcelas de “Venda do terreno”, entre a 3 e a 11, estão em aberto, somando R$ 46.000,00. A mais antiga venceu em 28/10/2024. Consegue ver isso pra mim?"
     );
+  });
+
+  it("grupo: a faixa sai com espaço comum, o NBSP é só da nossa tela (o WhatsApp recebe texto puro)", () => {
+    for (const locale of ["pt-BR", "en-US"] as const) {
+      const [text] = groupChargeMessage(
+        {
+          contractTitle: "Terreno do Sítio",
+          dueDate: "2026-08-25",
+          sequences: [1, 2, 3],
+          totalCents: 60_000,
+        },
+        locale
+      );
+      expect(text).not.toContain(NBSP);
+    }
+    expect(
+      groupChargeMessage(
+        {
+          contractTitle: "Terreno do Sítio",
+          dueDate: "2026-08-25",
+          sequences: [1, 2, 3],
+          totalCents: 60_000,
+        },
+        "pt-BR"
+      )[0]
+    ).toContain("As parcelas 1 a 3 de “Terreno do Sítio” estão em aberto");
   });
 
   it("grupo no idioma de quem envia", () => {

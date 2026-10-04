@@ -618,8 +618,9 @@ describe("ActionList", () => {
         name: nb("Venda do terreno · parcelas~5~a~12 e 14~a~20~de~60"),
       })
     ).toBeVisible();
+    // The screen keeps its no-break spaces; the message leaves as plain text.
     expect(whatsappText()).toContain(
-      nb("As parcelas 5~a~12 e 14~a~20 de “Venda do terreno” estão em aberto")
+      "As parcelas 5 a 12 e 14 a 20 de “Venda do terreno” estão em aberto"
     );
   });
 
