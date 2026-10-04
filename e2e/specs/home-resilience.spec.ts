@@ -9,6 +9,8 @@ import {
 } from "../fixtures";
 import { card, collectHydrationErrors } from "../home-helpers";
 
+const NBSP = String.fromCharCode(160);
+
 test("cold start: o shell e a saudação aparecem na hora, e a seção carrega depois", async ({
   page,
 }) => {
@@ -32,14 +34,14 @@ test("cold start: o shell e a saudação aparecem na hora, e a seção carrega d
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();
-  await expect(card(page, "Frio E2E · 1/3")).toHaveCount(0);
+  await expect(card(page, "Frio E2E · parcela 1 de 3")).toHaveCount(0);
   // Past the 3 s notice, far from the 15 s timeout.
   await page.clock.fastForward(4000);
   await expect(
     page.getByRole("status").filter({ hasText: "Conectando ao servidor…" })
   ).toBeVisible();
   warmUp();
-  await expect(card(page, "Frio E2E · 1/3")).toBeVisible();
+  await expect(card(page, "Frio E2E · parcela 1 de 3")).toBeVisible();
 });
 
 test("API travada: depois do timeout, Tentar de novo recupera", async ({
@@ -74,7 +76,7 @@ test("API travada: depois do timeout, Tentar de novo recupera", async ({
   );
   hang = false;
   await page.getByRole("button", { name: "Tentar de novo" }).click();
-  await expect(card(page, "Travada E2E · 1/3")).toBeVisible();
+  await expect(card(page, "Travada E2E · parcela 1 de 3")).toBeVisible();
 });
 
 test("Tentar de novo: pelo teclado o foco vai para a seção com o anel; pelo clique, sem o anel", async ({
@@ -112,7 +114,7 @@ test("Tentar de novo: pelo teclado o foco vai para a seção com o anel; pelo cl
   fail = false;
   await page.getByRole("button", { name: "Tentar de novo" }).click();
   await expect(
-    focused.getByRole("article", { name: "Anel E2E · 1/3" })
+    focused.getByRole("article", { name: "Anel E2E · parcela 1 de 3" })
   ).toBeVisible();
   await expect(focused).toHaveAttribute("tabindex", "-1");
   expect(await focused.evaluate((el) => el.matches(":focus-visible"))).toBe(
@@ -134,11 +136,17 @@ test("SSR: a home chega no HTML em streaming e o navegador não pede /api/home",
   const hydrationErrors = collectHydrationErrors(page);
   await page.goto("/");
   await waitForHydrated(page);
-  await expect(card(page, "Stream E2E · 1/3")).toBeVisible();
+  await expect(card(page, "Stream E2E · parcela 1 de 3")).toBeVisible();
   expect(homeCalls).toEqual([]);
   // The server HTML is what the browser renders: no hydration mismatch.
   expect(hydrationErrors).toEqual([]);
-  // The raw SSR response, cookie included, already carries the home.
-  const html = await (await page.request.get("/")).text();
-  expect(html).toContain("Stream E2E · 1/3");
+  // The raw SSR response, cookie included, already carries the home. The
+  // card's name is split in the HTML (the title, then the installment in its
+  // own span, with no-break spaces), so each part is checked on its own.
+  const html = (await (await page.request.get("/")).text()).replaceAll(
+    NBSP,
+    " "
+  );
+  expect(html).toContain("Stream E2E");
+  expect(html).toContain("parcela 1 de 3");
 });

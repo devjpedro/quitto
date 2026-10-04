@@ -17,6 +17,7 @@ const ACCEPT_INVITE = /Aceitar convite/i;
 const AGENDA_ROW = /Agenda E2E/;
 const FAR_ROW = /Longe E2E/;
 const INSTALLMENT_PARAM = /installment=/;
+const PAID_THIS_MONTH = /Pago em /;
 const WA_PREFIX = "https://wa.me/?text=";
 /** The list's double-tap lock (use-action-lock.ts). */
 const ACTION_LOCK_MS = 700;
@@ -35,10 +36,18 @@ test("primeiro acesso: o guia mostra o próximo passo e dispensar fica guardado"
   await expect(
     page.getByRole("link", { name: "Criar meu primeiro contrato" })
   ).toHaveAttribute("href", "/contracts/new");
+  // The screen answers at once (optimistic): reload only once the dismissal
+  // reached the API, or the reload can race it and bring the guide back.
+  const dismissed = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/me/onboarding/dismiss" &&
+      response.request().method() === "POST"
+  );
   await page.getByRole("button", { name: "dispensar guia" }).click();
   await expect(
     page.getByRole("heading", { name: "Suas pendências aparecem aqui" })
   ).toBeVisible();
+  expect((await dismissed).ok()).toBe(true);
   await page.reload();
   await waitForHydrated(page);
   await expect(
@@ -75,7 +84,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
   await page.goto("/");
   // A click before hydration lands on the server HTML and is lost.
   await waitForHydrated(page);
-  const first = card(page, "Aluguel E2E · 1/3");
+  const first = card(page, "Aluguel E2E · parcela 1 de 3");
   await expect(first.getByText("Faça primeiro · atrasada")).toBeVisible();
   await first.getByRole("button", { name: "Já paguei" }).click();
   await expect(
@@ -92,16 +101,17 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
   await expect(
     page.getByText("Nada pendente agora", { exact: true })
   ).toBeVisible();
-  await expect(card(page, "Aluguel E2E · 1/3")).toHaveCount(0);
-  // 1 of 3 paid: the milestone of the moment is "Mais perto de quitar". Desktop
-  // shows it in the sidebar's lime card; a phone opens the strip with it.
+  await expect(card(page, "Aluguel E2E · parcela 1 de 3")).toHaveCount(0);
+  // 1 of 3 paid is 33%, below the half "Mais perto de quitar" asks for: the
+  // milestone of the moment is what was paid this month. Desktop shows it in
+  // the sidebar's lime card; a phone opens the strip with it.
   if (testInfo.project.name === "mobile") {
     await expect(
       page.getByRole("region", { name: "Marcos" }).getByRole("listitem").first()
-    ).toContainText("Mais perto de quitar");
+    ).toContainText(PAID_THIS_MONTH);
   } else {
     await expect(
-      page.getByRole("complementary").getByText("Mais perto de quitar")
+      page.getByRole("complementary").getByText(PAID_THIS_MONTH)
     ).toBeVisible();
   }
 });
@@ -155,7 +165,7 @@ test("recebedor: Cobrar no WhatsApp leva a cobrança com o PIX, e Marcar como re
   await page.goto("/");
   // A click before hydration lands on the server HTML and is lost.
   await waitForHydrated(page);
-  const sale = card(page, "Venda E2E · 1/3");
+  const sale = card(page, "Venda E2E · parcela 1 de 3");
   const whatsapp = sale.getByRole("link", { name: "Cobrar no WhatsApp" });
   await expect(whatsapp).toHaveAttribute("target", "_blank");
   const href = (await whatsapp.getAttribute("href")) ?? "";
@@ -217,10 +227,15 @@ test("convites no Agora: recusar e aceitar ali mesmo, e o recusado não volta", 
     await waitForHydrated(guest.page);
     // The section has arrived (the h1 comes before it, by design): the
     // accepted contract's overdue installment is now the guest's to charge.
-    await expect(card(guest.page, "Convite Aceitar · 1/3")).toBeVisible();
+    await expect(
+      card(guest.page, "Convite Aceitar · parcela 1 de 3")
+    ).toBeVisible();
     await expect(inviteCard(guest.page, "Convite Recusar")).toHaveCount(0);
     await guest.page.goto("/contracts");
-    await expect(guest.page.getByText("Convite Aceitar")).toBeVisible();
+    // In the list, not in the sidebar's "Contratos ativos".
+    await expect(
+      guest.page.getByRole("main").getByText("Convite Aceitar")
+    ).toBeVisible();
   } finally {
     await owner.close();
     await guest.close();
@@ -262,7 +277,7 @@ test("conferir comprovante: Confirmar no próprio Agora", async ({
 
     await approver.page.goto("/");
     await waitForHydrated(approver.page);
-    const review = card(approver.page, "Conferir E2E · 1/3");
+    const review = card(approver.page, "Conferir E2E · parcela 1 de 3");
     await expect(
       review.getByText("Faça primeiro · aguarda você")
     ).toBeVisible();

@@ -10,9 +10,10 @@ import {
   signup,
   waitForHydrated,
 } from "../fixtures";
-import { card, seedWide } from "../home-helpers";
+import { card, chipsMeasured, seedWide } from "../home-helpers";
 
 const GREETING_EN = /^(Good morning|Good afternoon|Good evening), Usuário$/;
+const PAID_THIS_MONTH = /Pago em /;
 
 test("idioma: o Agora em inglês", async ({ page }) => {
   await signup(page);
@@ -94,10 +95,11 @@ for (const theme of ["light", "dark"] as const) {
       },
     });
     await page.goto("/");
-    await expect(card(page, "Axe pago · 1/3")).toBeVisible();
+    await expect(card(page, "Axe pago · parcela 1 de 3")).toBeVisible();
     if (theme === "dark") {
       await expect(page.locator("html.dark")).toBeVisible();
     }
+    await chipsMeasured(page);
     await scan(page);
     const panel = await openNotifications(page);
     await expect(panel).toHaveAttribute(
@@ -127,11 +129,12 @@ for (const theme of ["light", "dark"] as const) {
         ]);
       }
       const { hydrationErrors, id } = await seedWide(page);
-      // One installment paid this month: milestones show up in their column,
-      // and the sidebar's lime card ("Mais perto de quitar") sits on the canvas.
+      // One installment paid this month (the first contract's only one):
+      // milestones show up in their column, and the sidebar's lime card
+      // ("Pago em …") sits on the canvas.
       const detail = await getContract(page.request, id);
       const paid = await page.request.post(
-        `/api/installments/${detail.installments[5].id}/mark-paid`
+        `/api/installments/${detail.installments[0].id}/mark-paid`
       );
       expect(paid.ok()).toBe(true);
       await page.reload();
@@ -148,7 +151,7 @@ for (const theme of ["light", "dark"] as const) {
           .or(recent.getByRole("list"))
       ).toBeVisible();
       await expect(
-        page.getByRole("complementary").getByText("Mais perto de quitar")
+        page.getByRole("complementary").getByText(PAID_THIS_MONTH)
       ).toBeVisible();
       if (theme === "dark") {
         await expect(page.locator("html.dark")).toBeVisible();

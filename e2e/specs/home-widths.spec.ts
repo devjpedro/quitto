@@ -1,52 +1,46 @@
 import { expect, test } from "@playwright/test";
+import { signup, waitForHydrated } from "../fixtures";
 import {
-  isoDaysFromToday,
-  seedContract,
-  signup,
-  waitForHydrated,
-} from "../fixtures";
-import { box, card, expectNoPageScrollX, seedWide } from "../home-helpers";
+  box,
+  card,
+  expectNoPageScrollX,
+  seedOneEach,
+  seedWide,
+} from "../home-helpers";
 
 test("muitas ações: carrossel com 1 de N no celular e Ver todas no desktop", async ({
   page,
 }, testInfo) => {
   await signup(page);
-  await seedContract(page.request, {
-    title: "Muitas E2E",
-    schedule: {
-      mode: "custom",
-      installments: [-40, -30, -20, -10, -5].map((days) => ({
-        amountCents: 10_000,
-        dueDate: isoDaysFromToday(days),
-      })),
-    },
-  });
+  await seedOneEach(page.request, "Muitas E2E", [-40, -30, -20, -10, -5]);
   await page.goto("/");
   // A click before hydration lands on the server HTML and is lost.
   await waitForHydrated(page);
-  await expect(card(page, "Muitas E2E · 1/5")).toBeVisible();
+  await expect(card(page, "Muitas E2E 1 · parcela 1 de 1")).toBeVisible();
   if (testInfo.project.name === "mobile") {
     await expect(page.getByText("1 de 5")).toBeVisible();
     // the next card peeks at the edge, the last one is off screen
-    await expect(card(page, "Muitas E2E · 2/5")).toBeInViewport();
-    await expect(card(page, "Muitas E2E · 5/5")).not.toBeInViewport();
+    await expect(card(page, "Muitas E2E 2 · parcela 1 de 1")).toBeInViewport();
+    await expect(
+      card(page, "Muitas E2E 5 · parcela 1 de 1")
+    ).not.toBeInViewport();
     await expectNoPageScrollX(page);
     // keyboard reaches every card: focusing a button in an off-screen card scrolls it in
-    await card(page, "Muitas E2E · 5/5")
+    await card(page, "Muitas E2E 5 · parcela 1 de 1")
       .getByRole("button", { name: "Já paguei" })
       .focus();
-    await expect(card(page, "Muitas E2E · 5/5")).toBeInViewport();
+    await expect(card(page, "Muitas E2E 5 · parcela 1 de 1")).toBeInViewport();
     await page.getByRole("button", { name: "Ver todas", exact: true }).click();
-    const last = card(page, "Muitas E2E · 5/5");
+    const last = card(page, "Muitas E2E 5 · parcela 1 de 1");
     await last.scrollIntoViewIfNeeded();
     await expect(last).toBeInViewport();
     await expect(page.getByText("1 de 5")).toHaveCount(0);
     await expectNoPageScrollX(page);
   } else {
-    await expect(card(page, "Muitas E2E · 4/5")).toBeHidden();
+    await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeHidden();
     await page.getByRole("button", { name: "Ver todas (5)" }).click();
-    await expect(card(page, "Muitas E2E · 4/5")).toBeVisible();
-    await expect(card(page, "Muitas E2E · 5/5")).toBeVisible();
+    await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeVisible();
+    await expect(card(page, "Muitas E2E 5 · parcela 1 de 1")).toBeVisible();
   }
 });
 
@@ -62,20 +56,11 @@ test.describe("tablet a 800 px", () => {
       "o projeto mobile tem viewport própria"
     );
     await signup(page);
-    await seedContract(page.request, {
-      title: "Tablet E2E",
-      schedule: {
-        mode: "custom",
-        installments: [-40, -30, -20, -10, -5].map((days) => ({
-          amountCents: 10_000,
-          dueDate: isoDaysFromToday(days),
-        })),
-      },
-    });
+    await seedOneEach(page.request, "Tablet E2E", [-40, -30, -20, -10, -5]);
     await page.goto("/");
     await waitForHydrated(page);
     // Below lg it is still the carousel, now beside the sidebar.
-    await expect(card(page, "Tablet E2E · 1/5")).toBeVisible();
+    await expect(card(page, "Tablet E2E 1 · parcela 1 de 1")).toBeVisible();
     await expect(page.getByText("1 de 5")).toBeVisible();
     await expectNoPageScrollX(page);
   });
@@ -93,19 +78,12 @@ test.describe("desktop a 1024 px", () => {
       "o projeto mobile tem viewport própria"
     );
     await signup(page);
-    await seedContract(page.request, {
-      title: "Grade E2E",
-      schedule: {
-        mode: "custom",
-        installments: [-30, -20, -10].map((days) => ({
-          amountCents: 10_000,
-          dueDate: isoDaysFromToday(days),
-        })),
-      },
-    });
+    await seedOneEach(page.request, "Grade E2E", [-30, -20, -10]);
     await page.goto("/");
     for (const n of [1, 2, 3]) {
-      await expect(card(page, `Grade E2E · ${n}/3`)).toBeInViewport();
+      await expect(
+        card(page, `Grade E2E ${n} · parcela 1 de 1`)
+      ).toBeInViewport();
     }
     // From lg the cards are a grid: no carousel counter, nothing past the panel's edge.
     await expect(page.getByText("1 de 3")).toBeHidden();
