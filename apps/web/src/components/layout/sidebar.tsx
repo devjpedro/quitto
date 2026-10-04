@@ -114,9 +114,7 @@ export function Sidebar({
         </button>
       </nav>
       <div className="mt-auto flex flex-col gap-3">
-        {moment ? (
-          <MomentCard detail={moment.detail} title={moment.title} />
-        ) : null}
+        {moment ? <MomentCard moment={moment} /> : null}
         <AccountMenu identity={identity} variant="full" />
       </div>
     </aside>

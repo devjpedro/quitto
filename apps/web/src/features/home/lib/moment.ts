@@ -1,8 +1,9 @@
 import type { Locale } from "@quitto/shared";
-import { formatMoney, formatMonthName } from "@/lib/locale-format";
+import { formatDate, formatMoney, formatMonthName } from "@/lib/locale-format";
 import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
+import { sinceDate } from "./action-text";
 import type { MilestoneCell } from "./milestones";
 import { onboardingView } from "./onboarding";
 
@@ -15,7 +16,13 @@ export type MomentMilestone =
   | { done: number; id: "guide"; total: number };
 
 export interface MomentView {
-  detail: string;
+  /** A third line when there is one: "Falta 1 parcela, em 13/10". */
+  detail: string | null;
+  /** What kind of milestone: "Mais perto de quitar", "Tudo em dia em setembro". */
+  label: string;
+  /** The ring's % when the milestone is progress (DIRECAO › Progresso); null when it is not. */
+  percent: number | null;
+  /** The milestone itself: "Celular da Ana · 9/10", "12 de 12 parcelas quitadas", "R$ 2.300,00". */
   title: string;
 }
 
@@ -46,31 +53,71 @@ export function momentMilestone(home: Home): MomentMilestone | null {
     : null;
 }
 
-/** The lime card's two lines, in `locale`. The strip's cells read their text from here too, so both always agree. */
+/**
+ * "Falta 1 parcela, em 13/10"; with no date yet, "Falta 1 parcela"; "Faltam N
+ * parcelas" otherwise. The date is the oldest open installment's: once it is
+ * past, the line says since when it is late, never "em" a date gone by.
+ */
+function remainingDetail(
+  remainingCount: number,
+  nextDueDate: string | null,
+  today: string,
+  locale: Locale
+): string {
+  const options = { locale };
+  if (nextDueDate && nextDueDate < today) {
+    const date = sinceDate(nextDueDate, today, locale);
+    return remainingCount === 1
+      ? m.home_moment_one_left_overdue({ date }, options)
+      : m.home_moment_many_left_overdue(
+          { count: remainingCount, date },
+          options
+        );
+  }
+  if (remainingCount !== 1) {
+    return m.home_moment_many_left({ count: remainingCount }, options);
+  }
+  if (nextDueDate) {
+    return m.home_moment_one_left(
+      { date: formatDate(nextDueDate, locale, "dayMonth") },
+      options
+    );
+  }
+  return m.home_moment_one_left_nodate({}, options);
+}
+
+/**
+ * The lime card's text, in `locale`; `today` (the home's, São Paulo) tells a
+ * late installment from one still ahead. The strip's cells read their text
+ * from here too, so both always agree.
+ */
 export function momentView(
   moment: MomentMilestone,
-  locale: Locale
+  locale: Locale,
+  today: string
 ): MomentView {
   const options = { locale };
   switch (moment.id) {
     case "all_clear":
       return {
-        title: m.home_milestone_all_clear(
+        label: m.home_milestone_all_clear(
           { month: formatMonthName(moment.month, locale) },
           options
         ),
-        detail:
+        title:
           pluralForm(moment.paidCount, locale) === "one"
             ? m.home_milestone_all_clear_detail_one({}, options)
             : m.home_milestone_all_clear_detail_other(
                 { count: moment.paidCount },
                 options
               ),
+        detail: null,
+        percent: 100,
       };
     case "closest":
       return {
-        title: m.home_milestone_closest({}, options),
-        detail: m.home_milestone_closest_value(
+        label: m.home_milestone_closest({}, options),
+        title: m.home_milestone_closest_value(
           {
             title: moment.title,
             paid: moment.paidCount,
@@ -78,30 +125,43 @@ export function momentView(
           },
           options
         ),
+        detail: remainingDetail(
+          moment.remainingCount,
+          moment.nextDueDate,
+          today,
+          locale
+        ),
+        percent: moment.percent,
       };
     case "paid":
       return {
-        title: m.home_milestone_paid(
+        label: m.home_milestone_paid(
           { month: formatMonthName(moment.month, locale) },
           options
         ),
-        detail: formatMoney(moment.cents, locale),
+        title: formatMoney(moment.cents, locale),
+        detail: null,
+        percent: null,
       };
     case "received":
       return {
-        title: m.home_milestone_received(
+        label: m.home_milestone_received(
           { month: formatMonthName(moment.month, locale) },
           options
         ),
-        detail: formatMoney(moment.cents, locale),
+        title: formatMoney(moment.cents, locale),
+        detail: null,
+        percent: null,
       };
     default:
       return {
-        title: m.onboarding_tag({}, options),
-        detail: m.onboarding_progress(
+        label: m.onboarding_tag({}, options),
+        title: m.onboarding_progress(
           { done: moment.done, total: moment.total },
           options
         ),
+        detail: null,
+        percent: Math.round((moment.done / moment.total) * 100),
       };
   }
 }

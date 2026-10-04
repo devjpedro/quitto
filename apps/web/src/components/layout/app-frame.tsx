@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { SessionIdentity } from "@/lib/session-resolver";
 import { m } from "@/paraglide/messages.js";
+import type { MomentCardView } from "./moment-card";
 import type { NavCounts } from "./nav-items";
 import { Sidebar } from "./sidebar";
 import { TabBar } from "./tab-bar";
@@ -8,8 +9,8 @@ import { TopBar } from "./top-bar";
 
 export interface ShellProps {
   identity: SessionIdentity | null;
-  /** The milestone of the moment, as text (lime card at the foot of the sidebar); null hides it. */
-  moment: { detail: string; title: string } | null;
+  /** The milestone of the moment (lime card at the foot of the sidebar); null hides it. */
+  moment: MomentCardView | null;
   /** The numbers next to "Agora" and "Contratos" in the sidebar; 0 hides one. */
   navCounts: NavCounts;
   notificationsOpen: boolean;

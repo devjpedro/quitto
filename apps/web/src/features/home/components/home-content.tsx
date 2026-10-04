@@ -47,7 +47,11 @@ export function HomeContent() {
   const momentId = momentMilestone(home)?.id ?? null;
   const milestones = layout.hasContract ? (
     // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
-    <Milestones milestones={home.milestones} momentId={momentId} />
+    <Milestones
+      milestones={home.milestones}
+      momentId={momentId}
+      today={home.today}
+    />
   ) : null;
   // A strip with only that milestone is phone-only (md:hidden): it stays out of
   // the side column, which is then empty when "Notificações recentes" is gone.

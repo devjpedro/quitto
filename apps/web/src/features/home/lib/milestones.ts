@@ -5,13 +5,19 @@ export type MilestoneCell =
   | {
       contractId: string;
       id: "closest";
+      nextDueDate: string | null;
       paidCount: number;
       percent: number;
+      remainingCount: number;
       title: string;
       totalCount: number;
     }
   | { cents: number; id: "received" | "paid"; month: string }
-  | { cents: number; id: "settled_paid" | "settled_received" };
+  | {
+      cents: number;
+      id: "settled_paid" | "settled_received";
+      totalCents: number;
+    };
 
 /**
  * Cells of the milestones strip, in order. Empty ones are left out: never a
@@ -41,10 +47,18 @@ export function milestoneCells(ms: HomeMilestones): MilestoneCell[] {
     });
   }
   if (ms.settled.paidCents > 0) {
-    cells.push({ id: "settled_paid", cents: ms.settled.paidCents });
+    cells.push({
+      id: "settled_paid",
+      cents: ms.settled.paidCents,
+      totalCents: ms.settled.payableTotalCents,
+    });
   }
   if (ms.settled.receivedCents > 0) {
-    cells.push({ id: "settled_received", cents: ms.settled.receivedCents });
+    cells.push({
+      id: "settled_received",
+      cents: ms.settled.receivedCents,
+      totalCents: ms.settled.receivableTotalCents,
+    });
   }
   return cells;
 }
@@ -92,4 +106,12 @@ export function onlyMomentStrip(
 ): boolean {
   const strip = stripCells(milestoneCells(milestones), momentId);
   return strip.length > 0 && strip.every((item) => item.moment);
+}
+
+/** What is paid of the whole, in percent (0 to 100, rounded): "Já recebeu … 40%". */
+export function sharePercent(cents: number, totalCents: number): number {
+  if (totalCents <= 0) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, Math.round((cents / totalCents) * 100)));
 }

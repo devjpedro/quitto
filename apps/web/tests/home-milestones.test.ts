@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   milestoneCells,
   onlyMomentStrip,
+  sharePercent,
   stripCells,
 } from "@/features/home/lib/milestones";
 import { homeFixture } from "./home-fixtures";
@@ -55,7 +56,34 @@ describe("milestoneCells", () => {
         receivableTotalCents: 4_190_000,
       },
     });
-    expect(cells).toEqual([{ id: "settled_received", cents: 4_190_000 }]);
+    expect(cells).toEqual([
+      { id: "settled_received", cents: 4_190_000, totalCents: 4_190_000 },
+    ]);
+  });
+
+  it("as células do já quitado levam o total da direção", () => {
+    const cells = milestoneCells({
+      ...homeFixture().milestones,
+      settled: {
+        paidCents: 1_020_000,
+        receivedCents: 554_000,
+        payableTotalCents: 2_660_000,
+        receivableTotalCents: 1_370_000,
+      },
+    });
+    expect(cells).toEqual([
+      { id: "settled_paid", cents: 1_020_000, totalCents: 2_660_000 },
+      { id: "settled_received", cents: 554_000, totalCents: 1_370_000 },
+    ]);
+  });
+});
+
+describe("sharePercent", () => {
+  it("o pago sobre o total, arredondado e entre 0 e 100", () => {
+    expect(sharePercent(554_000, 1_370_000)).toBe(40);
+    expect(sharePercent(1_020_000, 2_660_000)).toBe(38);
+    expect(sharePercent(0, 1000)).toBe(0);
+    expect(sharePercent(1000, 0)).toBe(0);
   });
 });
 

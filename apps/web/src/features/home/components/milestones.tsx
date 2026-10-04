@@ -1,7 +1,9 @@
 import type { Locale } from "@quitto/shared";
 import { useId } from "react";
 import { Money } from "@/components/ui/money";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { Tag } from "@/components/ui/tag";
+import { formatMoney } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -9,86 +11,175 @@ import {
   type MilestoneCell,
   milestoneCells,
   onlyMomentStrip,
+  sharePercent,
   stripCells,
 } from "../lib/milestones";
-import { momentView } from "../lib/moment";
+import { type MomentMilestone, momentView } from "../lib/moment";
 import type { HomeMilestones } from "../types";
+import { SectionTitle } from "./section-title";
 
-const BAR =
-  "mt-1 h-1.5 w-full appearance-none overflow-hidden rounded-full bg-surface-sunken [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-brand [&::-webkit-progress-bar]:bg-surface-sunken [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-brand";
+/** A milestone's bar: decorative, the % is written beside the label. */
+function Bar({ percent }: { percent: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="mt-3 block h-1.5 overflow-hidden rounded-full bg-track"
+    >
+      <span
+        className="block h-full min-w-1.5 rounded-full bg-brand"
+        style={{ width: `${percent}%` }}
+      />
+    </span>
+  );
+}
 
-function Labeled({ cents, label }: { cents: number; label: string }) {
+function LabelRow({
+  label,
+  percent,
+}: {
+  label: string;
+  percent: number | null;
+}) {
+  return (
+    <span className="flex items-baseline justify-between gap-2 text-[12.5px] text-ink-muted">
+      <span>{label}</span>
+      {percent === null ? null : (
+        <b className="font-semibold text-[13px] text-ink tabular-nums">
+          {m.home_percent({ percent })}
+        </b>
+      )}
+    </span>
+  );
+}
+
+/** A value milestone (DIRECAO › Progresso): the value, "de R$ X", the % and a bar when there is a whole to measure against. */
+function ValueCell({
+  cents,
+  label,
+  locale,
+  totalCents,
+}: {
+  cents: number;
+  label: string;
+  locale: Locale;
+  totalCents: number | null;
+}) {
+  const percent = totalCents ? sharePercent(cents, totalCents) : null;
   return (
     <>
-      <span className="text-ink-muted text-xs">{label}</span>
-      <Money cents={cents} className="font-medium text-sm" />
+      <LabelRow label={label} percent={percent} />
+      <Money cents={cents} className="mt-1.5 block" size="milestone" />
+      {totalCents ? (
+        <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted tabular-nums">
+          {m.home_milestone_of({ amount: formatMoney(totalCents, locale) })}
+        </span>
+      ) : null}
+      {percent === null ? null : <Bar percent={percent} />}
     </>
   );
 }
 
-/** Title and detail come from momentView, the lime card's text: the strip and the sidebar always say the same. */
-function CellView({ cell, locale }: { cell: MilestoneCell; locale: Locale }) {
+interface CellProps {
+  cell: MilestoneCell;
+  locale: Locale;
+  today: string;
+}
+
+/** Label and title come from momentView, the lime card's text: the strip and the sidebar always say the same. */
+function CellView({ cell, locale, today }: CellProps) {
   switch (cell.id) {
     case "all_clear": {
-      const view = momentView(cell, locale);
+      const view = momentView(cell, locale, today);
       return (
         <>
-          <Tag tone="highlight">{view.title}</Tag>
-          <span className="text-sm">{view.detail}</span>
+          <Tag className="whitespace-nowrap" tone="highlight">
+            {view.label}
+          </Tag>
+          <span className="mt-2 block text-sm">{view.title}</span>
         </>
       );
     }
     case "closest": {
-      const view = momentView(cell, locale);
+      const view = momentView(cell, locale, today);
       return (
         <>
-          <span className="text-ink-muted text-xs">{view.title}</span>
-          <span className="font-medium text-sm">{view.detail}</span>
-          <progress
-            aria-label={m.home_milestone_closest_progress({
-              percent: cell.percent,
-            })}
-            className={BAR}
-            max={100}
-            value={cell.percent}
-          />
+          <LabelRow label={view.label} percent={cell.percent} />
+          <span className="mt-1.5 block truncate font-medium text-sm">
+            {view.title}
+          </span>
+          <Bar percent={cell.percent} />
         </>
       );
     }
     case "received":
     case "paid":
       return (
-        <Labeled cents={cell.cents} label={momentView(cell, locale).title} />
+        <ValueCell
+          cents={cell.cents}
+          label={momentView(cell, locale, today).label}
+          locale={locale}
+          totalCents={null}
+        />
       );
     case "settled_paid":
       return (
-        <Labeled cents={cell.cents} label={m.home_milestone_settled_paid()} />
+        <ValueCell
+          cents={cell.cents}
+          label={m.home_milestone_settled_paid()}
+          locale={locale}
+          totalCents={cell.totalCents}
+        />
       );
     default:
       return (
-        <Labeled
+        <ValueCell
           cents={cell.cents}
           label={m.home_milestone_settled_received()}
+          locale={locale}
+          totalCents={cell.totalCents}
         />
       );
   }
 }
 
+/** The milestone of the moment, opening the strip on a phone: lime, with the 44 px ring (mockup 13, frame D). */
+function MomentCell({ cell, locale, today }: CellProps) {
+  const view = momentView(cell as MomentMilestone, locale, today);
+  return (
+    <>
+      {view.percent === null ? null : (
+        <ProgressRing percent={view.percent} size={44} tone="onHighlight" />
+      )}
+      <span className="min-w-0">
+        <span className="block text-[12.5px]">{view.label}</span>
+        <span className="block font-semibold text-[15px] leading-[1.3]">
+          {view.title}
+        </span>
+        {view.detail ? (
+          <span className="block text-[12.5px]">{view.detail}</span>
+        ) : null}
+      </span>
+    </>
+  );
+}
+
 /**
- * Real progress, never decoration: a strip of cells with straight dividers
- * (gap-px over the line color), two columns below lg and one row from lg.
- * From lateral it sits in the home's side column (mockup 12): stacked under
- * a visible "Marcos", two by two once that column has 400 px (the section is
- * a size container). The milestone of the moment (`momentId`) opens it on a
- * phone; from md the sidebar's lime card shows that one, so the strip hides
- * it there.
+ * Real progress, never decoration (mockup 13): filled cells separated by a
+ * 2 px gap in the color behind them (the panel from md, the page on a
+ * phone), two columns below lg and one row from lg. From lateral it sits in
+ * the home's side column, stacked, two by two once that column has 400 px.
+ * The milestone of the moment opens it on a phone; from md the sidebar's
+ * lime card shows that one, so the strip hides it there. `today` is the
+ * home's: it tells a late installment from one still ahead.
  */
 export function Milestones({
   milestones,
   momentId,
+  today,
 }: {
   milestones: HomeMilestones;
   momentId: string | null;
+  today: string;
 }) {
   const locale = getLocale();
   const headingId = useId();
@@ -100,30 +191,26 @@ export function Milestones({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn(
-        "@container flex flex-col lateral:gap-2",
-        onlyMoment && "md:hidden"
-      )}
+      className={cn("@container", onlyMoment && "md:hidden")}
     >
-      {/* Same look as the "Próximos 30 dias" title; read aloud at any width. */}
-      <h2
-        className="sr-only lateral:not-sr-only font-medium text-ink-muted text-sm"
-        id={headingId}
-      >
-        {m.home_milestones_title()}
-      </h2>
-      <ul className="grid lateral:grid-flow-row grid-cols-2 lateral:@min-[400px]:grid-cols-2 lateral:grid-cols-1 gap-px overflow-hidden rounded-card border border-line bg-line lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
+      <SectionTitle id={headingId}>{m.home_milestones_title()}</SectionTitle>
+      <ul className="grid lateral:grid-flow-row grid-cols-2 lateral:@min-[400px]:grid-cols-2 lateral:grid-cols-1 gap-0.5 overflow-hidden rounded-card bg-surface-sunken md:bg-surface lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
         {strip.map(({ cell, moment, wide }) => (
           <li
             className={cn(
-              "flex flex-col gap-1 bg-surface-raised p-3.5",
-              wide &&
-                "col-span-2 lateral:@min-[400px]:col-span-2 lg:col-span-1",
-              moment && "md:hidden"
+              "min-w-0 px-4 pt-3.5 pb-4",
+              moment
+                ? "flex items-center gap-3.5 bg-highlight text-on-highlight md:hidden"
+                : "bg-surface-card",
+              wide && "col-span-2 lateral:@min-[400px]:col-span-2 lg:col-span-1"
             )}
             key={cell.id}
           >
-            <CellView cell={cell} locale={locale} />
+            {moment ? (
+              <MomentCell cell={cell} locale={locale} today={today} />
+            ) : (
+              <CellView cell={cell} locale={locale} today={today} />
+            )}
           </li>
         ))}
       </ul>

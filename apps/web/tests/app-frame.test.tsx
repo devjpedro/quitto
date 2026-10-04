@@ -174,19 +174,56 @@ describe("AppFrame", () => {
   it("shows the milestone of the moment as a lime card at the foot of the sidebar", async () => {
     await renderAt("/", {
       moment: {
-        title: "Tudo em dia em setembro",
-        detail: "12 de 12 parcelas quitadas",
+        label: "Tudo em dia em setembro",
+        title: "12 de 12 parcelas quitadas",
+        detail: null,
+        percent: 100,
       },
     });
-    const title = screen.getByText("Tudo em dia em setembro");
-    expect(title).toBeVisible();
+    const label = screen.getByText("Tudo em dia em setembro");
+    expect(label).toBeVisible();
     expect(screen.getByText("12 de 12 parcelas quitadas")).toBeVisible();
-    expect(title.closest("aside")).not.toBeNull();
+    expect(label.closest("aside")).not.toBeNull();
     // Dark text on lime, never lime text (DIRECAO).
-    expect(title.parentElement).toHaveClass(
+    expect(label.closest("div")).toHaveClass(
       "bg-highlight",
       "text-on-highlight"
     );
+  });
+
+  it("o cartão limão do marco do momento: rótulo, anel com o %, título e detalhe", async () => {
+    await renderAt("/", {
+      moment: {
+        label: "Mais perto de quitar",
+        title: "Celular da Ana · 9/10",
+        detail: "Falta 1 parcela, em 13/10",
+        percent: 90,
+      },
+    });
+    const card = screen
+      .getByText("Mais perto de quitar")
+      .closest("div") as HTMLElement;
+    expect(card).toHaveClass("bg-highlight");
+    expect(within(card).getByText("90%")).toBeVisible();
+    expect(card.querySelector("svg")).toHaveAttribute("width", "22");
+    expect(within(card).getByText("Celular da Ana · 9/10")).toBeVisible();
+    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toBeVisible();
+  });
+
+  it("um marco que não é progresso (pago no mês): sem anel e sem %", async () => {
+    await renderAt("/", {
+      moment: {
+        label: "Pago em outubro",
+        title: "R$ 1.250,00",
+        detail: null,
+        percent: null,
+      },
+    });
+    const card = screen
+      .getByText("Pago em outubro")
+      .closest("div") as HTMLElement;
+    expect(within(card).getByText("R$ 1.250,00")).toBeVisible();
+    expect(card.querySelector("svg")).toBeNull();
   });
 
   it("without a milestone the lime card is gone", async () => {

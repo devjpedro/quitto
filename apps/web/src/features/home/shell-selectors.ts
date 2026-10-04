@@ -3,7 +3,12 @@ import { useHydrated } from "@tanstack/react-router";
 import type { NavCounts } from "@/components/layout/nav-items";
 import { getLocale } from "@/paraglide/runtime.js";
 import { homeQueryOptions } from "./api";
-import { type MomentView, momentMilestone, momentView } from "./lib/moment";
+import {
+  type MomentMilestone,
+  type MomentView,
+  momentMilestone,
+  momentView,
+} from "./lib/moment";
 import type { Home } from "./types";
 
 // What the shell reads from GET /api/home: the bell's count, the sidebar's
@@ -20,6 +25,14 @@ const navCounts = (home: Home): NavCounts => ({
   contracts: home.activeContractsCount,
   now: home.actions.length,
 });
+
+/** The milestone of the moment with the home's today, which tells a late installment from one ahead. */
+const momentAndToday = (
+  home: Home
+): { milestone: MomentMilestone; today: string } | null => {
+  const milestone = momentMilestone(home);
+  return milestone ? { milestone, today: home.today } : null;
+};
 
 const NO_COUNTS: NavCounts = { contracts: 0, now: 0 };
 
@@ -39,10 +52,12 @@ export function useMomentMilestone(): MomentView | null {
   const hydrated = useHydrated();
   const { data } = useQuery({
     ...homeQueryOptions,
-    select: momentMilestone,
+    select: momentAndToday,
     throwOnError: false,
   });
-  return hydrated && data ? momentView(data, getLocale()) : null;
+  return hydrated && data
+    ? momentView(data.milestone, getLocale(), data.today)
+    : null;
 }
 
 /** The counts next to "Agora" and "Contratos" in the sidebar; zero until hydrated. */

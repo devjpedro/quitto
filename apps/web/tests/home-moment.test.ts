@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { momentMilestone, momentView } from "@/features/home/lib/moment";
-import { homeFixture } from "./home-fixtures";
+import { homeFixture, TODAY } from "./home-fixtures";
 
 const base = homeFixture();
 const closest = {
@@ -64,26 +64,95 @@ describe("momentMilestone", () => {
 });
 
 describe("momentView", () => {
-  it("o texto do cartão limão, no idioma pedido", () => {
+  it("rótulo, título, detalhe e o % do anel, no idioma pedido", () => {
     expect(
-      momentView({ id: "all_clear", month: "2026-09", paidCount: 12 }, "pt-BR")
+      momentView(
+        { id: "all_clear", month: "2026-09", paidCount: 12 },
+        "pt-BR",
+        TODAY
+      )
     ).toEqual({
-      title: "Tudo em dia em setembro",
-      detail: "12 de 12 parcelas quitadas",
+      label: "Tudo em dia em setembro",
+      title: "12 de 12 parcelas quitadas",
+      detail: null,
+      percent: 100,
     });
-    expect(momentView({ id: "closest", ...closest }, "pt-BR")).toEqual({
-      title: "Mais perto de quitar",
-      detail: "Celular da Ana · 9/10",
+    expect(momentView({ id: "closest", ...closest }, "pt-BR", TODAY)).toEqual({
+      label: "Mais perto de quitar",
+      title: "Celular da Ana · 9/10",
+      detail: "Falta 1 parcela, em 13/10",
+      percent: 90,
     });
     expect(
-      momentView({ id: "paid", month: "2026-10", cents: 125_000 }, "en-US")
+      momentView(
+        {
+          id: "closest",
+          ...closest,
+          paidCount: 6,
+          remainingCount: 4,
+          percent: 60,
+        },
+        "pt-BR",
+        TODAY
+      ).detail
+    ).toBe("Faltam 4 parcelas");
+    // One left with no date (the last one has no due date yet): singular, never "Faltam 1 parcelas".
+    expect(
+      momentView(
+        { id: "closest", ...closest, nextDueDate: null },
+        "pt-BR",
+        TODAY
+      ).detail
+    ).toBe("Falta 1 parcela");
+    expect(
+      momentView(
+        { id: "paid", month: "2026-10", cents: 125_000 },
+        "en-US",
+        TODAY
+      )
     ).toEqual({
-      title: "Paid in October",
-      detail: "R$1,250.00",
+      label: "Paid in October",
+      title: "R$1,250.00",
+      detail: null,
+      percent: null,
     });
-    expect(momentView({ id: "guide", done: 2, total: 4 }, "pt-BR")).toEqual({
-      title: "Comece por aqui",
-      detail: "2 de 4",
+    expect(
+      momentView({ id: "guide", done: 2, total: 4 }, "pt-BR", TODAY)
+    ).toEqual({
+      label: "Comece por aqui",
+      title: "2 de 4",
+      detail: null,
+      percent: 50,
     });
+  });
+
+  it("a parcela que falta já venceu: 'em atraso desde', nunca 'em' uma data passada", () => {
+    const late = {
+      id: "closest" as const,
+      ...closest,
+      nextDueDate: "2026-09-13",
+    };
+    expect(momentView(late, "pt-BR", TODAY).detail).toBe(
+      "Falta 1 parcela · em atraso desde 13/09"
+    );
+    expect(momentView(late, "en-US", TODAY).detail).toBe(
+      "1 installment left · overdue since 09/13"
+    );
+    // More than one left, the oldest late: the delay is said too.
+    expect(
+      momentView(
+        { ...late, paidCount: 6, remainingCount: 4, percent: 60 },
+        "pt-BR",
+        TODAY
+      ).detail
+    ).toBe("Faltam 4 parcelas · em atraso desde 13/09");
+    // Another year: the year is written, as on the cards.
+    expect(
+      momentView({ ...late, nextDueDate: "2025-12-10" }, "pt-BR", TODAY).detail
+    ).toBe("Falta 1 parcela · em atraso desde 10/12/2025");
+    // Due today is not late yet.
+    expect(
+      momentView({ ...late, nextDueDate: TODAY }, "pt-BR", TODAY).detail
+    ).toBe("Falta 1 parcela, em 02/10");
   });
 });

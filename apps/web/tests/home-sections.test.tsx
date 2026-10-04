@@ -208,23 +208,28 @@ describe("seções do home", () => {
           settled: {
             paidCents: 4_190_000,
             receivedCents: 0,
-            payableTotalCents: 4_190_000,
+            payableTotalCents: 5_000_000,
             receivableTotalCents: 0,
           },
         }}
         momentId={null}
+        today={TODAY}
       />
     );
     expect(screen.getByText("Tudo em dia em setembro")).toBeVisible();
+    // The tag must not wrap inside the half-width cell.
+    expect(screen.getByText("Tudo em dia em setembro")).toHaveClass(
+      "whitespace-nowrap"
+    );
     expect(screen.getByText("12 de 12 parcelas quitadas")).toBeVisible();
     expect(screen.getByText("Celular da Ana · 9/10")).toBeVisible();
-    expect(
-      screen.getByRole("progressbar", { name: "90% quitado" })
-    ).toHaveAttribute("value", "90");
+    expect(screen.getByText("90%")).toBeVisible();
     expect(screen.getByText("Recebido em outubro")).toBeVisible();
     expect(screen.queryByText("Pago em outubro")).toBeNull();
     expect(screen.getByText("Você já pagou")).toBeVisible();
     expect(screen.getByText("R$ 41.900,00")).toBeVisible();
+    expect(screen.getByText("de R$ 50.000,00")).toBeVisible();
+    expect(screen.getByText("84%")).toBeVisible();
     expect(screen.queryByText("Já recebeu")).toBeNull();
   });
 
@@ -252,7 +257,9 @@ describe("seções do home", () => {
         receivableTotalCents: 0,
       },
     };
-    renderWithProviders(<Milestones milestones={milestones} momentId={null} />);
+    renderWithProviders(
+      <Milestones milestones={milestones} momentId={null} today={TODAY} />
+    );
     expect(screen.getByText("1 de 1 parcela quitada")).toBeVisible();
     for (const cell of milestoneCells(milestones)) {
       // The four kinds the lime card can show; "Já quitado" is strip-only.
@@ -262,10 +269,10 @@ describe("seções do home", () => {
         cell.id === "paid" ||
         cell.id === "received"
       ) {
-        const view = momentView(cell, "pt-BR");
-        expect(screen.getByText(view.title)).toBeVisible();
+        const view = momentView(cell, "pt-BR", TODAY);
+        expect(screen.getByText(view.label)).toBeVisible();
         if (cell.id === "all_clear" || cell.id === "closest") {
-          expect(screen.getByText(view.detail)).toBeVisible();
+          expect(screen.getByText(view.title)).toBeVisible();
         }
       }
     }
@@ -290,15 +297,12 @@ describe("seções do home", () => {
           },
         }}
         momentId="all_clear"
+        today={TODAY}
       />
     );
     const items = screen.getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Tudo em dia em setembro");
     expect(items[0]).toHaveClass("col-span-2", "md:hidden");
-    // The tag must not wrap inside the half-width cell.
-    expect(screen.getByText("Tudo em dia em setembro")).toHaveClass(
-      "whitespace-nowrap"
-    );
     expect(items[1]).not.toHaveClass("md:hidden");
   });
 
@@ -310,6 +314,7 @@ describe("seções do home", () => {
           previousMonthAllClear: { month: "2026-09", paidCount: 12 },
         }}
         momentId="all_clear"
+        today={TODAY}
       />
     );
     expect(screen.getByRole("region", { name: "Marcos" })).toHaveClass(
@@ -336,15 +341,15 @@ describe("seções do home", () => {
           },
         }}
         momentId={null}
+        today={TODAY}
       />
     );
     const region = screen.getByRole("region", { name: "Marcos" });
     // A size container: the side column decides two by two, not the screen.
     expect(region).toHaveClass("@container");
-    // The title only shows in the side column; below lateral the strip speaks for itself (mockup 11).
-    expect(screen.getByRole("heading", { name: "Marcos" })).toHaveClass(
-      "sr-only",
-      "lateral:not-sr-only"
+    // A section title at every width (mockup 13): Bricolage in ink.
+    expect(screen.getByRole("heading", { name: "Marcos" })).not.toHaveClass(
+      "sr-only"
     );
     const strip = within(region).getByRole("list");
     // One row from lg; stacked from lateral, two by two once the column has 400 px.
@@ -362,6 +367,57 @@ describe("seções do home", () => {
       "lateral:@min-[400px]:col-span-2"
     );
     expect(items[0]).not.toHaveClass("col-span-2");
+  });
+
+  it("marcos: células preenchidas, separadas por 2 px da cor de trás, sem contorno", () => {
+    renderWithProviders(
+      <Milestones
+        milestones={{
+          ...homeFixture().milestones,
+          settled: {
+            paidCents: 1_020_000,
+            receivedCents: 554_000,
+            payableTotalCents: 2_660_000,
+            receivableTotalCents: 1_370_000,
+          },
+        }}
+        momentId={null}
+        today={TODAY}
+      />
+    );
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("gap-0.5", "bg-surface-sunken", "md:bg-surface");
+    expect(list).not.toHaveClass("border");
+    for (const cell of screen.getAllByRole("listitem")) {
+      expect(cell).toHaveClass("bg-surface-card");
+    }
+    expect(screen.getByText("de R$ 13.700,00")).toBeVisible();
+    expect(screen.getByText("40%")).toBeVisible();
+  });
+
+  it("o marco do momento abre a faixa no celular em limão, com o anel", () => {
+    const { container } = renderWithProviders(
+      <Milestones
+        milestones={{
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c3",
+            title: "Celular da Ana",
+            paidCount: 9,
+            totalCount: 10,
+            percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
+          },
+        }}
+        momentId="closest"
+        today={TODAY}
+      />
+    );
+    const [moment] = screen.getAllByRole("listitem");
+    expect(moment).toHaveClass("bg-highlight", "md:hidden");
+    expect(moment).toHaveTextContent("Falta 1 parcela, em 13/10");
+    expect(container.querySelector("li svg")).toHaveAttribute("width", "44");
   });
 
   it("nada pendente cita a próxima parcela e leva aos próximos 30 dias, sem mexer na URL", async () => {

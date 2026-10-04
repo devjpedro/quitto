@@ -403,9 +403,40 @@ describe("useMomentMilestone", () => {
     });
     await waitFor(() =>
       expect(result.current).toEqual({
-        title: "Mais perto de quitar",
-        detail: "Celular da Ana · 9/10",
+        label: "Mais perto de quitar",
+        title: "Celular da Ana · 9/10",
+        detail: "Falta 1 parcela, em 13/10",
+        percent: 90,
       })
+    );
+  });
+
+  it("o 'hoje' do atraso é o do home (o do servidor), não o relógio do aparelho", async () => {
+    // Today on the server is 01/09: the installment of 13/09 is still ahead,
+    // whatever the device's clock says.
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        today: "2026-09-01",
+        milestones: {
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c3",
+            title: "Celular da Ana",
+            paidCount: 9,
+            totalCount: 10,
+            percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-09-13",
+          },
+        },
+      }),
+      error: null,
+    });
+    const { result } = renderHook(() => useMomentMilestone(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() =>
+      expect(result.current?.detail).toBe("Falta 1 parcela, em 13/09")
     );
   });
 
@@ -475,8 +506,10 @@ describe("passada de hidratação", () => {
       expect(result.current).toEqual({
         counts: { contracts: 2, now: 1 },
         moment: {
-          title: "Tudo em dia em setembro",
-          detail: "12 de 12 parcelas quitadas",
+          label: "Tudo em dia em setembro",
+          title: "12 de 12 parcelas quitadas",
+          detail: null,
+          percent: 100,
         },
         unread: 3,
       });
