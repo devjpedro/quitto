@@ -448,7 +448,10 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     const list = screen.getByRole("list", { name: "Contratos ativos" });
     const links = within(list).getAllByRole("link");
     expect(links).toHaveLength(5);
-    expect(links[0]).toHaveTextContent("Notebook da Marina");
+    // The order they come in (the API's fixed order), never re-sorted here.
+    for (const [index, contract] of SIX.items.entries()) {
+      expect(links[index]).toHaveTextContent(contract.title);
+    }
     expect(links[0]).toHaveAttribute("href", "/contracts/c6");
     expect(links[0]?.querySelector("svg")).toHaveAttribute("width", "16");
     expect(links[2]).toHaveTextContent("2/10");
@@ -468,6 +471,19 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     expect(
       screen.getByRole("link", { name: "Moto do Rafa 2 de 10 quitadas" })
     ).toBeVisible();
+    // The visual mark beside the words: on the overdue ones only.
+    const links = within(
+      screen.getByRole("list", { name: "Contratos ativos" })
+    ).getAllByRole("link");
+    expect(links[0]?.querySelector(".bg-danger")).not.toBeNull();
+    expect(links[2]?.querySelector(".bg-danger")).toBeNull();
+  });
+
+  it("Ver todos (N) é a página atual só na lista, não na página de um contrato", async () => {
+    await renderAt("/contracts/new", { activeContracts: SIX });
+    expect(
+      screen.getByRole("link", { name: "Ver todos (6)" })
+    ).not.toHaveAttribute("aria-current");
   });
 
   it("antes do home: 3 linhas de esqueleto; com 0 contratos, nada", async () => {
@@ -501,13 +517,34 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     });
     const nav = within(sidebarNav as HTMLElement);
     const contracts = nav.getByRole("link", { name: "Contratos" });
+    // Inside on every item but the active one: on the black row an inner
+    // brand ring is 2.31:1 (1.73:1 dark), so its ring stays outside, on the canvas.
     expect(contracts).toHaveClass(
       "hover:bg-nav-hover",
-      "focus-visible:ring-inset"
+      "focus-visible:not-data-[status=active]:ring-inset"
     );
+    expect(contracts).not.toHaveClass("focus-visible:ring-inset");
     const row = within(
       nav.getByRole("list", { name: "Contratos ativos" })
     ).getAllByRole("link")[0];
     expect(row).toHaveClass("hover:bg-nav-hover", "focus-visible:ring-inset");
+    // The mockup's row padding (0 8px 0 12px measured from a 210 px sidebar):
+    // 6 px on our 208, so the fraction ends where the mockup's does.
+    expect(row).toHaveClass("pr-1.5");
+    // The overdue mark's halo follows the row's hover, so no canvas ring shows on it.
+    expect(row).toHaveClass("group");
+    expect(row?.querySelector(".bg-danger")).toHaveClass(
+      "group-hover:ring-nav-hover"
+    );
+  });
+
+  it("a tecla ⌘K da busca: placa de 6 px, que não some no hover do campo", async () => {
+    await renderAt("/");
+    const search = screen.getByRole("button", { name: "Buscar…" });
+    expect(search).toHaveClass("group");
+    // rounded-md is 10 px in this repo (the legacy --radius): a pill on a 19 px plate.
+    const plate = within(search).getByText("⌘K");
+    expect(plate).toHaveClass("rounded-[6px]", "group-hover:bg-surface");
+    expect(plate).not.toHaveClass("rounded-md");
   });
 });

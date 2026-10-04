@@ -20,8 +20,10 @@ export interface SidebarContracts {
 
 // Over the canvas (structure B): the hover steps toward the panel's
 // material, and the focus ring sits inside so the rounded row never cuts it.
+// pr-1.5: the mockup's 8 px measured from its 210 px sidebar, so the
+// fraction ends where the mockup's does and the title gets its 132 px.
 const ROW =
-  "flex h-8 items-center gap-2 rounded-control pr-2 pl-3 text-[13px] text-ink transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+  "group flex h-8 items-center gap-2 rounded-control pr-1.5 pl-3 text-[13px] text-ink transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
 
 function ContractRow({ contract }: { contract: SidebarContract }) {
   const { paidCount: paid, totalCount: total } = contract;
@@ -36,9 +38,10 @@ function ContractRow({ contract }: { contract: SidebarContract }) {
         <ProgressRing percent={percent} size={16} />
         {contract.hasOverdue ? (
           // The status is also said in words (the sr-only text below), never by color alone.
+          // The halo is the row's own fill, so it follows the hover.
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-danger ring-2 ring-canvas"
+            className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-danger ring-2 ring-canvas transition-shadow group-hover:ring-nav-hover"
           />
         ) : null}
       </span>
@@ -72,7 +75,7 @@ function ContractsSkeleton() {
       <div className="flex flex-col gap-0.5">
         {SKELETON_ROWS.map((key) => (
           <div
-            className="flex h-8 items-center gap-2 pr-2 pl-3"
+            className="flex h-8 items-center gap-2 pr-1.5 pl-3"
             data-skeleton-row=""
             key={key}
           >
@@ -118,6 +121,8 @@ export function SidebarContractsGroup({
       </ul>
       {contracts.total > contracts.items.length ? (
         <Link
+          // Only the list itself is the current page, not a contract or the wizard under it.
+          activeOptions={{ exact: true }}
           className="mt-0.5 flex h-[30px] items-center rounded-control px-3 font-medium text-[13px] text-ink-muted transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
           to="/contracts"
         >
