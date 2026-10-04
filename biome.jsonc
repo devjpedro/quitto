@@ -16,12 +16,16 @@
     // excluded. A leading-negation list means "everything except these" in
     // Biome 2.x; Biome canonicalizes it to this form (it strips a redundant
     // explicit "**"), so do not re-add one — it will be removed on --write.
+    // SVGs are generated assets too: apps/web/scripts/app-icons.tsx writes
+    // the favicon as the AppIcon's own markup, and a test keeps the two in
+    // sync, so the formatter must not rewrap it.
     "includes": [
       "!**/*.config.ts",
       "!**/drizzle",
       "!**/*.json",
       "!**/*.jsonc",
       "!**/*.html",
+      "!**/*.svg",
       "!**/src/paraglide"
     ]
   },
