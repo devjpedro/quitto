@@ -30,9 +30,7 @@ function CellView({
       const view = momentView(cell, locale, today);
       return (
         <>
-          <Tag className="whitespace-nowrap" tone="highlight">
-            {view.label}
-          </Tag>
+          <Tag tone="highlight">{view.label}</Tag>
           <span className="mt-2 block text-sm">{view.title}</span>
         </>
       );
