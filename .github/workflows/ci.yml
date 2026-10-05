@@ -122,7 +122,10 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
   deploy-web:
-    needs: migrate
+    # Depois da API: o web novo lê campos que só a API nova manda (ex.: o /home
+    # da Fase 1.5), e subir antes derruba o shell até o fly terminar. A API só
+    # cresce, então o web antigo com a API nova não quebra.
+    needs: [migrate, deploy-api]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
