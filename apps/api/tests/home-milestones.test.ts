@@ -891,6 +891,40 @@ describe("onboardingFacts", () => {
     expect(facts.activePartyContracts).toBe(1);
   });
 
+  it("contrato quitado com status active não conta para o guia", () => {
+    // Nothing writes `completed` yet: a paid-off contract stays `active`.
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [
+          contractRow({ id: "running", installmentsCount: 2 }),
+          contractRow({ id: "paid-off", installmentsCount: 2 }),
+        ],
+        installments: [
+          inst({ contractId: "running", id: "r1", status: "paid" }),
+          inst({ contractId: "running", id: "r2", sequence: 2 }),
+          inst({ contractId: "paid-off", id: "p1", status: "paid" }),
+          inst({
+            contractId: "paid-off",
+            id: "p2",
+            sequence: 2,
+            status: "confirmed",
+          }),
+        ],
+        participants: ["running", "paid-off"].map((contractId) => ({
+          contractId,
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+        })),
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts.activePartyContracts).toBe(1);
+  });
+
   it("o dia da conta é o de São Paulo: 01:30 UTC ainda é a véspera lá", () => {
     const facts = onboardingFacts(
       ME,

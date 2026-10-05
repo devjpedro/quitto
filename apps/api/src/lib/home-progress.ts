@@ -1,5 +1,14 @@
-import { INSTALLMENT_STATUS, isOverdue, isPaidStatus } from "@quitto/shared";
-import type { HomeInstallmentRow } from "./home-parties";
+import {
+  CONTRACT_STATUS,
+  INSTALLMENT_STATUS,
+  isOverdue,
+  isPaidStatus,
+} from "@quitto/shared";
+import type {
+  HomeContractRow,
+  HomeContractRows,
+  HomeInstallmentRow,
+} from "./home-parties";
 
 /** Up to this many installments the card's bar has one segment each; above it, zones (DIRECAO › Progresso). */
 export const BAR_SEGMENTS_MAX = 24;
@@ -60,4 +69,25 @@ export function contractSummary(
     remainingCents,
     statuses: ordered.length <= BAR_SEGMENTS_MAX ? statuses : null,
   };
+}
+
+/**
+ * The contracts still running: status `active` and not paid off. Nothing
+ * writes `completed` yet, so a contract with every installment paid (or
+ * confirmed) stays `active` for good; "Contratos ativos", its count and the
+ * guide leave it out. Decided by counting the paid installments, never by the
+ * bar's statuses (null above BAR_SEGMENTS_MAX).
+ */
+export function activeContracts(rows: HomeContractRows): HomeContractRow[] {
+  const paid = new Map<string, number>();
+  for (const it of rows.installments) {
+    if (isPaidStatus(it.status)) {
+      paid.set(it.contractId, (paid.get(it.contractId) ?? 0) + 1);
+    }
+  }
+  return rows.contracts.filter(
+    (c) =>
+      c.status === CONTRACT_STATUS.active &&
+      (paid.get(c.id) ?? 0) < c.installmentsCount
+  );
 }

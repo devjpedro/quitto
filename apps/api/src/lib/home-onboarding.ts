@@ -1,14 +1,15 @@
-import { CONTRACT_STATUS, isoDateInTimeZone } from "@quitto/shared";
+import { isoDateInTimeZone } from "@quitto/shared";
 import {
   type HomeContractRows,
   type PartyContract,
   partyContracts,
 } from "./home-parties";
+import { activeContracts } from "./home-progress";
 
 export interface HomeOnboarding {
   /** The day the account was created, on São Paulo's calendar: the web hides the guide after 30 days. */
   accountCreatedOn: string;
-  /** Active contracts the user pays or receives in (followed and cancelled ones don't count): the guide hides itself at 3. */
+  /** Active contracts the user pays or receives in (followed, cancelled and paid-off ones don't count): the guide hides itself at 3. */
   activePartyContracts: number;
   /** Most recent contract the user owns: where "invite the other party" leads. */
   counterpartyContractId: string | null;
@@ -60,8 +61,9 @@ export function onboardingFacts(
     .filter((c) => c.ownerId === userId)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const parties = partyContracts(userId, rows);
-  const activePartyContracts = parties.filter(
-    (party) => party.contract.status === CONTRACT_STATUS.active
+  const active = new Set(activeContracts(rows).map((c) => c.id));
+  const activePartyContracts = parties.filter((party) =>
+    active.has(party.contract.id)
   ).length;
   return {
     accountCreatedOn: isoDateInTimeZone(profile.createdAt),

@@ -1,6 +1,5 @@
-import { CONTRACT_STATUS } from "@quitto/shared";
 import type { HomeContractRows } from "./home-parties";
-import { barStatus } from "./home-progress";
+import { activeContracts, barStatus } from "./home-progress";
 
 /** At most this many contracts in the sidebar; "Ver todos (N)" covers the rest. */
 export const SIDEBAR_CONTRACTS = 5;
@@ -16,17 +15,17 @@ export interface SidebarContract {
 /**
  * "Contratos ativos" in the sidebar (owner's decision 10): a fixed order, the
  * newest on top, so the list never jumps as installments get paid. Every
- * active contract the user sees counts, the followed ones included: the same
- * set as activeContractsCount, which "Ver todos (N)" shows. The ring and the
- * overdue mark read each installment as the card's bar does (barStatus), so a
- * disputed installment past due is overdue here too (planner's decision 21).
+ * active contract the user sees counts, the followed ones included, and a
+ * paid-off one never does: the same set as activeContractsCount, which
+ * "Ver todos (N)" shows. The ring and the overdue mark read each installment
+ * as the card's bar does (barStatus), so a disputed installment past due is
+ * overdue here too (planner's decision 21).
  */
 export function sidebarContracts(
   rows: HomeContractRows,
   todayISO: string
 ): SidebarContract[] {
-  return rows.contracts
-    .filter((c) => c.status === CONTRACT_STATUS.active)
+  return activeContracts(rows)
     .sort(
       (a, b) =>
         b.createdAt.getTime() - a.createdAt.getTime() ||

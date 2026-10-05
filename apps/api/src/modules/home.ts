@@ -1,4 +1,4 @@
-import { CONTRACT_STATUS, todayISO } from "@quitto/shared";
+import { todayISO } from "@quitto/shared";
 import {
   and,
   count,
@@ -32,6 +32,7 @@ import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
 import { type HomeContractRows, partyContracts } from "../lib/home-parties";
+import { activeContracts } from "../lib/home-progress";
 import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
 import { requireAuth } from "../lib/session";
@@ -272,10 +273,9 @@ export const homeModule = new Elysia({ prefix: "/api" }).get(
       ),
       unreadCount,
       // Sidebar count: every active contract the user takes part in, the
-      // followed ones included (parties drops viewers, so count the rows).
-      activeContractsCount: rows.contracts.filter(
-        (c) => c.status === CONTRACT_STATUS.active
-      ).length,
+      // followed ones included (parties drops viewers, so count the rows);
+      // a paid-off one is not active.
+      activeContractsCount: activeContracts(rows).length,
       // "Contratos ativos" in the sidebar: no extra read, the rows are loaded (planner's decision 1).
       activeContracts: sidebarContracts(rows, today),
     };

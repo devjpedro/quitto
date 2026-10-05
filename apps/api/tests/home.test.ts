@@ -668,6 +668,28 @@ describe("GET /api/home", () => {
     expect(home.onboarding.activePartyContracts).toBe(6);
   });
 
+  it("quitado com status active: fora da lista, do contador do 'Ver todos (N)' e do guia; o mais antigo com atraso sobe", async () => {
+    const cookie = await signUpCookie(uniqueEmail("home-paid-off"));
+    await createContract(cookie, "Aluguel", addDays(today, -40));
+    for (const round of [1, 2, 3, 4, 5]) {
+      const id = await createContract(
+        cookie,
+        `Quitado ${round}`,
+        addDays(today, -60)
+      );
+      // Nothing writes `completed` yet: every installment paid, still `active`.
+      await db
+        .update(installment)
+        .set({ status: "paid", paidAt: new Date() })
+        .where(eq(installment.contractId, id));
+    }
+    const home = await getHome(cookie);
+    expect(home.activeContractsCount).toBe(1);
+    expect(home.activeContracts.map((c) => c.title)).toEqual(["Aluguel"]);
+    expect(home.activeContracts[0]?.hasOverdue).toBe(true);
+    expect(home.onboarding.activePartyContracts).toBe(1);
+  });
+
   it("contrato só acompanhado: entra nos contratos ativos da sidebar, mas não conta para o guia", async () => {
     const owner = await signUpCookie(uniqueEmail("home-followed-owner"));
     const viewerEmail = uniqueEmail("home-followed");

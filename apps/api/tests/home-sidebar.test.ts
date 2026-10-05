@@ -128,6 +128,51 @@ describe("sidebarContracts", () => {
     ]);
   });
 
+  it("quitado com status active não entra; o mais antigo com atraso sobe para a lista", () => {
+    // Nothing writes `completed` yet: a paid-off contract stays `active`.
+    const paidOff = ["q1", "q2", "q3", "q4", "q5"].map((id, i) =>
+      contract(id, `2026-0${i + 2}-01T12:00:00Z`)
+    );
+    const data = rows(
+      [contract("aluguel", "2026-01-01T12:00:00Z"), ...paidOff],
+      [
+        inst("aluguel", 1, { dueDate: "2026-09-01" }),
+        inst("aluguel", 2),
+        ...paidOff.flatMap((c) => [
+          inst(c.id, 1, { status: "paid", dueDate: "2026-09-01" }),
+          // Confirmed counts as paid too.
+          inst(c.id, 2, { status: "confirmed" }),
+        ]),
+      ]
+    );
+    expect(sidebarContracts(data, TODAY)).toEqual([
+      {
+        contractId: "aluguel",
+        title: "Contrato aluguel",
+        paidCount: 0,
+        totalCount: 2,
+        hasOverdue: true,
+      },
+    ]);
+  });
+
+  it("acima de 24 parcelas também: decide pela contagem de pagas", () => {
+    const long = (id: string, paid: number) =>
+      Array.from({ length: 30 }, (_, i) =>
+        inst(id, i + 1, { status: i < paid ? "paid" : "pending" })
+      );
+    const data = rows(
+      [
+        contract("done", "2026-01-01T12:00:00Z", { installmentsCount: 30 }),
+        contract("almost", "2026-02-01T12:00:00Z", { installmentsCount: 30 }),
+      ],
+      [...long("done", 30), ...long("almost", 29)]
+    );
+    expect(sidebarContracts(data, TODAY).map((c) => c.contractId)).toEqual([
+      "almost",
+    ]);
+  });
+
   it("contestada vencida marca atraso, como a barra do cartão (decisão 21)", () => {
     const data = rows(
       [contract("z", "2026-01-01T12:00:00Z")],
