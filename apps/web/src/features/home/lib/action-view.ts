@@ -85,7 +85,7 @@ export function describeAction(
         name: action.inviterName,
         text: m.home_detail_invite({ name: action.inviterName, role }, options),
       },
-      terms: inviteTerms(action, locale),
+      terms: inviteTerms(action, today, locale),
       legend: null,
     };
   }

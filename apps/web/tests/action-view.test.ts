@@ -321,6 +321,13 @@ describe("describeAction: convite", () => {
     });
   });
 
+  it("1ª parcela de outro ano: o 'a partir de' leva o ano", () => {
+    expect(
+      describeAction(inviteAction({ firstDueDate: "2025-03-10" }), ctx).terms
+        ?.from
+    ).toBe("a partir de 10/03/2025");
+  });
+
   it("parcelas de valores diferentes: o total; uma parcela só: no singular", () => {
     expect(
       describeAction(
