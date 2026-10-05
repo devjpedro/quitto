@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MomentCardView } from "@/components/layout/moment-card";
 import { useShowNotifications } from "@/features/notifications/hooks/use-notifications-panel";
 import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
 import {
@@ -69,7 +70,7 @@ vi.mock("@/components/layout/app-frame", () => ({
   }: {
     children: ReactNode;
     identity: { name: string } | null;
-    moment: { detail: string; title: string } | null;
+    moment: MomentCardView | null;
     navCounts: { contracts: number; now: number };
     onOpenNotifications: () => void;
     unreadCount: number;
@@ -77,7 +78,7 @@ vi.mock("@/components/layout/app-frame", () => ({
     <div data-testid="shell">
       <span>{identity?.name ?? "no identity"}</span>
       <span>unread {unreadCount}</span>
-      <span>moment {moment?.title ?? "none"}</span>
+      <span>moment {moment?.label ?? "none"}</span>
       <span>
         counts {navCounts.now}/{navCounts.contracts}
       </span>

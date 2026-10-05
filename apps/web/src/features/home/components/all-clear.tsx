@@ -36,7 +36,7 @@ export function AllClear({
       })
     : m.home_all_clear_none();
   return (
-    <div className="flex flex-wrap items-center gap-3.5 rounded-card border border-line bg-surface-raised p-4">
+    <div className="flex flex-wrap items-center gap-3.5 rounded-card bg-surface-card p-4">
       <span
         aria-hidden="true"
         className="flex size-11 shrink-0 items-center justify-center rounded-control bg-brand-subtle text-brand"
@@ -55,7 +55,7 @@ export function AllClear({
           className="w-full md:w-auto"
           onClick={jumpToUpcoming}
           size="sm"
-          variant="secondary"
+          variant="inset"
         >
           {m.home_all_clear_cta()}
         </Button>

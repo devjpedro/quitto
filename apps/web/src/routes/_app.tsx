@@ -11,6 +11,7 @@ import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
 import {
+  useActiveContracts,
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
@@ -61,6 +62,7 @@ function AppLayout() {
   const unreadCount = useUnreadCount();
   const moment = useMomentMilestone();
   const navCounts = useNavCounts();
+  const activeContracts = useActiveContracts();
   const notifications = useNotificationsPanel();
   const navigate = useNavigate();
   // Registered ONCE here: this layout owns the global ⌘K shortcut.
@@ -80,6 +82,7 @@ function AppLayout() {
   return (
     <NotificationsPanelContext value={notifications.show}>
       <AppFrame
+        activeContracts={activeContracts}
         identity={identity}
         moment={moment}
         navCounts={navCounts}

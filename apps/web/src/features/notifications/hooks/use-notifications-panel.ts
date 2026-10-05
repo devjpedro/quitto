@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useState } from "react";
 import { useMarkReadMutation } from "../api";
+import { notificationTarget } from "../lib/notification-view";
 import type { NotificationItem } from "../types";
 
 /** Open state of the bell panel; the shell layout owns it. */
@@ -23,19 +24,22 @@ export function useShowNotifications(): () => void {
   return useContext(NotificationsPanelContext);
 }
 
-/** Opening a notification marks it read, closes the panel and goes to its installment. */
+/**
+ * Opening a line marks it read (all of it), closes the panel and goes to its
+ * installment, or to the contract filtered when the line is a group.
+ */
 export function useOpenNotification(onNavigate: () => void) {
   const markRead = useMarkReadMutation();
   const navigate = useNavigate();
   return (item: NotificationItem) => {
     if (item.readAt === null) {
-      markRead.mutate(item.id);
+      markRead.mutate(item);
     }
     onNavigate();
     navigate({
       to: "/contracts/$id",
       params: { id: item.contractId },
-      search: { installment: item.installmentId ?? undefined },
+      search: notificationTarget(item),
     });
   };
 }

@@ -15,6 +15,21 @@ const upcomingItemSchema = t.Object({
   status: t.String(),
 });
 
+const barStatusSchema = t.Union([
+  t.Literal("paid"),
+  t.Literal("overdue"),
+  t.Literal("review"),
+  t.Literal("today"),
+  t.Literal("open"),
+]);
+
+const contractSummarySchema = t.Object({
+  paidCount: t.Integer(),
+  overdueCount: t.Integer(),
+  remainingCents: t.Integer(),
+  statuses: t.Union([t.Array(barStatusSchema), t.Null()]),
+});
+
 const installmentActionSchema = t.Object({
   id: t.String(),
   kind: t.Union([
@@ -36,6 +51,11 @@ const installmentActionSchema = t.Object({
   pixCode: nullableString,
   canMarkPaid: t.Boolean(),
   canConfirm: t.Boolean(),
+  count: t.Integer(),
+  installmentIds: t.Array(t.String()),
+  sequences: t.Array(t.Integer()),
+  totalCents: t.Integer(),
+  contract: contractSummarySchema,
 });
 
 const inviteActionSchema = t.Object({
@@ -45,11 +65,19 @@ const inviteActionSchema = t.Object({
   contractTitle: t.String(),
   role: t.String(),
   inviterName: t.String(),
+  installmentsCount: t.Integer(),
+  amountCents: t.Union([t.Integer(), t.Null()]),
+  totalCents: t.Integer(),
+  firstDueDate: nullableString,
 });
 
 export const homeSchema = t.Object({
   today: t.String(),
   actions: t.Array(t.Union([installmentActionSchema, inviteActionSchema])),
+  overdue: t.Object({
+    toPayCents: t.Integer(),
+    toReceiveCents: t.Integer(),
+  }),
   upcoming: t.Object({
     items: t.Array(upcomingItemSchema),
     moreCount: t.Integer(),
@@ -65,6 +93,8 @@ export const homeSchema = t.Object({
         paidCount: t.Integer(),
         totalCount: t.Integer(),
         percent: t.Integer(),
+        remainingCount: t.Integer(),
+        nextDueDate: nullableString,
       }),
       t.Null(),
     ]),
@@ -80,9 +110,13 @@ export const homeSchema = t.Object({
     settled: t.Object({
       paidCents: t.Integer(),
       receivedCents: t.Integer(),
+      payableTotalCents: t.Integer(),
+      receivableTotalCents: t.Integer(),
     }),
   }),
   onboarding: t.Object({
+    accountCreatedOn: t.String(),
+    activePartyContracts: t.Integer(),
     hasContract: t.Boolean(),
     hasPixKey: t.Boolean(),
     hasCounterparty: t.Boolean(),
@@ -93,4 +127,13 @@ export const homeSchema = t.Object({
   }),
   unreadCount: t.Integer(),
   activeContractsCount: t.Integer(),
+  activeContracts: t.Array(
+    t.Object({
+      contractId: t.String(),
+      title: t.String(),
+      paidCount: t.Integer(),
+      totalCount: t.Integer(),
+      hasOverdue: t.Boolean(),
+    })
+  ),
 });

@@ -12,8 +12,8 @@ import {
   markItemRead,
   unmarkItemsRead,
   withAllRead,
-  withOneRead,
-  withOneUnread,
+  withReadCount,
+  withUnreadAdded,
   withUnreadCount,
 } from "./lib/unread";
 import type { NotificationItem } from "./types";
@@ -82,36 +82,43 @@ function undoRead(
   qc.invalidateQueries({ queryKey: queryKeys.notifications });
 }
 
-/** Reading one updates the list and the bell at once; the home (where the count lives) refreshes after. */
+/**
+ * Reading a line reads every notification behind it (a grouped line is
+ * many): the list and the bell change at once, the bell by the line's
+ * unread count. The home (where the count lives) refreshes after.
+ */
 export function useMarkReadMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: NOTIFICATION_READ_KEY,
-    mutationFn: (id: string) =>
-      unwrap(api.api.notifications({ id }).read.post()),
-    onMutate: async (id: string) => {
-      const wasUnread =
-        qc
-          .getQueryData<NotificationItem[]>(queryKeys.notifications)
-          ?.some((item) => item.id === id && item.readAt === null) ?? true;
+    mutationFn: (item: NotificationItem) =>
+      unwrap(api.api.notifications.read.post({ ids: item.ids })),
+    onMutate: async (item: NotificationItem) => {
+      const cached = qc
+        .getQueryData<NotificationItem[]>(queryKeys.notifications)
+        ?.find((row) => row.id === item.id);
+      const line = cached ?? item;
+      const unreadInLine = line.readAt === null ? line.unreadCount : 0;
       const readAt = new Date().toISOString();
-      await markListRead(qc, (items) => markItemRead(items, id, readAt));
-      // At 0 there is nothing to take, so a failure must not add one back.
-      const tookOne =
-        wasUnread &&
-        (qc.getQueryData<WithUnread>(queryKeys.home)?.unreadCount ?? 0) > 0;
-      if (tookOne) {
-        updateHomeUnread(qc, withOneRead);
+      await markListRead(qc, (items) => markItemRead(items, item.id, readAt));
+      // Never take more than the bell shows, so a failure never adds one back.
+      const took = Math.min(
+        unreadInLine,
+        qc.getQueryData<WithUnread>(queryKeys.home)?.unreadCount ?? 0
+      );
+      if (took > 0) {
+        updateHomeUnread(qc, (home) => withReadCount(home, took));
       }
-      return { readAt, tookOne };
+      return { readAt, took };
     },
-    onError: (_error, id, context) => {
+    onError: (_error, item, context) => {
       if (context) {
+        const { took } = context;
         undoRead(
           qc,
-          [id],
+          [item.id],
           context.readAt,
-          context.tookOne ? withOneUnread : null
+          took > 0 ? (home) => withUnreadAdded(home, took) : null
         );
       }
     },

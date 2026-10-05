@@ -1,5 +1,5 @@
 import { QueryClient, skipToken, useQuery } from "@tanstack/react-query";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,11 +8,14 @@ import { NotificationsPanel } from "@/features/notifications/components/notifica
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture } from "./home-fixtures";
+import { notificationItem } from "./notification-fixtures";
 import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const CONFIRMED_ROW = /Pagamento confirmado/;
 const INVITE_ACCEPTED_ROW = /Convite aceito/;
+const OVERDUE_GROUP_ROW = /24 parcelas a receber estão vencidas/;
+const OVERDUE_GROUP_META = /Venda do terreno · parcelas 5 a 28 de 60/;
 
 const { getList, postRead, postReadAll, navigate } = vi.hoisted(() => ({
   getList: vi.fn(),
@@ -26,6 +29,7 @@ vi.mock("@/lib/api", () => {
     (_params: { id: string }) => ({ read: { post: () => postRead() } }),
     {
       get: () => getList(),
+      read: { post: () => postRead() },
       "read-all": { post: () => postReadAll() },
     }
   );
@@ -37,7 +41,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useNavigate: () => navigate,
 }));
 
-const unreadNote: NotificationItem = {
+const unreadNote: NotificationItem = notificationItem({
   id: "n1",
   type: "payment_confirmed",
   contractId: "c1",
@@ -48,17 +52,36 @@ const unreadNote: NotificationItem = {
   contractTitle: "Aluguel do apê",
   installmentSequence: 7,
   installmentsCount: 12,
-};
+});
 
-const readNote: NotificationItem = {
-  ...unreadNote,
+// Built on its own (not spread from unreadNote), so its ids, groupKey and
+// unreadCount follow its own id and readAt.
+const readNote: NotificationItem = notificationItem({
   id: "n2",
   type: "invite_accepted",
+  contractId: "c1",
   installmentId: null,
-  installmentSequence: null,
   metadata: { email: "ana@example.com" },
   readAt: new Date().toISOString(),
-};
+  createdAt: unreadNote.createdAt,
+  contractTitle: "Aluguel do apê",
+  installmentSequence: null,
+  installmentsCount: 12,
+});
+
+/** The owner's case: 24 overdue installments of one contract, one line. */
+const overdueGroup: NotificationItem = notificationItem({
+  id: "g1",
+  type: "installment_overdue_receivable",
+  contractId: "c9",
+  contractTitle: "Venda do terreno",
+  installmentsCount: 60,
+  ids: Array.from({ length: 24 }, (_, i) => `g${i + 1}`),
+  count: 24,
+  sequences: Array.from({ length: 24 }, (_, i) => i + 5),
+  unreadCount: 24,
+  createdAt: unreadNote.createdAt,
+});
 
 /** As the shell does (Task 13): a button opens the panel, and the count is the cached home's. */
 function Harness({
@@ -219,14 +242,14 @@ describe("NotificationsPanel", () => {
     expect(screen.queryAllByText("Nova")).toHaveLength(0);
   });
 
-  it("vazio: a versão compacta, com o sino no quadrado das linhas e sem ação", async () => {
+  it("vazio: a versão compacta, com o sino num quadrado pequeno da marca e sem ação", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderPanel(0);
     const heading = await screen.findByRole("heading", {
       name: "Nada novo por aqui",
     });
     expect(heading).toBeVisible();
-    // Mockup 10: the bell sits in the same 32 px brand tile as the rows' icons.
+    // Mockup 10: the bell on a small (32 px) brand tile; the rows' tiles are 40 px.
     expect(
       heading.parentElement?.querySelector("[aria-hidden='true']")
     ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");
@@ -236,5 +259,44 @@ describe("NotificationsPanel", () => {
     expect(
       screen.getByRole("dialog", { name: "Notificações" })
     ).not.toHaveAccessibleDescription();
+  });
+
+  it("abrir um grupo lê os avisos dele e abre o contrato filtrado no que ele conta", async () => {
+    getList.mockResolvedValue({ data: [overdueGroup], error: null });
+    postRead.mockResolvedValue({ data: { ok: true, count: 24 }, error: null });
+    const { onOpenChange } = renderPanel(24);
+    await userEvent.click(
+      await screen.findByRole("button", { name: OVERDUE_GROUP_ROW })
+    );
+    expect(postRead).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/contracts/$id",
+      params: { id: "c9" },
+      search: { status: "overdue" },
+    });
+  });
+
+  it("o título e o metadado quebram linha, nunca cortam: o caso do dono cabe inteiro no celular (mockup 10)", async () => {
+    getList.mockResolvedValue({ data: [overdueGroup], error: null });
+    renderPanel(24);
+    const title = await screen.findByText(OVERDUE_GROUP_ROW);
+    const meta = screen.getByText(OVERDUE_GROUP_META);
+    for (const line of [title, meta]) {
+      expect(line).toHaveClass("text-pretty");
+      expect(line).not.toHaveClass("truncate");
+    }
+  });
+
+  it("o anel e o hover da primeira e da última linha seguem o canto do bloco", async () => {
+    getList.mockResolvedValue({ data: [unreadNote, readNote], error: null });
+    renderPanel();
+    await screen.findByRole("button", { name: CONFIRMED_ROW });
+    // The block clips its corners (overflow-hidden): a square row there
+    // would cut the inset focus ring along the curve.
+    for (const item of screen.getAllByRole("listitem")) {
+      expect(item).toHaveClass("first:rounded-t-card", "last:rounded-b-card");
+      expect(within(item).getByRole("button")).toHaveClass("rounded-[inherit]");
+    }
   });
 });

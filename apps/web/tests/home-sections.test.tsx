@@ -17,6 +17,7 @@ import { momentView } from "@/features/home/lib/moment";
 import { onboardingView } from "@/features/home/lib/onboarding";
 import type { Home } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
+import { overwriteGetLocale } from "@/paraglide/runtime.js";
 import { homeFixture, TODAY, upcomingItem } from "./home-fixtures";
 import { renderWithProviders } from "./test-utils";
 
@@ -25,6 +26,9 @@ const { dismiss } = vi.hoisted(() => ({ dismiss: vi.fn() }));
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
+const PIX_ROW = /Cadastrar sua chave PIX/;
+const CONTRACT_ROW = /^Criar o primeiro contrato/;
+const NINE_OF_TEN = /parcela 9 de 10/;
 
 vi.mock("@/lib/api", () => ({
   api: { api: { me: { onboarding: { dismiss: { post: () => dismiss() } } } } },
@@ -54,6 +58,8 @@ describe("seções do home", () => {
   it("chips: pendências em limão e totais dos próximos 30 dias", () => {
     renderWithProviders(
       <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
         pendingCount={4}
         toPayCents={215_000}
         toReceiveCents={510_000}
@@ -65,20 +71,30 @@ describe("seções do home", () => {
     expect(chips.getByText("R$ 5.100,00")).toBeVisible();
   });
 
-  it("chips: uma pendência no singular, com a borda dos vizinhos; tudo zerado não mostra nada", () => {
+  it("chips: uma pendência no singular, em limão preenchido; tudo zerado não mostra nada", () => {
     const { container } = renderWithProviders(
-      <TotalsChips pendingCount={0} toPayCents={0} toReceiveCents={0} />
+      <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
+        pendingCount={0}
+        toPayCents={0}
+        toReceiveCents={0}
+      />
     );
     expect(container).toBeEmptyDOMElement();
     renderWithProviders(
-      <TotalsChips pendingCount={1} toPayCents={0} toReceiveCents={0} />
+      <TotalsChips
+        overdueToPayCents={0}
+        overdueToReceiveCents={0}
+        pendingCount={1}
+        toPayCents={0}
+        toReceiveCents={0}
+      />
     );
     const chips = within(screen.getByRole("list", { name: "Resumo" }));
-    // Same 1 px border as the outlined chips, so all of them share one height.
-    expect(chips.getByRole("listitem")).toHaveClass(
-      "border",
-      "border-highlight"
-    );
+    // Filled, not outlined (mockup 13): the pending chip is lime with no border.
+    expect(chips.getByRole("listitem")).toHaveClass("bg-highlight");
+    expect(chips.getByRole("listitem")).not.toHaveClass("border");
     expect(chips.getByText("pendência")).toBeVisible();
   });
 
@@ -114,12 +130,11 @@ describe("seções do home", () => {
     );
     expect(screen.getByText("+ R$ 320,00")).toBeVisible();
     expect(screen.getByText("− R$ 390,00")).toBeVisible();
-    // One tag only: below the date on a phone, mid-row from md (the row's grid places it).
+    // One tag only, beside the title in the row's first line (not in the meta).
     expect(screen.getAllByText("Comprovante enviado")).toHaveLength(1);
-    expect(screen.getByText("Comprovante enviado")).toHaveClass(
-      "row-start-3",
-      "md:col-start-2"
-    );
+    const titleLine = screen.getByText("Comprovante enviado").parentElement;
+    expect(titleLine).toHaveTextContent("Curso de inglês");
+    expect(titleLine).not.toHaveTextContent("você paga");
     expect(screen.getByText("+ 3 parcelas nos próximos 30 dias")).toBeVisible();
   });
 
@@ -185,27 +200,39 @@ describe("seções do home", () => {
             paidCount: 9,
             totalCount: 10,
             percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
           },
           monthToDate: {
             month: "2026-10",
             paidCents: 0,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 5_000_000,
+            receivableTotalCents: 0,
+          },
         }}
         momentId={null}
+        today={TODAY}
       />
     );
     expect(screen.getByText("Tudo em dia em setembro")).toBeVisible();
+    // The tag must not wrap inside the half-width cell.
+    expect(screen.getByText("Tudo em dia em setembro")).toHaveClass(
+      "whitespace-nowrap"
+    );
     expect(screen.getByText("12 de 12 parcelas quitadas")).toBeVisible();
     expect(screen.getByText("Celular da Ana · 9/10")).toBeVisible();
-    expect(
-      screen.getByRole("progressbar", { name: "90% quitado" })
-    ).toHaveAttribute("value", "90");
+    expect(screen.getByText("90%")).toBeVisible();
     expect(screen.getByText("Recebido em outubro")).toBeVisible();
     expect(screen.queryByText("Pago em outubro")).toBeNull();
     expect(screen.getByText("Você já pagou")).toBeVisible();
     expect(screen.getByText("R$ 41.900,00")).toBeVisible();
+    expect(screen.getByText("de R$ 50.000,00")).toBeVisible();
+    expect(screen.getByText("84%")).toBeVisible();
     expect(screen.queryByText("Já recebeu")).toBeNull();
   });
 
@@ -218,15 +245,24 @@ describe("seções do home", () => {
         paidCount: 9,
         totalCount: 10,
         percent: 90,
+        remainingCount: 1,
+        nextDueDate: "2026-10-13",
       },
       monthToDate: {
         month: "2026-10",
         paidCents: 125_000,
         receivedCents: 338_000,
       },
-      settled: { paidCents: 0, receivedCents: 0 },
+      settled: {
+        paidCents: 0,
+        receivedCents: 0,
+        payableTotalCents: 0,
+        receivableTotalCents: 0,
+      },
     };
-    renderWithProviders(<Milestones milestones={milestones} momentId={null} />);
+    renderWithProviders(
+      <Milestones milestones={milestones} momentId={null} today={TODAY} />
+    );
     expect(screen.getByText("1 de 1 parcela quitada")).toBeVisible();
     for (const cell of milestoneCells(milestones)) {
       // The four kinds the lime card can show; "Já quitado" is strip-only.
@@ -236,10 +272,10 @@ describe("seções do home", () => {
         cell.id === "paid" ||
         cell.id === "received"
       ) {
-        const view = momentView(cell, "pt-BR");
-        expect(screen.getByText(view.title)).toBeVisible();
+        const view = momentView(cell, "pt-BR", TODAY);
+        expect(screen.getByText(view.label)).toBeVisible();
         if (cell.id === "all_clear" || cell.id === "closest") {
-          expect(screen.getByText(view.detail)).toBeVisible();
+          expect(screen.getByText(view.title)).toBeVisible();
         }
       }
     }
@@ -256,18 +292,20 @@ describe("seções do home", () => {
             paidCents: 0,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 0, receivedCents: 4_190_000 },
+          settled: {
+            paidCents: 0,
+            receivedCents: 4_190_000,
+            payableTotalCents: 0,
+            receivableTotalCents: 4_190_000,
+          },
         }}
         momentId="all_clear"
+        today={TODAY}
       />
     );
     const items = screen.getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Tudo em dia em setembro");
     expect(items[0]).toHaveClass("col-span-2", "md:hidden");
-    // The tag must not wrap inside the half-width cell.
-    expect(screen.getByText("Tudo em dia em setembro")).toHaveClass(
-      "whitespace-nowrap"
-    );
     expect(items[1]).not.toHaveClass("md:hidden");
   });
 
@@ -279,6 +317,7 @@ describe("seções do home", () => {
           previousMonthAllClear: { month: "2026-09", paidCount: 12 },
         }}
         momentId="all_clear"
+        today={TODAY}
       />
     );
     expect(screen.getByRole("region", { name: "Marcos" })).toHaveClass(
@@ -297,18 +336,23 @@ describe("seções do home", () => {
             paidCents: 125_000,
             receivedCents: 338_000,
           },
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         }}
         momentId={null}
+        today={TODAY}
       />
     );
     const region = screen.getByRole("region", { name: "Marcos" });
     // A size container: the side column decides two by two, not the screen.
     expect(region).toHaveClass("@container");
-    // The title only shows in the side column; below lateral the strip speaks for itself (mockup 11).
-    expect(screen.getByRole("heading", { name: "Marcos" })).toHaveClass(
-      "sr-only",
-      "lateral:not-sr-only"
+    // A section title at every width (mockup 13): Bricolage in ink.
+    expect(screen.getByRole("heading", { name: "Marcos" })).not.toHaveClass(
+      "sr-only"
     );
     const strip = within(region).getByRole("list");
     // One row from lg; stacked from lateral, two by two once the column has 400 px.
@@ -326,6 +370,61 @@ describe("seções do home", () => {
       "lateral:@min-[400px]:col-span-2"
     );
     expect(items[0]).not.toHaveClass("col-span-2");
+  });
+
+  it("marcos: células preenchidas, separadas por 2 px da cor de trás, sem contorno", () => {
+    renderWithProviders(
+      <Milestones
+        milestones={{
+          ...homeFixture().milestones,
+          settled: {
+            paidCents: 1_020_000,
+            receivedCents: 554_000,
+            payableTotalCents: 2_660_000,
+            receivableTotalCents: 1_370_000,
+          },
+        }}
+        momentId={null}
+        today={TODAY}
+      />
+    );
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("gap-0.5", "bg-surface-sunken", "md:bg-surface");
+    expect(list).not.toHaveClass("border");
+    for (const cell of screen.getAllByRole("listitem")) {
+      expect(cell).toHaveClass("bg-surface-card");
+    }
+    expect(screen.getByText("de R$ 13.700,00")).toBeVisible();
+    expect(screen.getByText("40%")).toBeVisible();
+  });
+
+  it("o marco do momento abre a faixa no celular em limão, com o anel", () => {
+    const { container } = renderWithProviders(
+      <Milestones
+        milestones={{
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c3",
+            title: "Celular da Ana",
+            paidCount: 9,
+            totalCount: 10,
+            percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
+          },
+        }}
+        momentId="closest"
+        today={TODAY}
+      />
+    );
+    const [moment] = screen.getAllByRole("listitem");
+    expect(moment).toHaveClass("bg-highlight", "md:hidden");
+    expect(moment).toHaveTextContent("Falta 1 parcela, em 13/10");
+    // A long detail wraps without leaving one word (the date) alone on the last line.
+    expect(screen.getByText("Falta 1 parcela, em 13/10")).toHaveClass(
+      "text-pretty"
+    );
+    expect(container.querySelector("li svg")).toHaveAttribute("width", "44");
   });
 
   it("nada pendente cita a próxima parcela e leva aos próximos 30 dias, sem mexer na URL", async () => {
@@ -419,7 +518,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="hero"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />,
       { client }
     );
@@ -444,6 +543,15 @@ describe("seções do home", () => {
     });
     expect(guide).toHaveClass("lg:grid-cols-[1fr_1.3fr]");
     expect(guide).not.toHaveClass("md:grid-cols-[1fr_1.3fr]");
+    // Beside the green card the list keeps its own height, not the card's.
+    expect(screen.getByRole("list")).toHaveClass("self-start");
+    // The next row still reads as next (tint, ring), but the green card
+    // already carries its action: no second "Criar" beside it, a caret instead.
+    const nextRow = screen.getByRole("link", { name: CONTRACT_ROW });
+    expect(nextRow).toHaveClass("bg-surface-card-hover");
+    expect(nextRow).toHaveTextContent("próximo passo");
+    expect(within(nextRow).queryByText("Criar")).toBeNull();
+    expect(nextRow.querySelector("svg")).not.toBeNull();
     expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
     expect(screen.getByText("opcional")).toBeVisible();
     await userEvent.click(
@@ -466,7 +574,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="hero"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />
     );
     const pix = screen.getByRole("link", { name: "Cadastrar chave PIX" });
@@ -478,7 +586,7 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={fresh}
         variant="hero"
-        view={onboardingView(fresh)}
+        view={onboardingView(fresh, { activeContracts: 0, today: TODAY })}
       />
     );
     expect(
@@ -498,15 +606,16 @@ describe("seções do home", () => {
       <OnboardingGuide
         onboarding={onboarding}
         variant="compact"
-        view={onboardingView(onboarding)}
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
       />
     );
     expect(
-      screen.getByRole("region", { name: "Comece por aqui · 3 de 4" })
+      screen.getByRole("region", { name: "Comece por aqui" })
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: "Comece por aqui · 3 de 4" })
+      screen.getByRole("heading", { name: "Comece por aqui" })
     ).toBeVisible();
+    expect(screen.getByText("3 de 4")).toBeVisible();
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.queryByText("Cadastre sua chave PIX.")).toBeNull();
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
@@ -514,8 +623,226 @@ describe("seções do home", () => {
       "href",
       "/settings"
     );
+    const dismissButton = screen.getByRole("button", {
+      name: "dispensar guia",
+    });
+    expect(dismissButton).toBeVisible();
+    // Meta size (mockup 13's .gfoot): 13 px, below the rows' 14.
+    expect(dismissButton.parentElement).toHaveClass("text-[13px]");
+  });
+
+  it("guia: cada passo tem o estado como âncora, e o próximo vem tingido com a ação", () => {
+    const onboarding = {
+      ...homeFixture().onboarding,
+      hasPixKey: false,
+      remindersOn: false,
+    };
+    renderWithProviders(
+      <OnboardingGuide
+        onboarding={onboarding}
+        variant="compact"
+        view={onboardingView(onboarding, { activeContracts: 0, today: TODAY })}
+      />
+    );
     expect(
-      screen.getByRole("button", { name: "dispensar guia" })
-    ).toBeVisible();
+      screen.getByRole("heading", { name: "Comece por aqui" })
+    ).toHaveClass("font-display");
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass("bg-surface-card", "divide-divider");
+    expect(list).not.toHaveClass("border");
+    // Alone (a flex column), self-start would shrink the list to its words.
+    expect(list).not.toHaveClass("self-start");
+    const next = screen.getByRole("link", { name: PIX_ROW });
+    expect(next).toHaveClass("bg-surface-card-hover");
+    expect(next).toHaveTextContent("próximo passo");
+    expect(within(next).getByText("Cadastrar")).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    );
+    expect(screen.getByText("Criar sua conta")).toHaveClass("line-through");
+    expect(screen.getByText("opcional")).not.toHaveClass("line-through");
+  });
+
+  it("guia: o texto do botão do próximo passo está no nome acessível da linha, nos dois idiomas", () => {
+    // The button is aria-hidden (the row is the link), so its words reach
+    // voice control only through the row's name (WCAG 2.5.3, label in name).
+    const pendingSteps = [
+      { hasContract: false },
+      { hasPixKey: false },
+      { remindersOn: false },
+    ];
+    for (const locale of ["pt-BR", "en-US"] as const) {
+      overwriteGetLocale(() => locale);
+      try {
+        for (const pending of pendingSteps) {
+          const onboarding = { ...homeFixture().onboarding, ...pending };
+          const { unmount } = renderWithProviders(
+            <OnboardingGuide
+              onboarding={onboarding}
+              variant="compact"
+              view={onboardingView(onboarding, {
+                activeContracts: 0,
+                today: TODAY,
+              })}
+            />
+          );
+          const row = screen
+            .getAllByRole("link")
+            .find((link) => link.classList.contains("bg-surface-card-hover"));
+          const button = row?.querySelector(".rounded-control");
+          const label = button?.textContent ?? "";
+          expect(label).not.toBe("");
+          expect(button).toHaveAttribute("aria-hidden", "true");
+          expect(
+            screen.getByRole("link", { name: (name) => name.includes(label) })
+          ).toBe(row);
+          unmount();
+        }
+      } finally {
+        overwriteGetLocale(() => "pt-BR");
+      }
+    }
+  });
+});
+
+describe("UpcomingList (mockup 13)", () => {
+  const upcoming = (items: ReturnType<typeof upcomingItem>[]) => ({
+    items,
+    moreCount: 0,
+    toPayCents: 0,
+    toReceiveCents: 0,
+  });
+
+  it("um bloco preenchido com divisórias retas, sem uma caixa por linha", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem(),
+          upcomingItem({ installmentId: "u2", sequence: 3 }),
+        ])}
+      />
+    );
+    const list = screen.getByRole("list");
+    expect(list).toHaveClass(
+      "bg-surface-card",
+      "divide-y",
+      "divide-divider",
+      "rounded-card"
+    );
+    for (const link of within(list).getAllByRole("link")) {
+      expect(link).not.toHaveClass("border");
+      expect(link).toHaveClass(
+        "hover:bg-surface-card-hover",
+        "focus-visible:ring-inset"
+      );
+    }
+  });
+
+  it("cada linha: o tile de data, o dia da semana, a parcela a partir de md e o valor com sinal", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([upcomingItem()])}
+      />
+    );
+    const row = screen.getByRole("link");
+    // 2026-10-10 is a Saturday; installment 9 of 10, to receive R$ 320,00.
+    expect(within(row).getByText("sábado, 10 de outubro")).toHaveClass(
+      "sr-only"
+    );
+    expect(row).toHaveTextContent("sáb. · você recebe");
+    expect(within(row).getByText(NINE_OF_TEN)).toHaveClass("max-md:hidden");
+    expect(within(row).getByText("+ R$ 320,00")).toHaveClass("sr-only");
+  });
+
+  it("a última parcela ganha 'última'; a primeira, 'primeira'", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({
+            installmentId: "a",
+            sequence: 10,
+            installmentsCount: 10,
+          }),
+          upcomingItem({
+            installmentId: "b",
+            sequence: 1,
+            installmentsCount: 12,
+            direction: "pay",
+          }),
+        ])}
+      />
+    );
+    const [last, first] = screen.getAllByRole("link");
+    expect(within(last as HTMLElement).getByText("última")).toBeVisible();
+    expect(within(first as HTMLElement).getByText("primeira")).toBeVisible();
+    expect(within(first as HTMLElement).getByText("− R$ 320,00")).toHaveClass(
+      "sr-only"
+    );
+  });
+
+  it("o título é o de seção: Bricolage em ink, com a contagem à direita", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([upcomingItem()])}
+      />
+    );
+    expect(
+      screen.getByRole("heading", { name: "Próximos 30 dias" })
+    ).toHaveClass("font-display", "text-ink");
+    expect(screen.getByText("1 parcela")).toBeVisible();
+  });
+
+  it("o anel e o hover da primeira e da última linha seguem o canto do bloco", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem(),
+          upcomingItem({ installmentId: "u2", sequence: 3 }),
+        ])}
+      />
+    );
+    // The block clips its corners (overflow-hidden): a square row there
+    // would cut the inset focus ring along the curve.
+    for (const item of screen.getAllByRole("listitem")) {
+      expect(item).toHaveClass("first:rounded-t-card", "last:rounded-b-card");
+      expect(within(item).getByRole("link")).toHaveClass("rounded-[inherit]");
+    }
+  });
+
+  it("no celular, a tag nunca come o nome do contrato: a linha do título quebra e as tags descem", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({ sequence: 10, status: "awaiting_confirmation" }),
+        ])}
+      />
+    );
+    // The tags never shrink (nowrap): on a narrow row they must wrap below
+    // the title, or the title shrinks to "Câm…" or to nothing (review, I1).
+    const line = screen.getByText("Celular da Ana")
+      .parentElement as HTMLElement;
+    expect(line).toHaveClass("flex-wrap", "gap-y-1");
+    expect(within(line).getByText("última")).toBeVisible();
+    expect(within(line).getAllByText("Comprovante enviado")).toHaveLength(1);
+  });
+
+  it("um contrato de uma parcela só (1 de 1) mostra 'última', não 'primeira': pagando esta, quita", () => {
+    renderWithProviders(
+      <UpcomingList
+        hasInstallmentActions={false}
+        upcoming={upcoming([
+          upcomingItem({ sequence: 1, installmentsCount: 1 }),
+        ])}
+      />
+    );
+    const row = screen.getByRole("link");
+    expect(within(row).getByText("última")).toBeVisible();
+    expect(within(row).queryByText("primeira")).toBeNull();
   });
 });

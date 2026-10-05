@@ -37,13 +37,13 @@ function SectionError({
 }) {
   return (
     <div
-      className="flex flex-wrap items-center gap-3 rounded-card border border-line p-4"
+      className="flex flex-wrap items-center gap-3 rounded-card bg-surface-card p-4"
       role="alert"
     >
       <p className="text-ink-muted text-sm">
         {isTimeoutError(error) ? m.section_timeout() : m.section_error()}
       </p>
-      <Button onClick={onRetry} size="sm" variant="secondary">
+      <Button onClick={onRetry} size="sm" variant="inset">
         {m.section_retry()}
       </Button>
     </div>

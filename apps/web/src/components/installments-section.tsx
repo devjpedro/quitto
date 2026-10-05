@@ -30,13 +30,17 @@ interface Installment {
 }
 
 export function InstallmentsSection({
+  initialFilter,
   installments,
   onSelect,
 }: {
+  initialFilter?: InstallmentFilter;
   installments: Installment[];
   onSelect: (id: string) => void;
 }) {
-  const [filter, setFilter] = useState<InstallmentFilter>("all");
+  const [filter, setFilter] = useState<InstallmentFilter>(
+    initialFilter ?? "all"
+  );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const today = todayISO();
 

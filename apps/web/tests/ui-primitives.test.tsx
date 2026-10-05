@@ -10,6 +10,9 @@ import { Money } from "@/components/ui/money";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tag } from "@/components/ui/tag";
 
+/** Any background utility in a class list (classes are space-separated). */
+const BACKGROUND_RE = /(^| )bg-/;
+
 describe("Button", () => {
   it("is a real button that fires onClick and respects disabled", async () => {
     const onClick = vi.fn();
@@ -60,6 +63,20 @@ describe("Button", () => {
     expect(button).not.toHaveClass("focus-visible:ring-brand");
     expect(button).not.toHaveClass("focus-visible:ring-offset-surface");
   });
+
+  it("inset: the secondary button inside a card, filled one step lighter, no border", () => {
+    render(<Button variant="inset">Já paguei</Button>);
+    const button = screen.getByRole("button", { name: "Já paguei" });
+    expect(button).toHaveClass("bg-surface-inset");
+    expect(button).not.toHaveClass("border");
+  });
+
+  it("inset hover: its own token, a step away from the hovered card in light, dark and on a phone", () => {
+    render(<Button variant="inset">Já paguei</Button>);
+    expect(screen.getByRole("button", { name: "Já paguei" })).toHaveClass(
+      "hover:bg-surface-inset-hover"
+    );
+  });
 });
 
 describe("IconButton", () => {
@@ -85,6 +102,22 @@ describe("Tag", () => {
   it("renders its text (status is never color-only)", () => {
     render(<Tag tone="danger">Atrasada</Tag>);
     expect(screen.getByText("Atrasada")).toBeVisible();
+  });
+
+  it("neutral sits inside a card: one step lighter (surface-inset), never the sunken surface", () => {
+    render(<Tag>opcional</Tag>);
+    expect(screen.getByText("opcional")).toHaveClass(
+      "bg-surface-inset",
+      "text-ink-muted"
+    );
+  });
+
+  it("ink is the black of action: the 'Vence hoje' tag", () => {
+    render(<Tag tone="ink">Vence hoje</Tag>);
+    expect(screen.getByText("Vence hoje")).toHaveClass(
+      "bg-ink",
+      "text-ink-inverse"
+    );
   });
 });
 
@@ -129,15 +162,15 @@ describe("Money", () => {
     expect(screen.getByText("R$ 1.250,00")).toBeVisible();
   });
 
-  it("display keeps the full amount for screen readers and splits the visual parts", () => {
-    const { container } = render(<Money cents={125_050} size="display" />);
+  it("card keeps the full amount for screen readers and splits the visual parts", () => {
+    const { container } = render(<Money cents={125_050} size="card" />);
     expect(screen.getByText("R$ 1.250,50")).toHaveClass("sr-only");
     const visual = container.querySelector("[aria-hidden='true']");
     expect(visual).toHaveTextContent("R$1.250,50");
   });
 
-  it("display shows the minus sign for negative values", () => {
-    const { container } = render(<Money cents={-900} size="display" />);
+  it("card shows the minus sign for negative values", () => {
+    const { container } = render(<Money cents={-900} size="card" />);
     expect(container.querySelector("[aria-hidden='true']")).toHaveTextContent(
       "-R$9,00"
     );
@@ -162,5 +195,28 @@ describe("EmptyState", () => {
       screen.getByText("Cada contrato mostra quanto já foi quitado.")
     ).toBeVisible();
     expect(screen.getByRole("button", { name: "Novo contrato" })).toBeVisible();
+  });
+
+  it("compact: a dashed outline with no fill (DIRECAO › empty states), never a solid box", () => {
+    render(
+      <EmptyState
+        description="Avisamos aqui quando alguém enviar um comprovante."
+        icon={FileText}
+        title="Nada novo por aqui"
+        variant="compact"
+      />
+    );
+    const box = screen.getByRole("heading", {
+      name: "Nada novo por aqui",
+    }).parentElement;
+    // The same outline as GhostCard, the dashed shape of what will be there.
+    expect(box).toHaveClass(
+      "rounded-card",
+      "border-[1.5px]",
+      "border-dashed",
+      "border-line-strong"
+    );
+    expect(box).not.toHaveClass("border-line");
+    expect(box?.className).not.toMatch(BACKGROUND_RE);
   });
 });

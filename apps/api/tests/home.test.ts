@@ -19,19 +19,32 @@ const today = todayISO();
 
 interface HomeBody {
   actions: {
+    amountCents?: number | null;
     contractTitle: string;
     counterpartyName?: string | null;
     direction?: string;
+    firstDueDate?: string | null;
     id: string;
+    installmentsCount?: number;
     kind: string;
     pixCode?: string | null;
     token?: string;
+    totalCents?: number;
+  }[];
+  activeContracts: {
+    contractId: string;
+    hasOverdue: boolean;
+    paidCount: number;
+    title: string;
+    totalCount: number;
   }[];
   activeContractsCount: number;
   milestones: {
     previousMonthAllClear: { month: string; paidCount: number } | null;
   };
   onboarding: {
+    accountCreatedOn: string;
+    activePartyContracts: number;
     dismissedAt: string | null;
     hasContract: boolean;
     hasPixKey: boolean;
@@ -552,5 +565,156 @@ describe("GET /api/home", () => {
     } finally {
       select.mockRestore();
     }
+  });
+
+  it("convite traz as condições: quantas parcelas, o valor de cada uma, o total e a primeira data", async () => {
+    const email = uniqueEmail("home-invite-terms");
+    const cookie = await signUpCookie(email);
+    const owner = await signUpCookie(uniqueEmail("home-invite-terms-owner"));
+    const first = addDays(today, 38);
+    const id = await createContract(owner, "Viagem para Floripa", first);
+    await inviteTo(owner, id, email, "seller");
+    const home = await getHome(cookie);
+    expect(home.actions.find((a) => a.kind === "invite")).toMatchObject({
+      installmentsCount: 3,
+      amountCents: 1000,
+      totalCents: 3000,
+      firstDueDate: first,
+    });
+  });
+
+  it("convite com parcelas de valores diferentes: sem valor por parcela, com o total", async () => {
+    const email = uniqueEmail("home-invite-uneven");
+    const cookie = await signUpCookie(email);
+    const owner = await signUpCookie(uniqueEmail("home-invite-uneven-owner"));
+    const created = await post(owner, "/api/contracts", {
+      title: "Reforma da varanda",
+      ownerRole: "buyer",
+      requiresConfirmation: false,
+      schedule: {
+        mode: "auto",
+        totalAmountCents: 1000,
+        installmentsCount: 3,
+        firstDueDate: addDays(today, 10),
+      },
+    });
+    const { id } = (await created.json()) as { id: string };
+    await inviteTo(owner, id, email, "seller");
+    const home = await getHome(cookie);
+    expect(home.actions.find((a) => a.kind === "invite")).toMatchObject({
+      installmentsCount: 3,
+      amountCents: null,
+      totalCents: 1000,
+    });
+  });
+
+  it("convite: o total e o valor por parcela vêm das parcelas, mesmo depois de editar uma", async () => {
+    const email = uniqueEmail("home-invite-edited");
+    const cookie = await signUpCookie(email);
+    const owner = await signUpCookie(uniqueEmail("home-invite-edited-owner"));
+    const id = await createContract(
+      owner,
+      "Viagem editada",
+      addDays(today, 38)
+    );
+    const [first] = await db
+      .select({ id: installment.id })
+      .from(installment)
+      .where(eq(installment.contractId, id))
+      .orderBy(installment.sequence);
+    // The PATCH changes the installment, not contract.totalAmountCents.
+    const patched = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${id}/installments/${first?.id}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ amountCents: 1500 }),
+        }
+      )
+    );
+    expect(patched.status).toBe(200);
+    await inviteTo(owner, id, email, "seller");
+    const home = await getHome(cookie);
+    expect(home.actions.find((a) => a.kind === "invite")).toMatchObject({
+      installmentsCount: 3,
+      amountCents: null,
+      totalCents: 3500,
+    });
+  });
+
+  it("contratos ativos da sidebar: os 5 mais recentes em cima, com pagas, total e atraso", async () => {
+    const cookie = await signUpCookie(uniqueEmail("home-sidebar"));
+    for (const round of [1, 2, 3, 4, 5]) {
+      await createContract(cookie, `Contrato ${round}`, addDays(today, 20));
+    }
+    await createContract(cookie, "Contrato 6", addDays(today, -3));
+    const home = await getHome(cookie);
+    expect(home.activeContractsCount).toBe(6);
+    expect(home.activeContracts.map((c) => c.title)).toEqual([
+      "Contrato 6",
+      "Contrato 5",
+      "Contrato 4",
+      "Contrato 3",
+      "Contrato 2",
+    ]);
+    expect(home.activeContracts[0]).toMatchObject({
+      paidCount: 0,
+      totalCount: 3,
+      hasOverdue: true,
+    });
+    expect(home.activeContracts[1]?.hasOverdue).toBe(false);
+    // The guide counts the same six: the user pays in all of them.
+    expect(home.onboarding.activePartyContracts).toBe(6);
+  });
+
+  it("quitado com status active: fora da lista, do contador do 'Ver todos (N)' e do guia; o mais antigo com atraso sobe", async () => {
+    const cookie = await signUpCookie(uniqueEmail("home-paid-off"));
+    await createContract(cookie, "Aluguel", addDays(today, -40));
+    for (const round of [1, 2, 3, 4, 5]) {
+      const id = await createContract(
+        cookie,
+        `Quitado ${round}`,
+        addDays(today, -60)
+      );
+      // Nothing writes `completed` yet: every installment paid, still `active`.
+      await db
+        .update(installment)
+        .set({ status: "paid", paidAt: new Date() })
+        .where(eq(installment.contractId, id));
+    }
+    const home = await getHome(cookie);
+    expect(home.activeContractsCount).toBe(1);
+    expect(home.activeContracts.map((c) => c.title)).toEqual(["Aluguel"]);
+    expect(home.activeContracts[0]?.hasOverdue).toBe(true);
+    expect(home.onboarding.activePartyContracts).toBe(1);
+  });
+
+  it("contrato só acompanhado: entra nos contratos ativos da sidebar, mas não conta para o guia", async () => {
+    const owner = await signUpCookie(uniqueEmail("home-followed-owner"));
+    const viewerEmail = uniqueEmail("home-followed");
+    const viewer = await signUpCookie(viewerEmail);
+    const id = await createContract(owner, "Só acompanho", addDays(today, -5));
+    const token = await inviteTo(owner, id, viewerEmail, "viewer");
+    expect((await post(viewer, `/api/invites/${token}/accept`)).status).toBe(
+      200
+    );
+    const home = await getHome(viewer);
+    expect(home.activeContractsCount).toBe(1);
+    expect(home.activeContracts).toEqual([
+      {
+        contractId: id,
+        title: "Só acompanho",
+        paidCount: 0,
+        totalCount: 3,
+        hasOverdue: true,
+      },
+    ]);
+    expect(home.onboarding.activePartyContracts).toBe(0);
+  });
+
+  it("a conta diz em que dia foi criada, no calendário de São Paulo", async () => {
+    const home = await getHome(await signUpCookie(uniqueEmail("home-created")));
+    expect(home.onboarding.accountCreatedOn).toBe(today);
   });
 });

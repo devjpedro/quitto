@@ -32,7 +32,10 @@ test("convidado com e-mail certo aceita e vê o contrato", async ({
     await b.page.getByRole("button", { name: ACCEPT_INVITE }).click();
     await b.page.waitForURL(`**/contracts/${id}`);
     await b.page.goto("/contracts");
-    await expect(b.page.getByText(INVITE_TITLE)).toBeVisible();
+    // In the list, not in the sidebar's "Contratos ativos".
+    await expect(
+      b.page.getByRole("main").getByText(INVITE_TITLE)
+    ).toBeVisible();
   } finally {
     await a.close();
     await b.close();

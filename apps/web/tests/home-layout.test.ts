@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
+import {
+  fewLowerColumns,
+  homeLayout,
+  homeSubtitle,
+} from "@/features/home/lib/home-layout";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
+  accountCreatedOn: "2026-10-02",
+  activePartyContracts: 0,
   hasContract: false,
   hasPixKey: false,
   hasCounterparty: false,
@@ -70,6 +76,27 @@ describe("homeLayout", () => {
     );
   });
 
+  it("acompanhar contratos não esconde o guia: só contam aqueles em que você é parte", () => {
+    // Coordinator's rule, end to end: 5 followed contracts (the sidebar's
+    // count), none where the person pays or receives.
+    const home = homeFixture({
+      activeContractsCount: 5,
+      onboarding: { ...notStarted, activePartyContracts: 0 },
+    });
+    expect(homeLayout(home)).toMatchObject({ heroGuide: true, empty: false });
+  });
+
+  it("30 dias de conta, sem contrato e sem ação: o guia sumiu sozinho e fica o estado vazio", () => {
+    const home = homeFixture({
+      onboarding: { ...notStarted, accountCreatedOn: "2026-09-02" },
+    });
+    expect(homeLayout(home)).toMatchObject({
+      heroGuide: false,
+      compactGuide: false,
+      empty: true,
+    });
+  });
+
   it("sem contrato e com o guia dispensado: estado vazio", () => {
     const home = homeFixture({
       onboarding: { ...notStarted, dismissedAt: "2026-10-02T10:00:00.000Z" },
@@ -115,4 +142,55 @@ describe("homeLayout", () => {
       "1 thing needs your attention"
     );
   });
+});
+
+describe("homeLayout: poucas ações", () => {
+  it("fewActions só com contrato e 1 ou 2 ações", () => {
+    const one = homeFixture({ actions: [installmentAction()] });
+    const two = homeFixture({
+      actions: [
+        installmentAction(),
+        installmentAction({ installmentId: "i2" }),
+      ],
+    });
+    const three = homeFixture({
+      actions: [
+        installmentAction(),
+        installmentAction({ installmentId: "i2" }),
+        installmentAction({ installmentId: "i3" }),
+      ],
+    });
+    expect(homeLayout(one).fewActions).toBe(true);
+    expect(homeLayout(two).fewActions).toBe(true);
+    expect(homeLayout(three).fewActions).toBe(false);
+    expect(homeLayout(homeFixture()).fewActions).toBe(false);
+    const inviteOnly = homeFixture({
+      actions: [inviteAction()],
+      onboarding: { ...homeFixture().onboarding, hasContract: false },
+    });
+    expect(homeLayout(inviteOnly).fewActions).toBe(false);
+  });
+});
+
+describe("fewLowerColumns: a parte de baixo com poucas ações", () => {
+  it.each([
+    // [milestones, notifications, guide] → [guideRight, left, right]
+    [true, true, true, false, true, true],
+    [true, true, false, false, true, true],
+    [true, false, true, false, true, true],
+    [true, false, false, false, false, true],
+    [false, true, true, true, true, true],
+    [false, true, false, false, true, false],
+    [false, false, true, false, true, false],
+    [false, false, false, false, false, false],
+  ])(
+    "marcos %s, notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
+    (milestones, notifications, guide, guideRight, left, right) => {
+      expect(fewLowerColumns({ guide, milestones, notifications })).toEqual({
+        guideRight,
+        left,
+        right,
+      });
+    }
+  );
 });

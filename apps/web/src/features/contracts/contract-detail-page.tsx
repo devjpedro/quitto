@@ -108,7 +108,7 @@ function ContractPixSection({
 export function ContractDetailPage() {
   useDocumentTitle(PAGE_TITLE.contractDetail);
   const { id } = useParams({ from: "/_app/contracts/$id" });
-  const { installment } = useSearch({ from: "/_app/contracts/$id" });
+  const { installment, status } = useSearch({ from: "/_app/contracts/$id" });
   const navigate = useNavigate();
   const { data, isPending } = useContractQuery(id);
   const [openId, setOpenId] = useState<string | null>(installment ?? null);
@@ -126,7 +126,7 @@ export function ContractDetailPage() {
       navigate({
         to: "/contracts/$id",
         params: { id },
-        search: { installment: undefined },
+        search: (prev) => ({ ...prev, installment: undefined }),
         replace: true,
       });
     }
@@ -280,7 +280,15 @@ export function ContractDetailPage() {
         </ul>
       </section>
 
-      <InstallmentsSection installments={installments} onSelect={setOpenId} />
+      {/* The router keeps this page mounted when only the search or the id
+          changes: a new ?status= (or another contract) restarts the list on
+          that filter. A chip picked by hand or a closed drawer keeps it. */}
+      <InstallmentsSection
+        initialFilter={status}
+        installments={installments}
+        key={`${id}:${status ?? "all"}`}
+        onSelect={setOpenId}
+      />
 
       <InstallmentDrawer
         capabilities={{ isPayer: data.isPayer, isApprover: data.isApprover }}

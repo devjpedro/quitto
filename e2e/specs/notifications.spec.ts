@@ -7,6 +7,7 @@ import {
   PROOF_PDF,
   seedContract,
   seedInvite,
+  sheetAtRest,
   signup,
 } from "../fixtures";
 
@@ -64,9 +65,13 @@ test("comprovante gera notificação no painel do sino, com deep-link para a par
     const panel = await openNotifications(b.page);
     await panel.getByRole("button", { name: PROOF_NOTIF }).click();
     await expect(b.page).toHaveURL(new RegExp(`installment=${installmentId}`));
-    await expect(b.page.getByLabel("Parcela")).toBeVisible();
+    const drawer = b.page.getByLabel("Parcela");
+    await expect(drawer).toBeVisible();
     // The installment drawer is modal (the shell is hidden from the tree
-    // meanwhile): close it, then the bell no longer counts the read one.
+    // meanwhile): close it, then the bell no longer counts the read one. Esc
+    // only once it has loaded and rests: a press while it mounts is lost.
+    await expect(drawer.getByText("aguardando")).toBeVisible();
+    await sheetAtRest(drawer);
     await b.page.keyboard.press("Escape");
     await expect(b.page.getByLabel("Parcela")).toBeHidden();
     await expect(

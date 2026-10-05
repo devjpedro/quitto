@@ -1,9 +1,10 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { MouseEventHandler, ReactNode } from "react";
+import { type MouseEventHandler, type ReactNode, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
+import { SeeAllButton } from "@/features/home/components/chips-row";
 import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
 import type { Home, HomeAction } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
@@ -13,6 +14,7 @@ import {
   inviteAction,
   TODAY,
 } from "./home-fixtures";
+import { nb } from "./nbsp";
 import { renderWithProviders } from "./test-utils";
 
 const { markPaid, confirm, accept, decline } = vi.hoisted(() => ({
@@ -38,25 +40,42 @@ vi.mock("@/lib/api", () => ({
 }));
 
 interface LinkProps {
+  "aria-label"?: string;
   children: ReactNode;
   className?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   params?: { id: string };
-  search?: { installment?: string };
+  search?: { installment?: string; status?: string };
   to: string;
 }
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children, className, onClick, params, search, to }: LinkProps) => (
-    <a
-      className={className}
-      href={`${to.replace("$id", params?.id ?? "")}?installment=${search?.installment ?? ""}`}
-      onClick={onClick}
-    >
-      {children}
-    </a>
-  ),
+  Link: ({
+    children,
+    className,
+    onClick,
+    params,
+    search,
+    to,
+    ...rest
+  }: LinkProps) => {
+    const query = new URLSearchParams(
+      Object.entries(search ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+      )
+    ).toString();
+    return (
+      <a
+        aria-label={rest["aria-label"]}
+        className={className}
+        href={`${to.replace("$id", params?.id ?? "")}${query ? `?${query}` : ""}`}
+        onClick={onClick}
+      >
+        {children}
+      </a>
+    );
+  },
 }));
 
 function makeClient(actions: HomeAction[]) {
@@ -74,9 +93,32 @@ function makeClient(actions: HomeAction[]) {
   return client;
 }
 
+/** The list as the page mounts it: "Ver todas (N)" lives on the chips row and shares the state. */
+function Actions({ actions }: { actions: HomeAction[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const onToggle = () => setExpanded((value) => !value);
+  return (
+    <>
+      <SeeAllButton
+        count={actions.length}
+        expanded={expanded}
+        listId="acoes"
+        onToggle={onToggle}
+      />
+      <ActionList
+        actions={actions}
+        expanded={expanded}
+        listId="acoes"
+        onToggle={onToggle}
+        today={TODAY}
+      />
+    </>
+  );
+}
+
 /** Actions as a static prop: the card under the finger never leaves the screen. */
 function renderList(actions: HomeAction[] = [installmentAction()]) {
-  return renderWithProviders(<ActionList actions={actions} today={TODAY} />, {
+  return renderWithProviders(<Actions actions={actions} />, {
     client: makeClient(actions),
   });
 }
@@ -87,12 +129,47 @@ function LiveList() {
     queryKey: queryKeys.home,
     queryFn: () => new Promise<Home>(() => undefined),
   });
-  return data ? <ActionList actions={data.actions} today={TODAY} /> : null;
+  return data ? <Actions actions={data.actions} /> : null;
 }
 
 function renderLive(actions: HomeAction[]) {
   return renderWithProviders(<LiveList />, { client: makeClient(actions) });
 }
+
+const WHATSAPP_NAME = /Cobrar no WhatsApp/;
+const MARK_RECEIVED_NAME = /Marcar como recebida/;
+
+/** "Venda do terreno": `sequences` of 60 overdue, Diego owes me. */
+const terrenoGroup = (sequences: number[]) => {
+  const oldest = Math.min(...sequences);
+  return installmentAction({
+    id: "overdue:vt:receive",
+    kind: "overdue",
+    direction: "receive",
+    installmentId: `vt-${oldest}`,
+    contractId: "vt",
+    contractTitle: "Venda do terreno",
+    sequence: oldest,
+    installmentsCount: 60,
+    amountCents: 200_000,
+    dueDate: "2024-10-28",
+    counterpartyName: "Diego Martins",
+    pixCode: null,
+    canMarkPaid: false,
+    count: sequences.length,
+    installmentIds: sequences.map((n) => `vt-${n}`),
+    sequences,
+    totalCents: sequences.length * 200_000,
+  });
+};
+
+/** The decoded text of the card's "Cobrar no WhatsApp" link. */
+const whatsappText = () =>
+  decodeURIComponent(
+    screen
+      .getByRole("link", { name: "Cobrar no WhatsApp (abre o WhatsApp)" })
+      .getAttribute("href") ?? ""
+  );
 
 const twoToPay = () => [
   installmentAction({ installmentId: "i1", sequence: 1 }),
@@ -113,15 +190,17 @@ const overdue = (count: number) =>
     })
   );
 
-/** The grid cell (`li`) of the card "Aluguel do apê · n/12". */
+/** The grid cell (`li`) of the card "Aluguel do apê · parcela n de 12". */
 const itemOf = (n: number) =>
   screen
-    .getByRole("article", { name: `Aluguel do apê · ${n}/12` })
+    .getByRole("article", { name: nb(`Aluguel do apê · parcela~${n}~de~12`) })
     .closest("li");
 
-/** The card "Aluguel do apê · n/12", or null once it left the list. */
+/** The card "Aluguel do apê · parcela n de 12", or null once it left the list. */
 const articleOf = (n: number) =>
-  screen.queryByRole("article", { name: `Aluguel do apê · ${n}/12` });
+  screen.queryByRole("article", {
+    name: nb(`Aluguel do apê · parcela~${n}~de~12`),
+  });
 
 /** Freezes the lock's clock (`Date.now`), so only `advance` moves it on. */
 function frozenClock() {
@@ -172,11 +251,13 @@ beforeEach(() => {
 describe("ActionList", () => {
   it("o primeiro cartão é o verde 'Faça primeiro', com Pagar com PIX e Já paguei", () => {
     renderList();
-    const card = screen.getByRole("article", { name: "Aluguel do apê · 7/12" });
+    const card = screen.getByRole("article", {
+      name: nb("Aluguel do apê · parcela~7~de~12"),
+    });
     expect(card).toBeVisible();
-    // Same 1 px border as the white cards, in the card's own green (mockup 11):
-    // the content lines up across the row.
-    expect(card).toHaveClass("border", "border-brand-surface");
+    // Fill, not outline (mockup 13): the green card and its hover step.
+    expect(card).toHaveClass("bg-brand-surface", "hover:bg-brand-hover");
+    expect(card).not.toHaveClass("border");
     expect(screen.getByText("Faça primeiro · amanhã")).toBeVisible();
     expect(screen.getByText("R$ 1.250,00")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Pagar com PIX" })).toHaveAttribute(
@@ -304,11 +385,40 @@ describe("ActionList", () => {
   it("1 ação: largura toda no celular e 2 colunas no desktop", () => {
     renderList([installmentAction()]);
     const item = screen
-      .getByRole("article", { name: "Aluguel do apê · 7/12" })
+      .getByRole("article", { name: nb("Aluguel do apê · parcela~7~de~12") })
       .closest("li");
     expect(item).toHaveClass("w-full", "lg:col-span-2");
     expect(item).not.toHaveClass("w-[calc(100%-2.75rem)]");
     expect(screen.queryByText("1 de 1")).toBeNull();
+  });
+
+  it("poucas ações: a partir de lateral a lista é subgrid da linha e o cartão único ocupa 1 coluna", () => {
+    renderWithProviders(
+      <ActionList
+        actions={[installmentAction()]}
+        expanded={false}
+        few={1}
+        listId="acoes"
+        onToggle={vi.fn()}
+        today={TODAY}
+      />,
+      { client: makeClient([installmentAction()]) }
+    );
+    const item = screen.getByRole("article").closest("li");
+    const list = item?.parentElement;
+    expect(list).toHaveClass(
+      "lateral:grid-cols-subgrid",
+      "lateral:col-span-full"
+    );
+    expect(list).not.toHaveClass(
+      "2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
+    );
+    expect(list?.parentElement).toHaveClass(
+      "lateral:grid",
+      "lateral:grid-cols-subgrid",
+      "lateral:col-span-1"
+    );
+    expect(item).toHaveClass("lg:col-span-2", "lateral:col-span-1");
   });
 
   it("5 ações: 1 de 5 no carrossel e Ver todas revela as escondidas no desktop", async () => {
@@ -403,6 +513,305 @@ describe("ActionList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await waitFor(() => expect(confirm).toHaveBeenCalledWith("i1"));
     expect(markPaid).not.toHaveBeenCalled();
+  });
+
+  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato filtrado", () => {
+    renderList([
+      installmentAction({
+        id: "overdue:nb:receive",
+        kind: "overdue",
+        direction: "receive",
+        installmentId: "nb-3",
+        contractId: "nb",
+        contractTitle: "Notebook da Marina",
+        sequence: 3,
+        dueDate: "2026-08-30",
+        counterpartyName: "Marina Pires",
+        pixCode: null,
+        canMarkPaid: false,
+        count: 2,
+        installmentIds: ["nb-3", "nb-4"],
+        sequences: [3, 4],
+        totalCents: 70_000,
+      }),
+    ]);
+    const whatsapp = screen.getByRole("link", { name: WHATSAPP_NAME });
+    expect(decodeURIComponent(whatsapp.getAttribute("href") ?? "")).toContain(
+      "As parcelas 3 e 4 de “Notebook da Marina” estão em aberto, somando R$ 700,00"
+    );
+    expect(screen.getByRole("link", { name: "Ver parcelas" })).toHaveAttribute(
+      "href",
+      "/contracts/nb?status=overdue"
+    );
+    expect(
+      screen.queryByRole("button", { name: MARK_RECEIVED_NAME })
+    ).toBeNull();
+  });
+
+  it("grupo que você paga: Pagar a mais antiga e Ver parcelas (ícone de 44 px no celular), nada que dispare mutação", () => {
+    renderList([
+      installmentAction({
+        id: "overdue:al:pay",
+        kind: "overdue",
+        installmentId: "al-5",
+        contractId: "al",
+        sequence: 5,
+        dueDate: "2026-09-01",
+        pixCode: null,
+        canMarkPaid: false,
+        count: 2,
+        installmentIds: ["al-5", "al-6"],
+        sequences: [5, 6],
+        totalCents: 250_000,
+      }),
+    ]);
+    const card = screen.getByRole("article", {
+      name: nb("Aluguel do apê · parcelas~5 e 6~de~12"),
+    });
+    expect(within(card).getByText("Faça primeiro · 2 atrasadas")).toBeVisible();
+    // The name is in bold inside the line (PersonText): the line reads as one.
+    const person = within(card).getByText("Maria Souza").parentElement;
+    expect(person).toHaveTextContent("para Maria Souza · desde 01/09");
+    expect(person).toBeVisible();
+    expect(
+      within(card).getByRole("link", { name: "Pagar a mais antiga" })
+    ).toHaveAttribute("href", "/contracts/al?installment=al-5");
+    const seeAll = within(card).getByRole("link", { name: "Ver parcelas" });
+    expect(seeAll).toHaveAttribute("href", "/contracts/al?status=overdue");
+    // On a phone a square icon button (h-11 from size sm, w-11 here), named by aria-label.
+    expect(seeAll).toHaveClass("max-md:w-11", "max-md:px-0");
+    expect(within(card).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("grupo com lacuna: o nome do cartão e o WhatsApp dizem as faixas", () => {
+    renderList([
+      terrenoGroup([5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20]),
+    ]);
+    expect(
+      screen.getByRole("article", {
+        name: nb("Venda do terreno · parcelas~5~a~12 e 14~a~20~de~60"),
+      })
+    ).toBeVisible();
+    // The screen keeps its no-break spaces; the message leaves as plain text.
+    expect(whatsappText()).toContain(
+      "As parcelas 5 a 12 e 14 a 20 de “Venda do terreno” estão em aberto"
+    );
+  });
+
+  it("grupo com mais de 3 itens: o nome do cartão e o WhatsApp dizem quantas e entre quais", () => {
+    renderList([terrenoGroup([3, 5, 7, 9, 10, 11, 12])]);
+    expect(
+      screen.getByRole("article", {
+        name: nb("Venda do terreno · 7~parcelas entre 3~e~12~de~60"),
+      })
+    ).toBeVisible();
+    expect(whatsappText()).toContain(
+      "7 parcelas de “Venda do terreno”, entre a 3 e a 12, estão em aberto"
+    );
+  });
+
+  it("cartão comum: preenchido no tom quente, sem contorno, e o hover desce um degrau", () => {
+    renderList(twoToPay());
+    const second = screen.getByRole("article", {
+      name: nb("Aluguel do apê · parcela~2~de~12"),
+    });
+    expect(second).toHaveClass(
+      "bg-surface-card",
+      "hover:bg-surface-card-hover"
+    );
+    expect(second).not.toHaveClass("border");
+    expect(
+      within(second).getByRole("button", { name: "Já paguei" })
+    ).toHaveClass("bg-surface-inset");
+  });
+
+  it("cartão de parcela: a pessoa com rosto, a barra do contrato inteiro e a legenda", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction(),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    expect(within(card).getByText("MS")).toHaveAttribute("aria-hidden", "true");
+    expect(within(card).getByText("Maria Souza").tagName).toBe("B");
+    expect(card.querySelectorAll("[data-status]")).toHaveLength(12);
+    expect(within(card).getByText("6 de 12 pagas")).toBeVisible();
+    expect(within(card).getByText("falta R$ 7.500,00")).toBeVisible();
+  });
+
+  it("legenda no cartão estreito: quebra a linha em vez de vazar, e o 'falta' fica à direita (1024 px)", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction(),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    const remaining = within(card).getByText("falta R$ 7.500,00");
+    // 182 px of content at 1024: "4 de 12 pagas" and "falta R$ 14.400,00" need 190.
+    expect(remaining.parentElement).toHaveClass(
+      "flex-wrap",
+      "whitespace-nowrap"
+    );
+    expect(remaining).toHaveClass("ml-auto");
+  });
+
+  it("convite: avatar de 28 px, o título grande e as condições", () => {
+    renderList([installmentAction({ installmentId: "x0" }), inviteAction()]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    expect(within(card).getByText("A")).toHaveClass("size-7");
+    expect(within(card).getByText("4 parcelas de R$ 300,00")).toBeVisible();
+    expect(card).toHaveTextContent("a partir de 10/11");
+    // A narrow card (1024 px) wraps before "· a partir de 10/11", never inside it.
+    expect(within(card).getByText("· a partir de 10/11")).toHaveClass(
+      "whitespace-nowrap"
+    );
+  });
+
+  it("cartão estreito: os botões empilham na largura toda, sem meia linha (O2, 1024 px)", () => {
+    renderList([installmentAction({ kind: "review", canConfirm: true })]);
+    const card = screen.getByRole("article");
+    expect(card).toHaveClass("@container");
+    for (const control of [
+      screen.getByRole("link", { name: "Conferir" }),
+      screen.getByRole("button", { name: "Confirmar" }),
+    ]) {
+      expect(control).toHaveClass("@max-[15rem]:w-full");
+    }
+  });
+
+  it("par a receber (Cobrar no WhatsApp + Marcar como recebida, 362 px): empilha abaixo de 368 px, nunca um botão sozinho na linha", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction({ installmentId: "r1", direction: "receive" }),
+    ]);
+    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    for (const control of [
+      within(card).getByRole("link", { name: WHATSAPP_NAME }),
+      within(card).getByRole("button", { name: MARK_RECEIVED_NAME }),
+    ]) {
+      expect(control).toHaveClass("@max-[23rem]:w-full");
+      expect(control).not.toHaveClass("@max-[15rem]:w-full");
+    }
+  });
+
+  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem (331 e 267 px); no celular o ícone de 44 px cabe", () => {
+    const group = {
+      kind: "overdue",
+      pixCode: null,
+      canMarkPaid: false,
+      count: 2,
+    } as const;
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction({
+        ...group,
+        id: "overdue:nb:receive",
+        direction: "receive",
+        installmentId: "nb-3",
+        contractId: "nb",
+        contractTitle: "Notebook da Marina",
+        sequence: 3,
+        installmentIds: ["nb-3", "nb-4"],
+        sequences: [3, 4],
+      }),
+      installmentAction({
+        ...group,
+        id: "overdue:al:pay",
+        installmentId: "al-5",
+        contractId: "al",
+        sequence: 5,
+        installmentIds: ["al-5", "al-6"],
+        sequences: [5, 6],
+      }),
+    ]);
+    const [, receive, pay] = screen.getAllByRole("article") as HTMLElement[];
+    for (const control of [
+      within(receive as HTMLElement).getByRole("link", { name: WHATSAPP_NAME }),
+      within(receive as HTMLElement).getByRole("link", {
+        name: "Ver parcelas",
+      }),
+    ]) {
+      expect(control).toHaveClass(
+        "@max-[15rem]:w-full",
+        "md:@max-[21rem]:w-full"
+      );
+    }
+    for (const control of [
+      within(pay as HTMLElement).getByRole("link", {
+        name: "Pagar a mais antiga",
+      }),
+      within(pay as HTMLElement).getByRole("link", { name: "Ver parcelas" }),
+    ]) {
+      expect(control).toHaveClass(
+        "@max-[15rem]:w-full",
+        "md:@max-[17rem]:w-full"
+      );
+    }
+  });
+
+  it("12 px entre os cartões, no carrossel e na grade", () => {
+    renderList(overdue(3));
+    expect(itemOf(1)?.parentElement).toHaveClass("gap-3");
+  });
+
+  it("Já paguei ao lado de um grupo: a falha devolve só o cartão simples, no mesmo lugar, e a contagem volta", async () => {
+    let respond: (value: unknown) => void = () => undefined;
+    markPaid.mockReturnValue(
+      new Promise((resolve) => {
+        respond = resolve;
+      })
+    );
+    const group = installmentAction({
+      id: "overdue:nb:receive",
+      kind: "overdue",
+      direction: "receive",
+      installmentId: "nb-3",
+      contractId: "nb",
+      contractTitle: "Notebook da Marina",
+      dueDate: "2026-08-30",
+      pixCode: null,
+      canMarkPaid: false,
+      count: 2,
+      installmentIds: ["nb-3", "nb-4"],
+      sequences: [3, 4],
+      totalCents: 70_000,
+    });
+    const single = installmentAction({
+      installmentId: "i2",
+      sequence: 2,
+      pixCode: null,
+    });
+    // A card after the single one: putting it back at the end would show.
+    const review = installmentAction({
+      id: "installment:r3",
+      kind: "review",
+      installmentId: "r3",
+      contractId: "mr",
+      contractTitle: "Moto do Rafa",
+      sequence: 3,
+      installmentsCount: 10,
+      canConfirm: true,
+    });
+    const client = makeClient([group, single, review]);
+    const cachedIds = () =>
+      client
+        .getQueryData<Home>(queryKeys.home)
+        ?.actions.map((action) => action.id);
+    renderWithProviders(<LiveList />, { client });
+    await userEvent.click(screen.getByRole("button", { name: "Já paguei" }));
+    await waitFor(() => expect(markPaid).toHaveBeenCalledWith("i2"));
+    // In flight the card has already left, from the screen and the cache.
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
+    expect(cachedIds()).toEqual([group.id, review.id]);
+    respond({ data: null, error: { status: 422, value: null } });
+    // The refusal brings back only the single card, where it was: between the
+    // group and the next card, not at the end.
+    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
+    const [first, second, third] = screen.getAllByRole("article");
+    expect(first).toHaveTextContent("Notebook da Marina");
+    // toHaveTextContent folds the no-break spaces into plain ones.
+    expect(second).toHaveTextContent("Aluguel do apê · parcela 2 de 12");
+    expect(third).toHaveTextContent("Moto do Rafa");
+    // And the count goes back with it: pending counts are cards, read from the cache.
+    expect(cachedIds()).toEqual([group.id, single.id, review.id]);
   });
 });
 

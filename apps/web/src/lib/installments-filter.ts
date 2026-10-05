@@ -2,6 +2,14 @@ import { isOverdue, isPaidStatus } from "@quitto/shared";
 
 export type InstallmentFilter = "all" | "due" | "overdue" | "paid";
 
+const FILTERS: readonly string[] = ["all", "due", "overdue", "paid"];
+
+export function isInstallmentFilter(
+  value: unknown
+): value is InstallmentFilter {
+  return typeof value === "string" && FILTERS.includes(value);
+}
+
 interface FilterableInstallment {
   dueDate: string;
   status: string;

@@ -16,12 +16,16 @@
     // excluded. A leading-negation list means "everything except these" in
     // Biome 2.x; Biome canonicalizes it to this form (it strips a redundant
     // explicit "**"), so do not re-add one — it will be removed on --write.
+    // SVGs are generated assets too: apps/web/scripts/app-icons.tsx writes
+    // the favicon as the AppIcon's own markup, and a test keeps the two in
+    // sync, so the formatter must not rewrap it.
     "includes": [
       "!**/*.config.ts",
       "!**/drizzle",
       "!**/*.json",
       "!**/*.jsonc",
       "!**/*.html",
+      "!**/*.svg",
       "!**/src/paraglide"
     ]
   },
@@ -53,6 +57,16 @@
         "packages/shared/src/pix.ts",
         "packages/shared/tests/pix.test.ts"
       ],
+      "linter": {
+        "rules": { "suspicious": { "noBitwiseOperators": "off" } }
+      }
+    },
+    {
+      // FNV-1a + o finalizador do murmur3 (a cor do avatar pelo nome, mockup 13)
+      // são definidos em XOR, multiplicação de 32 bits e deslocamento: não há
+      // forma idiomática sem operadores bitwise. Mesmo caso do CRC do PIX acima.
+      // Só o arquivo do hash: o teste não usa operador de bits.
+      "includes": ["apps/web/src/lib/avatar-color.ts"],
       "linter": {
         "rules": { "suspicious": { "noBitwiseOperators": "off" } }
       }

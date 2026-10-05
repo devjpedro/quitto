@@ -1,5 +1,6 @@
 import {
   FileMagnifyingGlass,
+  ListBullets,
   QrCode,
   WhatsappLogo,
 } from "@phosphor-icons/react";
@@ -9,13 +10,15 @@ import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   chargeMessage,
+  groupChargeMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { type ActionButtonKind, LINK_BUTTONS } from "../lib/action-view";
 import type { HomeAction } from "../types";
 
-export type CardButtonVariant = "onBrand" | "onBrandOutline" | "secondary";
+export type CardButtonVariant = "onBrand" | "onBrandOutline" | "inset";
 
 const LABEL: Record<ActionButtonKind, () => string> = {
   pix: m.home_action_pix,
@@ -28,6 +31,8 @@ const LABEL: Record<ActionButtonKind, () => string> = {
   resend_proof: m.home_action_resend_proof,
   accept: m.home_action_accept,
   decline: m.home_action_decline,
+  pay_oldest: m.home_action_pay_oldest,
+  see_installments: m.home_action_see_installments,
 };
 
 function ButtonIcon({ kind }: { kind: ActionButtonKind }) {
@@ -46,6 +51,7 @@ function ButtonIcon({ kind }: { kind: ActionButtonKind }) {
 export function ActionButton({
   action,
   busy,
+  className,
   kind,
   locale,
   onRun,
@@ -55,6 +61,7 @@ export function ActionButton({
 }: {
   action: HomeAction;
   busy: boolean;
+  className?: string;
   kind: ActionButtonKind;
   locale: Locale;
   onRun: (kind: ActionButtonKind) => void;
@@ -71,11 +78,21 @@ export function ActionButton({
     }
   };
   if (action.kind !== "invite" && kind === "whatsapp") {
-    const href = whatsappUrl(
-      chargeMessage({ ...action, todayISO: today }, locale)
-    );
+    const paragraphs =
+      action.count > 1
+        ? groupChargeMessage(
+            {
+              contractTitle: action.contractTitle,
+              dueDate: action.dueDate,
+              sequences: action.sequences,
+              totalCents: action.totalCents,
+            },
+            locale
+          )
+        : chargeMessage({ ...action, todayISO: today }, locale);
+    const href = whatsappUrl(paragraphs);
     return (
-      <Button asChild size="sm" variant={variant}>
+      <Button asChild className={className} size="sm" variant={variant}>
         <a
           href={href}
           onClick={guard}
@@ -91,9 +108,31 @@ export function ActionButton({
       </Button>
     );
   }
+  if (action.kind !== "invite" && kind === "see_installments") {
+    // On a phone the label would break the row: a 44 px icon button, named by aria-label (mockup 13).
+    return (
+      <Button
+        asChild
+        className={cn("max-md:w-11 max-md:px-0", className)}
+        size="sm"
+        variant={variant}
+      >
+        <Link
+          aria-label={label}
+          onClick={guard}
+          params={{ id: action.contractId }}
+          search={{ status: "overdue" }}
+          to="/contracts/$id"
+        >
+          <ListBullets aria-hidden="true" className="md:hidden" size={18} />
+          <span className="max-md:hidden">{label}</span>
+        </Link>
+      </Button>
+    );
+  }
   if (action.kind !== "invite" && LINK_BUTTONS.has(kind)) {
     return (
-      <Button asChild size="sm" variant={variant}>
+      <Button asChild className={className} size="sm" variant={variant}>
         <Link
           onClick={guard}
           params={{ id: action.contractId }}
@@ -108,6 +147,7 @@ export function ActionButton({
   }
   return (
     <Button
+      className={className}
       disabled={busy}
       onClick={() => onRun(kind)}
       size="sm"

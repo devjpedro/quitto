@@ -29,14 +29,14 @@ test("criar contrato (auto) aparece na lista e no Agora", async ({ page }) => {
     page.getByRole("heading", { name: "Aluguel E2E" })
   ).toBeVisible();
 
-  // aparece na lista
+  // aparece na lista (no main: a sidebar também lista os contratos ativos)
   await page.goto("/contracts");
-  await expect(page.getByText("Aluguel E2E")).toBeVisible();
+  await expect(page.getByRole("main").getByText("Aluguel E2E")).toBeVisible();
 
   // aparece no Agora: a 1ª parcela vence em 5 dias
   await page.goto("/");
   await expect(
-    page.getByRole("article", { name: "Aluguel E2E · 1/3" })
+    page.getByRole("article", { name: "Aluguel E2E · parcela 1 de 3" })
   ).toBeVisible();
 });
 

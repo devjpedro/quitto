@@ -178,5 +178,56 @@ it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
   expectTypeOf<NonNullable<HomeData>["milestones"]["settled"]>().toEqualTypeOf<{
     paidCents: number;
     receivedCents: number;
+    payableTotalCents: number;
+    receivableTotalCents: number;
   }>();
+  // The closest-to-payoff milestone brings what's left and when the next one
+  // is due; nextDueDate is null-able, never optional (no undefined).
+  type HomeClosest = NonNullable<
+    NonNullable<HomeData>["milestones"]["closestToPayoff"]
+  >;
+  expectTypeOf<HomeClosest["remainingCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeClosest["nextDueDate"]>().toEqualTypeOf<string | null>();
+  // Every installment card carries its contract's summary; statuses is null
+  // above 24 installments, never optional (planner's decision 4: no undefined).
+  type HomeInstallmentAction = Exclude<
+    NonNullable<HomeData>["actions"][number],
+    { kind: "invite" }
+  >;
+  expectTypeOf<HomeInstallmentAction["contract"]>().toEqualTypeOf<{
+    paidCount: number;
+    overdueCount: number;
+    remainingCents: number;
+    statuses: ("paid" | "overdue" | "review" | "today" | "open")[] | null;
+  }>();
+  // The invite card's terms: amountCents is null when the installments have
+  // different amounts, and firstDueDate is null-able; both never optional.
+  type HomeInviteAction = Extract<
+    NonNullable<HomeData>["actions"][number],
+    { kind: "invite" }
+  >;
+  expectTypeOf<HomeInviteAction["installmentsCount"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeInviteAction["amountCents"]>().toEqualTypeOf<
+    number | null
+  >();
+  expectTypeOf<HomeInviteAction["totalCents"]>().toEqualTypeOf<number>();
+  expectTypeOf<HomeInviteAction["firstDueDate"]>().toEqualTypeOf<
+    string | null
+  >();
+  // The sidebar's active contracts, and the two facts the guide hides itself by.
+  expectTypeOf<
+    NonNullable<HomeData>["activeContracts"][number]
+  >().toEqualTypeOf<{
+    contractId: string;
+    title: string;
+    paidCount: number;
+    totalCount: number;
+    hasOverdue: boolean;
+  }>();
+  expectTypeOf<
+    NonNullable<HomeData>["onboarding"]["accountCreatedOn"]
+  >().toEqualTypeOf<string>();
+  expectTypeOf<
+    NonNullable<HomeData>["onboarding"]["activePartyContracts"]
+  >().toEqualTypeOf<number>();
 });

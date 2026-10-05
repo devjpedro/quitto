@@ -54,6 +54,7 @@ import {
   useMarkPaidFromHome,
 } from "../src/features/home/api";
 import {
+  useActiveContracts,
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
@@ -87,6 +88,14 @@ const paidInstallment = {
   status: "paid",
   paidAt: "2026-10-02T12:00:00.000Z",
   confirmedAt: null,
+};
+
+const ROW = {
+  contractId: "c2",
+  title: "Celular da Ana",
+  paidCount: 9,
+  totalCount: 10,
+  hasOverdue: false,
 };
 
 const homeIds = (client: QueryClient) =>
@@ -391,6 +400,8 @@ describe("useMomentMilestone", () => {
             paidCount: 9,
             totalCount: 10,
             percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-10-13",
           },
         },
       }),
@@ -401,9 +412,40 @@ describe("useMomentMilestone", () => {
     });
     await waitFor(() =>
       expect(result.current).toEqual({
-        title: "Mais perto de quitar",
-        detail: "Celular da Ana · 9/10",
+        label: "Mais perto de quitar",
+        title: "Celular da Ana · 9/10",
+        detail: "Falta 1 parcela, em 13/10",
+        percent: 90,
       })
+    );
+  });
+
+  it("o 'hoje' do atraso é o do home (o do servidor), não o relógio do aparelho", async () => {
+    // Today on the server is 01/09: the installment of 13/09 is still ahead,
+    // whatever the device's clock says.
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        today: "2026-09-01",
+        milestones: {
+          ...homeFixture().milestones,
+          closestToPayoff: {
+            contractId: "c3",
+            title: "Celular da Ana",
+            paidCount: 9,
+            totalCount: 10,
+            percent: 90,
+            remainingCount: 1,
+            nextDueDate: "2026-09-13",
+          },
+        },
+      }),
+      error: null,
+    });
+    const { result } = renderHook(() => useMomentMilestone(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() =>
+      expect(result.current?.detail).toBe("Falta 1 parcela, em 13/09")
     );
   });
 
@@ -437,6 +479,38 @@ describe("useNavCounts", () => {
   });
 });
 
+describe("useActiveContracts", () => {
+  it("null enquanto o home não chegou (o esqueleto); os contratos quando chega", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({ activeContracts: [ROW], activeContractsCount: 6 }),
+      error: null,
+    });
+    const { result } = renderHook(() => useActiveContracts(), {
+      wrapper: wrapper(),
+    });
+    expect(result.current).toBeNull();
+    await waitFor(() =>
+      expect(result.current).toEqual({ items: [ROW], total: 6 })
+    );
+  });
+
+  it("com o home falhando, o grupo some: o esqueleto nunca fica para sempre", async () => {
+    getHome.mockResolvedValue({
+      data: null,
+      error: {
+        status: 503,
+        value: { error: { code: "INTERNAL", message: "cold" } },
+      },
+    });
+    const { result } = renderHook(() => useActiveContracts(), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() =>
+      expect(result.current).toEqual({ items: [], total: 0 })
+    );
+  });
+});
+
 describe("passada de hidratação", () => {
   it("antes de hidratar, o shell não mostra nada do home, nem com ele já em cache (o HTML do servidor não tem)", () => {
     const client = makeClient();
@@ -446,6 +520,7 @@ describe("passada de hidratação", () => {
         unreadCount: 3,
         actions: [installmentAction()],
         activeContractsCount: 2,
+        activeContracts: [ROW],
         milestones: {
           ...homeFixture().milestones,
           previousMonthAllClear: { month: "2026-09", paidCount: 12 },
@@ -456,6 +531,7 @@ describe("passada de hidratação", () => {
     try {
       const { result, rerender } = renderHook(
         () => ({
+          contracts: useActiveContracts(),
           counts: useNavCounts(),
           moment: useMomentMilestone(),
           unread: useUnreadCount(),
@@ -463,6 +539,7 @@ describe("passada de hidratação", () => {
         { wrapper: wrapper(client) }
       );
       expect(result.current).toEqual({
+        contracts: null,
         counts: { contracts: 0, now: 0 },
         moment: null,
         unread: 0,
@@ -471,10 +548,13 @@ describe("passada de hidratação", () => {
       hydration.done = true;
       rerender();
       expect(result.current).toEqual({
+        contracts: { items: [ROW], total: 2 },
         counts: { contracts: 2, now: 1 },
         moment: {
-          title: "Tudo em dia em setembro",
-          detail: "12 de 12 parcelas quitadas",
+          label: "Tudo em dia em setembro",
+          title: "12 de 12 parcelas quitadas",
+          detail: null,
+          percent: 100,
         },
         unread: 3,
       });

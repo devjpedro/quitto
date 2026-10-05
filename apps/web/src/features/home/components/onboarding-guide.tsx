@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useDismissOnboarding } from "../api";
@@ -6,6 +7,7 @@ import type { OnboardingView } from "../lib/onboarding";
 import type { HomeOnboarding } from "../types";
 import { GuideHero } from "./guide-hero";
 import { OnboardingChecklist } from "./onboarding-checklist";
+import { SectionTitle } from "./section-title";
 
 /**
  * "Comece por aqui", a checklist and never a balloon tour. `hero` puts the
@@ -29,7 +31,9 @@ export function OnboardingGuide({
       aria-labelledby={headingId}
       // Side by side from lg, the action grid's cut: with the sidebar, md leaves
       // the checklist too narrow for its words (176 px at 768).
-      className={cn("grid gap-3", showHero && "lg:grid-cols-[1fr_1.3fr]")}
+      className={cn(
+        showHero ? "grid gap-3 lg:grid-cols-[1fr_1.3fr]" : "flex flex-col"
+      )}
     >
       {showHero && view.next ? (
         <GuideHero
@@ -39,16 +43,37 @@ export function OnboardingGuide({
           view={view}
         />
       ) : (
-        <h2 className="font-medium text-sm" id={headingId}>
-          {m.onboarding_tag()} ·{" "}
-          {m.onboarding_progress({ done: view.doneCount, total: view.total })}
-        </h2>
+        <SectionTitle
+          aux={
+            <>
+              <ProgressRing
+                percent={(view.doneCount / view.total) * 100}
+                size={18}
+              />
+              {m.onboarding_progress({
+                done: view.doneCount,
+                total: view.total,
+              })}
+            </>
+          }
+          id={headingId}
+        >
+          {m.onboarding_tag()}
+        </SectionTitle>
       )}
-      <OnboardingChecklist onboarding={onboarding} steps={view.steps} />
+      <OnboardingChecklist
+        // Beside the green card (lg) the list keeps its own height; alone it
+        // takes the full width.
+        className={showHero ? "self-start" : undefined}
+        next={view.next}
+        onboarding={onboarding}
+        showNextAction={!showHero}
+        steps={view.steps}
+      />
       <p
         className={cn(
-          "text-ink-muted text-sm",
-          showHero && "lg:col-span-2 lg:text-right"
+          "text-[13px] text-ink-muted",
+          showHero ? "lg:col-span-2 lg:text-right" : "mt-2.5"
         )}
       >
         {m.onboarding_dismiss_prompt()} ·{" "}

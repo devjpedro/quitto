@@ -91,11 +91,18 @@ describe("buildMilestones", () => {
       paidCount: 3,
       totalCount: 4,
       percent: 75,
+      remainingCount: 1,
+      nextDueDate: "2026-10-20",
     });
-    expect(result.settled).toEqual({ paidCents: 5 * 10_000, receivedCents: 0 });
+    expect(result.settled).toEqual({
+      paidCents: 5 * 10_000,
+      receivedCents: 0,
+      payableTotalCents: 8 * 10_000,
+      receivableTotalCents: 0,
+    });
   });
 
-  describe("mais perto de quitar: o percentual fica entre 1% e 99% em contrato em aberto", () => {
+  describe("mais perto de quitar: o percentual fica entre 50% e 99% em contrato em aberto", () => {
     const base = {
       contracts: [contractRow({ id: "c", title: "Carro" })],
       participants: [
@@ -119,7 +126,7 @@ describe("buildMilestones", () => {
       expect(result.closestToPayoff?.percent).toBe(99);
     });
 
-    it("R$ 1,00 pago de R$ 100.000,00 mostra 1%, nunca 0%", () => {
+    it("abaixo de 50% não é marco: R$ 1,00 pago de R$ 100.000,00 não vira 'mais perto de quitar'", () => {
       const result = milestones({
         ...base,
         installments: [
@@ -127,7 +134,101 @@ describe("buildMilestones", () => {
           inst({ id: "b", contractId: "c", amountCents: 9_999_900 }),
         ],
       });
-      expect(result.closestToPayoff?.percent).toBe(1);
+      expect(result.closestToPayoff).toBeNull();
+    });
+
+    it("49% ainda não vale; 50% já vale, pelo mesmo % arredondado que a tela mostra", () => {
+      const at = (paid: number) =>
+        milestones({
+          ...base,
+          installments: [
+            inst({
+              id: "a",
+              contractId: "c",
+              status: "paid",
+              amountCents: paid,
+            }),
+            inst({ id: "b", contractId: "c", amountCents: 10_000 - paid }),
+          ],
+        }).closestToPayoff;
+      expect(at(4900)).toBeNull();
+      expect(at(5000)?.percent).toBe(50);
+      // Decision 5: 49.5% shows as 50%, so it counts; 49.49% shows as 49%, so it doesn't.
+      expect(at(4950)?.percent).toBe(50);
+      expect(at(4949)).toBeNull();
+    });
+
+    it("falta 1: traz quantas faltam e a data da próxima em aberto", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          // The paid ones fell due earlier: their dates never count as "next".
+          inst({
+            id: "a",
+            contractId: "c",
+            sequence: 1,
+            status: "paid",
+            dueDate: "2026-08-13",
+          }),
+          inst({
+            id: "b",
+            contractId: "c",
+            sequence: 2,
+            status: "confirmed",
+            dueDate: "2026-09-13",
+          }),
+          inst({
+            id: "c",
+            contractId: "c",
+            sequence: 3,
+            dueDate: "2026-10-13",
+          }),
+        ],
+      });
+      expect(result.closestToPayoff).toMatchObject({
+        remainingCount: 1,
+        nextDueDate: "2026-10-13",
+      });
+    });
+
+    it("a próxima é a menor data entre as em aberto, em qualquer ordem, nunca a de uma paga", () => {
+      const result = milestones({
+        ...base,
+        installments: [
+          inst({
+            id: "a",
+            contractId: "c",
+            sequence: 1,
+            status: "paid",
+            dueDate: "2026-08-13",
+          }),
+          inst({
+            id: "b",
+            contractId: "c",
+            sequence: 2,
+            status: "paid",
+            dueDate: "2026-09-13",
+          }),
+          // Out of order on purpose: the first open one in the list is not the next.
+          inst({
+            id: "d",
+            contractId: "c",
+            sequence: 4,
+            dueDate: "2026-11-13",
+          }),
+          inst({
+            id: "c",
+            contractId: "c",
+            sequence: 3,
+            dueDate: "2026-10-13",
+          }),
+        ],
+      });
+      expect(result.closestToPayoff).toMatchObject({
+        percent: 50,
+        remainingCount: 2,
+        nextDueDate: "2026-10-13",
+      });
     });
   });
 
@@ -240,7 +341,12 @@ describe("buildMilestones", () => {
       receivedCents: 7000,
     });
     // "Já quitado no total": one total per direction, never summed together.
-    expect(result.settled).toEqual({ paidCents: 12_500, receivedCents: 7000 });
+    expect(result.settled).toEqual({
+      paidCents: 12_500,
+      receivedCents: 7000,
+      payableTotalCents: 12_500,
+      receivableTotalCents: 7000,
+    });
   });
 
   it("tudo em dia no mês passado só quando todas as parcelas de lá foram pagas no prazo", () => {
@@ -448,6 +554,74 @@ describe("buildMilestones", () => {
       expect(result.previousMonthAllClear).toBeNull();
     });
   });
+
+  it("o total por direção soma os contratos em aberto e os quitados, e nunca junta as duas direções", () => {
+    const result = milestones({
+      contracts: [
+        contractRow({ id: "pay", ownerRole: "buyer" }),
+        contractRow({ id: "recv", ownerRole: "seller" }),
+        contractRow({ id: "done", ownerRole: "seller" }),
+      ],
+      participants: [
+        {
+          contractId: "pay",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+        {
+          contractId: "recv",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+        {
+          contractId: "done",
+          role: "seller",
+          linkedUserId: ME,
+          displayName: "Eu",
+        },
+      ],
+      installments: [
+        inst({
+          id: "p1",
+          contractId: "pay",
+          status: "paid",
+          amountCents: 180_000,
+        }),
+        inst({
+          id: "p2",
+          contractId: "pay",
+          sequence: 2,
+          amountCents: 180_000,
+        }),
+        inst({
+          id: "r1",
+          contractId: "recv",
+          status: "paid",
+          amountCents: 35_000,
+        }),
+        inst({
+          id: "r2",
+          contractId: "recv",
+          sequence: 2,
+          amountCents: 35_000,
+        }),
+        inst({
+          id: "d1",
+          contractId: "done",
+          status: "confirmed",
+          amountCents: 25_000,
+        }),
+      ],
+    });
+    expect(result.settled).toEqual({
+      paidCents: 180_000,
+      payableTotalCents: 360_000,
+      receivedCents: 60_000,
+      receivableTotalCents: 95_000,
+    });
+  });
 });
 
 describe("onboardingFacts", () => {
@@ -455,6 +629,7 @@ describe("onboardingFacts", () => {
     pixKey: null,
     emailRemindersOptIn: false,
     onboardingDismissedAt: null,
+    createdAt: new Date("2026-09-01T12:00:00Z"),
   };
 
   it("conta nova: nada feito", () => {
@@ -466,6 +641,8 @@ describe("onboardingFacts", () => {
         true
       )
     ).toEqual({
+      accountCreatedOn: "2026-09-01",
+      activePartyContracts: 0,
       hasContract: false,
       hasPixKey: false,
       hasCounterparty: false,
@@ -517,10 +694,13 @@ describe("onboardingFacts", () => {
         pixKey: "joao@example.com",
         emailRemindersOptIn: true,
         onboardingDismissedAt: new Date("2026-10-01T10:00:00Z"),
+        createdAt: new Date("2026-09-01T12:00:00Z"),
       },
       false
     );
     expect(facts).toEqual({
+      accountCreatedOn: "2026-09-01",
+      activePartyContracts: 2,
       hasContract: true,
       hasPixKey: true,
       hasCounterparty: true,
@@ -664,5 +844,94 @@ describe("onboardingFacts", () => {
       hasCounterparty: false,
       counterpartyContractId: null,
     });
+  });
+
+  it("contratos ativos em que é parte: os acompanhados, os concluídos e os cancelados não contam", () => {
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [
+          contractRow({ id: "mine" }),
+          contractRow({ id: "followed", ownerId: "u-owner" }),
+          contractRow({ id: "gone", status: "cancelled" }),
+          contractRow({ id: "done", status: "completed" }),
+        ],
+        installments: [],
+        participants: [
+          {
+            contractId: "mine",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "followed",
+            role: "viewer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "gone",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+          {
+            contractId: "done",
+            role: "buyer",
+            linkedUserId: ME,
+            displayName: "Eu",
+          },
+        ],
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts.activePartyContracts).toBe(1);
+  });
+
+  it("contrato quitado com status active não conta para o guia", () => {
+    // Nothing writes `completed` yet: a paid-off contract stays `active`.
+    const facts = onboardingFacts(
+      ME,
+      {
+        contracts: [
+          contractRow({ id: "running", installmentsCount: 2 }),
+          contractRow({ id: "paid-off", installmentsCount: 2 }),
+        ],
+        installments: [
+          inst({ contractId: "running", id: "r1", status: "paid" }),
+          inst({ contractId: "running", id: "r2", sequence: 2 }),
+          inst({ contractId: "paid-off", id: "p1", status: "paid" }),
+          inst({
+            contractId: "paid-off",
+            id: "p2",
+            sequence: 2,
+            status: "confirmed",
+          }),
+        ],
+        participants: ["running", "paid-off"].map((contractId) => ({
+          contractId,
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+        })),
+        users: [],
+      },
+      profile,
+      true
+    );
+    expect(facts.activePartyContracts).toBe(1);
+  });
+
+  it("o dia da conta é o de São Paulo: 01:30 UTC ainda é a véspera lá", () => {
+    const facts = onboardingFacts(
+      ME,
+      { contracts: [], installments: [], participants: [], users: [] },
+      { ...profile, createdAt: new Date("2026-09-02T01:30:00Z") },
+      true
+    );
+    expect(facts.accountCreatedOn).toBe("2026-09-01");
   });
 });

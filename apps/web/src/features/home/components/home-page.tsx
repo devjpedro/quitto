@@ -25,7 +25,7 @@ export function HomePage() {
         <div className="flex items-center justify-between gap-3">
           {/* The SSR and the browser may sit on either side of an hour boundary. */}
           <h1
-            className="font-bold font-display text-[26px] tracking-[-0.03em] md:text-[28px]"
+            className="font-bold font-display text-[28px] leading-[1.1] tracking-[-0.035em] md:text-[32px]"
             suppressHydrationWarning
           >
             {greeting}

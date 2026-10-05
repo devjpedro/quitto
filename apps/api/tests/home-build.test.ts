@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildAgenda, type HomeInviteRow } from "../src/lib/home";
+import { buildAgenda } from "../src/lib/home";
 import {
   type HomeContractRow,
   type HomeContractRows,
@@ -7,6 +7,7 @@ import {
   type HomeParticipantRow,
   partyContracts,
 } from "../src/lib/home-parties";
+import type { HomeInviteRow } from "../src/lib/home-types";
 
 const ME = "u-me";
 const OTHER = "u-other";
@@ -69,6 +70,10 @@ function invite(over: Partial<HomeInviteRow> = {}): HomeInviteRow {
     role: "seller",
     inviterName: "Ana",
     createdAt: new Date("2026-10-01T12:00:00Z"),
+    installmentsCount: 4,
+    amountCents: 30_000,
+    totalCents: 120_000,
+    firstDueDate: "2026-11-10",
     ...over,
   };
 }

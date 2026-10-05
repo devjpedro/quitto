@@ -2,9 +2,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LOWER_FEW, LOWER_STACK } from "@/features/home/components/home-grid";
 import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
+import { nb } from "./nbsp";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
 const { getHome, getNotifications, markPaid } = vi.hoisted(() => ({
@@ -40,6 +42,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 
 const GREETING = /^(Bom dia|Boa tarde|Boa noite), Maria$/;
+const DATE_LEAD = /Sexta-feira, 2 de outubro ·/;
+const TWO_THINGS = /2 coisas pedem sua atenção/;
 
 const NOTIFICATIONS_FAILED = {
   data: null,
@@ -56,9 +60,8 @@ function setScreenWidth(width: number) {
 
 const startWidth = window.innerWidth;
 
-/** The content's lower part (the skeleton's shares its grid, not this class). */
-const lowerPart = () =>
-  document.querySelector<HTMLElement>("[class~='lateral:has-[>:empty]:block']");
+/** The content's lower part (HomeLower); the skeleton's shares its grid, not this attribute. */
+const lowerPart = () => document.querySelector<HTMLElement>("[data-lower]");
 
 function renderHome({ likeTheApp = false } = {}) {
   const client = makeTestQueryClient();
@@ -107,7 +110,9 @@ describe("HomePage", () => {
       error: null,
     });
     expect(
-      await screen.findByRole("article", { name: "Aluguel do apê · 7/12" })
+      await screen.findByRole("article", {
+        name: nb("Aluguel do apê · parcela~7~de~12"),
+      })
     ).toBeVisible();
     expect(screen.getByText("1 coisa pede sua atenção")).toBeVisible();
     expect(document.title).toBe("Quitto · Agora");
@@ -173,15 +178,43 @@ describe("HomePage", () => {
     expect(shortcut).toHaveClass("hidden", "md:inline-flex");
   });
 
+  it("cabeçalho: saudação 32/700 e, no desktop, a data por extenso antes do resumo", async () => {
+    // TODAY (home-fixtures) is 2026-10-02, a Friday.
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2", sequence: 8 }),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    expect(
+      screen.getByRole("heading", { level: 1, name: GREETING })
+    ).toHaveClass("md:text-[32px]", "font-bold");
+    expect(await screen.findByText(DATE_LEAD)).toHaveClass("max-md:hidden");
+    expect(screen.getByText(TWO_THINGS)).toBeVisible();
+  });
+
   it("tela larga: o conteúdo para em 1840 px, com respiro de 24 a 32 px, e a parte de baixo cresce por colunas", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({
-        actions: [installmentAction()],
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2" }),
+          installmentAction({ installmentId: "i3" }),
+        ],
         // The guide is unfinished, so it shows compact at the end.
         onboarding: { ...homeFixture().onboarding, hasPixKey: false },
         milestones: {
           ...homeFixture().milestones,
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         },
       }),
       error: null,
@@ -203,6 +236,14 @@ describe("HomePage", () => {
       "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]",
       "wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))]"
     );
+    // The rhythm of mockup 13: 28 px between blocks on a phone, 36 px and
+    // 28 px between columns from lateral, 36 px above the lower part.
+    expect(lower).toHaveClass(
+      ...LOWER_STACK.split(" "),
+      "lateral:gap-x-7",
+      "lateral:gap-y-9"
+    );
+    expect(left).toHaveClass("lateral:gap-9");
     // Below lateral the column wrappers dissolve, so the lower part reads as mockup 11.
     expect(left).toHaveClass("contents", "lateral:flex");
     const side = screen.getByRole("region", { name: "Marcos" }).parentElement;
@@ -325,7 +366,7 @@ describe("HomePage", () => {
     const recent = await screen.findByRole("region", {
       name: "Notificações recentes",
     });
-    expect(recent).toHaveClass("hidden", "lateral:flex");
+    expect(recent).toHaveClass("hidden", "lateral:block");
     // In the side column; from wide it takes a column of its own.
     const side = recent.parentElement;
     expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
@@ -342,7 +383,12 @@ describe("HomePage", () => {
       data: homeFixture({
         milestones: {
           ...homeFixture().milestones,
-          settled: { paidCents: 4_190_000, receivedCents: 0 },
+          settled: {
+            paidCents: 4_190_000,
+            receivedCents: 0,
+            payableTotalCents: 4_190_000,
+            receivableTotalCents: 0,
+          },
         },
       }),
       error: null,
@@ -361,8 +407,8 @@ describe("HomePage", () => {
       screen.getByRole("region", { name: "Próximos 30 dias" })
     ).toBeVisible();
     expect(screen.getByRole("region", { name: "Marcos" })).toBeVisible();
-    // The milestones keep the side column filled, so the grid stays on.
-    expect(lowerPart()?.matches(":has(> :empty)")).toBe(false);
+    // The milestones keep the side column filled, so the columns stay on.
+    expect(lowerPart()).toHaveAttribute("data-lower", "columns");
   });
 
   it.each([
@@ -393,10 +439,14 @@ describe("HomePage", () => {
       );
       const lower = lowerPart();
       expect(lower?.lastElementChild).toBeEmptyDOMElement();
-      // A column left empty turns the grid into a block: no 2fr track stays
+      // An empty side column is decided by the data (no milestones from md,
+      // and the list failed): the lower part stacks, so no 2fr track stays
       // blank beside the list or the guide.
-      expect(lower).toHaveClass("lateral:has-[>:empty]:block");
-      expect(lower?.matches(":has(> :empty)")).toBe(true);
+      expect(lower).toHaveAttribute("data-lower", "stack");
+      expect(lower).not.toHaveClass("lateral:grid");
+      // And it takes no room from lateral: no 32 px gap under the last block.
+      expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
+      expect(lower?.firstElementChild).not.toHaveClass("lateral:hidden");
     }
   );
 
@@ -412,6 +462,8 @@ describe("HomePage", () => {
             paidCount: 1,
             totalCount: 3,
             percent: 33,
+            remainingCount: 2,
+            nextDueDate: "2026-10-13",
           },
         },
       }),
@@ -427,13 +479,14 @@ describe("HomePage", () => {
     );
     // The strip with only the milestone of the moment is for phones (from md
     // the sidebar's lime card shows it): it lives in the left column, so the
-    // side column is left empty and the grid turns into a block.
+    // side column is left empty and the lower part stacks.
     const strip = screen.getByRole("region", { name: "Marcos" });
     expect(strip).toHaveClass("md:hidden");
     const lower = lowerPart();
     expect(lower?.firstElementChild).toContainElement(strip);
     expect(lower?.lastElementChild).toBeEmptyDOMElement();
-    expect(lower?.matches(":has(> :empty)")).toBe(true);
+    expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
+    expect(lower).toHaveAttribute("data-lower", "stack");
   });
 
   it("primeiro acesso: o guia verde lidera", async () => {
@@ -537,7 +590,9 @@ describe("HomePage", () => {
       // The focus is already lost, with the card still on screen.
       expect(document.activeElement).toBe(document.body);
       expect(
-        screen.getByRole("article", { name: "Aluguel do apê · 7/12" })
+        screen.getByRole("article", {
+          name: nb("Aluguel do apê · parcela~7~de~12"),
+        })
       ).toBeVisible();
       release();
       expect(await screen.findByText("Nada pendente agora")).toBeVisible();
@@ -555,7 +610,9 @@ describe("HomePage", () => {
       error: null,
     });
     const { client } = renderHome();
-    await screen.findByRole("article", { name: "Aluguel do apê · 7/12" });
+    await screen.findByRole("article", {
+      name: nb("Aluguel do apê · parcela~7~de~12"),
+    });
     await userEvent.tab();
     const shortcut = screen.getByRole("link", { name: "Novo contrato" });
     expect(document.activeElement).toBe(shortcut);
@@ -570,11 +627,328 @@ describe("HomePage", () => {
       error: null,
     });
     const { client } = renderHome();
-    await screen.findByRole("article", { name: "Aluguel do apê · 7/12" });
+    await screen.findByRole("article", {
+      name: nb("Aluguel do apê · parcela~7~de~12"),
+    });
     expect(document.activeElement).toBe(document.body);
     // A refetch on returning to the tab: the other party already paid.
     client.setQueryData(queryKeys.home, homeFixture());
     expect(await screen.findByText("Nada pendente agora")).toBeVisible();
     expect(document.activeElement).toBe(document.body);
+  });
+
+  it("um Ver todas aberto fecha quando a lista esvazia: os cartões seguintes voltam como carrossel, não como lista aberta", async () => {
+    const five = [1, 2, 3, 4, 5].map((n) =>
+      installmentAction({ installmentId: `i${n}`, sequence: n })
+    );
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: five }),
+      error: null,
+    });
+    const { client } = renderHome();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Ver todas (5)" })
+    );
+    expect(screen.getAllByRole("button", { name: "Ver menos" })).toHaveLength(
+      2
+    );
+    // Paid elsewhere: the list empties...
+    client.setQueryData(queryKeys.home, homeFixture());
+    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    // ...and a refetch brings five cards again.
+    client.setQueryData(queryKeys.home, homeFixture({ actions: five }));
+    expect(await screen.findByText("1 de 5")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Ver todas (5)" })
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Ver menos" })).toBeNull();
+  });
+
+  it("poucas ações a partir de 1440: Próximos 30 dias na linha das ações; notificações e marcos embaixo", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue({ data: [], error: null });
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        milestones: {
+          ...homeFixture().milestones,
+          settled: {
+            paidCents: 1_020_000,
+            receivedCents: 0,
+            payableTotalCents: 2_660_000,
+            receivableTotalCents: 0,
+          },
+        },
+      }),
+      error: null,
+    });
+    renderHome();
+    const upcoming = await screen.findByRole("region", {
+      name: "Próximos 30 dias",
+    });
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    const row = upcoming.parentElement?.parentElement;
+    expect(row).toHaveClass("lateral:grid");
+    expect(upcoming.parentElement).toHaveClass(
+      "lateral:col-span-2",
+      "2xl:col-span-3",
+      "wide:col-span-4"
+    );
+    expect(row).toContainElement(screen.getByRole("article"));
+    const lower = lowerPart();
+    expect(lower).toHaveAttribute("data-lower", "columns");
+    expect(lower).toHaveClass(
+      "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
+    );
+    expect(lower).not.toContainElement(upcoming);
+    // Notifications on the left, milestones on the right (frame E), both shown.
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toContainElement(
+      screen.getByRole("region", { name: "Marcos" })
+    );
+    for (const column of Array.from(lower?.children ?? [])) {
+      expect(column).not.toHaveClass("lateral:hidden");
+    }
+  });
+
+  it("poucas ações com marcos e a lista de notificações falhando: a coluna da esquerda, vazia, some a partir de 1440, e Marcos não desce 32 px", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        milestones: {
+          ...homeFixture().milestones,
+          settled: {
+            paidCents: 1_020_000,
+            receivedCents: 0,
+            payableTotalCents: 2_660_000,
+            receivableTotalCents: 0,
+          },
+        },
+      }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    const milestones = await screen.findByRole("region", { name: "Marcos" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+    const lower = lowerPart();
+    // The left column has nothing to show from lateral (the list failed, no
+    // guide): hidden there, it adds no gap, so the milestones sit 36 px under
+    // the actions' row, not 68.
+    expect(lower?.firstElementChild).toBeEmptyDOMElement();
+    expect(lower?.firstElementChild).toHaveClass("lateral:hidden");
+    expect(lower?.lastElementChild).toContainElement(milestones);
+    expect(lower?.lastElementChild).not.toHaveClass("lateral:hidden");
+    // The grid stays: alone, the milestones take the 3fr track, never the whole width.
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+  });
+
+  it("só o marco do momento e a lista de notificações falhando: a 1440 a parte de baixo empilha, sem trilha em branco", async () => {
+    setScreenWidth(1440);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2" }),
+          installmentAction({ installmentId: "i3" }),
+        ],
+        milestones: {
+          ...homeFixture().milestones,
+          previousMonthAllClear: { month: "2026-09", paidCount: 12 },
+        },
+      }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("region", { name: "Próximos 30 dias" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+  });
+
+  it("poucas ações sem marcos e com o guia: a partir de 1440 as notificações à esquerda e o guia à direita, nada na largura toda", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue({ data: [], error: null });
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        // The guide is unfinished, so it shows compact; no milestones from md.
+        onboarding: { ...homeFixture().onboarding, hasPixKey: false },
+      }),
+      error: null,
+    });
+    renderHome();
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    const guide = screen
+      .getByRole("button", { name: "dispensar guia" })
+      .closest("section");
+    const lower = lowerPart();
+    // The guide takes the milestones' column, so neither block stretches
+    // across the whole content.
+    expect(lower).toHaveAttribute("data-lower", "columns");
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toContainElement(guide);
+  });
+
+  it("poucas ações sem marcos, com o guia e a lista de notificações falhando: sobra um bloco, na trilha de 3fr", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [installmentAction()],
+        onboarding: { ...homeFixture().onboarding, hasPixKey: false },
+      }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("button", { name: "dispensar guia" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(lowerPart()).toHaveAttribute("data-lower", "stack")
+    );
+    expect(lowerPart()?.firstElementChild).toContainElement(
+      screen.getByRole("button", { name: "dispensar guia" }).closest("section")
+    );
+    expect(lowerPart()?.lastElementChild).toHaveClass("lateral:hidden");
+    expect(lowerPart()).toHaveClass(...LOWER_FEW.split(" "));
+  });
+
+  it("poucas ações sem marcos e sem guia: as notificações sozinhas ficam na trilha de 3fr, sem esticar na largura toda", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue({ data: [], error: null });
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction()] }),
+      error: null,
+    });
+    renderHome();
+    const recent = await screen.findByRole("region", {
+      name: "Notificações recentes",
+    });
+    const lower = lowerPart();
+    // One block: no second column, but the grid stays, so the list keeps the
+    // width it has beside the milestones (3fr) instead of the whole content.
+    expect(lower).toHaveAttribute("data-lower", "stack");
+    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+    expect(lower?.firstElementChild).toContainElement(recent);
+    expect(lower?.lastElementChild).toHaveClass("lateral:hidden");
+  });
+
+  it("poucas ações sem marcos, sem guia e com a lista de notificações falhando: nada a mostrar a partir de 1440, e a parte de baixo inteira some ali", async () => {
+    setScreenWidth(1512);
+    getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction()] }),
+      error: null,
+    });
+    renderHome({ likeTheApp: true });
+    await screen.findByRole("region", { name: "Próximos 30 dias" });
+    await waitFor(() => expect(getNotifications).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    // Hidden from lateral only: below it a phone-only strip may live in it.
+    // No margin of its own is left at the end of the panel.
+    const lower = lowerPart();
+    expect(lower).toHaveClass("lateral:hidden");
+    // One class per line: with two, .not passes as soon as either is missing.
+    expect(lower).not.toHaveClass("lateral:grid");
+    expect(lower).not.toHaveClass("hidden");
+  });
+
+  it("3 → 2 ações pelo teclado: a lista não remonta, e o foco vai para o cartão que ficou no lugar", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2", sequence: 8 }),
+          installmentAction({ installmentId: "i3", sequence: 9 }),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    const section = await screen.findByRole("region", {
+      name: "O que fazer agora",
+    });
+    expect(section.parentElement).toHaveClass("contents");
+    const [first] = within(section).getAllByRole("button", {
+      name: "Já paguei",
+    });
+    // As if tabbed to it: a focused button hands the focus on (useActionFocus).
+    first?.focus();
+    expect(document.activeElement).toBe(first);
+    await userEvent.keyboard("{Enter}");
+    // The 1st card leaves (optimistic): 2 left, so the row turns "few".
+    await waitFor(() =>
+      expect(within(section).getAllByRole("article")).toHaveLength(2)
+    );
+    // Only classes changed: the same section, now inside the few-actions grid.
+    expect(screen.getByRole("region", { name: "O que fazer agora" })).toBe(
+      section
+    );
+    // Between md and lateral, 36 px from the cards to "Próximos 30 dias", as in the normal mode.
+    expect(section.parentElement).toHaveClass(
+      "lateral:grid",
+      "gap-7",
+      "md:gap-9"
+    );
+    const [nowFirst] = within(section).getAllByRole("article");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toBe(
+      nowFirst?.querySelector("a[href], button:not(:disabled)")
+    );
+  });
+
+  it("3 → 2 ações: o 2º toque dentro da trava não age no cartão que deslizou para o lugar", async () => {
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          installmentAction(),
+          installmentAction({ installmentId: "i2", sequence: 8 }),
+          installmentAction({ installmentId: "i3", sequence: 9 }),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    const section = await screen.findByRole("region", {
+      name: "O que fazer agora",
+    });
+    // A frozen clock: the 2nd tap stays inside ACTION_LOCK_MS (700 ms) however
+    // slow the machine is (the pattern of action-list.test.tsx's frozenClock).
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    try {
+      const [first] = within(section).getAllByRole("button", {
+        name: "Já paguei",
+      });
+      await userEvent.click(first as HTMLElement);
+      await waitFor(() =>
+        expect(within(section).getAllByRole("article")).toHaveLength(2)
+      );
+      // A double tap: the 2nd lands on the "Já paguei" of the card that slid into the spot.
+      const [next] = within(section).getAllByRole("button", {
+        name: "Já paguei",
+      });
+      await userEvent.click(next as HTMLElement);
+      expect(markPaid).toHaveBeenCalledTimes(1);
+      expect(within(section).getAllByRole("article")).toHaveLength(2);
+    } finally {
+      clock.mockRestore();
+    }
   });
 });

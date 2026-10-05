@@ -9,6 +9,7 @@ import {
   moneyParts,
   normalizeSpaces,
 } from "@/lib/locale-format";
+import { importInZone, ZONES } from "./time-zones";
 
 const NBSP_RE = /[\u00A0\u202F]/;
 
@@ -258,6 +259,45 @@ describe("formatRelativeTime", () => {
       "30 min. ago"
     );
   });
+});
+
+describe("datas no fuso da máquina", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const load = () => import("@/lib/locale-format");
+
+  it.each(ZONES)("nenhuma data muda de dia pelo fuso (%s)", async (zone) => {
+    const lf = await importInZone(zone, load);
+    expect(lf.formatDate("2026-10-02", "pt-BR", "short")).toBe("02/10/2026");
+    expect(lf.formatDate("2026-11-01", "en-US", "dayMonth")).toBe("11/01");
+    expect(lf.formatDate("2026-10-03", "pt-BR", "weekdayShort")).toBe(
+      "sáb., 03/10"
+    );
+    expect(lf.formatMonthName("2026-11", "pt-BR")).toBe("novembro");
+    expect(lf.daysBetween("2026-10-31", "2026-11-01")).toBe(1);
+    expect(lf.formatRelativeDays("2026-10-02", "2026-10-01", "pt-BR")).toBe(
+      "amanhã"
+    );
+  });
+
+  // São Paulo is UTC-3: 2026-10-03T02:00Z is 23:00 of Oct 2 there, and
+  // already 11:00 of Oct 3 in Tokyo, where the same pair is two days apart.
+  it.each(ZONES)(
+    "'ontem' e 'anteontem' seguem o calendário de São Paulo, nunca o da máquina (%s)",
+    async (zone) => {
+      const lf = await importInZone(zone, load);
+      const lateTonight = Date.parse("2026-10-03T02:00:00Z");
+      expect(
+        lf.formatRelativeTime("2026-10-01T04:00:00Z", lateTonight, "pt-BR")
+      ).toBe("ontem");
+      const earlyToday = Date.parse("2026-10-02T04:00:00Z");
+      expect(
+        lf.formatRelativeTime("2026-10-01T02:00:00Z", earlyToday, "pt-BR")
+      ).toBe("anteontem");
+    }
+  );
 });
 
 describe("formatMonthName", () => {
