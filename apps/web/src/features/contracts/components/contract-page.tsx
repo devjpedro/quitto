@@ -86,7 +86,9 @@ function ContractContent({ slots }: { slots: ContractSlots }) {
         {card ? (
           <div
             className={cn(
-              "lateral:mt-0 mt-5 [grid-area:card] md:mt-6 md:self-start",
+              // From lateral the aside is a flex column: stretch, or the
+              // card shrinks to its content instead of filling the 420 px.
+              "lateral:mt-0 mt-5 lateral:self-stretch [grid-area:card] md:mt-6 md:self-start",
               panelOpen && "lateral:hidden"
             )}
           >
