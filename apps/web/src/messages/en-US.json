@@ -553,5 +553,9 @@
   "error_contract_create_failed": "We couldn't create the contract. Nothing was saved; try again.",
   "warning_schedule_first_due_past": "That date has passed: installments before today will show as overdue.",
   "warning_installments_date_order": "This installment is due before the previous one.",
-  "wizard_optional": "optional"
+  "wizard_optional": "optional",
+  "preview_summary_even": "{count} × {amount}",
+  "preview_summary_first": "1st of {first} and {count} of {rest}",
+  "preview_every_day": "day {day} each month",
+  "preview_day": "day {day}"
 }
