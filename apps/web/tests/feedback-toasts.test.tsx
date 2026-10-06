@@ -26,7 +26,6 @@ vi.mock("@/lib/api", () => {
 });
 
 import { useCreateContractMutation } from "../src/hooks/use-contract-mutations";
-import { useConfirmPaymentMutation } from "../src/hooks/use-payment-mutations";
 import { FEEDBACK } from "../src/lib/feedback";
 import { queryClient } from "../src/lib/query";
 
@@ -59,17 +58,6 @@ describe("feedback toasts wiring", () => {
     });
     await waitFor(() =>
       expect(success).toHaveBeenCalledWith(FEEDBACK.contractCreated)
-    );
-  });
-
-  it("confirmPayment toasts the success message", async () => {
-    success.mockClear();
-    const { result } = renderHook(() => useConfirmPaymentMutation("c1", "i1"), {
-      wrapper,
-    });
-    await result.current.mutateAsync();
-    await waitFor(() =>
-      expect(success).toHaveBeenCalledWith(FEEDBACK.paymentConfirmed)
     );
   });
 });

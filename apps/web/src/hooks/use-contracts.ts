@@ -9,16 +9,6 @@ export const contractsQueryOptions = queryOptions({
   queryFn: () => unwrap(api.api.contracts.get()),
 });
 
-export const contractQueryOptions = (id: string) =>
-  queryOptions({
-    queryKey: queryKeys.contract(id),
-    queryFn: () => unwrap(api.api.contracts({ id }).get()),
-  });
-
 export function useContractsQuery() {
   return useQuery(contractsQueryOptions);
-}
-
-export function useContractQuery(id: string) {
-  return useQuery(contractQueryOptions(id));
 }

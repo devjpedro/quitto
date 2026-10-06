@@ -16,10 +16,7 @@ vi.mock("@/lib/api", () => {
   return { api: { api: { contracts } } };
 });
 
-import {
-  useCreateContractMutation,
-  useUpdateInstallmentMutation,
-} from "../src/hooks/use-contract-mutations";
+import { useCreateContractMutation } from "../src/hooks/use-contract-mutations";
 
 function wrap(client: ReturnType<typeof makeTestQueryClient>) {
   return ({ children }: { children: ReactNode }) => (
@@ -44,21 +41,6 @@ describe("cache coherence", () => {
         installmentsCount: 1,
         firstDueDate: "2026-07-10",
       },
-    });
-    await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
-    );
-  });
-
-  it("updateInstallment invalidates the home", async () => {
-    const client = makeTestQueryClient();
-    const spy = vi.spyOn(client, "invalidateQueries");
-    const { result } = renderHook(() => useUpdateInstallmentMutation("c1"), {
-      wrapper: wrap(client),
-    });
-    await result.current.mutateAsync({
-      installmentId: "i1",
-      body: { amountCents: 500 },
     });
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })

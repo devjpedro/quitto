@@ -191,7 +191,6 @@
   "contract_key_open_view": "open",
   "contract_key_ends": "ends {month}",
   "contract_key_settled": "settled on {date}",
-  "contract_bar_label": "Contract progress",
   "contract_tabs_label": "Contract sections",
   "contract_tab_installments": "Installments",
   "contract_tab_people": "People",

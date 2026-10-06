@@ -27,10 +27,7 @@ vi.mock("@/lib/api", () => {
   return { api: { api: { contracts } } };
 });
 
-import {
-  useCreateContractMutation,
-  useUpdateInstallmentMutation,
-} from "../src/hooks/use-contract-mutations";
+import { useCreateContractMutation } from "../src/hooks/use-contract-mutations";
 import { useContractsQuery } from "../src/hooks/use-contracts";
 
 function wrapper(client = makeTestQueryClient()) {
@@ -91,24 +88,5 @@ describe("useCreateContractMutation", () => {
     });
     expect(created).toEqual({ id: "new-id" });
     expect(postContract).toHaveBeenCalledOnce();
-  });
-});
-
-describe("useUpdateInstallmentMutation", () => {
-  beforeEach(() => patchInstallment.mockReset());
-
-  it("invalidates both the contract detail and the list on success", async () => {
-    patchInstallment.mockResolvedValue({ data: { id: "i1" }, error: null });
-    const client = makeTestQueryClient();
-    const spy = vi.spyOn(client, "invalidateQueries");
-    const { result } = renderHook(() => useUpdateInstallmentMutation("c1"), {
-      wrapper: wrapper(client),
-    });
-    await result.current.mutateAsync({
-      installmentId: "i1",
-      body: { amountCents: 100 },
-    });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ["contract", "c1"] });
-    expect(spy).toHaveBeenCalledWith({ queryKey: ["contracts"] });
   });
 });
