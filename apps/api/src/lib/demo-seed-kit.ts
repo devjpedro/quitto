@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { generateMonthlySchedule, NOTIFICATION_TYPE } from "@quitto/shared";
 import { addDays } from "./dates";
 
@@ -76,6 +77,8 @@ export interface DemoContract {
   installments: DemoInstallment[];
   /** The counterpart's slot is invited by e-mail to this account (left pending). */
   invite: DemoAccountKey | null;
+  /** How the pending `invite` ended; omitted, it is pending (the invite page's states, phase 3). Accepted is `counterpart.account`/`joinedAt`. */
+  inviteState?: "declined" | "expired";
   key: string;
   owner: DemoAccountKey;
   ownerRole: "buyer" | "seller";
@@ -203,6 +206,18 @@ export function base(
     receiptShares: [],
     viewers: [],
   };
+}
+
+/**
+ * The demo invite link of a contract's other-party slot, the same on every
+ * seed so the screenshots open each state (planner's decision 16). Local
+ * only: the seed refuses to run anywhere else. e2e/scripts/capture.ts
+ * computes the same hash.
+ */
+export function demoInviteToken(contractKey: string): string {
+  return createHash("sha256")
+    .update(`quitto-demo-invite:${contractKey}`)
+    .digest("hex");
 }
 
 const REMINDER_TYPES: ReadonlySet<string> = new Set([

@@ -17,6 +17,13 @@ import { errorMessage } from "@/lib/error-message";
 import { ROLE_LABEL } from "@/lib/labels";
 import { PAGE_TITLE } from "@/lib/page-title";
 
+// The old page reads the phase-3 view until Task 9B replaces it.
+const UNAVAILABLE: Record<"accepted" | "declined" | "expired", string> = {
+  accepted: "Convite já utilizado",
+  declined: "Convite já recusado",
+  expired: "Convite expirado",
+};
+
 export function AcceptInvitePage() {
   useDocumentTitle(PAGE_TITLE.acceptInvite);
   useApiWarmup();
@@ -35,14 +42,16 @@ export function AcceptInvitePage() {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || data.status !== "pending") {
     return (
       <PageContainer width="narrow">
         <h1 className="font-bold text-foreground text-xl">
           Convite indisponível
         </h1>
         <p className="mt-2 text-muted-foreground text-sm">
-          {errorMessage(error)}
+          {data && data.status !== "pending"
+            ? UNAVAILABLE[data.status]
+            : errorMessage(error)}
         </p>
       </PageContainer>
     );
@@ -71,7 +80,7 @@ export function AcceptInvitePage() {
   }
 
   let action: ReactNode;
-  if (data.alreadyParticipant) {
+  if (data.viewer === "owner" || data.viewer === "alreadyParticipant") {
     action = (
       <div className="mt-4">
         <p className="text-muted-foreground text-sm">
@@ -87,7 +96,7 @@ export function AcceptInvitePage() {
         </Button>
       </div>
     );
-  } else if (data.emailMatches) {
+  } else if (data.viewer === "invitee") {
     action = (
       <div className="mt-4 flex flex-col gap-2">
         <Button
@@ -113,8 +122,8 @@ export function AcceptInvitePage() {
     action = (
       <div className="mt-4">
         <p className="text-muted-foreground text-sm">
-          Este convite é para outro e-mail ({data.email}). Entre com a conta
-          correta para aceitar.
+          Este convite é para outro e-mail ({data.emailMasked}). Entre com a
+          conta correta para aceitar.
         </p>
         <Button
           className="mt-3 w-full"
@@ -136,33 +145,21 @@ export function AcceptInvitePage() {
       <div className="mt-4 rounded-xl border border-border bg-card p-4 shadow-xs">
         <p className="text-foreground">
           <strong>{data.inviterName}</strong> convidou você para{" "}
-          <strong>{data.contractTitle}</strong> como{" "}
+          <strong>{data.contract.title}</strong> como{" "}
           <strong>{ROLE_LABEL[data.role] ?? data.role}</strong>.
         </p>
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <div>
             <dt className="text-muted-foreground">Total</dt>
             <dd>
-              <Money cents={data.totalAmountCents} size="sm" />
+              <Money cents={data.terms.totalCents} size="sm" />
             </dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Parcelas</dt>
-            <dd className="tabular-nums">{data.installmentsCount}</dd>
+            <dd className="tabular-nums">{data.terms.installmentsCount}</dd>
           </div>
         </dl>
-        {data.parties.length > 0 && (
-          <div className="mt-3 text-sm">
-            <p className="text-muted-foreground">Partes</p>
-            <ul className="mt-1 space-y-0.5">
-              {data.parties.map((party) => (
-                <li key={`${party.displayName}-${party.role}`}>
-                  {party.displayName} — {ROLE_LABEL[party.role] ?? party.role}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
         {action}
       </div>
     </PageContainer>

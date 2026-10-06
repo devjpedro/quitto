@@ -1,16 +1,5 @@
 import { todayISO } from "@quitto/shared";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  max,
-  min,
-  sum,
-} from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, max } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../db/client";
 import {
@@ -35,6 +24,7 @@ import { type HomeContractRows, partyContracts } from "../lib/home-parties";
 import { activeContracts } from "../lib/home-progress";
 import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
+import { loadInviteTerms } from "../lib/invite-terms";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
 
@@ -121,45 +111,6 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
   return { contracts, installments, participants, users };
 }
 
-interface InviteTerms {
-  firstDueDate: string | null;
-  installmentsCount: number;
-  maxCents: number | null;
-  minCents: number | null;
-  totalCents: number | null;
-}
-
-/**
- * Count, sum, first due date and the smallest and largest installment of
- * each invited contract, in one grouped read. From the installments, never
- * contract.totalAmountCents: editing one installment does not update it, and
- * the invite page sums the installments too.
- */
-async function loadInviteTerms(
-  contractIds: string[]
-): Promise<Map<string, InviteTerms>> {
-  const terms = new Map<string, InviteTerms>();
-  if (contractIds.length === 0) {
-    return terms;
-  }
-  const rows = await db
-    .select({
-      contractId: installment.contractId,
-      firstDueDate: min(installment.dueDate),
-      minCents: min(installment.amountCents),
-      maxCents: max(installment.amountCents),
-      totalCents: sum(installment.amountCents).mapWith(Number),
-      installmentsCount: count(),
-    })
-    .from(installment)
-    .where(inArray(installment.contractId, contractIds))
-    .groupBy(installment.contractId);
-  for (const { contractId, ...row } of rows) {
-    terms.set(contractId, row);
-  }
-  return terms;
-}
-
 /** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot, and its latest copy decides. */
 async function loadInvites(email: string): Promise<HomeInviteRow[]> {
   const rows = await db
@@ -209,10 +160,7 @@ async function loadInvites(email: string): Promise<HomeInviteRow[]> {
       totalCents: t?.totalCents ?? 0,
       firstDueDate: t?.firstDueDate ?? null,
       // One amount per installment, or null when they differ (the card shows the total).
-      amountCents:
-        t && t.minCents !== null && t.minCents === t.maxCents
-          ? t.minCents
-          : null,
+      amountCents: t?.amountCents ?? null,
     };
   });
 }

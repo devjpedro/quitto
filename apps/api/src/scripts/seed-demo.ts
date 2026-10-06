@@ -23,6 +23,7 @@ import {
   DEMO_PASSWORD,
   type DemoAccountKey,
   type DemoContract,
+  demoInviteToken,
   reminderDedupeKey,
 } from "../lib/demo-seed-kit";
 import { newShareToken } from "../lib/receipt-share";
@@ -148,13 +149,25 @@ async function insertPeople(
     })
     .returning({ id: participant.id });
   if (slot && inviteeEmail) {
-    await insertInvite(ctx, slot.id, { email: inviteeEmail });
+    const sentAt = new Date(createdAt.getTime() + 2 * MINUTE_MS);
+    await insertInvite(ctx, slot.id, {
+      email: inviteeEmail,
+      token: demoInviteToken(spec.key),
+      createdAt: sentAt,
+      // Seven days, like INVITE_TTL_DAYS: the expired one (10 days old) ran out 3 days ago.
+      expiresAt:
+        spec.inviteState === "expired"
+          ? new Date(sentAt.getTime() + 7 * DAY_MS)
+          : new Date(Date.now() + 14 * DAY_MS),
+      declinedAt: spec.inviteState === "declined" ? daysAgo(1) : null,
+    });
   }
   if (slot && counterpartUser && spec.counterpart.joinedAt) {
     // The accepted invite of a counterpart that has an account.
     const sentAt = createdAt.getTime() + 2 * MINUTE_MS;
     await insertInvite(ctx, slot.id, {
       email: counterpartUser.email,
+      token: demoInviteToken(spec.key),
       createdAt: new Date(sentAt),
       expiresAt: new Date(sentAt + 7 * DAY_MS),
       acceptedByUserId: counterpartUser.id,

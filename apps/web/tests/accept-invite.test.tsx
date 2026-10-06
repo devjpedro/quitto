@@ -42,6 +42,31 @@ vi.mock("@/lib/auth-client", () => ({
 
 import { AcceptInvitePage } from "../src/features/invites/accept-invite-page";
 
+/** The phase-3 GET /invites/:token the old page reads until Task 9B. */
+function view(
+  over: {
+    email?: string | null;
+    role?: string;
+    title?: string;
+    viewer?: string;
+  } = {}
+) {
+  return {
+    status: "pending",
+    viewer: over.viewer ?? "invitee",
+    contract: {
+      title: over.title ?? "Apê",
+      description: null,
+      createdAt: "2026-10-04T12:00:00.000Z",
+    },
+    role: over.role ?? "seller",
+    email: over.email === undefined ? "a@b.com" : over.email,
+    emailMasked: "a•••@b.com",
+    inviterName: "Maria Silva",
+    terms: { installmentsCount: 12, totalCents: 120_000 },
+  };
+}
+
 describe("AcceptInvitePage", () => {
   beforeEach(() => {
     useInviteQuery.mockReset();
@@ -52,16 +77,7 @@ describe("AcceptInvitePage", () => {
 
   it("aceita quando o e-mail bate e navega ao contrato", async () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Apê",
-        role: "seller",
-        email: "a@b.com",
-        emailMatches: true,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [],
-      },
+      data: view(),
       isPending: false,
       error: null,
     });
@@ -80,17 +96,7 @@ describe("AcceptInvitePage", () => {
 
   it("mostra mensagem e oculta aceitar quando já participa do contrato", () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Apê",
-        role: "seller",
-        email: "a@b.com",
-        emailMatches: true,
-        alreadyParticipant: true,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [],
-      },
+      data: view({ viewer: "alreadyParticipant" }),
       isPending: false,
       error: null,
     });
@@ -101,16 +107,7 @@ describe("AcceptInvitePage", () => {
 
   it("desabilita aceitar quando o e-mail não bate", () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Apê",
-        role: "seller",
-        email: "outro@b.com",
-        emailMatches: false,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [],
-      },
+      data: view({ viewer: "otherAccount", email: null }),
       isPending: false,
       error: null,
     });
@@ -121,16 +118,7 @@ describe("AcceptInvitePage", () => {
 
   it("trocar de conta apaga o cookie de identidade antes de ir pro login", async () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Apê",
-        role: "seller",
-        email: "outro@b.com",
-        emailMatches: false,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [],
-      },
+      data: view({ viewer: "otherAccount", email: null }),
       isPending: false,
       error: null,
     });
@@ -164,16 +152,7 @@ describe("AcceptInvitePage", () => {
 
   it("exibe prévia do contrato e botão Recusar quando e-mail bate", () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Aluguel do Apê",
-        role: "buyer",
-        email: "a@b.com",
-        emailMatches: true,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [{ displayName: "João Vendedor", role: "seller" }],
-      },
+      data: view({ title: "Aluguel do Apê", role: "buyer" }),
       isPending: false,
       error: null,
     });
@@ -186,25 +165,13 @@ describe("AcceptInvitePage", () => {
     expect(container.textContent).toMatch(BRL_1200);
     expect(screen.getByText("12")).toBeInTheDocument();
     expect(
-      screen.getByText("João Vendedor", { exact: false })
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("button", { name: DECLINE_BUTTON })
     ).toBeInTheDocument();
   });
 
   it("chama a mutation de recusar e navega para /contracts", async () => {
     useInviteQuery.mockReturnValue({
-      data: {
-        contractTitle: "Aluguel do Apê",
-        role: "buyer",
-        email: "a@b.com",
-        emailMatches: true,
-        inviterName: "Maria Silva",
-        totalAmountCents: 120_000,
-        installmentsCount: 12,
-        parties: [],
-      },
+      data: view({ title: "Aluguel do Apê", role: "buyer" }),
       isPending: false,
       error: null,
     });

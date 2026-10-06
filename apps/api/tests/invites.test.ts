@@ -262,67 +262,7 @@ describe("invites", () => {
     expect([403, 422]).toContain(second.status);
   });
 
-  it("GET convite: alreadyParticipant=true quando já participa do contrato", async () => {
-    const ts = Date.now();
-    const ownerEmail = `own-ap-${ts}@example.com`;
-    const owner = await signUpCookie(ownerEmail);
-    // Convite para o próprio dono → ele já participa (slot ligado ao ownerId).
-    const { token } = await setupInvite(owner, ownerEmail);
-
-    const res = await app.handle(
-      new Request(`http://localhost/api/invites/${token}`, {
-        headers: { cookie: owner },
-      })
-    );
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.alreadyParticipant).toBe(true);
-    expect(body.emailMatches).toBe(true);
-  });
-
   // ─── Gap 1: GET /api/invites/:token (view) ───────────────────────────────
-
-  it("GET convite: emailMatches=true quando e-mail bate (200)", async () => {
-    const ts = Date.now();
-    const ownerEmail = `own-view-match-${ts}@example.com`;
-    const inviteeEmail = `invitee-view-match-${ts}@example.com`;
-    const owner = await signUpCookie(ownerEmail);
-    const { token } = await setupInvite(owner, inviteeEmail);
-    const invitee = await signUpCookie(inviteeEmail);
-
-    const res = await app.handle(
-      new Request(`http://localhost/api/invites/${token}`, {
-        headers: { cookie: invitee },
-      })
-    );
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.emailMatches).toBe(true);
-    expect(typeof body.contractTitle).toBe("string");
-    expect(body.contractTitle.length).toBeGreaterThan(0);
-    expect(body.email).toBe(inviteeEmail.toLowerCase());
-    expect(typeof body.role).toBe("string");
-  });
-
-  it("GET convite: emailMatches=false quando e-mail não bate (200)", async () => {
-    const ts = Date.now();
-    const ownerEmail = `own-view-nomatch-${ts}@example.com`;
-    const targetEmail = `target-view-nomatch-${ts}@example.com`;
-    const otherEmail = `other-view-nomatch-${ts}@example.com`;
-    const owner = await signUpCookie(ownerEmail);
-    const { token } = await setupInvite(owner, targetEmail);
-    const other = await signUpCookie(otherEmail);
-
-    const res = await app.handle(
-      new Request(`http://localhost/api/invites/${token}`, {
-        headers: { cookie: other },
-      })
-    );
-    // The view endpoint returns 200 for any authenticated user; only accept is hard-locked.
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.emailMatches).toBe(false);
-  });
 
   it("GET convite: sem autenticação → 401", async () => {
     const ts = Date.now();
@@ -439,26 +379,6 @@ describe("invites", () => {
     expect((await res.json()).length).toBe(0);
   });
 
-  it("preview traz quem convidou, total, contagem e partes", async () => {
-    const ownerCookie = await signUpCookie(uniqueEmail("owner"));
-    const inviteeEmail = uniqueEmail("guest");
-    const { token } = await setupInvite(ownerCookie, inviteeEmail);
-
-    const inviteeCookie = await signUpCookie(inviteeEmail);
-    const res = await app.handle(
-      new Request(`http://localhost/api/invites/${token}`, {
-        headers: { cookie: inviteeCookie },
-      })
-    );
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(typeof body.inviterName).toBe("string");
-    expect(body.inviterName.length).toBeGreaterThan(0);
-    expect(body.installmentsCount).toBeGreaterThan(0);
-    expect(body.totalAmountCents).toBeGreaterThan(0);
-    expect(Array.isArray(body.parties)).toBe(true);
-  });
-
   it("aceitar notifica o dono", async () => {
     const ownerCookie = await signUpCookie(uniqueEmail("owner"));
     const inviteeEmail = uniqueEmail("guest");
@@ -478,44 +398,5 @@ describe("invites", () => {
     expect(
       notifs.some((n) => n.type === NOTIFICATION_TYPE.inviteAccepted)
     ).toBe(true);
-  });
-
-  it("convite expirado retorna 422 ao visualizar (GET)", async () => {
-    const ts = Date.now() + 1; // +1 para token único em relação ao teste anterior
-    const ownerEmail = `own-exp-view-${ts}@example.com`;
-    const inviteeEmail = `invitee-exp-view-${ts}@example.com`;
-    const owner = await signUpCookie(ownerEmail);
-
-    const contractId = await createContract(owner);
-
-    const addRes = await app.handle(
-      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie: owner },
-        body: JSON.stringify({
-          displayName: "Convidado Exp View",
-          role: "seller",
-        }),
-      })
-    );
-    const { id: participantId } = await addRes.json();
-
-    const expiredToken = `expired-view-${ts}`;
-    await db.insert(invite).values({
-      contractId,
-      participantId,
-      email: inviteeEmail.toLowerCase(),
-      token: expiredToken,
-      expiresAt: new Date(Date.now() - 1000),
-    });
-
-    const invitee = await signUpCookie(inviteeEmail);
-
-    const res = await app.handle(
-      new Request(`http://localhost/api/invites/${expiredToken}`, {
-        headers: { cookie: invitee },
-      })
-    );
-    expect(res.status).toBe(422);
   });
 });

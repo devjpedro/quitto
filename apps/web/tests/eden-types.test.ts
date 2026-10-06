@@ -174,22 +174,29 @@ it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mi
     expiresAt: string;
   }>();
 
-  // GET /api/invites/:token — response is { contractTitle, role, email, emailMatches }.
+  // GET /api/invites/:token — the phase-3 view: status and viewer, not any.
   const inviteGet = api.api.invites({ token: "t" }).get;
   type GetInviteResponse = Awaited<ReturnType<typeof inviteGet>>["data"];
   expectTypeOf<GetInviteResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<GetInviteResponse>["status"]>().toEqualTypeOf<
+    "pending" | "accepted" | "declined" | "expired"
+  >();
+  expectTypeOf<NonNullable<GetInviteResponse>["viewer"]>().toEqualTypeOf<
+    "invitee" | "owner" | "otherAccount" | "alreadyParticipant"
+  >();
+  expectTypeOf<NonNullable<GetInviteResponse>["email"]>().toEqualTypeOf<
+    string | null
+  >();
+
+  // GET /api/invites/:token/preview — public, the minimum.
+  const previewGet = api.api.invites({ token: "t" }).preview.get;
+  type PreviewResponse = Awaited<ReturnType<typeof previewGet>>["data"];
+  expectTypeOf<PreviewResponse>().not.toBeAny();
   expectTypeOf<
-    NonNullable<GetInviteResponse>["contractTitle"]
+    NonNullable<PreviewResponse>["emailMasked"]
   >().toEqualTypeOf<string>();
-  expectTypeOf<
-    NonNullable<GetInviteResponse>["role"]
-  >().toEqualTypeOf<string>();
-  expectTypeOf<
-    NonNullable<GetInviteResponse>["email"]
-  >().toEqualTypeOf<string>();
-  expectTypeOf<
-    NonNullable<GetInviteResponse>["emailMatches"]
-  >().toEqualTypeOf<boolean>();
+  // The terms only while pending (planner's decision 13).
+  expectTypeOf<null>().toMatchTypeOf<NonNullable<PreviewResponse>["terms"]>();
 
   // POST /api/invites/:token/accept — response is { contractId: string }.
   const acceptPost = api.api.invites({ token: "t" }).accept.post;

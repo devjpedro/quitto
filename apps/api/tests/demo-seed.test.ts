@@ -6,6 +6,7 @@ import {
   type DemoAccountKey,
   type DemoContract,
   type DemoScenario,
+  demoInviteToken,
   reminderDedupeKey,
   shiftMonths,
 } from "../src/lib/demo-seed-kit";
@@ -19,6 +20,7 @@ const T = "2026-10-03";
 const DAY_MS = 86_400_000;
 // Top-level regex literal (lint/performance/useTopLevelRegex).
 const TEST_WORDS = /teste|testando|administrador|lorem/;
+const HEX_64 = /^[0-9a-f]{64}$/;
 
 function lastProofOf(c: DemoContract, sequence: number): Date | null {
   const times = c.proofs
@@ -355,6 +357,50 @@ describe("demoScenario: os números do mockup 13", () => {
     for (const text of texts) {
       expect(text.toLowerCase()).not.toMatch(TEST_WORDS);
     }
+  });
+
+  it("os convites do seed cobrem os quatro estados, para contas que existem", () => {
+    const scenario = demoScenario(T);
+    const accounts = new Set<string>(scenario.accounts.map((a) => a.key));
+    const states: [string, string][] = [];
+    for (const c of scenario.contracts) {
+      if (c.invite !== null) {
+        expect(accounts.has(c.invite)).toBe(true);
+        states.push([c.key, c.inviteState ?? "pending"]);
+      }
+      if (c.counterpart.account !== null && c.counterpart.joinedAt !== null) {
+        states.push([c.key, "accepted"]);
+      }
+    }
+    expect(states).toEqual(
+      expect.arrayContaining([
+        ["floripa", "pending"],
+        ["mesa", "expired"],
+        ["show", "declined"],
+        ["violao", "accepted"],
+      ])
+    );
+  });
+
+  it("nenhum token de convite se repete no cenário (invite.token é unique)", () => {
+    const scenario = demoScenario(T);
+    const tokens: string[] = [];
+    for (const c of scenario.contracts) {
+      const accepted =
+        c.counterpart.account !== null && c.counterpart.joinedAt !== null;
+      // One slot, one deterministic invite: never pending and accepted at once.
+      expect(c.invite !== null && accepted).toBe(false);
+      if (c.invite !== null || accepted) {
+        tokens.push(demoInviteToken(c.key));
+      }
+    }
+    expect(new Set(tokens).size).toBe(tokens.length);
+  });
+
+  it("o token do convite é o mesmo a cada seed, e um por contrato", () => {
+    expect(demoInviteToken("floripa")).toBe(demoInviteToken("floripa"));
+    expect(demoInviteToken("floripa")).toMatch(HEX_64);
+    expect(demoInviteToken("floripa")).not.toBe(demoInviteToken("mesa"));
   });
 });
 

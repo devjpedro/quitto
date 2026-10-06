@@ -7,6 +7,7 @@ import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
 import { renderReceiptPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
+import { PUBLIC_HEADERS } from "../lib/public-headers";
 import {
   findActiveShare,
   newShareToken,
@@ -49,11 +50,6 @@ const shareView = (s: { token: string; createdAt: Date }) => ({
 const shareSchema = t.Object({ token: t.String(), createdAt: t.String() });
 
 const params = t.Object({ installmentId: idParam });
-
-const PUBLIC_HEADERS = {
-  "cache-control": "no-store",
-  "x-robots-tag": "noindex",
-} as const;
 
 /** Resolve o recibo público; nos 404 também aplica os cabeçalhos públicos. */
 async function resolveOrNoStore(

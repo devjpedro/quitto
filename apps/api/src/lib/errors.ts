@@ -49,6 +49,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class RateLimitedError extends AppError {
+  constructor(message = "Muitas tentativas. Espere um minuto.") {
+    super({ code: "RATE_LIMITED", httpStatus: 429, message });
+  }
+}
+
 /** A 422 whose code the web translates; details carry the field's path and the message's parameters. */
 export class CodedError extends AppError {
   constructor(args: {

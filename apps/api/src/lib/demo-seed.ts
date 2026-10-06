@@ -367,6 +367,65 @@ function scenarioThree(t: string): DemoContract[] {
   ];
 }
 
+/**
+ * Bia's other invites to Carla, one per ended state of the invite page
+ * (mockup 15, frames H3–H5). Every installment is more than 30 days ahead:
+ * nothing new lands on Carla's home.
+ */
+function scenarioInvites(todayISO: string): DemoContract[] {
+  const t = todayISO;
+  const violao = base(
+    "violao",
+    "bia",
+    "Aulas de violão",
+    "seller",
+    "Carla Nunes"
+  );
+  return [
+    {
+      ...violao,
+      // Accepted the Phase 2 way: the slot linked to Carla, the invite accepted two days ago.
+      counterpart: {
+        ...violao.counterpart,
+        account: "tres",
+        joinedAt: at(t, -2, "10:00"),
+      },
+      invite: null,
+      createdDaysAgo: 3,
+      installments: monthly({
+        amountCents: 25_000,
+        months: 4,
+        firstDueDate: addDays(t, 40),
+        paid: 0,
+      }),
+    },
+    {
+      ...base("show", "bia", "Ingressos do show", "seller", "Carla Nunes"),
+      invite: "tres",
+      inviteState: "declined",
+      createdDaysAgo: 2,
+      installments: monthly({
+        amountCents: 18_000,
+        months: 3,
+        firstDueDate: addDays(t, 45),
+        paid: 0,
+      }),
+    },
+    {
+      ...base("mesa", "bia", "Mesa de jantar", "seller", "Carla Nunes"),
+      invite: "tres",
+      inviteState: "expired",
+      createdDaysAgo: 10,
+      installments: monthly({
+        amountCents: 35_000,
+        months: 6,
+        firstDueDate: addDays(t, 35),
+        paid: 0,
+      }),
+    },
+  ];
+}
+
 function notifications(t: string): DemoNotification[] {
   const quadroA: DemoNotification[] = [
     {
@@ -448,6 +507,7 @@ export function demoScenario(todayISO: string): DemoScenario {
       ...scenarioA(todayISO),
       ...scenarioOwnerAndNew(todayISO),
       ...scenarioThree(todayISO),
+      ...scenarioInvites(todayISO),
     ],
     notifications: notifications(todayISO),
   };
