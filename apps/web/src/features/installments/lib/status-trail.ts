@@ -28,6 +28,8 @@ export interface TrailInput {
   requiresConfirmation: boolean;
   status: string;
   today: string;
+  /** A proof is on its way (P7): "Paga" waits for it to finish, not for the person to send it. */
+  uploading?: boolean;
 }
 
 export interface TrailStep {
@@ -178,6 +180,9 @@ function paidSub(input: TrailInput, paid: boolean): string {
   const options = { locale: input.locale };
   if (paid) {
     return settledSub(input);
+  }
+  if (input.perspective === "pay" && input.uploading) {
+    return m.panel_sub_when_done({}, options);
   }
   return input.perspective === "pay"
     ? m.panel_sub_when_you_send({}, options)

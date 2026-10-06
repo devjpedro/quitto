@@ -51,6 +51,8 @@ function UploadProgress({
   const percent =
     state.total > 0 ? Math.round((state.loaded / state.total) * 100) : 0;
   const KindIcon = PDF_RE.test(state.name) ? FilePdf : FileImage;
+  // After the PUT only the record is left (a POST that cannot be aborted): no cancel to offer.
+  const recording = state.total > 0 && state.loaded >= state.total;
   return (
     <div
       className={cn("flex items-center gap-3 rounded-card p-3.5", tone.block)}
@@ -93,18 +95,20 @@ function UploadProgress({
           />
         </div>
       </div>
-      <button
-        aria-label={m.panel_upload_cancel()}
-        className={cn(
-          buttonVariants({ size: "sm", variant: "inset" }),
-          "w-11 px-0 md:w-9",
-          tone.innerButton
-        )}
-        onClick={upload.cancel}
-        type="button"
-      >
-        <X aria-hidden="true" size={16} />
-      </button>
+      {recording ? null : (
+        <button
+          aria-label={m.panel_upload_cancel()}
+          className={cn(
+            buttonVariants({ size: "sm", variant: "inset" }),
+            "w-11 px-0 md:w-9",
+            tone.innerButton
+          )}
+          onClick={upload.cancel}
+          type="button"
+        >
+          <X aria-hidden="true" size={16} />
+        </button>
+      )}
     </div>
   );
 }
@@ -138,7 +142,15 @@ function DropArea({ mode }: { mode: PanelMode }) {
           }
         }}
         onDragEnter={enter}
-        onDragLeave={() => upload.setDragging(false)}
+        onDragLeave={(event) => {
+          // Passing over a child of the area (the tile, the words) is not leaving it.
+          if (
+            event.currentTarget.contains(event.relatedTarget as Node | null)
+          ) {
+            return;
+          }
+          upload.setDragging(false);
+        }}
         onDragOver={enter}
         onDrop={(event) => {
           event.preventDefault();

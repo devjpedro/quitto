@@ -157,4 +157,18 @@ describe("trailSteps (o topo do painel: o valor e a trilha, sem tag e sem data p
       ).at(-1)?.[2]
     ).toBe("você confirma");
   });
+
+  it("P7, quem paga enquanto o comprovante vai: 'Paga' espera 'quando terminar'", () => {
+    const sending = {
+      ...common,
+      perspective: "pay" as const,
+      requiresConfirmation: false,
+      status: "pending",
+      dueDate: "2026-10-05",
+    };
+    expect(names(trailSteps(sending)).at(-1)?.[2]).toBe("quando você enviar");
+    expect(names(trailSteps({ ...sending, uploading: true })).at(-1)?.[2]).toBe(
+      "quando terminar"
+    );
+  });
 });

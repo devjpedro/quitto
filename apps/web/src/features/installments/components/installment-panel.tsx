@@ -89,6 +89,7 @@ function PanelContent({
   mode: PanelMode;
   route: ContractRoute;
 }) {
+  const { busy } = usePanel();
   const perspective = perspectiveOf(contract.role);
   const payer = contract.participants.find((p) => p.role === "buyer");
   const receiver = contract.participants.find((p) => p.role === "seller");
@@ -106,6 +107,7 @@ function PanelContent({
     requiresConfirmation: contract.contract.requiresConfirmation,
     status: detail.status,
     today: route.today,
+    uploading: busy,
   });
   const { blocks } = panelView(panelInputOf(contract, detail));
   return (

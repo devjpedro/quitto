@@ -11,6 +11,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
 import { proofFileError } from "../lib/proof-file";
 import { UploadError, uploadWithProgress } from "../lib/upload";
+import type { InstallmentDetail } from "../types";
 
 type ProofMime = "application/pdf" | "image/jpeg" | "image/png";
 
@@ -108,6 +109,19 @@ export function useProofUpload(contractId: string, installmentId: string) {
           (detail) =>
             detail &&
             withInstallmentPatch(detail, entity.id, entity, todayISO())
+        );
+        // The panel reads the installment's own cache: patch it now, or the
+        // P1 (the drop zone, the pinned "Enviar comprovante") shows again until
+        // the refetch comes back, and invites a second send.
+        qc.setQueryData<InstallmentDetail>(
+          queryKeys.installment(id),
+          (detail) =>
+            detail && {
+              ...detail,
+              status: entity.status,
+              paidAt: entity.paidAt,
+              confirmedAt: entity.confirmedAt,
+            }
         );
         toast.success(m.panel_toast_proof_sent());
         set(IDLE);

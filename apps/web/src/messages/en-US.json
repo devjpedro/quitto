@@ -429,6 +429,7 @@
   "panel_sub_they_confirm": "{name} confirms",
   "panel_sub_missing_you": "waiting on you",
   "panel_sub_when_you_send": "when you send it",
+  "panel_sub_when_done": "when it finishes",
   "panel_sub_when_they_pay": "when {name} pays",
   "panel_sub_disputed": "disputed",
   "panel_sub_at": "{day}, {time}",
