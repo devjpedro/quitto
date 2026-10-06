@@ -34,17 +34,26 @@ interface LinkProps {
   to: string;
 }
 
-vi.mock("@tanstack/react-router", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children, className, to }: LinkProps) => (
-    <a className={className} href={to}>
-      {children}
-    </a>
-  ),
-  useNavigate: () => navigate,
-  useParams: () => ({ id: "c-moto" }),
-  useSearch: () => route.search,
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const staticRouter = {
+    state: { location: { state: {} } },
+    history: { back: vi.fn() },
+    subscribe: () => () => undefined,
+  };
+  return {
+    ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+    Link: ({ children, className, to }: LinkProps) => (
+      <a className={className} href={to}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => navigate,
+    useParams: () => ({ id: "c-moto" }),
+    // The contract's entry, as the router keeps it (no panel pushed by the list).
+    useRouter: () => staticRouter,
+    useSearch: () => route.search,
+  };
+});
 
 const TERMS = "R$ 480,00 todo dia 30 · 10 parcelas · com confirmação";
 const PERCENT = /\d+\s?%/;

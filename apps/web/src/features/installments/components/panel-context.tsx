@@ -48,7 +48,7 @@ export const PANEL_TONE: Record<
 interface PanelState {
   /** Ignores ↑ ↓ while a proof is on its way (reviews I4 and M12). */
   busy: boolean;
-  /** Stops the work in flight when the panel closes: the upload's PUT. */
+  /** Stops the work in flight when the panel closes (the upload's PUT), and says so. */
   cancelWork: () => void;
   chooseFile: () => void;
   contestOpen: boolean;
@@ -108,7 +108,7 @@ export function PanelProvider({
   const value = useMemo<PanelState>(
     () => ({
       busy,
-      cancelWork: upload.cancel,
+      cancelWork: upload.stop,
       chooseFile,
       contestOpen,
       contractId,

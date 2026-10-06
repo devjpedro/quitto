@@ -34,22 +34,44 @@ const IDLE: UploadState = { phase: "idle" };
  * the page mid-upload asks the browser to confirm (beforeunload). The state
  * is marked with its installment (the panel does not remount on a step,
  * planner's decision 34), so another installment reads it as idle, and
- * moving to another one aborts the previous one's upload.
+ * moving to another one aborts the previous one's upload. Any stop but the
+ * drop zone's own "Cancelar" (the panel closing, the phone's Back, another
+ * installment, leaving the contract) says so in a toast: a proof is never
+ * dropped in silence (review I2).
  */
 export function useProofUpload(contractId: string, installmentId: string) {
   const qc = useQueryClient();
   const [held, setHeld] = useState({ id: installmentId, state: IDLE });
   const state = held.id === installmentId ? held.state : IDLE;
-  const flight = useRef<{ abort: AbortController; id: string } | null>(null);
+  const flight = useRef<{
+    abort: AbortController;
+    id: string;
+    name: string;
+    /** The PUT is done and the proof is being recorded: that POST runs to its end. */
+    recording: boolean;
+  } | null>(null);
+
+  const abortFlight = useCallback((announce: boolean) => {
+    const current = flight.current;
+    if (!current || current.recording || current.abort.signal.aborted) {
+      return;
+    }
+    current.abort.abort();
+    if (announce) {
+      toast.warning(m.panel_toast_proof_stopped(), {
+        description: m.panel_toast_proof_stopped_hint({ name: current.name }),
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (flight.current && flight.current.id !== installmentId) {
-      flight.current.abort.abort();
+      abortFlight(true);
     }
-  }, [installmentId]);
+  }, [abortFlight, installmentId]);
 
   // Leaving the contract (the panel unmounts) stops the PUT too.
-  useEffect(() => () => flight.current?.abort.abort(), []);
+  useEffect(() => () => abortFlight(true), [abortFlight]);
 
   useEffect(() => {
     if (state.phase !== "uploading") {
@@ -78,7 +100,8 @@ export function useProofUpload(contractId: string, installmentId: string) {
         return;
       }
       const abort = new AbortController();
-      flight.current = { abort, id };
+      const current = { abort, id, name: file.name, recording: false };
+      flight.current = current;
       set({ phase: "uploading", name: file.name, loaded: 0, total: file.size });
       try {
         const mimeType = file.type as ProofMime;
@@ -97,6 +120,7 @@ export function useProofUpload(contractId: string, installmentId: string) {
           // Cancelled between the PUT's end and the record: nothing is recorded.
           throw new UploadError("aborted", 0);
         }
+        current.recording = true;
         const entity = await unwrap(
           proofs.post({
             objectKey: presign.objectKey,
@@ -145,7 +169,10 @@ export function useProofUpload(contractId: string, installmentId: string) {
     [contractId, installmentId, qc]
   );
 
-  const cancel = useCallback(() => flight.current?.abort.abort(), []);
+  /** The drop zone's "Cancelar": the user sees the zone come back, nothing to say. */
+  const cancel = useCallback(() => abortFlight(false), [abortFlight]);
+  /** The panel let the proof go (closed, Back, another installment): said in a toast. */
+  const stop = useCallback(() => abortFlight(true), [abortFlight]);
   const setDragging = useCallback(
     (on: boolean) =>
       setHeld((current) => {
@@ -158,7 +185,7 @@ export function useProofUpload(contractId: string, installmentId: string) {
     [installmentId]
   );
   return useMemo(
-    () => ({ state, pick, cancel, setDragging }),
-    [state, pick, cancel, setDragging]
+    () => ({ state, pick, cancel, stop, setDragging }),
+    [state, pick, cancel, stop, setDragging]
   );
 }

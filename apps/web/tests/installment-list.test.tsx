@@ -30,17 +30,26 @@ interface LinkProps {
   to: string;
 }
 
-vi.mock("@tanstack/react-router", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children, className, to }: LinkProps) => (
-    <a className={className} href={to}>
-      {children}
-    </a>
-  ),
-  useNavigate: () => navigate,
-  useParams: () => ({ id: "c-moto" }),
-  useSearch: () => route.search,
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const staticRouter = {
+    state: { location: { state: {} } },
+    history: { back: vi.fn() },
+    subscribe: () => () => undefined,
+  };
+  return {
+    ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+    Link: ({ children, className, to }: LinkProps) => (
+      <a className={className} href={to}>
+        {children}
+      </a>
+    ),
+    useNavigate: () => navigate,
+    useParams: () => ({ id: "c-moto" }),
+    // The contract's entry, as the router keeps it (no panel pushed by the list).
+    useRouter: () => staticRouter,
+    useSearch: () => route.search,
+  };
+});
 
 const ACTION_NAMES = [
   /Cobrar/,
@@ -171,13 +180,14 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
     );
   });
 
-  it("clicar numa linha abre a parcela (openInstallment com o id)", async () => {
+  it("clicar numa linha abre a parcela (openInstallment com o id) numa entrada própria do histórico, marcada como do painel", async () => {
     const user = userEvent.setup();
     const { list } = renderList();
     await user.click(row(list, "i5"));
     expect(navigate).toHaveBeenCalledTimes(1);
     const call = navigate.mock.calls[0]?.[0];
-    expect(call.replace).toBe(true);
+    expect(call.replace).toBeFalsy();
+    expect(call.state).toEqual({ panel: true });
     expect(call.search({ tab: undefined })).toEqual({
       tab: undefined,
       installment: "i5",

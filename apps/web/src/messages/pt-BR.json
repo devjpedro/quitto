@@ -523,6 +523,8 @@
   "panel_upload_failed": "não foi enviado. Tente de novo.",
   "panel_send_proof": "Enviar comprovante",
   "panel_toast_proof_sent": "Comprovante enviado",
+  "panel_toast_proof_stopped": "Comprovante não enviado",
+  "panel_toast_proof_stopped_hint": "O envio de {name} parou porque você saiu da parcela. Abra-a de novo para enviar.",
   "panel_mark_paid_link": "Marcar como paga sem comprovante",
   "panel_charge_title": "Mensagem para {name}",
   "panel_charge_with_pix": "+ o seu PIX copia e cola",

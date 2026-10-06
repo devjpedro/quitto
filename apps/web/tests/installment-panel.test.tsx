@@ -83,6 +83,11 @@ interface LinkProps {
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const { useSyncExternalStore } = await import("react");
+  const staticRouter = {
+    state: { location: { state: {} } },
+    history: { back: vi.fn() },
+    subscribe: () => () => undefined,
+  };
   return {
     ...(await importOriginal<typeof import("@tanstack/react-router")>()),
     Link: ({ children, className, to }: LinkProps) => (
@@ -93,6 +98,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     useHydrated: () => hydration.done,
     useNavigate: () => navigate,
     useParams: () => ({ id: "c-moto" }),
+    // The contract's entry, as the router keeps it (no panel pushed by the list).
+    useRouter: () => staticRouter,
     useSearch: () => useSyncExternalStore(router.subscribe, router.get),
   };
 });

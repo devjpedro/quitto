@@ -523,6 +523,8 @@
   "panel_upload_failed": "wasn't sent. Try again.",
   "panel_send_proof": "Send proof",
   "panel_toast_proof_sent": "Proof sent",
+  "panel_toast_proof_stopped": "Proof not sent",
+  "panel_toast_proof_stopped_hint": "Sending {name} stopped because you left the installment. Open it again to send it.",
   "panel_mark_paid_link": "Mark as paid without proof",
   "panel_charge_title": "Message to {name}",
   "panel_charge_with_pix": "+ your Pix copy-and-paste code",

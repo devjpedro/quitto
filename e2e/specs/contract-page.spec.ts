@@ -208,6 +208,90 @@ test("no celular, o bottom sheet e a barra de cima do detalhe", async ({
   }
 });
 
+test("abrir pela linha é uma entrada do histórico: o Voltar fecha o painel e fica no contrato; o ✕ (Esc na coluna) dá no mesmo, e o Voltar seguinte sai do contrato", async ({
+  browser,
+}, testInfo) => {
+  const parties = await receiveWithProof(browser);
+  const { page } = parties.owner;
+  const mobile = testInfo.project.name === "mobile";
+  const contract = `/contracts/${parties.id}`;
+  const row2 = page.locator(`[data-installment-row="${idOf(parties, 2)}"]`);
+  // The bottom sheet on the phone; the column from 1440.
+  const panel = mobile
+    ? page.getByRole("dialog", { name: PANEL_2 })
+    : page.getByTestId("installment-panel-docked");
+  const onContract = (at: URL) =>
+    at.pathname === contract && !at.searchParams.has("installment");
+  try {
+    if (!mobile) {
+      await page.setViewportSize({ width: 1512, height: 860 });
+    }
+    await page.goto("/");
+    await waitForHydrated(page);
+    await page.goto(contract);
+    await waitForHydrated(page);
+
+    await row2.scrollIntoViewIfNeeded();
+    const scrolled = await page.evaluate(() => window.scrollY);
+    await row2.click();
+    await expect(panel).toContainText(PANEL_2);
+    await page.waitForURL((at) => at.searchParams.has("installment"));
+
+    await page.goBack();
+    await page.waitForURL(onContract);
+    await expect(panel).toHaveCount(0);
+    // The page stays where the tap was.
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+
+    await row2.click();
+    await expect(panel).toContainText(PANEL_2);
+    if (mobile) {
+      await sheetAtRest(panel);
+      await panel.getByRole("button", { name: "Fechar" }).click();
+    } else {
+      await page.keyboard.press("Escape");
+    }
+    await page.waitForURL(onContract);
+    await expect(panel).toHaveCount(0);
+    await expect(row2).toBeFocused();
+
+    await page.goBack();
+    await page.waitForURL((at) => at.pathname === "/");
+  } finally {
+    await closeBoth(parties);
+  }
+});
+
+test("no celular, 'Histórico' no pé do sheet fecha o sheet e mostra a aba; o Voltar volta às parcelas, não ao painel", async ({
+  browser,
+}, testInfo) => {
+  // biome-ignore lint/suspicious/noSkippedTests: below 1440 only; the column keeps the panel beside the tab (unit test)
+  test.skip(testInfo.project.name !== "mobile", "só no celular");
+  const parties = await receiveWithProof(browser);
+  const { page } = parties.owner;
+  try {
+    await page.goto(`/contracts/${parties.id}`);
+    await waitForHydrated(page);
+    await page.locator(`[data-installment-row="${idOf(parties, 2)}"]`).click();
+    const sheet = await sheetOf2(page);
+    await sheet.getByRole("button", { name: "Histórico" }).click();
+    await expect(page).toHaveURL(TAB_HISTORY);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByTestId("history")).toBeVisible();
+    await expect(page.getByRole("radio", { name: HISTORY_TAB })).toBeFocused();
+
+    await page.goBack();
+    await page.waitForURL(
+      (at) =>
+        !(at.searchParams.has("tab") || at.searchParams.has("installment"))
+    );
+    await expect(page.getByTestId("installment-list")).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  } finally {
+    await closeBoth(parties);
+  }
+});
+
 test("contrato de outra pessoa: 'Contrato não encontrado', e o link volta aos contratos", async ({
   browser,
   page,

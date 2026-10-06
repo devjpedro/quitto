@@ -90,6 +90,11 @@ interface LinkProps {
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const { useSyncExternalStore } = await import("react");
+  const staticRouter = {
+    state: { location: { state: {} } },
+    history: { back: vi.fn() },
+    subscribe: () => () => undefined,
+  };
   return {
     ...(await importOriginal<typeof import("@tanstack/react-router")>()),
     Link: ({ children, className, to }: LinkProps) => (
@@ -100,14 +105,29 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     useHydrated: () => true,
     useNavigate: () => navigate,
     useParams: () => ({ id: "c-moto" }),
+    // The contract's entry, as the router keeps it (no panel pushed by the list).
+    useRouter: () => staticRouter,
     useSearch: () => useSyncExternalStore(router.subscribe, router.get),
   };
 });
 
-const { toastSuccess } = vi.hoisted(() => ({ toastSuccess: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
+const { toastSuccess, toastWarning } = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
+}));
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: vi.fn(), warning: toastWarning },
+}));
 
 const WA = "https://wa.me/?text=";
+/** The proof the panel let go of without the user's own "Cancelar" (review I2). */
+const STOPPED = [
+  "Comprovante não enviado",
+  {
+    description:
+      "O envio de pix-carlos-outubro.pdf parou porque você saiu da parcela. Abra-a de novo para enviar.",
+  },
+] as const;
 const MB_14_2 = 14_889_779;
 const BAD_TYPE = "IMG_2231.heic não é aceito. Envie PDF, JPG ou PNG.";
 const TOO_LARGE =
@@ -345,6 +365,7 @@ beforeEach(() => {
     error: null,
   });
   toastSuccess.mockReset();
+  toastWarning.mockReset();
 });
 
 afterEach(async () => {
@@ -610,9 +631,11 @@ describe("enviar o comprovante (mockup 14, P7)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("button", { name: MARK_PAID })).toBeVisible();
     expect(calls.proofs).not.toHaveBeenCalled();
+    // The user stopped it on screen: nothing more to say.
+    expect(toastWarning).not.toHaveBeenCalled();
   });
 
-  it("durante o envio, ↑ ↓ ficam desabilitadas e fechar o painel aborta o PUT", async () => {
+  it("durante o envio, ↑ ↓ ficam desabilitadas e fechar o painel aborta o PUT, e o aviso diz que o comprovante não foi (uma vez)", async () => {
     const user = userEvent.setup();
     renderPage({ contract: floripa(), detail: payDetail() });
     await startUpload(user);
@@ -629,11 +652,13 @@ describe("enviar o comprovante (mockup 14, P7)", () => {
     expect(FakeXhr.last.aborted).toBe(true);
     expect(router.get()).toEqual({ installment: undefined });
     expect(calls.proofs).not.toHaveBeenCalled();
+    expect(toastWarning).toHaveBeenCalledTimes(1);
+    expect(toastWarning).toHaveBeenCalledWith(...STOPPED);
   });
 });
 
 describe("o envio sai do ar (M12 e bordas)", () => {
-  it("a 390, a URL que tira o ?installment= durante o envio (o Voltar do navegador) aborta o PUT", async () => {
+  it("a 390, a URL que tira o ?installment= durante o envio (o Voltar do navegador) aborta o PUT e avisa que o comprovante não foi", async () => {
     renderPage({ contract: floripa(), detail: payDetail(), width: 390 });
     await screen.findByRole("dialog");
     chooseFile(pdf());
@@ -641,6 +666,20 @@ describe("o envio sai do ar (M12 e bordas)", () => {
     act(() => router.set({}));
     await waitFor(() => expect(FakeXhr.last.aborted).toBe(true));
     expect(calls.proofs).not.toHaveBeenCalled();
+    expect(toastWarning).toHaveBeenCalledTimes(1);
+    expect(toastWarning).toHaveBeenCalledWith(...STOPPED);
+  });
+
+  it("sair do contrato durante o envio (a página desmonta) aborta o PUT e avisa", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderPage({
+      contract: floripa(),
+      detail: payDetail(),
+    });
+    await startUpload(user);
+    unmount();
+    expect(FakeXhr.last.aborted).toBe(true);
+    expect(toastWarning).toHaveBeenCalledWith(...STOPPED);
   });
 
   it("a 390, o alerta do arquivo recusado não volta quando o sheet fecha e a mesma parcela reabre", async () => {
@@ -660,13 +699,14 @@ describe("o envio sai do ar (M12 e bordas)", () => {
     expect(within(reopened).queryByRole("alert")).toBeNull();
   });
 
-  it("a 1600, trocar de parcela durante o envio aborta o PUT e não registra o comprovante", async () => {
+  it("a 1600, trocar de parcela durante o envio aborta o PUT, não registra o comprovante e avisa", async () => {
     const user = userEvent.setup();
     renderPage({ contract: floripa(), detail: payDetail() });
     await startUpload(user);
     act(() => router.set({ installment: "i6" }));
     await waitFor(() => expect(FakeXhr.last.aborted).toBe(true));
     expect(calls.proofs).not.toHaveBeenCalled();
+    expect(toastWarning).toHaveBeenCalledWith(...STOPPED);
   });
 
   it("o PUT recusado (403): o alerta pelo nome do arquivo e a área de envio de volta", async () => {
@@ -734,6 +774,34 @@ describe("o envio sai do ar (M12 e bordas)", () => {
       },
       error: null,
     });
+  });
+
+  it("fechar o painel com o PUT já feito, enquanto o comprovante é registrado: nenhum aviso de 'não enviado' (o registro termina e diz 'Comprovante enviado')", async () => {
+    const user = userEvent.setup();
+    const recording = deferred<unknown>();
+    calls.proofs.mockReturnValue(recording.promise);
+    renderPage({ contract: floripa(), detail: payDetail() });
+    await startUpload(user);
+    act(() => {
+      FakeXhr.last.status = 200;
+      FakeXhr.last.onload?.();
+    });
+    await waitFor(() => expect(calls.proofs).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(router.get()).toEqual({ installment: undefined });
+    recording.resolve({
+      data: {
+        id: "i5",
+        status: "awaiting_confirmation",
+        paidAt: null,
+        confirmedAt: null,
+      },
+      error: null,
+    });
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith("Comprovante enviado")
+    );
+    expect(toastWarning).not.toHaveBeenCalled();
   });
 
   it("o comprovante registrado já tira o P1 do painel (sem esperar o refetch)", async () => {
