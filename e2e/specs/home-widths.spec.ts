@@ -133,6 +133,7 @@ for (const { width, perRow } of [
         page
           .getByRole("button", { name: "Ver todas", exact: true })
           .filter({ visible: true })
+          .first()
       ).toBeVisible();
       // The side column exists from 1440.
       await expect(
