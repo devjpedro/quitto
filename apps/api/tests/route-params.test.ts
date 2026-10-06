@@ -117,6 +117,20 @@ describe("ids na URL (revisão final api M1)", () => {
     expect(wrong).toEqual([]);
   });
 
+  it("sem sessão, o id malformado continua 401: a sessão vem antes do id", async () => {
+    for (const path of [
+      `/api/contracts/${BAD}`,
+      `/api/contracts/${BAD}/statement.csv`,
+      `/api/installments/${BAD}`,
+    ]) {
+      const res = await call("", path);
+      expect(res.status).toBe(401);
+      expect(await res.json()).toMatchObject({
+        error: { code: "UNAUTHORIZED" },
+      });
+    }
+  });
+
   it("o corpo inválido continua 422 (só o id da URL vira 'não encontrado')", async () => {
     const cookie = await signUpCookie(uniqueEmail("route-params-body"));
     const res = await call(cookie, `/api/contracts/${NONE}`, "PATCH", {

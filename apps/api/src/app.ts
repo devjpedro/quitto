@@ -4,7 +4,12 @@ import { Elysia, t } from "elysia";
 import { auth } from "./auth";
 import { runReminderSweep } from "./cron/reminders";
 import { env } from "./env";
-import { AppError, NotFoundError, toErrorBody } from "./lib/errors";
+import {
+  AppError,
+  NotFoundError,
+  toErrorBody,
+  UnauthorizedError,
+} from "./lib/errors";
 import { accountModule } from "./modules/account";
 import { contractDetailModule } from "./modules/contract-detail";
 import { contractsModule } from "./modules/contracts";
@@ -28,17 +33,21 @@ const apiRoutes = new Elysia({ prefix: "/api" }).get(
 
 export function buildApp() {
   return new Elysia()
-    .onError(({ code, error, set }) => {
+    .onError(async ({ code, error, request, set }) => {
       if (error instanceof AppError) {
         set.status = error.httpStatus;
         return toErrorBody(error);
       }
       // A malformed id in the path (each one is a uuid, lib/route-params): for
       // the caller it is "not found", as an id it may not see is; a cut link
-      // lands on the web's "não encontrado". A bad body or query stays a 422.
+      // lands on the web's "não encontrado". The check runs before the
+      // handler, so the session is asked here: every route with an id needs
+      // one, and without it the answer stays 401. A bad body or query stays 422.
       if (code === "VALIDATION" && error.type === "params") {
-        set.status = 404;
-        return toErrorBody(new NotFoundError());
+        const session = await auth.api.getSession({ headers: request.headers });
+        const answer = session ? new NotFoundError() : new UnauthorizedError();
+        set.status = answer.httpStatus;
+        return toErrorBody(answer);
       }
       captureException(error);
     })
