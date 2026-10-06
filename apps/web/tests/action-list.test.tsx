@@ -719,7 +719,7 @@ describe("ActionList", () => {
     }
   });
 
-  it("par a receber (Cobrar no WhatsApp + Marcar como recebida, 362 px): empilha abaixo de 368 px, nunca um botão sozinho na linha", () => {
+  it("par a receber como no contrato: o WhatsApp diz 'Cobrar' num cartão estreito (o nome acessível segue inteiro), e o par fica em linha até 272 px ('Cobrar' + 'Marcar como recebida'); abaixo, empilha, nunca um botão sozinho na linha", () => {
     renderList([
       installmentAction({ installmentId: "x0" }),
       installmentAction({
@@ -729,16 +729,26 @@ describe("ActionList", () => {
       }),
     ]);
     const card = screen.getAllByRole("article")[1] as HTMLElement;
+    const whatsapp = within(card).getByRole("link", {
+      name: "Cobrar no WhatsApp (abre o WhatsApp)",
+    });
+    expect(within(whatsapp).getByText("Cobrar no WhatsApp")).toHaveClass(
+      "@max-[23.5rem]:hidden"
+    );
+    expect(within(whatsapp).getByText("Cobrar")).toHaveClass(
+      "hidden",
+      "@max-[23.5rem]:inline"
+    );
     for (const control of [
-      within(card).getByRole("link", { name: WHATSAPP_NAME }),
+      whatsapp,
       within(card).getByRole("button", { name: MARK_RECEIVED_NAME }),
     ]) {
-      expect(control).toHaveClass("@max-[23rem]:w-full");
-      expect(control).not.toHaveClass("@max-[15rem]:w-full");
+      expect(control).toHaveClass("@max-[17rem]:w-full");
+      expect(control).not.toHaveClass("@max-[23rem]:w-full");
     }
   });
 
-  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem (331 e 267 px); no celular o ícone de 44 px cabe", () => {
+  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem ('Cobrar' + 'See installments', 238 px; 267 px); no celular o ícone de 44 px cabe", () => {
     const group = {
       kind: "overdue",
       pixCode: null,
@@ -778,7 +788,7 @@ describe("ActionList", () => {
     ]) {
       expect(control).toHaveClass(
         "@max-[15rem]:w-full",
-        "md:@max-[21rem]:w-full"
+        "md:@max-[15.5rem]:w-full"
       );
     }
     for (const control of [
