@@ -1,17 +1,23 @@
-import { CalendarBlank } from "@phosphor-icons/react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CalendarBlank,
+} from "@phosphor-icons/react";
 import { INSTALLMENT_STATUS, type Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import { DateTile } from "@/components/ui/date-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 import { Tag } from "@/components/ui/tag";
 import { weekdayName } from "@/lib/date-parts";
+import { formatMoney } from "@/lib/locale-format";
 import { pluralForm } from "@/lib/plural";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import { upcomingTotals } from "../lib/home-totals";
 import type { Home, UpcomingItem } from "../types";
 import { SectionTitle } from "./section-title";
 
@@ -25,8 +31,9 @@ function edgeTag(item: UpcomingItem): string | null {
 
 /**
  * One upcoming installment (mockup 13): the date tile as its anchor, the
- * contract, the weekday and the side, and the amount with its sign. The
- * installment number joins the meta from md (a phone keeps the row short).
+ * contract, the weekday, and the amount with its sign (the side is the sign and
+ * the color). The installment number joins the meta from md (a phone keeps
+ * the row short), and only when no first/last tag already places the row.
  */
 function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
   const receive = item.direction === "receive";
@@ -57,19 +64,19 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
           ) : null}
         </span>
         <span className="mt-[3px] block truncate text-[12.5px] text-ink-muted tabular-nums">
-          {receive
-            ? m.home_upcoming_receive({ date })
-            : m.home_upcoming_pay({ date })}
-          <span className="max-md:hidden">
-            {" "}
-            {m.home_dot_after({
-              text: sequencesLabel(
-                [item.sequence],
-                item.installmentsCount,
-                locale
-              ),
-            })}
-          </span>
+          {date}
+          {edge ? null : (
+            <span className="max-md:hidden">
+              {" "}
+              {m.home_dot_after({
+                text: sequencesLabel(
+                  [item.sequence],
+                  item.installmentsCount,
+                  locale
+                ),
+              })}
+            </span>
+          )}
         </span>
       </span>
       <Money
@@ -85,6 +92,49 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
 /** The section "Ver próximos 30 dias" jumps to (AllClear). */
 export const UPCOMING_SECTION_ID = "upcoming";
 
+/** What the rows below add up to, by direction: a direction with nothing in the list is left out. */
+function UpcomingTotals({
+  locale,
+  totals,
+}: {
+  locale: Locale;
+  totals: { toPayCents: number; toReceiveCents: number };
+}) {
+  const parts: ReactNode[] = [];
+  if (totals.toReceiveCents > 0) {
+    parts.push(
+      <span className="inline-flex items-center gap-1" key="receive">
+        <ArrowDownLeft aria-hidden="true" size={14} />
+        {m.home_upcoming_totals_receive({
+          amount: formatMoney(totals.toReceiveCents, locale),
+        })}
+      </span>
+    );
+  }
+  if (totals.toPayCents > 0) {
+    parts.push(
+      <span className="inline-flex items-center gap-1" key="pay">
+        <ArrowUpRight aria-hidden="true" size={14} />
+        {m.home_upcoming_totals_pay({
+          amount: formatMoney(totals.toPayCents, locale),
+        })}
+      </span>
+    );
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return parts.length === 2 ? (
+    <>
+      {parts[0]}
+      <span aria-hidden="true">{m.home_dot_after({ text: "" }).trim()}</span>
+      {parts[1]}
+    </>
+  ) : (
+    parts[0]
+  );
+}
+
 /** "Próximos 30 dias": what is coming that is not a card yet, as one filled block with straight dividers. */
 export function UpcomingList({
   hasInstallmentActions,
@@ -96,7 +146,6 @@ export function UpcomingList({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const total = upcoming.items.length + upcoming.moreCount;
   const one = (count: number) => pluralForm(count, locale) === "one";
   // Nothing listed, yet there are installment cards above or money due in
   // the window: it is in the cards.
@@ -104,12 +153,6 @@ export function UpcomingList({
     upcoming.items.length === 0 &&
     (hasInstallmentActions ||
       upcoming.toPayCents + upcoming.toReceiveCents > 0);
-  let count: string | null = null;
-  if (total > 0) {
-    count = one(total)
-      ? m.home_upcoming_count_one()
-      : m.home_upcoming_count_other({ count: total });
-  }
   return (
     <section
       aria-labelledby={titleId}
@@ -120,7 +163,15 @@ export function UpcomingList({
       id={UPCOMING_SECTION_ID}
       tabIndex={-1}
     >
-      <SectionTitle aux={count} id={titleId}>
+      <SectionTitle
+        aux={
+          <UpcomingTotals
+            locale={locale}
+            totals={upcomingTotals(upcoming.items)}
+          />
+        }
+        id={titleId}
+      >
         {m.home_upcoming_title()}
       </SectionTitle>
       {upcoming.items.length === 0 ? (

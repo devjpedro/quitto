@@ -7,6 +7,7 @@ import { HomePage } from "@/features/home/components/home-page";
 import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 import { nb } from "./nbsp";
+import { notificationItem } from "./notification-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
 const { getHome, getNotifications, markPaid } = vi.hoisted(() => ({
@@ -43,6 +44,9 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 const GREETING = /^(Bom dia|Boa tarde|Boa noite), Maria$/;
 const DATE_LEAD = /Sexta-feira, 2 de outubro ·/;
+const DATE_ONLY = /^Sexta-feira, 2 de outubro$/;
+const ONE_THING = /1 coisa pede sua atenção/;
+const NOTHING_PENDING = /Nada pede sua atenção agora\./;
 const TWO_THINGS = /2 coisas pedem sua atenção/;
 
 const NOTIFICATIONS_FAILED = {
@@ -61,6 +65,22 @@ function setScreenWidth(width: number) {
 const startWidth = window.innerWidth;
 
 /** The content's lower part (HomeLower); the skeleton's shares its grid, not this attribute. */
+/** A notice no card says (an accepted invite is never a card): "Notificações recentes" keeps it. */
+const NOTICE = notificationItem({
+  id: "k1",
+  type: "invite_accepted",
+  installmentId: null,
+  contractId: "c1",
+});
+
+/** The desktop "Ver todas" (the phone's, under the carousel, has the same name). */
+const desktopSeeAll = () =>
+  screen
+    .getAllByRole("button", { name: "Ver todas" })
+    .find((button) =>
+      button.parentElement?.classList.contains("lg:flex")
+    ) as HTMLElement;
+
 const lowerPart = () => document.querySelector<HTMLElement>("[data-lower]");
 
 function renderHome({ likeTheApp = false } = {}) {
@@ -114,7 +134,7 @@ describe("HomePage", () => {
         name: nb("Aluguel do apê · parcela~7~de~12"),
       })
     ).toBeVisible();
-    expect(screen.getByText("1 coisa pede sua atenção")).toBeVisible();
+    expect(screen.getByText(ONE_THING)).toBeVisible();
     expect(document.title).toBe("Quitto · Agora");
   });
 
@@ -193,7 +213,13 @@ describe("HomePage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: GREETING })
     ).toHaveClass("md:text-[32px]", "font-bold");
+    // The date leads the subtitle on desktop; on a phone it is the whole subtitle (the carousel says the count).
     expect(await screen.findByText(DATE_LEAD)).toHaveClass("max-md:hidden");
+    expect(screen.getByText(DATE_ONLY)).toHaveClass("md:hidden");
+    // "Ver todas" sits at the end of the same line (it only shows with 4+ cards).
+    expect(
+      screen.getByText(TWO_THINGS).closest("p")?.parentElement
+    ).toHaveClass("flex", "justify-between");
     expect(screen.getByText(TWO_THINGS)).toBeVisible();
   });
 
@@ -233,9 +259,10 @@ describe("HomePage", () => {
     const lower = left?.parentElement;
     expect(lower).toHaveClass(
       "lateral:grid",
-      "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]",
-      "wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))]"
+      "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
     );
+    // Two columns at every width: from wide the actions go to 5 per row, down here nothing changes.
+    expect(lower?.className).not.toContain("wide:grid-cols");
     // The rhythm of mockup 13: 28 px between blocks on a phone, 36 px and
     // 28 px between columns from lateral, 36 px above the lower part.
     expect(lower).toHaveClass(
@@ -247,7 +274,8 @@ describe("HomePage", () => {
     // Below lateral the column wrappers dissolve, so the lower part reads as mockup 11.
     expect(left).toHaveClass("contents", "lateral:flex");
     const side = screen.getByRole("region", { name: "Marcos" }).parentElement;
-    expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
+    expect(side).toHaveClass("contents", "lateral:flex");
+    expect(side).not.toHaveClass("wide:contents");
     expect(side?.parentElement).toBe(lower);
     // List, milestones, then the guide: the guide goes last below lateral, under the list from lateral.
     const guide = screen
@@ -367,9 +395,10 @@ describe("HomePage", () => {
       name: "Notificações recentes",
     });
     expect(recent).toHaveClass("hidden", "lateral:block");
-    // In the side column; from wide it takes a column of its own.
+    // In the side column, which stays one column at every width.
     const side = recent.parentElement;
-    expect(side).toHaveClass("contents", "lateral:flex", "wide:contents");
+    expect(side).toHaveClass("contents", "lateral:flex");
+    expect(side).not.toHaveClass("wide:contents");
     // This fixture has a contract but no milestones on screen: the block alone
     // keeps the side column filled, so the grid is on.
     expect(side?.parentElement).toHaveClass("lateral:grid");
@@ -532,7 +561,9 @@ describe("HomePage", () => {
     expect(
       screen.queryByRole("region", { name: "O que fazer agora" })
     ).toBeNull();
-    const summary = screen.getByText("Nada pede sua atenção agora.");
+    const summary = screen
+      .getByText(NOTHING_PENDING)
+      .closest("p") as HTMLElement;
     expect(document.activeElement).not.toBe(document.body);
     expect(document.activeElement).toBe(summary);
     expect(summary).toHaveAttribute("tabindex", "-1");
@@ -597,7 +628,7 @@ describe("HomePage", () => {
       release();
       expect(await screen.findByText("Nada pendente agora")).toBeVisible();
       expect(document.activeElement).toBe(
-        screen.getByText("Nada pede sua atenção agora.")
+        screen.getByText(NOTHING_PENDING).closest("p") as HTMLElement
       );
     } finally {
       dropFocusWhenDisabled.disconnect();
@@ -646,9 +677,8 @@ describe("HomePage", () => {
       error: null,
     });
     const { client } = renderHome();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Ver todas (5)" })
-    );
+    await screen.findAllByRole("button", { name: "Ver todas" });
+    await userEvent.click(desktopSeeAll());
     expect(screen.getAllByRole("button", { name: "Ver menos" })).toHaveLength(
       2
     );
@@ -658,15 +688,13 @@ describe("HomePage", () => {
     // ...and a refetch brings five cards again.
     client.setQueryData(queryKeys.home, homeFixture({ actions: five }));
     expect(await screen.findByText("1 de 5")).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Ver todas (5)" })
-    ).toHaveAttribute("aria-expanded", "false");
+    expect(desktopSeeAll()).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: "Ver menos" })).toBeNull();
   });
 
-  it("poucas ações a partir de 1440: Próximos 30 dias na linha das ações; notificações e marcos embaixo", async () => {
+  it("poucas ações a partir de 1440: Próximos 30 dias e os marcos, empilhados, na linha das ações; só as notificações embaixo", async () => {
     setScreenWidth(1512);
-    getNotifications.mockResolvedValue({ data: [], error: null });
+    getNotifications.mockResolvedValue({ data: [NOTICE], error: null });
     getHome.mockResolvedValue({
       data: homeFixture({
         actions: [installmentAction()],
@@ -689,31 +717,32 @@ describe("HomePage", () => {
     const recent = await screen.findByRole("region", {
       name: "Notificações recentes",
     });
-    const row = upcoming.parentElement?.parentElement;
-    expect(row).toHaveClass("lateral:grid");
-    expect(upcoming.parentElement).toHaveClass(
+    const milestones = screen.getByRole("region", { name: "Marcos" });
+    // The slot of the row: "Próximos 30 dias" with the milestones right under it (mockup 16, frame D).
+    const stack = upcoming.parentElement;
+    expect(stack).toHaveClass("flex", "flex-col");
+    expect(stack).toContainElement(milestones);
+    const slot = stack?.parentElement;
+    expect(slot).toHaveClass(
       "lateral:col-span-2",
       "2xl:col-span-3",
       "wide:col-span-4"
     );
+    const row = slot?.parentElement;
+    expect(row).toHaveClass("lateral:grid");
     expect(row).toContainElement(screen.getByRole("article"));
     const lower = lowerPart();
-    expect(lower).toHaveAttribute("data-lower", "columns");
+    expect(lower).not.toContainElement(upcoming);
+    expect(lower).not.toContainElement(milestones);
+    // Only the notifications are left down here: one block, in the 3fr track.
+    expect(lower).toHaveAttribute("data-lower", "stack");
     expect(lower).toHaveClass(
       "lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]"
     );
-    expect(lower).not.toContainElement(upcoming);
-    // Notifications on the left, milestones on the right (frame E), both shown.
     expect(lower?.firstElementChild).toContainElement(recent);
-    expect(lower?.lastElementChild).toContainElement(
-      screen.getByRole("region", { name: "Marcos" })
-    );
-    for (const column of Array.from(lower?.children ?? [])) {
-      expect(column).not.toHaveClass("lateral:hidden");
-    }
   });
 
-  it("poucas ações com marcos e a lista de notificações falhando: a coluna da esquerda, vazia, some a partir de 1440, e Marcos não desce 32 px", async () => {
+  it("poucas ações com marcos e a lista de notificações falhando: os marcos continuam na linha das ações, e a parte de baixo inteira some a partir de 1440", async () => {
     setScreenWidth(1512);
     getNotifications.mockResolvedValue(NOTIFICATIONS_FAILED);
     getHome.mockResolvedValue({
@@ -737,16 +766,11 @@ describe("HomePage", () => {
     await waitFor(() =>
       expect(lowerPart()).toHaveAttribute("data-lower", "stack")
     );
-    const lower = lowerPart();
-    // The left column has nothing to show from lateral (the list failed, no
-    // guide): hidden there, it adds no gap, so the milestones sit 36 px under
-    // the actions' row, not 68.
-    expect(lower?.firstElementChild).toBeEmptyDOMElement();
-    expect(lower?.firstElementChild).toHaveClass("lateral:hidden");
-    expect(lower?.lastElementChild).toContainElement(milestones);
-    expect(lower?.lastElementChild).not.toHaveClass("lateral:hidden");
-    // The grid stays: alone, the milestones take the 3fr track, never the whole width.
-    expect(lower).toHaveClass(...LOWER_FEW.split(" "));
+    const upcoming = screen.getByRole("region", { name: "Próximos 30 dias" });
+    expect(upcoming.parentElement).toContainElement(milestones);
+    // Nothing left to show from lateral (no guide, the list failed): hidden, no margin at the panel's end.
+    expect(lowerPart()).toHaveClass("lateral:hidden");
+    expect(lowerPart()).not.toHaveClass("lateral:grid");
   });
 
   it("só o marco do momento e a lista de notificações falhando: a 1440 a parte de baixo empilha, sem trilha em branco", async () => {
@@ -776,7 +800,7 @@ describe("HomePage", () => {
 
   it("poucas ações sem marcos e com o guia: a partir de 1440 as notificações à esquerda e o guia à direita, nada na largura toda", async () => {
     setScreenWidth(1512);
-    getNotifications.mockResolvedValue({ data: [], error: null });
+    getNotifications.mockResolvedValue({ data: [NOTICE], error: null });
     getHome.mockResolvedValue({
       data: homeFixture({
         actions: [installmentAction()],
@@ -826,7 +850,7 @@ describe("HomePage", () => {
 
   it("poucas ações sem marcos e sem guia: as notificações sozinhas ficam na trilha de 3fr, sem esticar na largura toda", async () => {
     setScreenWidth(1512);
-    getNotifications.mockResolvedValue({ data: [], error: null });
+    getNotifications.mockResolvedValue({ data: [NOTICE], error: null });
     getHome.mockResolvedValue({
       data: homeFixture({ actions: [installmentAction()] }),
       error: null,

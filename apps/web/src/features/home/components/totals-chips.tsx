@@ -1,16 +1,9 @@
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  type Icon,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { type Icon, WarningCircle } from "@phosphor-icons/react";
 import { type ReactNode, useRef } from "react";
 import { Money } from "@/components/ui/money";
 import { useScrollsSideways } from "@/hooks/use-scrolls-sideways";
-import { pluralForm } from "@/lib/plural";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
-import { getLocale } from "@/paraglide/runtime.js";
 
 const CHIP =
   "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13.5px]";
@@ -72,36 +65,21 @@ function MoneyChip({
 }
 
 /**
- * The home's totals as filled chips (mockup 13): what needs you (cards, not
- * installments), what is overdue (owner's decision 8, by direction and never
- * summed, with an icon so the status is not color alone) and what falls due
- * within 30 days, looking ahead only.
+ * The overdue chips (owner's decision 8, by direction and never summed, with
+ * an icon so the status is not color alone). A chip is there only when it
+ * says more than a card (overdueChips); the rest of the totals went to the
+ * subtitle and to the title of "Próximos 30 dias" (DIRECAO › Home enxuta).
  */
 export function TotalsChips({
   overdueToPayCents,
   overdueToReceiveCents,
-  pendingCount,
-  toPayCents,
-  toReceiveCents,
 }: {
-  overdueToPayCents: number;
-  overdueToReceiveCents: number;
-  pendingCount: number;
-  toPayCents: number;
-  toReceiveCents: number;
+  overdueToPayCents: number | null;
+  overdueToReceiveCents: number | null;
 }) {
   const stripRef = useRef<HTMLUListElement>(null);
   const chips: ReactNode[] = [];
-  if (pendingCount > 0) {
-    const one = pluralForm(pendingCount, getLocale()) === "one";
-    chips.push(
-      <li className={cn(CHIP, "bg-highlight text-on-highlight")} key="pending">
-        <span className="font-semibold tabular-nums">{pendingCount}</span>{" "}
-        {one ? m.home_chip_pending_one() : m.home_chip_pending_other()}
-      </li>
-    );
-  }
-  if (overdueToPayCents > 0) {
+  if (overdueToPayCents !== null) {
     chips.push(
       <MoneyChip
         cents={overdueToPayCents}
@@ -112,7 +90,7 @@ export function TotalsChips({
       />
     );
   }
-  if (overdueToReceiveCents > 0) {
+  if (overdueToReceiveCents !== null) {
     chips.push(
       <MoneyChip
         cents={overdueToReceiveCents}
@@ -120,28 +98,6 @@ export function TotalsChips({
         key="overdue-receive"
         label={m.home_chip_overdue_receive()}
         tone="danger"
-      />
-    );
-  }
-  if (toPayCents > 0) {
-    chips.push(
-      <MoneyChip
-        cents={toPayCents}
-        icon={ArrowUpRight}
-        key="to-pay"
-        label={m.home_chip_to_pay()}
-        tone="plain"
-      />
-    );
-  }
-  if (toReceiveCents > 0) {
-    chips.push(
-      <MoneyChip
-        cents={toReceiveCents}
-        icon={ArrowDownLeft}
-        key="to-receive"
-        label={m.home_chip_to_receive()}
-        tone="plain"
       />
     );
   }

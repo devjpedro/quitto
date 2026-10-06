@@ -7,7 +7,7 @@ import {
 } from "../fixtures";
 
 const WEB = "http://localhost:3001";
-const SEE_ALL = /^(Ver todas|See all) \(\d+\)$/;
+const SEE_ALL = /^(Ver todas|See all)$/;
 /** Desktop widths where a card's content crosses a pair's limit: 182 px at 1024 up to 336 at 1920. */
 const DESKTOP_WIDTHS = [1024, 1280, 1512, 1536, 1920];
 
@@ -74,7 +74,10 @@ async function expectTidyCards(page: Page, label: string): Promise<void> {
 
 /** Opens the hidden cards past the desktop row, when there are any. */
 async function showEveryCard(page: Page): Promise<void> {
-  const seeAll = page.getByRole("button", { name: SEE_ALL });
+  // The desktop's button (its wrapper is "hidden … lg:flex"): the phone's, under the carousel, has the same name.
+  const seeAll = page
+    .locator(".hidden.lg\\:flex")
+    .getByRole("button", { name: SEE_ALL });
   if (await seeAll.isVisible()) {
     await seeAll.click();
   }

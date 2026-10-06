@@ -121,7 +121,6 @@ export function ActionButton({
           aria-label={label}
           onClick={guard}
           params={{ id: action.contractId }}
-          search={{ status: "overdue" }}
           to="/contracts/$id"
         >
           <ListBullets aria-hidden="true" className="md:hidden" size={18} />

@@ -60,7 +60,7 @@ describe("describeAction: cartão simples", () => {
       amountCents: 125_000,
       person: { name: "Maria Souza", text: "para Maria Souza" },
       terms: null,
-      legend: { done: "6 de 12 pagas", remaining: "falta R$ 7.500,00" },
+      legend: { done: "6 pagas", remaining: "falta R$ 7.500,00" },
     });
   });
 
@@ -79,7 +79,7 @@ describe("describeAction: cartão simples", () => {
       tone: "danger",
       tag: "Atrasada · há 4 dias",
       person: { name: "Carlos Lima", text: "Carlos Lima te deve" },
-      legend: { done: "6 de 12 recebidas" },
+      legend: { done: "6 recebidas" },
     });
   });
 
@@ -159,7 +159,7 @@ describe("describeAction: cartão simples", () => {
       tag: "Do first · tomorrow",
       sequence: nb("installment~7~of~12"),
       person: { text: "to Maria Souza" },
-      legend: { done: "6 of 12 paid" },
+      legend: { done: "6 paid" },
     });
     expect(
       describeAction(inviteAction(), { ...ctx, locale: "en-US" }).person
@@ -179,7 +179,7 @@ describe("describeAction: grupo de atrasadas", () => {
         name: "Marina Pires",
         text: "Marina Pires te deve · desde 30/08",
       },
-      legend: { done: "2 de 12 recebidas", remaining: "falta R$ 3.500,00" },
+      legend: { done: "2 recebidas", remaining: "falta R$ 3.500,00" },
     });
     expect(describeAction(marinaGroup(), { ...ctx, first: true }).tag).toBe(
       "Faça primeiro · 2 atrasadas"
@@ -245,7 +245,7 @@ describe("describeAction: grupo de atrasadas", () => {
       amountCents: 250_000,
       person: { name: "Maria Souza", text: "para Maria Souza · desde 01/09" },
       terms: null,
-      legend: { done: "4 de 12 pagas", remaining: "falta R$ 10.000,00" },
+      legend: { done: "4 pagas", remaining: "falta R$ 10.000,00" },
     });
   });
 
@@ -275,7 +275,7 @@ describe("describeAction: grupo de atrasadas", () => {
       tag: "2 overdue · since 08/30",
       sequence: nb("installments~3 and 4~of~12"),
       person: { text: "Marina Pires owes you · since 08/30" },
-      legend: { done: "2 of 12 received", remaining: "R$3,500.00 left" },
+      legend: { done: "2 received", remaining: "R$3,500.00 left" },
     });
     expect(
       describeAction(marinaGroup(), { ...ctx, first: true, locale: "en-US" })
@@ -362,14 +362,23 @@ describe("actionButtons", () => {
     ).toEqual(["send_proof"]);
   });
 
-  it("receber: WhatsApp, e Marcar como recebida só quando a API deixa", () => {
-    expect(actionButtons(installmentAction({ direction: "receive" }))).toEqual([
-      "whatsapp",
-      "mark_received",
-    ]);
+  it("receber: WhatsApp, e Marcar como recebida quando a API diz que o aprovador pode (canMarkReceived)", () => {
     expect(
       actionButtons(
-        installmentAction({ direction: "receive", canMarkPaid: false })
+        installmentAction({
+          direction: "receive",
+          canMarkPaid: false,
+          canMarkReceived: true,
+        })
+      )
+    ).toEqual(["whatsapp", "mark_received"]);
+    expect(
+      actionButtons(
+        installmentAction({
+          direction: "receive",
+          canMarkPaid: true,
+          canMarkReceived: false,
+        })
       )
     ).toEqual(["whatsapp"]);
   });

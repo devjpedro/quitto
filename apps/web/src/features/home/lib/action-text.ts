@@ -127,16 +127,15 @@ export function personLine(
   };
 }
 
-/** "4 de 12 pagas" (or "recebidas") and "falta R$ 14.400,00": the whole contract, under its bar. */
+/** "4 pagas" (or "recebidas") and "falta R$ 14.400,00": the whole contract, under its bar. */
 export function legendOf(action: InstallmentAction, locale: Locale) {
   const options = { locale };
   const paid = action.contract.paidCount;
-  const total = action.installmentsCount;
   return {
     done:
       action.direction === "pay"
-        ? m.home_progress_paid({ paid, total }, options)
-        : m.home_progress_received({ paid, total }, options),
+        ? m.home_progress_paid({ paid }, options)
+        : m.home_progress_received({ paid }, options),
     remaining: m.home_progress_remaining(
       { amount: formatMoney(action.contract.remainingCents, locale) },
       options

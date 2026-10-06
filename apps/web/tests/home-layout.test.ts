@@ -27,7 +27,6 @@ describe("homeLayout", () => {
       heroGuide: false,
       compactGuide: false,
       empty: false,
-      showChips: true,
     });
     expect(homeSubtitle(home, layout, "pt-BR")).toBe(
       "Nada pede sua atenção agora."
@@ -101,10 +100,10 @@ describe("homeLayout", () => {
     const home = homeFixture({
       onboarding: { ...notStarted, dismissedAt: "2026-10-02T10:00:00.000Z" },
     });
-    expect(homeLayout(home)).toMatchObject({ empty: true, showChips: false });
+    expect(homeLayout(home)).toMatchObject({ empty: true });
   });
 
-  it("só um convite, sem contrato: não é o vazio nem o Nada pendente, e os chips aparecem", () => {
+  it("só um convite, sem contrato: não é o vazio nem o Nada pendente, e o subtítulo conta o convite", () => {
     const dismissed = {
       ...notStarted,
       dismissedAt: "2026-10-02T10:00:00.000Z",
@@ -115,7 +114,6 @@ describe("homeLayout", () => {
         empty: false,
         allClear: false,
         heroGuide: false,
-        showChips: true,
         compactGuide: onboarding.dismissedAt === null,
       });
       expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
@@ -172,21 +170,17 @@ describe("homeLayout: poucas ações", () => {
   });
 });
 
-describe("fewLowerColumns: a parte de baixo com poucas ações", () => {
+describe("fewLowerColumns: a parte de baixo com poucas ações (os marcos subiram)", () => {
   it.each([
-    // [milestones, notifications, guide] → [guideRight, left, right]
-    [true, true, true, false, true, true],
-    [true, true, false, false, true, true],
-    [true, false, true, false, true, true],
-    [true, false, false, false, false, true],
-    [false, true, true, true, true, true],
-    [false, true, false, false, true, false],
-    [false, false, true, false, true, false],
-    [false, false, false, false, false, false],
+    // [notifications, guide] → [guideRight, left, right]
+    [true, true, true, true, true],
+    [true, false, false, true, false],
+    [false, true, false, true, false],
+    [false, false, false, false, false],
   ])(
-    "marcos %s, notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
-    (milestones, notifications, guide, guideRight, left, right) => {
-      expect(fewLowerColumns({ guide, milestones, notifications })).toEqual({
+    "notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
+    (notifications, guide, guideRight, left, right) => {
+      expect(fewLowerColumns({ guide, notifications })).toEqual({
         guideRight,
         left,
         right,

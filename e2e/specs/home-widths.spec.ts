@@ -38,7 +38,7 @@ test("muitas ações: carrossel com 1 de N no celular e Ver todas no desktop", a
     await expectNoPageScrollX(page);
   } else {
     await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeHidden();
-    await page.getByRole("button", { name: "Ver todas (5)" }).click();
+    await page.getByRole("button", { name: "Ver todas", exact: true }).click();
     await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeVisible();
     await expect(card(page, "Muitas E2E 5 · parcela 1 de 1")).toBeVisible();
   }
@@ -111,7 +111,7 @@ for (const { width, perRow } of [
         testInfo.project.name === "mobile",
         "o projeto mobile tem viewport própria"
       );
-      await seedWide(page);
+      await seedWide(page, { withNotice: true });
       // Structure B: the sidebar on the canvas at the left edge, the panel up to 12 px from the right edge.
       const sidebar = await box(page.getByRole("complementary"));
       expect(sidebar.x).toBe(0);
@@ -130,7 +130,9 @@ for (const { width, perRow } of [
       );
       expect(new Set(tops).size).toBe(1);
       await expect(
-        page.getByRole("button", { name: "Ver todas (6)" })
+        page
+          .getByRole("button", { name: "Ver todas", exact: true })
+          .filter({ visible: true })
       ).toBeVisible();
       // The side column exists from 1440.
       await expect(
@@ -186,7 +188,7 @@ test.describe("Notificações recentes só a partir de 1440 px", () => {
         calls.push(req.url());
       }
     });
-    await seedWide(page);
+    await seedWide(page, { withNotice: true });
     const recent = page.getByRole("region", { name: "Notificações recentes" });
     await expect(recent).toBeHidden();
     // Below lateral nothing is fetched for a block that is not on screen, not

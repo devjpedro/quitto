@@ -23,7 +23,7 @@ describe("HomeSkeleton", () => {
     const [list, side] = Array.from(lower?.children ?? []);
     expect(list).toHaveClass(...classes(LOWER_COLUMN));
     // From wide each side block takes a column of its own, as in the content.
-    expect(side).toHaveClass(...classes(LOWER_COLUMN), "wide:contents");
+    expect(side).toHaveClass(...classes(LOWER_COLUMN));
     // "Próximos 30 dias" at any width: its section title and one filled block.
     expect(list?.firstElementChild?.children).toHaveLength(2);
     expect(list?.firstElementChild?.lastElementChild).toHaveClass(

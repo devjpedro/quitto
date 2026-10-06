@@ -1,5 +1,4 @@
 import { type Locale, NOTIFICATION_TYPE } from "@quitto/shared";
-import type { InstallmentFilter } from "@/lib/installments-filter";
 import { formatRelativeTime } from "@/lib/locale-format";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { m } from "@/paraglide/messages.js";
@@ -80,28 +79,15 @@ const GROUP_TITLE: Record<string, GroupMessage> = {
   [NOTIFICATION_TYPE.inviteDeclined]: m.notification_group_invite_declined,
 };
 
-/** The contract filter a grouped line opens on: the list already cut to what the line counts. */
-const GROUP_FILTER: Partial<Record<string, InstallmentFilter>> = {
-  [NOTIFICATION_TYPE.installmentOverdue]: "overdue",
-  [NOTIFICATION_TYPE.installmentOverdueReceivable]: "overdue",
-  [NOTIFICATION_TYPE.installmentPaid]: "paid",
-  [NOTIFICATION_TYPE.paymentConfirmed]: "paid",
-  [NOTIFICATION_TYPE.installmentDueSoon]: "due",
-  [NOTIFICATION_TYPE.installmentDueSoonReceivable]: "due",
-};
-
 /**
- * Where a line leads: a group opens its contract filtered by what it counts
- * ("Atrasadas", "Pagas", "A pagar"), or as it is when no filter cuts it
- * (proofs, disputes, invites); one notice opens its installment.
+ * Where a line leads: a group opens its contract as it is (the contract's
+ * list says the rest); one notice opens its installment.
  */
 export function notificationTarget(item: NotificationItem): {
   installment?: string;
-  status?: InstallmentFilter;
 } {
   if (item.count > 1) {
-    const status = GROUP_FILTER[item.type];
-    return status ? { status } : {};
+    return {};
   }
   return item.installmentId ? { installment: item.installmentId } : {};
 }

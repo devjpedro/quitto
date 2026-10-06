@@ -3,16 +3,19 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ErrorBoundary } from "react-error-boundary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { HomeAction } from "@/features/home/types";
 import { NotificationsSkeleton } from "@/features/notifications/components/notifications-list";
 import { RecentNotifications } from "@/features/notifications/components/recent-notifications";
 import { NotificationsPanelContext } from "@/features/notifications/hooks/use-notifications-panel";
 import type { NotificationItem } from "@/features/notifications/types";
 import { queryKeys } from "@/lib/query-keys";
+import { installmentAction } from "./home-fixtures";
 import { notificationItem } from "./notification-fixtures";
 import { renderWithProviders } from "./test-utils";
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const CONFIRMED_ROW = /Pagamento confirmado/;
+const PROOF_ROW = /Novo comprovante/;
 const OVERDUE_GROUP_ROW = /24 parcelas a receber estão vencidas/;
 
 const { getList, postRead, navigate, hydration } = vi.hoisted(() => ({
@@ -73,7 +76,10 @@ function setScreenWidth(width: number) {
 
 const startWidth = window.innerWidth;
 
-function renderRecent() {
+/** No cards on screen: nothing in the list is already said by one. */
+const NO_CARDS: HomeAction[] = [];
+
+function renderRecent(actions: HomeAction[] = NO_CARDS) {
   const showAll = vi.fn();
   const client = new QueryClient({
     defaultOptions: {
@@ -92,7 +98,7 @@ function renderRecent() {
     <NotificationsPanelContext value={showAll}>
       <ErrorBoundary fallback={<p>home boundary</p>}>
         <p>rest of the home</p>
-        <RecentNotifications />
+        <RecentNotifications actions={actions} />
       </ErrorBoundary>
     </NotificationsPanelContext>,
     { client }
@@ -151,17 +157,49 @@ describe("RecentNotifications", () => {
     });
   });
 
-  it("sem aviso: o vazio compacto do painel, com o sino num quadrado pequeno da marca", async () => {
+  it("sem aviso que não tenha cartão: o bloco some (o painel do sino guarda o vazio)", async () => {
     getList.mockResolvedValue({ data: [], error: null });
     renderRecent();
-    const heading = await within(region()).findByRole("heading", {
-      name: "Nada novo por aqui",
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("region", { name: "Notificações recentes" })
+      ).toBeNull()
+    );
+    expect(screen.queryByText("Nada novo por aqui")).toBeNull();
+    expect(screen.getByText("rest of the home")).toBeVisible();
+  });
+
+  it("tira o que já é cartão e então corta em 4", async () => {
+    // i1 is the card "Aguarda você": its proof notice is the card, not news.
+    const proof = notificationItem({
+      id: "p1",
+      groupKey: "p1",
+      type: "proof_submitted",
+      contractId: "c1",
+      installmentId: "i1",
+      contractTitle: "Aluguel do apê",
+      createdAt: new Date(Date.now() - 1 * 3_600_000).toISOString(),
     });
-    expect(heading).toBeVisible();
-    // The same empty as the panel (mockup 10): the bell on a small (32 px) brand tile.
+    getList.mockResolvedValue({
+      data: [proof, ...["n1", "n2", "n3", "n4", "n5"].map(note)],
+      error: null,
+    });
+    renderRecent([
+      installmentAction({
+        id: "installment:i1",
+        kind: "review",
+        installmentId: "i1",
+        contractId: "c1",
+      }),
+    ]);
+    await waitFor(() =>
+      expect(
+        within(region()).getAllByRole("button", { name: CONFIRMED_ROW })
+      ).toHaveLength(4)
+    );
     expect(
-      heading.parentElement?.querySelector("[aria-hidden='true']")
-    ).toHaveClass("size-8", "rounded-control", "bg-brand-subtle", "text-brand");
+      within(region()).queryByRole("button", { name: PROOF_ROW })
+    ).toBeNull();
   });
 
   it("carregando: o esqueleto tem as 4 linhas do bloco, no mesmo fundo", () => {

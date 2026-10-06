@@ -136,6 +136,8 @@ export function actionButtons(action: HomeAction): ActionButtonKind[] {
       if (action.direction === "pay") {
         return payButtons(action);
       }
-      return action.canMarkPaid ? ["whatsapp", "mark_received"] : ["whatsapp"];
+      return action.canMarkReceived
+        ? ["whatsapp", "mark_received"]
+        : ["whatsapp"];
   }
 }

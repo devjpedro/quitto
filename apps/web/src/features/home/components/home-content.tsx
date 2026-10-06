@@ -8,13 +8,15 @@ import { homeQueryOptions } from "../api";
 import { useFocusAfterLastAction } from "../hooks/use-focus-after-last-action";
 import { useSeeAll } from "../hooks/use-see-all";
 import { homeLayout, homeSubtitle } from "../lib/home-layout";
+import { overdueChips } from "../lib/home-totals";
 import { momentMilestone } from "../lib/moment";
 import { ActionsRow } from "./actions-row";
 import { AllClear } from "./all-clear";
-import { ChipsRow } from "./chips-row";
 import { HomeEmpty } from "./home-empty";
 import { HomeLower } from "./home-lower";
+import { Milestones } from "./milestones";
 import { OnboardingGuide } from "./onboarding-guide";
+import { SeeAllButton } from "./see-all-button";
 import { TotalsChips } from "./totals-chips";
 import { UpcomingList } from "./upcoming-list";
 
@@ -32,6 +34,8 @@ export function HomeContent() {
   const { expanded, toggle } = useSeeAll(home.actions.length);
   const summaryRef = useFocusAfterLastAction(home.actions.length);
   const layout = homeLayout(home);
+  const date = capitalize(formatDate(home.today, locale, "long"));
+  const chips = overdueChips(home);
   const few = layout.fewActions ? (home.actions.length as 1 | 2) : null;
   const upcoming = layout.hasContract ? (
     <UpcomingList
@@ -39,6 +43,14 @@ export function HomeContent() {
         (action) => action.kind !== "invite"
       )}
       upcoming={home.upcoming}
+    />
+  ) : null;
+  const strip = layout.hasContract ? (
+    // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
+    <Milestones
+      milestones={home.milestones}
+      momentId={momentMilestone(home)?.id ?? null}
+      today={home.today}
     />
   ) : null;
   const guide = layout.compactGuide ? (
@@ -53,21 +65,28 @@ export function HomeContent() {
   ) : null;
   return (
     <div className="flex flex-col gap-4 md:gap-5">
-      <p
-        // Takes the focus of the last action (useFocusAfterLastAction). The
-        // ring keeps 4 px off the text, in the page color; the sticky top bar
-        // (~56 px) would cover it on a phone.
-        className="-mt-2 scroll-mt-16 rounded-control text-ink-muted text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:-mt-3 md:scroll-mt-4 md:text-[14px] md:focus-visible:ring-offset-surface"
-        ref={summaryRef}
-        tabIndex={-1}
-      >
-        <span className="max-md:hidden">
-          {m.home_date_lead({
-            date: capitalize(formatDate(home.today, locale, "long")),
-          })}{" "}
-        </span>
-        {homeSubtitle(home, layout, locale)}
-      </p>
+      <div className="-mt-2 flex items-baseline justify-between gap-3 md:-mt-3">
+        <p
+          // Takes the focus of the last action (useFocusAfterLastAction). The
+          // ring keeps 4 px off the text, in the page color; the sticky top bar
+          // (~56 px) would cover it on a phone.
+          className="scroll-mt-16 rounded-control text-ink-muted text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:scroll-mt-4 md:text-[14px] md:focus-visible:ring-offset-surface"
+          ref={summaryRef}
+          tabIndex={-1}
+        >
+          {/* On a phone the subtitle is the date: the carousel's "1 de N" says the count. */}
+          <span className="md:hidden">{date}</span>
+          <span className="max-md:hidden">
+            {m.home_date_lead({ date })} {homeSubtitle(home, layout, locale)}
+          </span>
+        </p>
+        <SeeAllButton
+          count={home.actions.length}
+          expanded={expanded}
+          listId={listId}
+          onToggle={toggle}
+        />
+      </div>
       {layout.heroGuide ? (
         <OnboardingGuide
           onboarding={home.onboarding}
@@ -75,21 +94,10 @@ export function HomeContent() {
           view={layout.guide}
         />
       ) : null}
-      {layout.showChips ? (
-        <ChipsRow
-          chips={
-            <TotalsChips
-              overdueToPayCents={home.overdue.toPayCents}
-              overdueToReceiveCents={home.overdue.toReceiveCents}
-              pendingCount={home.actions.length}
-              toPayCents={home.upcoming.toPayCents}
-              toReceiveCents={home.upcoming.toReceiveCents}
-            />
-          }
-          count={home.actions.length}
-          expanded={expanded}
-          listId={listId}
-          onToggle={toggle}
+      {chips.toPayCents !== null || chips.toReceiveCents !== null ? (
+        <TotalsChips
+          overdueToPayCents={chips.toPayCents}
+          overdueToReceiveCents={chips.toReceiveCents}
         />
       ) : null}
       {home.actions.length > 0 ? (
@@ -100,7 +108,17 @@ export function HomeContent() {
           listId={listId}
           onToggle={toggle}
           today={home.today}
-          upcoming={upcoming}
+          upcoming={
+            // With few cards the milestones go up with the list, under it.
+            few ? (
+              <div className="flex flex-col gap-7 md:gap-9">
+                {upcoming}
+                {strip}
+              </div>
+            ) : (
+              upcoming
+            )
+          }
         />
       ) : null}
       {layout.allClear ? (
@@ -113,6 +131,7 @@ export function HomeContent() {
       {layout.empty ? <HomeEmpty /> : null}
       {layout.hasContract || layout.compactGuide ? (
         <HomeLower
+          actions={home.actions}
           few={few !== null}
           guide={guide}
           hasContract={layout.hasContract}

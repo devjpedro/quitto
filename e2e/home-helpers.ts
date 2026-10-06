@@ -1,12 +1,15 @@
 import {
   type APIRequestContext,
+  type Browser,
   expect,
   type Locator,
   type Page,
 } from "@playwright/test";
 import {
   isoDaysFromToday,
+  newUser,
   seedContract,
+  seedInvite,
   signup,
   waitForHydrated,
 } from "./fixtures";
@@ -50,14 +53,21 @@ export async function expectNoPageScrollX(page: Page): Promise<void> {
  * The chips strip once the client has measured it: it takes a tab stop only
  * while it scrolls (useScrollsSideways), which the server HTML cannot know,
  * and the home streams in after the root hydrates. axe waits for this, or on
- * a phone it can see a strip that scrolls with no tab stop yet.
+ * a phone it can see a strip that scrolls with no tab stop yet. Returns at
+ * once when the home has no chip row (it shows only with 2+ overdue cards in
+ * a direction).
  */
 export async function chipsMeasured(page: Page): Promise<void> {
+  const strip = page.getByRole("list", { name: "Resumo" });
+  // The chip row only exists with 2+ overdue cards in a direction: without it there is nothing to measure.
+  if ((await strip.count()) === 0) {
+    return;
+  }
   await expect
     .poll(() =>
-      page
-        .getByRole("list", { name: "Resumo" })
-        .evaluate((el) => el.scrollWidth <= el.clientWidth || el.tabIndex === 0)
+      strip.evaluate(
+        (el) => el.scrollWidth <= el.clientWidth || el.tabIndex === 0
+      )
     )
     .toBe(true);
 }
@@ -110,23 +120,45 @@ export async function seedOneEach(
   return ids;
 }
 
+/** A second account accepts an invite to the contract: the owner gets an "invite_accepted" notice. */
+async function acceptInviteAsSeller(page: Page, contractId: string) {
+  const browser = page.context().browser();
+  expect(browser).not.toBeNull();
+  const seller = await newUser(browser as Browser);
+  const { token } = await seedInvite(page.request, contractId, {
+    displayName: "Vendedor E2E",
+    role: "seller",
+    email: seller.email,
+  });
+  expect(
+    (await seller.page.request.post(`/api/invites/${token}/accept`)).ok()
+  ).toBeTruthy();
+  await seller.close();
+}
+
 // Tela larga (mockup 12, estrutura B; Desvio 21). Six overdue installments in
-// six contracts: six cards, more than any row holds, so "Ver todas (6)" stays
+// six contracts: six cards, more than any row holds, so "Ver todas" stays
 // at every width.
 const WIDE_DAYS = [-50, -40, -30, -20, -10, -5];
 
 /**
  * A new account with six overdue installments in six contracts (six cards),
- * on the hydrated home. The server HTML is the same at every width, so no
+ * on the hydrated home. "Notificações recentes" keeps only what no card says,
+ * so it exists here only with `withNotice`: a second account accepts the first
+ * contract's invite, which gives the owner an "invite_accepted" (never a card). The server HTML is the same at every width, so no
  * hydration mismatch either: checked here, and the returned list keeps
  * collecting for later reloads.
  */
 export async function seedWide(
-  page: Page
+  page: Page,
+  { withNotice = false }: { withNotice?: boolean } = {}
 ): Promise<{ hydrationErrors: string[]; id: string }> {
   const hydrationErrors = collectHydrationErrors(page);
   await signup(page);
   const [id] = await seedOneEach(page.request, "Larga E2E", WIDE_DAYS);
+  if (withNotice) {
+    await acceptInviteAsSeller(page, id);
+  }
   await page.goto("/");
   await waitForHydrated(page);
   await expect(card(page, "Larga E2E 1 · parcela 1 de 1")).toBeVisible();

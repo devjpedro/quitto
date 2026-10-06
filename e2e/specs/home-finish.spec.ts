@@ -27,8 +27,7 @@ import {
 
 // Top-level regex literals (lint/performance/useTopLevelRegex), without backslashes.
 const WHATSAPP = /Cobrar no WhatsApp/;
-const STATUS_OVERDUE = /status=overdue/;
-const STATUS_PAID = /status=paid/;
+const STATUS_IN_URL = /status=/;
 const PAID_GROUP = /2 parcelas marcadas como pagas/;
 const INVITE_ACCEPTED = /Convite aceito/;
 const WA = "https://wa.me/?text=";
@@ -113,7 +112,7 @@ function seedCloseToPayoff(page: Page, browser: Browser) {
 /**
  * The milestone of the moment is "Mais perto de quitar": desktop's lime card
  * (the ring and the % on the label's line), or the phone's first Marcos cell
- * (the 44 px ring, no % beside it). Returns that ring.
+ * (the 44 px ring, the % on the label). Returns that ring.
  */
 async function expectCloseToPayoff(
   page: Page,
@@ -124,8 +123,10 @@ async function expectCloseToPayoff(
       .getByRole("region", { name: "Marcos" })
       .getByRole("listitem")
       .first();
-    await expect(cell).toContainText("Mais perto de quitar");
-    await expect(cell).toContainText("Moto E2E · 2/3");
+    // The phone's variant: the % on the label, only the name below (no fraction).
+    await expect(cell).toContainText("Mais perto de quitar · 67%");
+    await expect(cell).toContainText("Moto E2E");
+    await expect(cell).not.toContainText("2/3");
     const ring = cell.locator(RING_SVG);
     await expect(ring).toHaveAttribute("width", "44");
     return ring;
@@ -151,9 +152,9 @@ async function unreadCount(page: Page): Promise<number> {
   return ((await response.json()) as { unreadCount: number }).unreadCount;
 }
 
-test("atrasadas do mesmo contrato são um cartão; Ver parcelas abre o contrato filtrado", async ({
+test("atrasadas do mesmo contrato são um cartão; Ver parcelas abre o contrato", async ({
   page,
-}) => {
+}, testInfo) => {
   await signup(page);
   const { id } = await seedOverdueGroup(page, "Terreno E2E", "seller");
   await home(page);
@@ -161,18 +162,15 @@ test("atrasadas do mesmo contrato são um cartão; Ver parcelas abre o contrato 
   await expect(group).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(1);
   await expect(page.getByText("Faça primeiro · 3 atrasadas")).toBeVisible();
-  await expect(page.getByRole("list", { name: "Resumo" })).toContainText(
-    "1 pendência"
-  );
-  await expect(page.getByRole("list", { name: "Resumo" })).toContainText(
-    "R$ 600,00 a receber em atraso"
-  );
+  // One card only: no chip row (its value is already in the card). The count
+  // is the desktop's subtitle; on a phone the subtitle is the date.
+  await expect(page.getByRole("list", { name: "Resumo" })).toHaveCount(0);
+  if (testInfo.project.name !== "mobile") {
+    await expect(page.getByText("1 coisa pede sua atenção")).toBeVisible();
+  }
   await group.getByRole("link", { name: "Ver parcelas" }).click();
-  await expect(page).toHaveURL(STATUS_OVERDUE);
-  expect(page.url()).toContain(`/contracts/${id}`);
-  await expect(
-    page.getByRole("button", { name: "Atrasadas (3)" })
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(new RegExp(`/contracts/${id}$`));
+  expect(page.url()).not.toMatch(STATUS_IN_URL);
 });
 
 test("Cobrar no WhatsApp de um grupo cita todas as parcelas e o total", async ({
@@ -204,7 +202,7 @@ test("grupo que você paga: Pagar a mais antiga abre a gaveta na mais antiga", a
   await expect(group.getByRole("button", { name: "Já paguei" })).toHaveCount(0);
   await expect(
     group.getByRole("link", { name: "Ver parcelas" })
-  ).toHaveAttribute("href", `/contracts/${id}?status=overdue`);
+  ).toHaveAttribute("href", `/contracts/${id}`);
   await group.getByRole("link", { name: "Pagar a mais antiga" }).click();
   await expect(page).toHaveURL(new RegExp(`installment=${oldest.id}`));
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -229,13 +227,9 @@ test("avisos iguais seguidos são uma linha; ler a linha lê o grupo", async ({
     panel.getByRole("button", { name: INVITE_ACCEPTED })
   ).toContainText("Nova");
   await row.click();
-  // A group of paid notices opens its contract on "Pagas".
-  await expect(page).toHaveURL(new RegExp(`/contracts/${id}`));
-  await expect(page).toHaveURL(STATUS_PAID);
-  await expect(page.getByRole("button", { name: "Pagas (2)" })).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
+  // A group of paid notices opens its contract as it is: no ?status= (decision 13).
+  await expect(page).toHaveURL(new RegExp(`/contracts/${id}$`));
+  expect(page.url()).not.toMatch(STATUS_IN_URL);
   // Reading the line read its two notices, and only them.
   await expect.poll(() => unreadCount(page)).toBe(before - 2);
   const again = await openNotifications(page);
@@ -245,23 +239,8 @@ test("avisos iguais seguidos são uma linha; ler a linha lê o grupo", async ({
   await expect(
     again.getByRole("button", { name: INVITE_ACCEPTED })
   ).toContainText("Nova");
-  // With the contract already open on "Todas", the line still lands on
-  // "Pagas": the list follows ?status= with the page mounted.
   await page.keyboard.press("Escape");
   await expect(again).toBeHidden();
-  await page.goto(`/contracts/${id}`);
-  await waitForHydrated(page);
-  await expect(page.getByRole("button", { name: "Todas (2)" })).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
-  const fromContract = await openNotifications(page);
-  await fromContract.getByRole("button", { name: PAID_GROUP }).click();
-  await expect(page).toHaveURL(STATUS_PAID);
-  await expect(page.getByRole("button", { name: "Pagas (2)" })).toHaveAttribute(
-    "aria-pressed",
-    "true"
-  );
 });
 
 test.describe("tela larga", () => {
@@ -397,38 +376,28 @@ test("celular: o cartão é branco sobre o fundo, e Ver parcelas vira um ícone 
   await expectNoPageScrollX(page);
 });
 
-test("celular: os chips numa linha só, que rola de lado; a página não rola", async ({
+test("celular: o chip de atraso aparece com 2 cartões a receber, numa linha; a página não rola", async ({
   page,
 }, testInfo) => {
-  // biome-ignore lint/suspicious/noSkippedTests: the chip strip scrolls only at the phone's width
+  // biome-ignore lint/suspicious/noSkippedTests: the chip strip is measured at the phone's width
   test.skip(testInfo.project.name !== "mobile", "só no celular");
   // The strip's tab stop is the client's (the server cannot measure): it must
   // not make the hydration diverge.
   const hydrationErrors = collectHydrationErrors(page);
   await signup(page);
-  // Five chips: pending, overdue to pay, overdue to receive, to pay and to receive in 30 days.
+  // Two overdue cards to receive (two contracts): the only case with a chip.
   await seedOverdueGroup(page, "Terreno E2E", "seller");
-  await seedOneEach(page.request, "Paga E2E", [-5, 12], "buyer");
-  await seedOneEach(page.request, "Recebe E2E", [15], "seller");
+  await seedOverdueGroup(page, "Notebook E2E", "seller");
   await home(page);
   const strip = page.getByRole("list", { name: "Resumo" });
   const chips = strip.getByRole("listitem");
-  await expect(chips).toHaveCount(5);
-  // One line (decision 23): every chip on the same row, the strip wider than its box.
-  const tops = await chips.evaluateAll((items) =>
-    items.map((item) => Math.round(item.getBoundingClientRect().top))
-  );
-  expect(new Set(tops).size).toBe(1);
+  await expect(chips).toHaveCount(1);
+  await expect(chips).toContainText("a receber em atraso");
+  // One line, and one chip does not scroll: no tab stop on the strip.
+  expect(await strip.getAttribute("tabindex")).toBeNull();
   expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
-    true
+    false
   );
-  // A strip that scrolls is a tab stop (useScrollsSideways), so axe passes.
-  await expect(strip).toHaveAttribute("tabindex", "0");
-  // The last chip scrolls fully into view, inside the strip's 16 px end
-  // gutter (its padding scrolls with it).
-  await chips.last().scrollIntoViewIfNeeded();
-  const last = await box(chips.last());
-  expect(last.x + last.width).toBeLessThanOrEqual(390 - 16);
   await expectNoPageScrollX(page);
   await scan(page);
   expect(hydrationErrors).toEqual([]);
@@ -495,13 +464,15 @@ test("marco do momento: 2 de 3 pagas é Mais perto de quitar, com o anel da logo
     "stroke-dasharray",
     "37.89 56.55"
   );
-  // The detail says what is left, and the next date (40 days ahead).
-  await expect(
-    (isMobile
-      ? page.getByRole("region", { name: "Marcos" })
-      : page.getByRole("complementary")
-    ).getByText("Falta 1 parcela, em", { exact: false })
-  ).toBeVisible();
+  // The sidebar's card says what is left, and the next date (40 days ahead);
+  // the phone's cell is short and does not.
+  if (!isMobile) {
+    await expect(
+      page
+        .getByRole("complementary")
+        .getByText("Falta 1 parcela, em", { exact: false })
+    ).toBeVisible();
+  }
 });
 
 test("axe em claro e escuro com grupo, chips de atraso, marcos e notificações", async ({

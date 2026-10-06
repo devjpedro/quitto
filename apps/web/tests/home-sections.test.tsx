@@ -28,6 +28,9 @@ const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
 const PIX_ROW = /Cadastrar sua chave PIX/;
 const CONTRACT_ROW = /^Criar o primeiro contrato/;
+const RECEIVE_TOTAL = /R\$\s320,00 a receber/;
+const PAY_TOTAL = /R\$\s390,00 a pagar/;
+const YOU_RECEIVE = /você recebe/;
 const NINE_OF_TEN = /parcela 9 de 10/;
 
 vi.mock("@/lib/api", () => ({
@@ -55,47 +58,21 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 
 describe("seções do home", () => {
-  it("chips: pendências em limão e totais dos próximos 30 dias", () => {
-    renderWithProviders(
-      <TotalsChips
-        overdueToPayCents={0}
-        overdueToReceiveCents={0}
-        pendingCount={4}
-        toPayCents={215_000}
-        toReceiveCents={510_000}
-      />
-    );
-    const chips = within(screen.getByRole("list", { name: "Resumo" }));
-    expect(chips.getByText("pendências")).toBeVisible();
-    expect(chips.getByText("R$ 2.150,00")).toBeVisible();
-    expect(chips.getByText("R$ 5.100,00")).toBeVisible();
-  });
-
-  it("chips: uma pendência no singular, em limão preenchido; tudo zerado não mostra nada", () => {
+  it("chips: só o atraso de 2+ cartões no mesmo sentido; sem isso, nenhuma linha de chips", () => {
     const { container } = renderWithProviders(
-      <TotalsChips
-        overdueToPayCents={0}
-        overdueToReceiveCents={0}
-        pendingCount={0}
-        toPayCents={0}
-        toReceiveCents={0}
-      />
+      <TotalsChips overdueToPayCents={null} overdueToReceiveCents={null} />
     );
     expect(container).toBeEmptyDOMElement();
     renderWithProviders(
-      <TotalsChips
-        overdueToPayCents={0}
-        overdueToReceiveCents={0}
-        pendingCount={1}
-        toPayCents={0}
-        toReceiveCents={0}
-      />
+      <TotalsChips overdueToPayCents={null} overdueToReceiveCents={118_000} />
     );
     const chips = within(screen.getByRole("list", { name: "Resumo" }));
-    // Filled, not outlined (mockup 13): the pending chip is lime with no border.
-    expect(chips.getByRole("listitem")).toHaveClass("bg-highlight");
+    // Filled, not outlined, with an icon: the status is not color alone.
+    expect(chips.getByRole("listitem")).toHaveClass("bg-danger-subtle");
     expect(chips.getByRole("listitem")).not.toHaveClass("border");
-    expect(chips.getByText("pendência")).toBeVisible();
+    expect(chips.getByText("R$ 1.180,00")).toBeVisible();
+    expect(chips.getByText("a receber em atraso")).toBeVisible();
+    expect(chips.queryByText("pendências")).toBeNull();
   });
 
   it("próximos 30 dias: linhas com + recebe / − paga, comprovante enviado e o que sobrou", () => {
@@ -123,7 +100,10 @@ describe("seções do home", () => {
     expect(
       screen.getByRole("heading", { name: "Próximos 30 dias" })
     ).toBeVisible();
-    expect(screen.getByText("5 parcelas")).toBeVisible();
+    // The title adds up the rows of the list only, by direction, with the direction's icon.
+    expect(screen.getByText(RECEIVE_TOTAL)).toBeVisible();
+    expect(screen.getByText(PAY_TOTAL)).toBeVisible();
+    expect(screen.queryByText("5 parcelas")).toBeNull();
     expect(screen.getByRole("link", { name: ANA_ROW })).toHaveAttribute(
       "href",
       "/contracts/c2?installment=u1"
@@ -135,6 +115,8 @@ describe("seções do home", () => {
     const titleLine = screen.getByText("Comprovante enviado").parentElement;
     expect(titleLine).toHaveTextContent("Curso de inglês");
     expect(titleLine).not.toHaveTextContent("você paga");
+    // The side is the sign and the color: the meta keeps just the weekday (and the installment from md).
+    expect(screen.queryByText(YOU_RECEIVE)).toBeNull();
     expect(screen.getByText("+ 3 parcelas nos próximos 30 dias")).toBeVisible();
   });
 
@@ -226,13 +208,14 @@ describe("seções do home", () => {
     );
     expect(screen.getByText("12 de 12 parcelas quitadas")).toBeVisible();
     expect(screen.getByText("Celular da Ana · 9/10")).toBeVisible();
-    expect(screen.getByText("90%")).toBeVisible();
+    // No % on the strip's cells: it belongs to the milestone of the moment.
+    expect(screen.queryByText("90%")).toBeNull();
     expect(screen.getByText("Recebido em outubro")).toBeVisible();
     expect(screen.queryByText("Pago em outubro")).toBeNull();
     expect(screen.getByText("Você já pagou")).toBeVisible();
     expect(screen.getByText("R$ 41.900,00")).toBeVisible();
     expect(screen.getByText("de R$ 50.000,00")).toBeVisible();
-    expect(screen.getByText("84%")).toBeVisible();
+    expect(screen.queryByText("84%")).toBeNull();
     expect(screen.queryByText("Já recebeu")).toBeNull();
   });
 
@@ -325,7 +308,7 @@ describe("seções do home", () => {
     );
   });
 
-  it("marcos na coluna lateral (a partir de lateral): título visível, empilhados e de 2 em 2 com 400 px", () => {
+  it("marcos na coluna lateral (a partir de lateral): título visível e empilhados, nunca de 2 em 2", () => {
     renderWithProviders(
       <Milestones
         milestones={{
@@ -355,20 +338,18 @@ describe("seções do home", () => {
       "sr-only"
     );
     const strip = within(region).getByRole("list");
-    // One row from lg; stacked from lateral, two by two once the column has 400 px.
+    // One row from lg; stacked from lateral (never two by two: mockup 16).
     expect(strip).toHaveClass(
       "lg:grid-flow-col",
       "lateral:grid-flow-row",
-      "lateral:grid-cols-1",
-      "lateral:@min-[400px]:grid-cols-2"
+      "lateral:grid-cols-1"
     );
-    // Received, paid and settled: the odd last one takes the whole row, two by two.
+    expect(strip.className).not.toContain("@min-[400px]");
+    // Received, paid and settled: the odd last one takes the whole row below lateral.
     const items = within(region).getAllByRole("listitem");
     expect(items).toHaveLength(3);
-    expect(items[2]).toHaveClass(
-      "col-span-2",
-      "lateral:@min-[400px]:col-span-2"
-    );
+    expect(items[2]).toHaveClass("col-span-2", "lg:col-span-1");
+    expect(items[2]?.className).not.toContain("@min-[400px]");
     expect(items[0]).not.toHaveClass("col-span-2");
   });
 
@@ -395,7 +376,11 @@ describe("seções do home", () => {
       expect(cell).toHaveClass("bg-surface-card");
     }
     expect(screen.getByText("de R$ 13.700,00")).toBeVisible();
-    expect(screen.getByText("40%")).toBeVisible();
+    expect(screen.queryByText("40%")).toBeNull();
+    // The bar stays: it is the progress.
+    expect(
+      document.querySelectorAll("li [aria-hidden='true'].bg-track")
+    ).toHaveLength(2);
   });
 
   it("o marco do momento abre a faixa no celular em limão, com o anel", () => {
@@ -419,11 +404,11 @@ describe("seções do home", () => {
     );
     const [moment] = screen.getAllByRole("listitem");
     expect(moment).toHaveClass("bg-highlight", "md:hidden");
-    expect(moment).toHaveTextContent("Falta 1 parcela, em 13/10");
-    // A long detail wraps without leaving one word (the date) alone on the last line.
-    expect(screen.getByText("Falta 1 parcela, em 13/10")).toHaveClass(
-      "text-pretty"
-    );
+    // The phone's cell is short (variant "phone"): the label carries the %, the title is the name only.
+    expect(moment).toHaveTextContent("Mais perto de quitar · 90%");
+    expect(moment).toHaveTextContent("Celular da Ana");
+    expect(moment).not.toHaveTextContent("9/10");
+    expect(moment).not.toHaveTextContent("Falta 1 parcela");
     expect(container.querySelector("li svg")).toHaveAttribute("width", "44");
   });
 
@@ -751,7 +736,9 @@ describe("UpcomingList (mockup 13)", () => {
     expect(within(row).getByText("sábado, 10 de outubro")).toHaveClass(
       "sr-only"
     );
-    expect(row).toHaveTextContent("sáb. · você recebe");
+    // The side is the sign and the color, so the meta is just the weekday; the installment joins from md.
+    expect(row).toHaveTextContent("sáb.");
+    expect(row).not.toHaveTextContent("você recebe");
     expect(within(row).getByText(NINE_OF_TEN)).toHaveClass("max-md:hidden");
     expect(within(row).getByText("+ R$ 320,00")).toHaveClass("sr-only");
   });
@@ -777,13 +764,15 @@ describe("UpcomingList (mockup 13)", () => {
     );
     const [last, first] = screen.getAllByRole("link");
     expect(within(last as HTMLElement).getByText("última")).toBeVisible();
+    // A first/last tag already places the row: no "parcela N de M" beside it.
+    expect(last).not.toHaveTextContent("parcela 10 de 10");
     expect(within(first as HTMLElement).getByText("primeira")).toBeVisible();
     expect(within(first as HTMLElement).getByText("− R$ 320,00")).toHaveClass(
       "sr-only"
     );
   });
 
-  it("o título é o de seção: Bricolage em ink, com a contagem à direita", () => {
+  it("o título é o de seção: Bricolage em ink, com o total do sentido à direita", () => {
     renderWithProviders(
       <UpcomingList
         hasInstallmentActions={false}
@@ -793,7 +782,9 @@ describe("UpcomingList (mockup 13)", () => {
     expect(
       screen.getByRole("heading", { name: "Próximos 30 dias" })
     ).toHaveClass("font-display", "text-ink");
-    expect(screen.getByText("1 parcela")).toBeVisible();
+    expect(screen.getByText(RECEIVE_TOTAL)).toBeVisible();
+    // A direction with nothing in the list is left out.
+    expect(screen.queryByText(PAY_TOTAL)).toBeNull();
   });
 
   it("o anel e o hover da primeira e da última linha seguem o canto do bloco", () => {

@@ -12,16 +12,24 @@ import { queryKeys } from "@/lib/query-keys";
 import { makeQueryClient } from "../src/lib/query";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
-const { markPaid, accept, dismiss, getHome, toastError, hydration } =
-  vi.hoisted(() => ({
-    markPaid: vi.fn(),
-    accept: vi.fn(),
-    dismiss: vi.fn(),
-    getHome: vi.fn(),
-    toastError: vi.fn(),
-    // A client render outside hydration is hydrated, like the real hook says.
-    hydration: { done: true },
-  }));
+const {
+  markPaid,
+  markReceived,
+  accept,
+  dismiss,
+  getHome,
+  toastError,
+  hydration,
+} = vi.hoisted(() => ({
+  markPaid: vi.fn(),
+  markReceived: vi.fn(),
+  accept: vi.fn(),
+  dismiss: vi.fn(),
+  getHome: vi.fn(),
+  toastError: vi.fn(),
+  // A client render outside hydration is hydrated, like the real hook says.
+  hydration: { done: true },
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -36,6 +44,7 @@ vi.mock("@/lib/api", () => ({
       home: { get: () => getHome() },
       installments: () => ({
         "mark-paid": { post: () => markPaid() },
+        "mark-received": { post: () => markReceived() },
         confirm: { post: () => markPaid() },
       }),
       invites: () => ({
@@ -52,6 +61,7 @@ import {
   useAcceptInviteFromHome,
   useDismissOnboarding,
   useMarkPaidFromHome,
+  useMarkReceivedFromHome,
 } from "../src/features/home/api";
 import {
   useActiveContracts,
@@ -103,6 +113,7 @@ const homeIds = (client: QueryClient) =>
 
 beforeEach(() => {
   markPaid.mockReset();
+  markReceived.mockReset();
   accept.mockReset();
   dismiss.mockReset();
   getHome.mockReset();
@@ -157,6 +168,26 @@ describe("ações otimistas do home", () => {
     expect(client.getMutationCache().getAll()[0]?.meta?.successMessage).toBe(
       "Parcela marcada como paga"
     );
+  });
+
+  it("Marcar como recebida: chama o endpoint do aprovador (mark-received), não o mark-paid", async () => {
+    const action = installmentAction({
+      direction: "receive",
+      canMarkPaid: false,
+      canMarkReceived: true,
+    });
+    const client = makeClient();
+    client.setQueryData(queryKeys.home, homeFixture({ actions: [action] }));
+    markReceived.mockResolvedValue({ data: paidInstallment, error: null });
+    const { result } = renderHook(() => useMarkReceivedFromHome(), {
+      wrapper: wrapper(client),
+    });
+    await act(async () => {
+      await result.current.mutateAsync(action);
+    });
+    expect(markReceived).toHaveBeenCalledTimes(1);
+    expect(markPaid).not.toHaveBeenCalled();
+    expect(homeIds(client)).toEqual([]);
   });
 
   it("rollback devolve a ação quando a API recusa", async () => {

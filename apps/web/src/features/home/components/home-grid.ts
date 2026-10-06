@@ -18,13 +18,13 @@ export function lowerColumn(shows: boolean, className?: string): string {
 }
 
 /**
- * The lower part with a side column: 3fr/2fr from lateral; from wide 2fr for
- * the list and 1fr per side block (the side column turns `contents` there).
- * auto-fit collapses the track of a side block that is not on screen, instead
- * of leaving a 300 px hole.
+ * The lower part with a side column: 3fr/2fr from lateral, at every width
+ * (from wide the actions go to 5 per row, but there are still two columns
+ * down here). A side block that is not on screen leaves no track: the grid
+ * only exists when the data says there is something to put in it.
  */
 export const LOWER_WITH_SIDE =
-  "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-7 lateral:gap-y-9 wide:grid-cols-[minmax(0,2fr)_repeat(auto-fit,minmax(300px,1fr))]";
+  "lateral:grid lateral:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)] lateral:items-start lateral:gap-x-7 lateral:gap-y-9";
 
 /**
  * The actions' row when they are few (mockup 13, frame E): from lateral the

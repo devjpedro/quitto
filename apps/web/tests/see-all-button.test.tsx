@@ -1,14 +1,12 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ChipsRow, SeeAllButton } from "@/features/home/components/chips-row";
 import { SectionTitle } from "@/features/home/components/section-title";
+import { SeeAllButton } from "@/features/home/components/see-all-button";
 import { TotalsChips } from "@/features/home/components/totals-chips";
 import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
+import { overdueChips } from "@/features/home/lib/home-totals";
 import { homeFixture, installmentAction } from "./home-fixtures";
-
-// Top-level regex literals (lint/performance/useTopLevelRegex).
-const OVERDUE_CHIP = /em atraso/;
 
 /** The fade on the strip's right edge while a chip is still past it (decision 23). */
 const FADE_RIGHT =
@@ -71,47 +69,39 @@ function measureStrip(sizes: {
 }
 
 const ALL = {
-  pendingCount: 5,
   overdueToPayCents: 180_000,
   overdueToReceiveCents: 70_000,
-  toPayCents: 230_000,
-  toReceiveCents: 140_000,
 };
 
 describe("TotalsChips", () => {
-  it("na ordem: pendências, atraso (pagar, receber), 30 dias (pagar, receber), preenchidos e sem contorno", () => {
+  it("só atraso, e só o que vier não nulo: pagar e receber, em vermelho, preenchidos, sem contorno e com ícone", () => {
     render(<TotalsChips {...ALL} />);
     const items = within(
       screen.getByRole("list", { name: "Resumo" })
     ).getAllByRole("listitem");
     expect(items.map((i) => i.textContent)).toEqual([
-      "5 pendências",
       "R$ 1.800,00 a pagar em atraso",
       "R$ 700,00 a receber em atraso",
-      "R$ 2.300,00 a pagar · 30d",
-      "R$ 1.400,00 a receber · 30d",
     ]);
     for (const item of items) {
       expect(item).not.toHaveClass("border");
+      expect(item).toHaveClass("bg-danger-subtle", "text-danger");
+      expect(item.querySelector("svg")).not.toBeNull();
     }
-    expect(items[1]).toHaveClass("bg-danger-subtle", "text-danger");
-    expect(items[1]?.querySelector("svg")).not.toBeNull();
-    expect(items[3]).toHaveClass("bg-surface-card");
+    // One direction only: just its chip.
+    const one = render(
+      <TotalsChips overdueToPayCents={null} overdueToReceiveCents={118_000} />
+    );
+    expect(
+      within(one.container)
+        .getAllByRole("listitem")
+        .map((i) => i.textContent)
+    ).toEqual(["R$ 1.180,00 a receber em atraso"]);
   });
 
-  it("sem atraso não há chip de atraso; nada a mostrar, nada aparece", () => {
-    render(
-      <TotalsChips {...ALL} overdueToPayCents={0} overdueToReceiveCents={0} />
-    );
-    expect(screen.queryByText(OVERDUE_CHIP)).toBeNull();
+  it("sem nenhum chip (os dois nulos) não renderiza nada: a linha some", () => {
     const empty = render(
-      <TotalsChips
-        overdueToPayCents={0}
-        overdueToReceiveCents={0}
-        pendingCount={0}
-        toPayCents={0}
-        toReceiveCents={0}
-      />
+      <TotalsChips overdueToPayCents={null} overdueToReceiveCents={null} />
     );
     expect(empty.container).toBeEmptyDOMElement();
   });
@@ -188,12 +178,10 @@ describe("TotalsChips", () => {
     });
     try {
       const { rerender } = render(
-        <TotalsChips {...ALL} overdueToReceiveCents={0} toReceiveCents={0} />
+        <TotalsChips {...ALL} overdueToReceiveCents={null} />
       );
-      // The same refetch clears the overdue to pay and brings "a receber · 30d": still 3 chips.
-      rerender(
-        <TotalsChips {...ALL} overdueToPayCents={0} overdueToReceiveCents={0} />
-      );
+      // The same refetch clears the overdue to pay and brings the one to receive: still 1 chip.
+      rerender(<TotalsChips {...ALL} overdueToPayCents={null} />);
       // The new chip arrives as a DOM mutation (delivered in a microtask).
       await act(async () => {
         await Promise.resolve();
@@ -202,7 +190,7 @@ describe("TotalsChips", () => {
       expect(strip).not.toHaveAttribute("tabindex");
       // A later refetch grows that chip's amount: the strip now scrolls.
       contentWidth = 620;
-      act(() => resize(screen.getByText("a receber · 30d")));
+      act(() => resize(screen.getByText("a receber em atraso")));
       expect(strip).toHaveAttribute("tabindex", "0");
     } finally {
       restore();
@@ -221,12 +209,12 @@ describe("TotalsChips", () => {
       .mockReturnValue(358);
     try {
       const { rerender } = render(
-        <TotalsChips {...ALL} overdueToPayCents={0} overdueToReceiveCents={0} />
+        <TotalsChips {...ALL} overdueToReceiveCents={null} />
       );
       expect(screen.getByRole("list", { name: "Resumo" })).not.toHaveAttribute(
         "tabindex"
       );
-      // A refetch brings the two overdue chips.
+      // A refetch brings the two overdue chips back.
       contentWidth = 620;
       rerender(<TotalsChips {...ALL} />);
       expect(screen.getByRole("list", { name: "Resumo" })).toHaveAttribute(
@@ -258,7 +246,7 @@ describe("TotalsChips", () => {
     }
   });
 
-  it("24 atrasadas de um contrato são 1 pendência e 1 coisa (contam cartões)", () => {
+  it("24 atrasadas de um contrato são 1 coisa no subtítulo e nenhum chip (contam cartões)", () => {
     const group = installmentAction({
       id: "overdue:vt:receive",
       kind: "overdue",
@@ -267,28 +255,32 @@ describe("TotalsChips", () => {
       sequences: Array.from({ length: 24 }, (_, i) => i + 5),
       totalCents: 4_800_000,
     });
-    const home = homeFixture({ actions: [group] });
-    render(<TotalsChips {...ALL} pendingCount={home.actions.length} />);
-    expect(screen.getByText("pendência")).toBeVisible();
+    const home = homeFixture({
+      actions: [group],
+      overdue: { toPayCents: 0, toReceiveCents: 4_800_000 },
+    });
     expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
       "1 coisa pede sua atenção"
     );
+    expect(overdueChips(home)).toEqual({
+      toPayCents: null,
+      toReceiveCents: null,
+    });
   });
 });
 
-describe("ChipsRow", () => {
-  it("o Ver todas (N) fica na ponta da linha dos chips, só no desktop e controlando a lista", async () => {
+describe("SeeAllButton", () => {
+  it("o Ver todas, sem o (N), controla a lista e só aparece no desktop", async () => {
     const onToggle = vi.fn();
     render(
-      <ChipsRow
-        chips={<span>chips</span>}
+      <SeeAllButton
         count={5}
         expanded={false}
         listId="acoes"
         onToggle={onToggle}
       />
     );
-    const button = screen.getByRole("button", { name: "Ver todas (5)" });
+    const button = screen.getByRole("button", { name: "Ver todas" });
     expect(button).toHaveAttribute("aria-controls", "acoes");
     expect(button).toHaveAttribute("aria-expanded", "false");
     expect(button.parentElement).toHaveClass(

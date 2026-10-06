@@ -39,7 +39,7 @@ function CellView({
       const view = momentView(cell, locale, today);
       return (
         <>
-          <LabelRow label={view.label} percent={cell.percent} />
+          <LabelRow label={view.label} percent={null} />
           <span className="mt-1.5 block truncate font-medium text-sm">
             {view.title}
           </span>
@@ -82,7 +82,8 @@ function CellView({
  * Real progress, never decoration (mockup 13): filled cells separated by a
  * 2 px gap in the color behind them (the panel from md, the page on a
  * phone), two columns below lg and one row from lg. From lateral it sits in
- * the home's side column, stacked, two by two once that column has 400 px.
+ * the home's side column, stacked (or under "Próximos 30 dias" with few cards).
+ * No % on the accumulated ones: it belongs to the milestone of the moment.
  * The milestone of the moment opens it on a phone; from md the sidebar's
  * lime card shows that one, so the strip hides it there. `today` is the
  * home's: it tells a late installment from one still ahead.
@@ -109,7 +110,7 @@ export function Milestones({
       className={cn("@container", onlyMoment && "md:hidden")}
     >
       <SectionTitle id={headingId}>{m.home_milestones_title()}</SectionTitle>
-      <ul className="grid lateral:grid-flow-row grid-cols-2 lateral:@min-[400px]:grid-cols-2 lateral:grid-cols-1 gap-0.5 overflow-hidden rounded-card bg-surface-sunken md:bg-surface lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
+      <ul className="grid lateral:grid-flow-row grid-cols-2 lateral:grid-cols-1 gap-0.5 overflow-hidden rounded-card bg-surface-sunken md:bg-surface lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
         {strip.map(({ cell, moment, wide }) => (
           <li
             className={cn(
@@ -117,7 +118,7 @@ export function Milestones({
               moment
                 ? "flex items-center gap-3.5 bg-highlight text-on-highlight md:hidden"
                 : "bg-surface-card",
-              wide && "col-span-2 lateral:@min-[400px]:col-span-2 lg:col-span-1"
+              wide && "col-span-2 lg:col-span-1"
             )}
             key={cell.id}
           >

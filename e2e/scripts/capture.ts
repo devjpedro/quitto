@@ -111,9 +111,9 @@ async function noLoading(page: Page, where: string): Promise<void> {
  * is met while the bundle still hydrates (no request for 500 ms), and only
  * then "Notificações recentes" asks for its list (useRecentNotifications waits
  * for hydration and a lateral screen). So wait for no loading state; then, on
- * the home from lateral up, for that list or its empty state, but only if the
- * block is there: the first access has no lower part, and a failed list takes
- * the block away. Never demand it.
+ * the home from lateral up, for the block to leave its skeleton, but only if
+ * the block is there: the first access has no lower part, and a failed list or
+ * nothing but what a card already says takes the block away. Never demand it.
  */
 async function settle(page: Page, width: number, where: string): Promise<void> {
   await noLoading(page, where);
@@ -121,15 +121,14 @@ async function settle(page: Page, width: number, where: string): Promise<void> {
     const recent = page.getByRole("region", { name: "Notificações recentes" });
     if ((await recent.count()) > 0) {
       try {
-        // The skeleton is aria-hidden, so neither of these matches it.
-        await recent
-          .getByRole("list")
-          .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
-          .first()
-          .waitFor();
+        // The block settles past its skeleton (aria-hidden) into a list, or
+        // goes away when no notice is left that a card does not already say.
+        await recent.locator("ul[aria-hidden='true']").waitFor({
+          state: "detached",
+        });
       } catch (error) {
         throw new Error(
-          `${where}: "Notificações recentes" não mostrou a lista nem o estado vazio em 30 s (a API de notificações falhou?)`,
+          `${where}: "Notificações recentes" não saiu do esqueleto em 30 s (a API de notificações falhou?)`,
           { cause: error }
         );
       }

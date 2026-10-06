@@ -18,7 +18,7 @@ function TitleBone({ className }: { className: string }) {
 }
 
 /**
- * The home's shape while it loads: subtitle, chips, the action cards
+ * The home's shape while it loads: subtitle (the chips row is almost never there), the action cards
  * (carousel below lg, a grid of 3 to 5 from lg) and the lower part on the
  * content's grid: "Próximos 30 dias" (its title and one block), and from
  * lateral the side column with the milestones and "Notificações recentes".
@@ -32,11 +32,6 @@ export function HomeSkeleton() {
     // The content's gaps and rhythm, so nothing shifts when the home streams in.
     <div className="flex flex-col gap-4 md:gap-5">
       <Skeleton className="h-4 w-56 bg-surface-card" />
-      <div className="flex gap-1.5">
-        <Skeleton className="h-8 w-28 rounded-full bg-surface-card" />
-        <Skeleton className="h-8 w-36 rounded-full bg-surface-card" />
-        <Skeleton className="hidden h-8 w-36 rounded-full bg-surface-card md:block" />
-      </div>
       <div className="flex wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))] gap-3 overflow-hidden lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]">
         <Skeleton className="h-[267px] w-[calc(100%-2.75rem)] shrink-0 rounded-card bg-surface-card md:h-[259px] lg:w-auto" />
         <Skeleton className="h-[267px] w-[calc(100%-2.75rem)] shrink-0 rounded-card bg-surface-card md:h-[259px] lg:w-auto" />
@@ -51,7 +46,7 @@ export function HomeSkeleton() {
             <Skeleton className="h-48 rounded-card bg-surface-card" />
           </div>
         </div>
-        <div className={cn(LOWER_COLUMN, "wide:contents")}>
+        <div className={LOWER_COLUMN}>
           <div className="lateral:flex hidden flex-col">
             <TitleBone className="w-16" />
             <Skeleton className="h-36 rounded-card bg-surface-card" />

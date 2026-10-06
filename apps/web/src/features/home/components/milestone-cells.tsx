@@ -6,7 +6,7 @@ import { m } from "@/paraglide/messages.js";
 import { type MomentMilestoneCell, sharePercent } from "../lib/milestones";
 import { momentView } from "../lib/moment";
 
-/** A milestone's bar: decorative, the % is written beside the label. */
+/** A milestone's bar: decorative; "de R$ X" above it says what it measures. */
 export function Bar({ percent }: { percent: number }) {
   return (
     <span
@@ -41,7 +41,7 @@ export function LabelRow({
   );
 }
 
-/** A value milestone (DIRECAO › Progresso): the value, "de R$ X", the % and a bar when there is a whole to measure against. */
+/** A value milestone (DIRECAO › Progresso): the value, "de R$ X" and a bar when there is a whole to measure against. The % stays with the milestone of the moment. */
 export function ValueCell({
   cents,
   label,
@@ -56,7 +56,7 @@ export function ValueCell({
   const percent = totalCents ? sharePercent(cents, totalCents) : null;
   return (
     <>
-      <LabelRow label={label} percent={percent} />
+      <LabelRow label={label} percent={null} />
       <Money cents={cents} className="mt-1.5 block" size="milestone" />
       {totalCents ? (
         <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted tabular-nums">
@@ -78,7 +78,7 @@ export function MomentCell({
   locale: Locale;
   today: string;
 }) {
-  const view = momentView(cell, locale, today);
+  const view = momentView(cell, locale, today, "phone");
   return (
     <>
       {view.percent === null ? null : (

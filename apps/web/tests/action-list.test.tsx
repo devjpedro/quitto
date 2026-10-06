@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { type MouseEventHandler, type ReactNode, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
-import { SeeAllButton } from "@/features/home/components/chips-row";
+import { SeeAllButton } from "@/features/home/components/see-all-button";
 import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
 import type { Home, HomeAction } from "@/features/home/types";
 import { queryKeys } from "@/lib/query-keys";
@@ -93,7 +93,7 @@ function makeClient(actions: HomeAction[]) {
   return client;
 }
 
-/** The list as the page mounts it: "Ver todas (N)" lives on the chips row and shares the state. */
+/** The list as the page mounts it: "Ver todas" lives on the subtitle row and shares the state. */
 function Actions({ actions }: { actions: HomeAction[] }) {
   const [expanded, setExpanded] = useState(false);
   const onToggle = () => setExpanded((value) => !value);
@@ -137,6 +137,13 @@ function renderLive(actions: HomeAction[]) {
 }
 
 const WHATSAPP_NAME = /Cobrar no WhatsApp/;
+/** The desktop's "Ver todas" (hidden below lg); the phone's one under the carousel has the same name. */
+function desktopSeeAll(): HTMLElement | undefined {
+  return screen
+    .queryAllByRole("button", { name: "Ver todas" })
+    .find((button) => button.parentElement?.classList.contains("lg:flex"));
+}
+
 const MARK_RECEIVED_NAME = /Marcar como recebida/;
 
 /** "Venda do terreno": `sequences` of 60 overdue, Diego owes me. */
@@ -146,6 +153,7 @@ const terrenoGroup = (sequences: number[]) => {
     id: "overdue:vt:receive",
     kind: "overdue",
     direction: "receive",
+    canMarkReceived: true,
     installmentId: `vt-${oldest}`,
     contractId: "vt",
     contractTitle: "Venda do terreno",
@@ -237,7 +245,12 @@ function watchLinkClicks() {
 /** 1/12 has only "Já paguei" (no Pix); 2/12 is to receive (WhatsApp); 3/12 has "Pagar com PIX". */
 const markPaidThenLinks = () => [
   installmentAction({ installmentId: "i1", sequence: 1, pixCode: null }),
-  installmentAction({ installmentId: "i2", sequence: 2, direction: "receive" }),
+  installmentAction({
+    installmentId: "i2",
+    sequence: 2,
+    direction: "receive",
+    canMarkReceived: true,
+  }),
   installmentAction({ installmentId: "i3", sequence: 3 }),
 ];
 
@@ -274,6 +287,7 @@ describe("ActionList", () => {
         installmentId: "r1",
         kind: "overdue",
         direction: "receive",
+        canMarkReceived: true,
         dueDate: "2026-09-28",
         counterpartyName: "Carlos",
         contractTitle: "Notebook",
@@ -430,7 +444,7 @@ describe("ActionList", () => {
     // Past the row of 3 (lg), back in the row of 4 (2xl) and of 5 (wide).
     expect(fourth).toHaveClass("lg:hidden", "2xl:block");
     expect(fifth).toHaveClass("lg:hidden", "wide:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (5)" });
+    const seeAll = desktopSeeAll() as HTMLElement;
     expect(seeAll).toHaveAttribute("aria-expanded", "false");
     // Shown while a card is past the row: until wide, where all 5 fit.
     expect(seeAll.parentElement).toHaveClass("lg:flex", "wide:hidden");
@@ -461,7 +475,7 @@ describe("ActionList", () => {
   it("4 ações: a 4ª aparece a partir de 2xl e o Ver todas some ali", () => {
     renderList(overdue(4));
     expect(itemOf(4)).toHaveClass("lg:hidden", "2xl:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (4)" });
+    const seeAll = desktopSeeAll() as HTMLElement;
     expect(seeAll.parentElement).toHaveClass(
       "lg:flex",
       "2xl:hidden",
@@ -473,14 +487,14 @@ describe("ActionList", () => {
     renderList(overdue(6));
     expect(itemOf(6)).toHaveClass("lg:hidden");
     expect(itemOf(6)).not.toHaveClass("wide:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (6)" });
+    const seeAll = desktopSeeAll() as HTMLElement;
     expect(seeAll.parentElement).toHaveClass("lg:flex");
     expect(seeAll.parentElement).not.toHaveClass("wide:hidden");
   });
 
   it("3 ações: nenhum Ver todas no desktop", () => {
     renderList(overdue(3));
-    expect(screen.queryByRole("button", { name: "Ver todas (3)" })).toBeNull();
+    expect(desktopSeeAll()).toBeUndefined();
   });
 
   it("o carrossel contém os sr-only: o ul é relative", () => {
@@ -521,6 +535,7 @@ describe("ActionList", () => {
         id: "overdue:nb:receive",
         kind: "overdue",
         direction: "receive",
+        canMarkReceived: true,
         installmentId: "nb-3",
         contractId: "nb",
         contractTitle: "Notebook da Marina",
@@ -541,7 +556,7 @@ describe("ActionList", () => {
     );
     expect(screen.getByRole("link", { name: "Ver parcelas" })).toHaveAttribute(
       "href",
-      "/contracts/nb?status=overdue"
+      "/contracts/nb"
     );
     expect(
       screen.queryByRole("button", { name: MARK_RECEIVED_NAME })
@@ -577,7 +592,7 @@ describe("ActionList", () => {
       within(card).getByRole("link", { name: "Pagar a mais antiga" })
     ).toHaveAttribute("href", "/contracts/al?installment=al-5");
     const seeAll = within(card).getByRole("link", { name: "Ver parcelas" });
-    expect(seeAll).toHaveAttribute("href", "/contracts/al?status=overdue");
+    expect(seeAll).toHaveAttribute("href", "/contracts/al");
     // On a phone a square icon button (h-11 from size sm, w-11 here), named by aria-label.
     expect(seeAll).toHaveClass("max-md:w-11", "max-md:px-0");
     expect(within(card).queryAllByRole("button")).toEqual([]);
@@ -634,7 +649,7 @@ describe("ActionList", () => {
     expect(within(card).getByText("MS")).toHaveAttribute("aria-hidden", "true");
     expect(within(card).getByText("Maria Souza").tagName).toBe("B");
     expect(card.querySelectorAll("[data-status]")).toHaveLength(12);
-    expect(within(card).getByText("6 de 12 pagas")).toBeVisible();
+    expect(within(card).getByText("6 pagas")).toBeVisible();
     expect(within(card).getByText("falta R$ 7.500,00")).toBeVisible();
   });
 
@@ -645,7 +660,7 @@ describe("ActionList", () => {
     ]);
     const card = screen.getAllByRole("article")[1] as HTMLElement;
     const remaining = within(card).getByText("falta R$ 7.500,00");
-    // 182 px of content at 1024: "4 de 12 pagas" and "falta R$ 14.400,00" need 190.
+    // 182 px of content at 1024: "4 pagas" and "falta R$ 14.400,00" need 190.
     expect(remaining.parentElement).toHaveClass(
       "flex-wrap",
       "whitespace-nowrap"
@@ -680,7 +695,11 @@ describe("ActionList", () => {
   it("par a receber (Cobrar no WhatsApp + Marcar como recebida, 362 px): empilha abaixo de 368 px, nunca um botão sozinho na linha", () => {
     renderList([
       installmentAction({ installmentId: "x0" }),
-      installmentAction({ installmentId: "r1", direction: "receive" }),
+      installmentAction({
+        installmentId: "r1",
+        direction: "receive",
+        canMarkReceived: true,
+      }),
     ]);
     const card = screen.getAllByRole("article")[1] as HTMLElement;
     for (const control of [
@@ -705,6 +724,7 @@ describe("ActionList", () => {
         ...group,
         id: "overdue:nb:receive",
         direction: "receive",
+        canMarkReceived: true,
         installmentId: "nb-3",
         contractId: "nb",
         contractTitle: "Notebook da Marina",
@@ -763,6 +783,7 @@ describe("ActionList", () => {
       id: "overdue:nb:receive",
       kind: "overdue",
       direction: "receive",
+      canMarkReceived: true,
       installmentId: "nb-3",
       contractId: "nb",
       contractTitle: "Notebook da Marina",
