@@ -1,45 +1,58 @@
 import { describe, expect, it } from "bun:test";
 import { installmentPix } from "../src/lib/installment-pix";
 
-const recebedor = {
+const account = {
   displayName: "Maria José",
-  profileKey: "maria@example.com",
+  hasAccount: true,
+  key: "maria@example.com",
+  keySource: "account" as const,
 };
 
 describe("installmentPix", () => {
-  it("a chave do contrato vence a do perfil, com valor, nome e cidade no código", () => {
-    const pix = installmentPix("loja@example.com", recebedor, 12_345);
-    expect(pix?.keyType).toBe("email");
+  it("monta o BR Code com valor, nome e cidade, e diz a chave e a origem", () => {
+    const pix = installmentPix(account, 12_345);
+    expect(pix).toMatchObject({
+      key: "maria@example.com",
+      keyType: "email",
+      source: "account",
+    });
     expect(pix?.code).toStartWith("000201");
-    expect(pix?.code).toContain("0116loja@example.com");
-    expect(pix?.code).not.toContain("maria@example.com");
+    expect(pix?.code).toContain("0117maria@example.com");
     expect(pix?.code).toContain("5406123.45");
     expect(pix?.code).toContain("5910MARIA JOSE");
     expect(pix?.code).toContain("6006BRASIL");
   });
 
-  it("sem chave no contrato, usa a do perfil do recebedor", () => {
-    const pix = installmentPix(null, recebedor, 10_000);
-    expect(pix?.keyType).toBe("email");
-    expect(pix?.code).toContain("0117maria@example.com");
+  it("a chave do contato sai com source contact", () => {
+    const pix = installmentPix(
+      {
+        displayName: "Helena Duarte",
+        hasAccount: false,
+        key: "helena.duarte@exemplo.com",
+        keySource: "contact",
+      },
+      180_000
+    );
+    expect(pix?.source).toBe("contact");
+    expect(pix?.code).toContain("helena.duarte@exemplo.com");
   });
 
   it("sem chave nenhuma não há código", () => {
     expect(
-      installmentPix(null, { displayName: "Maria", profileKey: null }, 100)
+      installmentPix(
+        { displayName: "Maria", hasAccount: false, key: null, keySource: null },
+        100
+      )
     ).toBeNull();
   });
 
   it("chave guardada que não é mais válida dá null, sem lançar", () => {
-    expect(installmentPix("não-é-chave", recebedor, 100)).toBeNull();
+    expect(installmentPix({ ...account, key: "não-é-chave" }, 100)).toBeNull();
   });
 
   it("recebedor sem nome usa o nome padrão do BR Code", () => {
-    const pix = installmentPix(
-      "loja@example.com",
-      { displayName: null, profileKey: null },
-      100
-    );
-    expect(pix?.code).toContain("5909RECEBEDOR");
+    expect(
+      installmentPix({ ...account, displayName: null }, 100)?.code
+    ).toContain("5909RECEBEDOR");
   });
 });

@@ -50,6 +50,7 @@ const installmentActionSchema = t.Object({
   counterpartyName: nullableString,
   pixCode: nullableString,
   canMarkPaid: t.Boolean(),
+  canMarkReceived: t.Boolean(),
   canConfirm: t.Boolean(),
   count: t.Integer(),
   installmentIds: t.Array(t.String()),

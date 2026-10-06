@@ -88,6 +88,36 @@ it("infers the Fase-3a installment endpoints cross-package (eden#215 mitigation)
     paidAt: string | null;
     confirmedAt: string | null;
   }>();
+
+  // GET /api/installments/:installmentId — the panel's fields (Fase 2, Task 1).
+  expectTypeOf<
+    NonNullable<DetailResponse>["pixMissing"]
+  >().toEqualTypeOf<boolean>();
+  expectTypeOf<
+    NonNullable<NonNullable<DetailResponse>["pix"]>["source"]
+  >().toEqualTypeOf<"account" | "contact">();
+  expectTypeOf<
+    NonNullable<DetailResponse>["proofs"][number]["state"]
+  >().toEqualTypeOf<"current" | "disputed">();
+
+  // POST mark-received — the updated installment, like confirm.
+  const received = api.api.installments({ installmentId: "i" })["mark-received"]
+    .post;
+  type ReceivedResponse = Awaited<ReturnType<typeof received>>["data"];
+  expectTypeOf<ReceivedResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<ReceivedResponse>>().toEqualTypeOf<
+    NonNullable<ConfirmResponse>
+  >();
+
+  // PATCH the contact's key.
+  const contactKey = api.api
+    .contracts({ id: "c" })
+    .participants({ participantId: "p" })["pix-key"].patch;
+  type ContactKeyResponse = Awaited<ReturnType<typeof contactKey>>["data"];
+  expectTypeOf<NonNullable<ContactKeyResponse>>().toEqualTypeOf<{
+    id: string;
+    pixKey: string | null;
+  }>();
 });
 
 it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mitigation)", () => {

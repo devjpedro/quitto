@@ -20,7 +20,6 @@ function contractRow(
     ownerRole: "buyer",
     requiresConfirmation: false,
     status: "active",
-    pixKey: null,
     installmentsCount: 4,
     createdAt: new Date("2026-09-01T12:00:00Z"),
     ...over,
@@ -73,6 +72,7 @@ describe("buildMilestones", () => {
         role: "buyer",
         linkedUserId: ME,
         displayName: "Eu",
+        pixKey: null,
       })),
       installments: [
         inst({ id: "h1", contractId: "half", status: "paid" }),
@@ -106,7 +106,13 @@ describe("buildMilestones", () => {
     const base = {
       contracts: [contractRow({ id: "c", title: "Carro" })],
       participants: [
-        { contractId: "c", role: "buyer", linkedUserId: ME, displayName: "Eu" },
+        {
+          contractId: "c",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+          pixKey: null,
+        },
       ],
     };
 
@@ -248,12 +254,14 @@ describe("buildMilestones", () => {
           role: "buyer",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
         {
           contractId: "recv",
           role: "seller",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
       ],
       installments: [
@@ -303,12 +311,14 @@ describe("buildMilestones", () => {
           role: "buyer",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
         {
           contractId: "recv",
           role: "seller",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
       ],
       installments: [
@@ -353,7 +363,13 @@ describe("buildMilestones", () => {
     const base = {
       contracts: [contractRow({ id: "c" })],
       participants: [
-        { contractId: "c", role: "buyer", linkedUserId: ME, displayName: "Eu" },
+        {
+          contractId: "c",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+          pixKey: null,
+        },
       ],
     };
     const allPaid = milestones({
@@ -406,7 +422,13 @@ describe("buildMilestones", () => {
     const base = {
       contracts: [contractRow({ id: "c" })],
       participants: [
-        { contractId: "c", role: "buyer", linkedUserId: ME, displayName: "Eu" },
+        {
+          contractId: "c",
+          role: "buyer",
+          linkedUserId: ME,
+          displayName: "Eu",
+          pixKey: null,
+        },
       ],
     };
 
@@ -568,18 +590,21 @@ describe("buildMilestones", () => {
           role: "buyer",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
         {
           contractId: "recv",
           role: "seller",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
         {
           contractId: "done",
           role: "seller",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         },
       ],
       installments: [
@@ -674,18 +699,21 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "new",
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "new",
             role: "seller",
             linkedUserId: null,
             displayName: "Maria",
+            pixKey: null,
           },
         ],
         users: [],
@@ -723,12 +751,14 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "gone",
             role: "seller",
             linkedUserId: null,
             displayName: "Maria",
+            pixKey: null,
           },
         ],
         users: [],
@@ -755,12 +785,14 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: "u-owner",
             displayName: "Ana",
+            pixKey: null,
           },
           {
             contractId: "guest",
             role: "seller",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
         ],
         users: [],
@@ -788,12 +820,14 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "mine",
             role: "viewer",
             linkedUserId: null,
             displayName: "Pai",
+            pixKey: null,
           },
         ],
         users: [],
@@ -820,18 +854,21 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: "u-owner",
             displayName: "Ana",
+            pixKey: null,
           },
           {
             contractId: "watched",
             role: "seller",
             linkedUserId: "u-seller",
             displayName: "Bruno",
+            pixKey: null,
           },
           {
             contractId: "watched",
             role: "viewer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
         ],
         users: [],
@@ -863,24 +900,28 @@ describe("onboardingFacts", () => {
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "followed",
             role: "viewer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "gone",
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
           {
             contractId: "done",
             role: "buyer",
             linkedUserId: ME,
             displayName: "Eu",
+            pixKey: null,
           },
         ],
         users: [],
@@ -916,6 +957,7 @@ describe("onboardingFacts", () => {
           role: "buyer",
           linkedUserId: ME,
           displayName: "Eu",
+          pixKey: null,
         })),
         users: [],
       },

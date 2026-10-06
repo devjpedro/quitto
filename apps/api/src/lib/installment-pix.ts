@@ -8,22 +8,23 @@ import type { Recebedor } from "./contract-access";
 
 export interface InstallmentPix {
   code: string;
+  key: string;
   keyType: PixKeyType;
+  source: "account" | "contact";
 }
 
 /**
- * The installment's static BR Code. The contract's key wins over the receiver's
- * profile key. null when there is no key, or when the stored one is no longer
- * valid, so a stale key never breaks the screen. One source for the installment
- * detail and the home, so both show the same code for the same installment.
+ * The installment's static BR Code, with the key and where it came from (the
+ * account, or the contact without one). null without a key, or when the
+ * stored one is no longer valid, so a stale key never breaks the screen. One
+ * source for the installment detail and the home.
  */
 export function installmentPix(
-  contractPixKey: string | null,
   recebedor: Recebedor,
   amountCents: number
 ): InstallmentPix | null {
-  const key = contractPixKey ?? recebedor.profileKey;
-  if (!key) {
+  const { key, keySource } = recebedor;
+  if (!(key && keySource)) {
     return null;
   }
   try {
@@ -35,7 +36,9 @@ export function installmentPix(
         merchantName: normalizeMerchantName(recebedor.displayName ?? ""),
         merchantCity: "BRASIL",
       }),
+      key,
       keyType: type,
+      source: keySource,
     };
   } catch {
     return null;

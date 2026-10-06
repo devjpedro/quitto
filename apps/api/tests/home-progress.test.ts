@@ -123,7 +123,6 @@ describe("buildAgenda: o progresso no cartão", () => {
       ownerRole: "seller",
       requiresConfirmation: false,
       status: "active",
-      pixKey: null,
       installmentsCount: 4,
       createdAt: new Date("2026-06-01T12:00:00Z"),
     };
@@ -142,12 +141,14 @@ describe("buildAgenda: o progresso no cartão", () => {
           role: "seller",
           linkedUserId: ME,
           displayName: "João Souza",
+          pixKey: null,
         },
         {
           contractId: "c",
           role: "buyer",
           linkedUserId: null,
           displayName: "Marina Pires",
+          pixKey: null,
         },
       ],
       users: [],

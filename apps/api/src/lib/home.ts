@@ -87,6 +87,10 @@ function toAction(
       caps.isPayer &&
       !contract.requiresConfirmation &&
       it.status === INSTALLMENT_STATUS.pending,
+    canMarkReceived:
+      caps.isApprover &&
+      (it.status === INSTALLMENT_STATUS.pending ||
+        it.status === INSTALLMENT_STATUS.disputed),
     canConfirm:
       caps.isApprover &&
       contract.requiresConfirmation &&

@@ -240,7 +240,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       const today = todayISO();
       const progress = computeProgress(items, today);
       const recebedorInfo = await resolveRecebedor(c);
-      const recebedorResolvedKey = c.pixKey ?? recebedorInfo.profileKey ?? null;
+      const recebedorResolvedKey = recebedorInfo.key;
       const recebedor =
         recebedorInfo.displayName === null && recebedorResolvedKey === null
           ? null

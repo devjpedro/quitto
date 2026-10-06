@@ -150,6 +150,10 @@ export const participant = pgTable(
     linkedUserId: text("linked_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    // The receiver's Pix key kept on a contact without an account (owner's
+    // decision, 2026-10-05). Once the contact has an account, the account's
+    // key counts and this one stays stored, unused.
+    pixKey: text("pix_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

@@ -10,6 +10,7 @@ import { contractsModule } from "./modules/contracts";
 import { dashboardModule } from "./modules/dashboard";
 import { documentsModule } from "./modules/documents";
 import { homeModule } from "./modules/home";
+import { installmentsModule } from "./modules/installments";
 import { internalCronModule } from "./modules/internal-cron";
 import { invitesModule } from "./modules/invites";
 import { meModule } from "./modules/me";
@@ -39,6 +40,7 @@ export function buildApp() {
     .use(meModule)
     .use(contractsModule)
     .use(paymentsModule)
+    .use(installmentsModule)
     .use(documentsModule)
     .use(receiptSharesModule)
     .use(participantsModule)

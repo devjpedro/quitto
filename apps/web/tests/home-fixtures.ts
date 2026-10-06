@@ -75,6 +75,7 @@ export function installmentAction(
     counterpartyName: "Maria Souza",
     pixCode: "000201pix",
     canMarkPaid: true,
+    canMarkReceived: false,
     canConfirm: false,
     count: 1,
     installmentIds: [installmentId],

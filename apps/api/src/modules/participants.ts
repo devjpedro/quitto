@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { PARTICIPANT_ROLE } from "@quitto/shared";
+import { PARTICIPANT_ROLE, parsePixKey } from "@quitto/shared";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -301,5 +301,54 @@ export const participantsModule = new Elysia({ prefix: "/api" })
     {
       params: t.Object({ id: t.String(), participantId: t.String() }),
       response: t.Object({ token: t.String(), expiresAt: t.String() }),
+    }
+  )
+  .patch(
+    "/contracts/:id/participants/:participantId/pix-key",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      await requireOwner(user.id, params.id);
+      const [target] = await db
+        .select()
+        .from(participant)
+        .where(
+          and(
+            eq(participant.id, params.participantId),
+            eq(participant.contractId, params.id)
+          )
+        )
+        .limit(1);
+      if (!target) {
+        throw new NotFoundError("Participante não encontrado");
+      }
+      if (target.role !== PARTICIPANT_ROLE.seller) {
+        throw new ValidationError("Só a chave de quem recebe fica no contato");
+      }
+      if (target.linkedUserId) {
+        throw new ValidationError("Com conta, vale a chave da conta");
+      }
+      let pixKey: string | null = null;
+      if (body.pixKey && body.pixKey.trim() !== "") {
+        try {
+          pixKey = parsePixKey(body.pixKey).value;
+        } catch (e) {
+          throw new ValidationError((e as Error).message);
+        }
+      }
+      await db
+        .update(participant)
+        .set({ pixKey })
+        .where(eq(participant.id, target.id));
+      return { id: target.id, pixKey };
+    },
+    {
+      params: t.Object({ id: t.String(), participantId: t.String() }),
+      body: t.Object({
+        pixKey: t.Union([t.String({ maxLength: 140 }), t.Null()]),
+      }),
+      response: t.Object({
+        id: t.String(),
+        pixKey: t.Union([t.String(), t.Null()]),
+      }),
     }
   );

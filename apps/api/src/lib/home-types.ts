@@ -22,6 +22,8 @@ export interface UpcomingItem {
 export interface InstallmentAction extends UpcomingItem {
   canConfirm: boolean;
   canMarkPaid: boolean;
+  /** The approver may mark it received (POST …/mark-received): pending or disputed. */
+  canMarkReceived: boolean;
   /** The whole contract: the card's bar and legend. */
   contract: ContractSummary;
   /** How many overdue installments the card stands for; 1 on every other card. */

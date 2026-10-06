@@ -13,7 +13,6 @@ export interface HomeContractRow {
   installmentsCount: number;
   ownerId: string;
   ownerRole: string;
-  pixKey: string | null;
   requiresConfirmation: boolean;
   status: string;
   title: string;
@@ -36,6 +35,8 @@ export interface HomeParticipantRow {
   contractId: string;
   displayName: string;
   linkedUserId: string | null;
+  /** The receiver's key kept on a contact without an account. */
+  pixKey: string | null;
   role: string;
 }
 
@@ -119,8 +120,5 @@ export function pixCodeFor(
   party: PartyContract,
   amountCents: number
 ): string | null {
-  return (
-    installmentPix(party.contract.pixKey, party.recebedor, amountCents)?.code ??
-    null
-  );
+  return installmentPix(party.recebedor, amountCents)?.code ?? null;
 }

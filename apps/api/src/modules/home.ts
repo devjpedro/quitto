@@ -55,7 +55,6 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
       ownerRole: contract.ownerRole,
       requiresConfirmation: contract.requiresConfirmation,
       status: contract.status,
-      pixKey: contract.pixKey,
       installmentsCount: contract.installmentsCount,
       createdAt: contract.createdAt,
     })
@@ -84,6 +83,7 @@ async function loadContractRows(userId: string): Promise<HomeContractRows> {
         displayName: participant.displayName,
         role: participant.role,
         linkedUserId: participant.linkedUserId,
+        pixKey: participant.pixKey,
       })
       .from(participant)
       .where(inArray(participant.contractId, ids)),
