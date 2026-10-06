@@ -156,6 +156,7 @@ export function InstallmentRow({
 export function GroupRow({
   amountCents,
   expanded,
+  ids,
   label,
   meta,
   muted,
@@ -166,6 +167,8 @@ export function GroupRow({
 }: {
   amountCents: number;
   expanded: boolean;
+  /** The group's installments, space separated: where Esc gives the focus back when the line left. */
+  ids: string;
   label: string;
   meta: string | null;
   muted: boolean;
@@ -179,6 +182,7 @@ export function GroupRow({
     <button
       aria-expanded={expanded}
       className={ROW}
+      data-group-ids={ids}
       onClick={onToggle}
       type="button"
     >

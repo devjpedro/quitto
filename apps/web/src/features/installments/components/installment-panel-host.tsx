@@ -1,0 +1,192 @@
+import { useEffect, useRef } from "react";
+import {
+  ResponsiveSheet,
+  useSheetVariant,
+} from "@/components/ui/responsive-sheet";
+import { SectionBoundary } from "@/components/ui/section-boundary";
+import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
+import type {
+  ContractDetail,
+  ContractInstallment,
+} from "@/features/contracts/types";
+import { LATERAL_UP, useMediaQuery } from "@/hooks/use-media-query";
+import { m } from "@/paraglide/messages.js";
+import { usePanelKeys } from "../hooks/use-panel-keys";
+import {
+  type PanelNavigation,
+  usePanelNavigation,
+} from "../hooks/use-panel-navigation";
+import { InstallmentPanel } from "./installment-panel";
+import { PanelProvider } from "./panel-context";
+import { PanelArrows } from "./panel-header";
+import { PanelSkeleton } from "./panel-skeleton";
+import { SheetFooter, useSheetPrimary } from "./sheet-footer";
+
+/** The installment's line, or the button of the closed group that holds it. */
+function rowOrGroup(id: string): HTMLElement | null {
+  const row = document.querySelector<HTMLElement>(
+    `[data-installment-row="${id}"]`
+  );
+  const group = document.querySelector<HTMLElement>(
+    `[data-group-ids~="${id}"]`
+  );
+  return row ?? group;
+}
+
+/** Esc's return (DIRECAO › Contrato): the focus goes back to the installment's line, or to its group's button. */
+export function focusInstallmentRow(id: string): void {
+  rowOrGroup(id)?.focus();
+}
+
+function DockedPanel({
+  contract,
+  route,
+}: {
+  contract: ContractDetail;
+  route: ContractRoute;
+}) {
+  const wrapper = useRef<HTMLDivElement>(null);
+  const nav = usePanelNavigation(contract, route, () => wrapper.current);
+  const onKeyDown = usePanelKeys({
+    onClose: nav.close,
+    onNext: nav.goNext,
+    onPrev: nav.goPrev,
+  });
+  // Heard on the DOM, not through React's tree: a dialog opened from the
+  // panel (a portal) keeps its own keys, Esc included.
+  useEffect(() => {
+    const el = wrapper.current;
+    el?.addEventListener("keydown", onKeyDown);
+    return () => el?.removeEventListener("keydown", onKeyDown);
+  }, [onKeyDown]);
+  return (
+    // The boundary's own wrapper is a flex column too, so the column can
+    // shrink to the side's height and scroll inside. It holds the focus
+    // while the content remounts or loads.
+    <div
+      className="lateral:flex hidden min-h-0 lateral:flex-col outline-none [&>div]:flex [&>div]:min-h-0 [&>div]:flex-col"
+      data-testid="installment-panel-docked"
+      ref={wrapper}
+      tabIndex={-1}
+    >
+      <SectionBoundary fallback={<PanelSkeleton mode="docked" />}>
+        <InstallmentPanel
+          contract={contract}
+          key={route.installmentId}
+          mode="docked"
+          nav={nav}
+          route={route}
+        />
+      </SectionBoundary>
+    </div>
+  );
+}
+
+/** The sheet's body: the variant only exists inside the sheet. */
+function SheetBody({
+  contract,
+  nav,
+  route,
+}: {
+  contract: ContractDetail;
+  nav: PanelNavigation;
+  route: ContractRoute;
+}) {
+  const mode = useSheetVariant() ?? "side";
+  return (
+    // As tall as the sheet's body, through the boundary's own wrapper, so the
+    // panel's foot sits at the bottom of the floating panel (mockup 14, A at
+    // 1280); the bottom sheet is as tall as its content anyway.
+    <div className="flex min-h-full flex-col [&>div]:flex [&>div]:flex-1 [&>div]:flex-col">
+      <SectionBoundary fallback={<PanelSkeleton mode={mode} />}>
+        <InstallmentPanel
+          contract={contract}
+          key={route.installmentId}
+          mode={mode}
+          nav={nav}
+          route={route}
+        />
+      </SectionBoundary>
+    </div>
+  );
+}
+
+function SheetPanel({
+  contract,
+  installment,
+  route,
+}: {
+  contract: ContractDetail;
+  installment: ContractInstallment;
+  route: ContractRoute;
+}) {
+  const nav = usePanelNavigation(contract, route, () => null);
+  // No Esc here: in the sheet, Radix closes it.
+  const onKeyDown = usePanelKeys({ onNext: nav.goNext, onPrev: nav.goPrev });
+  // A footer only with something to pin: an empty one would still draw its line.
+  const pinned = useSheetPrimary(contract);
+  return (
+    <ResponsiveSheet
+      description={contract.contract.title}
+      fallbackFocus={() => rowOrGroup(installment.id)}
+      footer={
+        pinned ? (
+          <SheetFooter contract={contract} key={installment.id} />
+        ) : undefined
+      }
+      headerActions={<PanelArrows nav={nav} />}
+      onKeyDown={onKeyDown}
+      onOpenChange={(open) => {
+        if (!open) {
+          nav.close();
+        }
+      }}
+      open
+      title={m.panel_title({
+        sequence: installment.sequence,
+        count: contract.installments.length,
+      })}
+    >
+      <SheetBody contract={contract} nav={nav} route={route} />
+    </ResponsiveSheet>
+  );
+}
+
+/**
+ * One tree for the panel (planner's decisions 16 and 34): from lateral a
+ * docked column, below it the ResponsiveSheet (floating from md, bottom sheet
+ * below). Neither remounts when the installment changes: only the content
+ * does (keyed by the id), so ↑ ↓ walk without closing, and the keyboard is
+ * heard on a wrapper that stays mounted. The server renders the column
+ * (hidden by CSS below lateral); after hydration a narrow screen swaps to the
+ * sheet.
+ */
+export function InstallmentPanelHost({
+  contract,
+  route,
+}: {
+  contract: ContractDetail;
+  route: ContractRoute;
+}) {
+  const docked = useMediaQuery(LATERAL_UP, true);
+  const id = route.installmentId;
+  const installment = id
+    ? contract.installments.find((it) => it.id === id)
+    : undefined;
+  if (!(id && installment)) {
+    return null;
+  }
+  return (
+    <PanelProvider contractId={contract.contract.id} installmentId={id}>
+      {docked ? (
+        <DockedPanel contract={contract} route={route} />
+      ) : (
+        <SheetPanel
+          contract={contract}
+          installment={installment}
+          route={route}
+        />
+      )}
+    </PanelProvider>
+  );
+}

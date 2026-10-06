@@ -1,3 +1,4 @@
+import { InstallmentPanelHost } from "@/features/installments/components/installment-panel-host";
 import { nextActionOf } from "../lib/next-action";
 import type { ContractSlots } from "./contract-page";
 import { HistoryTab } from "./history-tab";
@@ -11,8 +12,7 @@ import { RecentActivity } from "./recent-activity";
  * What the route hands the contract page. Each later task swaps its own slot
  * here and never touches the route or the page: the next action's card and
  * the Parcelas tab (Task 7), Pessoas, Histórico, the recent activity and the
- * tabs' action (Task 8), the installment panel (Task 9). Until then a slot
- * draws nothing.
+ * tabs' action (Task 8), the installment panel (Task 9).
  */
 export const CONTRACT_SLOTS: ContractSlots = {
   nextAction: (detail, route) => {
@@ -21,7 +21,9 @@ export const CONTRACT_SLOTS: ContractSlots = {
       <NextActionCard action={action} detail={detail} route={route} />
     ) : null;
   },
-  panel: () => null,
+  panel: (detail, route) => (
+    <InstallmentPanelHost contract={detail} route={route} />
+  ),
   recentActivity: (detail, route) => (
     <RecentActivity detail={detail} route={route} />
   ),

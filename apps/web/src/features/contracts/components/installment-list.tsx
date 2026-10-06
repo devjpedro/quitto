@@ -152,6 +152,7 @@ export function InstallmentList({
               <GroupRow
                 amountCents={sum(row.installments)}
                 expanded={expanded}
+                ids={row.installments.map((it) => it.id).join(" ")}
                 label={`${pad(first?.sequence)}–${pad(last?.sequence)}`}
                 meta={
                   row.group === "tail" && first && last

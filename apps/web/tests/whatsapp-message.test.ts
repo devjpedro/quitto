@@ -3,6 +3,7 @@ import {
   type ChargeMessageInput,
   chargeMessage,
   groupChargeMessage,
+  receiptMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
 import { NBSP } from "./nbsp";
@@ -175,6 +176,31 @@ describe("whatsappUrl", () => {
     expect(text).toContain("R%24%201.250%2C00");
     expect(decodeURIComponent(text)).toBe(
       paragraphs.join(String.fromCharCode(10, 10))
+    );
+  });
+});
+
+describe("receiptMessage", () => {
+  const input = {
+    amountCents: 48_000,
+    contractTitle: "Moto do Rafa",
+    installmentsCount: 10,
+    sequence: 2,
+    url: "https://app.quitto.dev/r/7fQ2kX9mVb",
+  };
+
+  it("quem recebe: 'Recebi a parcela…' e o link, em parágrafos", () => {
+    expect(
+      receiptMessage({ ...input, perspective: "receive" }, "pt-BR")
+    ).toEqual([
+      "Oi! Recebi a parcela 2 de 10 de “Moto do Rafa” (R$ 480,00). O recibo está aqui:",
+      "https://app.quitto.dev/r/7fQ2kX9mVb",
+    ]);
+  });
+
+  it("quem paga: 'Paguei a parcela…' (I7)", () => {
+    expect(receiptMessage({ ...input, perspective: "pay" }, "pt-BR")[0]).toBe(
+      "Oi! Paguei a parcela 2 de 10 de “Moto do Rafa” (R$ 480,00). O recibo está aqui:"
     );
   });
 });

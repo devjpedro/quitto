@@ -57,22 +57,28 @@ const HIDE = /Esconder as parcelas$/;
 const ROW_30_JUN = /^Parcela 1 30 de junho/;
 const ROW_3 = /^Parcela 3 30 de agosto Atrasada · 36 dias R\$/;
 
+/**
+ * The page without the installment panel: it has its own test
+ * (installment-panel.test.tsx), and here its sheet would hide the list from
+ * the queries whenever the URL holds an installment.
+ */
+const SLOTS = { ...CONTRACT_SLOTS, panel: () => null };
+
 function renderList(detail: ContractDetail = motoDetail()) {
   const client = makeTestQueryClient();
   client.setQueryDefaults(queryKeys.contract("c-moto"), {
     gcTime: Number.POSITIVE_INFINITY,
   });
   client.setQueryData(queryKeys.contract("c-moto"), detail);
-  const { rerender } = renderWithProviders(
-    <ContractPage slots={CONTRACT_SLOTS} />,
-    { client }
-  );
+  const { rerender } = renderWithProviders(<ContractPage slots={SLOTS} />, {
+    client,
+  });
   return {
     list: screen.getByTestId("installment-list"),
     /** The URL moves to another installment (the panel's arrows, the browser's back). */
     goTo: (installment: string | null) => {
       route.search = installment ? { installment } : {};
-      rerender(<ContractPage slots={CONTRACT_SLOTS} />);
+      rerender(<ContractPage slots={SLOTS} />);
     },
   };
 }

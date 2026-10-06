@@ -1,4 +1,5 @@
 import type { ContractDetail } from "@/features/contracts/types";
+import type { InstallmentDetail } from "@/features/installments/types";
 
 const DUE = [
   "2026-06-30",
@@ -111,6 +112,59 @@ export function motoDetail(over: Partial<ContractDetail> = {}): ContractDetail {
       },
     ],
     recentEvents: [],
+    ...over,
+  };
+}
+
+/**
+ * GET /api/installments/:id of the Moto's installment 4 (mockup 14, P4): a
+ * PDF proof sent by Rafael yesterday at 10:00, waiting for João.
+ */
+export function installmentDetail(
+  over: Partial<InstallmentDetail> = {}
+): InstallmentDetail {
+  return {
+    id: "i4",
+    sequence: 4,
+    amountCents: 48_000,
+    dueDate: "2026-09-30",
+    status: "awaiting_confirmation",
+    paidAt: null,
+    confirmedAt: null,
+    receiver: {
+      name: "João Souza",
+      hasAccount: true,
+      contactParticipantId: null,
+    },
+    pix: null,
+    pixMissing: false,
+    dispute: null,
+    receiptShare: null,
+    proofs: [
+      {
+        id: "pf-4",
+        fileName: "pix-moto-outubro.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 188_416,
+        downloadUrl: "https://files.quitto.test/pix-moto-outubro.pdf",
+        createdAt: "2026-10-04T13:00:00.000Z",
+        uploadedByName: "Rafael Prado",
+        uploadedByMe: false,
+        state: "current",
+        disputeReason: null,
+      },
+    ],
+    events: [
+      {
+        id: "e-4",
+        type: "proof_submitted",
+        actorUserId: "u-rafa",
+        actorName: "Rafael Prado",
+        isMe: false,
+        metadata: { sizeBytes: 188_416 },
+        createdAt: "2026-10-04T13:00:00.000Z",
+      },
+    ],
     ...over,
   };
 }

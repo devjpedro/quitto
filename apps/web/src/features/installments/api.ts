@@ -7,7 +7,7 @@ import {
 import { withInstallmentPatch } from "@/features/contracts/lib/contract-cache";
 import type { ContractDetail } from "@/features/contracts/types";
 import { api } from "@/lib/api";
-import { unwrap, unwrapOrNull } from "@/lib/api-client";
+import { ApiError, unwrap, unwrapOrNull } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { optimisticUpdate } from "@/lib/optimistic";
 import { queryKeys } from "@/lib/query-keys";
@@ -115,4 +115,94 @@ export function useMarkReceivedMutation(
     requiresConfirmation ? "confirmed" : "paid",
     m.panel_toast_marked_received()
   );
+}
+
+/** "Confirmar recebimento" (spec §7: optimistic, like "Já paguei"). */
+export function useConfirmMutation(contractId: string) {
+  return useInstallmentStatusMutation(
+    contractId,
+    (installmentId) =>
+      unwrap(api.api.installments({ installmentId }).confirm.post()),
+    "confirmed",
+    m.panel_toast_confirmed()
+  );
+}
+
+/** "Enviar contestação": not optimistic (the reason has to reach the payer). */
+export function useDisputeMutation(contractId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { installmentId: string; reason: string }) =>
+      unwrap(
+        api.api
+          .installments({ installmentId: input.installmentId })
+          .dispute.post({ reason: input.reason })
+      ),
+    meta: { successMessage: m.panel_toast_disputed() },
+    onSuccess: (entity) => {
+      qc.setQueryData<ContractDetail>(
+        queryKeys.contract(contractId),
+        (detail) =>
+          detail && withInstallmentPatch(detail, entity.id, entity, todayISO())
+      );
+    },
+    onSettled: (_r, _e, input) => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.installment(input.installmentId),
+      });
+      invalidateContractViews(qc, contractId);
+    },
+  });
+}
+
+/** "Editar valor ou data" (owner): only the fields that changed (buildInstallmentPatch). */
+export function useUpdateInstallmentMutation(contractId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      body: { amountCents?: number; dueDate?: string };
+      installmentId: string;
+    }) =>
+      unwrap(
+        api.api
+          .contracts({ id: contractId })
+          .installments({ installmentId: input.installmentId })
+          .patch(input.body)
+      ),
+    meta: { successMessage: m.panel_toast_updated() },
+    onSettled: (_r, _e, input) => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.installment(input.installmentId),
+      });
+      invalidateContractViews(qc, contractId);
+    },
+  });
+}
+
+/**
+ * "Compartilhar recibo": creates or reuses the link (POST is idempotent) and
+ * answers its public URL, or null when it was not created: the caller says
+ * so in its own words ("O link do recibo não foi criado"), once, instead of
+ * the generic toast every failed mutation gets. A 401 still throws (the
+ * session gate takes it).
+ */
+export function useShareReceiptMutation(installmentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<{ url: string } | null> => {
+      try {
+        const share = await unwrap(
+          api.api.installments({ installmentId })["receipt-share"].post()
+        );
+        return { url: `${window.location.origin}/r/${share.token}` };
+      } catch (error) {
+        if (error instanceof ApiError && error.httpStatus === 401) {
+          throw error;
+        }
+        return null;
+      }
+    },
+    onSettled: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) }),
+  });
 }

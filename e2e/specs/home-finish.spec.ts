@@ -30,6 +30,7 @@ const WHATSAPP = /Cobrar no WhatsApp/;
 const STATUS_IN_URL = /status=/;
 const PAID_GROUP = /2 parcelas marcadas como pagas/;
 const INVITE_ACCEPTED = /Convite aceito/;
+const PARCELA_1_DE_3 = /Parcela 1 de 3/;
 const WA = "https://wa.me/?text=";
 /** The logo's ring (ProgressRing: viewBox 24, radius 9), never a Phosphor icon (viewBox 256). */
 const RING_SVG = 'svg[viewBox="0 0 24 24"]:has(circle[r="9"])';
@@ -205,6 +206,9 @@ test("grupo que você paga: Pagar a mais antiga abre a mais antiga", async ({
   ).toHaveAttribute("href", `/contracts/${id}`);
   await group.getByRole("link", { name: "Pagar a mais antiga" }).click();
   await expect(page).toHaveURL(new RegExp(`installment=${oldest.id}`));
+  await expect(
+    page.getByRole("dialog", { name: PARCELA_1_DE_3 })
+  ).toBeVisible();
 });
 
 test("avisos iguais seguidos são uma linha; ler a linha lê o grupo", async ({

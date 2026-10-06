@@ -17,6 +17,7 @@ const ACCEPT_INVITE = /Aceitar convite/i;
 const AGENDA_ROW = /Agenda E2E/;
 const FAR_ROW = /Longe E2E/;
 const INSTALLMENT_PARAM = /installment=/;
+const PARCELA_2_DE_2 = /Parcela 2 de 2/;
 const PAID_THIS_MONTH = /Pago em /;
 const WA_PREFIX = "https://wa.me/?text=";
 /** The list's double-tap lock (use-action-lock.ts). */
@@ -303,4 +304,8 @@ test("Próximos 30 dias: a linha abre a parcela no contrato", async ({
     .getByRole("link", { name: AGENDA_ROW })
     .click();
   await expect(page).toHaveURL(INSTALLMENT_PARAM);
+  // chromium is 1280 wide (the floating sheet); mobile, the bottom sheet.
+  await expect(
+    page.getByRole("dialog", { name: PARCELA_2_DE_2 })
+  ).toBeVisible();
 });

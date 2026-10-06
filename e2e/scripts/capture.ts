@@ -133,22 +133,47 @@ async function settle(page: Page, width: number, where: string): Promise<void> {
   }
 }
 
+/** How long the PDF viewer takes to paint the page after its frame loads. */
+const PDF_PAINT_MS = 2000;
+
+/** The panel: the sheet below lateral, the docked column from lateral up (not a dialog there). */
+const PANEL = "[role='dialog'], [data-testid='installment-panel-docked']";
+
 /**
  * With --installment the panel opens on load, and a shot taken during its
  * entrance shows it half see-through over the page. Wait for the CSS
- * animations, then for the dialog's box and opacity to hold across two frames
- * (a spring run in JS is not in getAnimations()).
+ * animations, then for the panel's box and opacity to hold across two frames
+ * (a spring run in JS is not in getAnimations()). From lateral the panel is
+ * the docked column, which is no dialog: whichever of the two is shown.
  */
 async function settlePanel(page: Page, where: string): Promise<void> {
-  const dialog = page.locator("[role='dialog']").first();
-  await dialog.waitFor({ state: "visible", timeout: 15_000 });
+  const panel = page
+    .locator(
+      "[role='dialog']:visible, [data-testid='installment-panel-docked']:visible"
+    )
+    .first();
+  await panel.waitFor({ state: "visible", timeout: 15_000 });
+  // A PDF proof (P4) is drawn by the browser's viewer some time after its
+  // frame loads, out of reach of the page (another origin): give it that.
+  const pdf = panel.locator("iframe");
+  if ((await pdf.count()) > 0) {
+    await pdf
+      .first()
+      .elementHandle()
+      .then((frame) => frame?.contentFrame())
+      .then((frame) => frame?.waitForLoadState("load"))
+      .catch(() => undefined);
+    await page.waitForTimeout(PDF_PAINT_MS);
+  }
   await page.evaluate(() =>
     Promise.all(document.getAnimations().map((a) => a.finished))
   );
   try {
     await page.waitForFunction(
-      () => {
-        const el = document.querySelector("[role='dialog']");
+      (selector) => {
+        const el = [...document.querySelectorAll(selector)].find((each) =>
+          each.checkVisibility()
+        );
         if (!el) {
           return false;
         }
@@ -163,7 +188,7 @@ async function settlePanel(page: Page, where: string): Promise<void> {
         w.__panelRead = now;
         return stable;
       },
-      undefined,
+      PANEL,
       { polling: "raf", timeout: 10_000 }
     );
   } catch (error) {
@@ -234,7 +259,9 @@ if (contractTitle) {
   expectedPath = `/contracts/${target.id}`;
 }
 
-const browser = await chromium.launch();
+// The full Chromium, not the headless shell: only it has the PDF viewer the
+// installment panel's proof preview shows (owner's decision 4).
+const browser = await chromium.launch({ channel: "chromium" });
 try {
   for (const size of sizes) {
     for (const theme of THEMES) {
