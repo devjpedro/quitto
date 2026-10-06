@@ -11,14 +11,30 @@ import { ContactKeyForm } from "./contact-key-form";
 import { NoPixBlock } from "./no-pix-block";
 import type { PanelBlockProps } from "./panel-blocks";
 import { PANEL_TONE, type PanelMode, usePanel } from "./panel-context";
-import { CodeLine, FullPix, type Pix, PixQr, useCopyCode } from "./pix-parts";
+import {
+  CodeLine,
+  DOT,
+  EditButton,
+  FullPix,
+  type Pix,
+  PixQr,
+  useCopyCode,
+} from "./pix-parts";
 
 /**
  * P1 in the bottom sheet (DIRECAO › Contrato): "Copiar código PIX" is the
  * main button (the sheet's first focus) and the QR stays folded until
- * "Mostrar o QR code". The contact's "Editar" is not here (mockup 14, frame E).
+ * "Mostrar o QR code". The contact's "Editar" is here too (owner only, review I1 of Task 10: a phone is where the key may be mistyped, and there is no other place to fix it).
  */
-function PhonePix({ name, pix }: { name: string; pix: Pix }) {
+function PhonePix({
+  name,
+  onEdit,
+  pix,
+}: {
+  name: string;
+  onEdit: (() => void) | null;
+  pix: Pix;
+}) {
   const [qr, setQr] = useState(false);
   const copyCode = useCopyCode(pix.copiaECola);
   const tone = PANEL_TONE.bottom;
@@ -41,13 +57,19 @@ function PhonePix({ name, pix }: { name: string; pix: Pix }) {
                   right: m.panel_pix_from_contact(),
                 })
               : meta}
+            {pix.source === "contact" && onEdit ? (
+              <>
+                {DOT()}
+                <EditButton onEdit={onEdit} />
+              </>
+            ) : null}
           </span>
         </p>
       </div>
       <CodeLine mode="bottom" pix={pix} />
       {qr ? (
         <PixQr
-          className="mx-auto mt-3 size-40 rounded-[10px] p-2"
+          className="mx-auto mt-3 size-40 rounded-control p-2"
           code={pix.copiaECola}
           label={m.panel_pix_qr_label({ name })}
         />
@@ -85,7 +107,10 @@ function FoldedPix({
   const tone = PANEL_TONE[mode];
   return (
     <div className="flex items-center gap-3">
-      <PixQr className="size-10 rounded-lg p-[3px]" code={pix.copiaECola} />
+      <PixQr
+        className="size-10 rounded-control p-[3px]"
+        code={pix.copiaECola}
+      />
       <p className="min-w-0 flex-1">
         <span className="block truncate font-semibold text-[13.5px] text-ink">
           {m.panel_pix_of_name({ name })}
@@ -159,7 +184,7 @@ export function PixBlock({ contract, detail, mode }: PanelBlockProps) {
       />
     );
   } else if (mode === "bottom") {
-    body = <PhonePix name={name} pix={pix} />;
+    body = <PhonePix name={name} onEdit={edit} pix={pix} />;
   }
   return (
     <div

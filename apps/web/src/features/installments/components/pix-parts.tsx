@@ -11,7 +11,7 @@ import { PANEL_TONE, type PanelMode, usePanel } from "./panel-context";
 
 export type Pix = NonNullable<InstallmentDetail["pix"]>;
 
-const DOT = () => ` ${m.home_dot_after({ text: "" }).trim()} `;
+export const DOT = () => ` ${m.home_dot_after({ text: "" }).trim()} `;
 
 /**
  * The code as a QR, always on white (any theme) so a bank's reader gets the
@@ -115,11 +115,11 @@ function ContactSource({ onEdit }: { onEdit: (() => void) | null }) {
   );
 }
 
-function EditButton({ onEdit }: { onEdit: () => void }) {
+export function EditButton({ onEdit }: { onEdit: () => void }) {
   return (
     <button
       // The word is small; the target is not (≥ 44 px below md).
-      className="relative text-ink underline decoration-1 underline-offset-[3px] after:absolute after:-inset-x-2 after:-inset-y-3 after:rounded-control focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand md:after:-inset-y-1"
+      className="relative text-ink underline decoration-1 underline-offset-[3px] after:absolute after:-inset-x-2 after:-inset-y-3.5 after:rounded-control focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand md:after:-inset-y-1"
       onClick={onEdit}
       type="button"
     >
@@ -144,7 +144,7 @@ export function FullPix({
     <>
       <div className="flex items-start gap-3.5">
         <PixQr
-          className="size-28 rounded-[10px] p-1.5"
+          className="size-28 rounded-control p-1.5"
           code={pix.copiaECola}
           label={m.panel_pix_qr_label({ name })}
         />

@@ -382,6 +382,31 @@ describe("pagar (mockup 14, P1 e P2)", () => {
     expect(within(other).queryByRole("button", { name: "Editar" })).toBeNull();
   });
 
+  it("P1 de um contato sem conta no celular (390): o dono vê 'Editar' (alvo de 44 px) e abre o campo; quem não é dono não vê", async () => {
+    const user = userEvent.setup();
+    const owner = renderPage({
+      contract: aluguel(),
+      detail: helenaDetail(),
+      width: 390,
+    });
+    const block = screen.getByTestId("pix-block");
+    expect(block).toHaveTextContent("guardada no contato · Editar");
+    await user.click(within(block).getByRole("button", { name: "Editar" }));
+    expect(
+      screen.getByRole("textbox", { name: "Chave PIX de Helena" })
+    ).toHaveValue("helena.duarte@exemplo.com");
+    owner.unmount();
+
+    renderPage({
+      contract: aluguel(false),
+      detail: helenaDetail(),
+      width: 390,
+    });
+    const other = screen.getByTestId("pix-block");
+    expect(other).toHaveTextContent("guardada no contato");
+    expect(within(other).queryByRole("button", { name: "Editar" })).toBeNull();
+  });
+
   it("P1 no celular (390): 'Copiar código PIX' é o botão principal, o QR fica recolhido até 'Mostrar o QR code', e 'Enviar comprovante' está no rodapé com 'PDF, JPG ou PNG · até 10 MB'", async () => {
     const user = userEvent.setup();
     renderPage({ contract: floripa(), detail: payDetail(), width: 390 });
@@ -591,6 +616,115 @@ describe("enviar o comprovante (mockup 14, P7)", () => {
   });
 });
 
+describe("o envio sai do ar (M12 e bordas)", () => {
+  it("a 1600, trocar de parcela durante o envio aborta o PUT e não registra o comprovante", async () => {
+    const user = userEvent.setup();
+    renderPage({ contract: floripa(), detail: payDetail() });
+    await startUpload(user);
+    act(() => router.set({ installment: "i6" }));
+    await waitFor(() => expect(FakeXhr.last.aborted).toBe(true));
+    expect(calls.proofs).not.toHaveBeenCalled();
+  });
+
+  it("o PUT recusado (403): o alerta pelo nome do arquivo e a área de envio de volta", async () => {
+    const user = userEvent.setup();
+    renderPage({ contract: floripa(), detail: payDetail() });
+    await startUpload(user);
+    act(() => {
+      FakeXhr.last.status = 403;
+      FakeXhr.last.onload?.();
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "pix-carlos-outubro.pdf não foi enviado. Tente de novo."
+    );
+    expect(screen.queryByTestId("upload-progress")).toBeNull();
+    expect(
+      within(screen.getByTestId("proof-dropzone")).getByRole("button", {
+        name: DROP,
+      })
+    ).toBeVisible();
+    expect(calls.proofs).not.toHaveBeenCalled();
+  });
+
+  it("o presign que falha: o mesmo alerta, sem PUT", async () => {
+    const user = userEvent.setup();
+    calls.presign.mockResolvedValue({
+      data: null,
+      error: {
+        status: 500,
+        value: { error: { code: "INTERNAL", message: "falhou" } },
+      },
+    });
+    renderPage({ contract: floripa(), detail: payDetail() });
+    await user.upload(fileInput(), pdf());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "pix-carlos-outubro.pdf não foi enviado. Tente de novo."
+    );
+    expect(FakeXhr.last).toBeUndefined();
+  });
+
+  it("depois do PUT, só falta registrar: o ✕ de cancelar sai (o POST não se aborta)", async () => {
+    const user = userEvent.setup();
+    const recording = deferred<unknown>();
+    calls.proofs.mockReturnValue(recording.promise);
+    renderPage({ contract: floripa(), detail: payDetail() });
+    await startUpload(user);
+    expect(
+      screen.getByRole("button", { name: "Cancelar o envio" })
+    ).toBeVisible();
+    act(() =>
+      FakeXhr.last.upload.onprogress?.({
+        lengthComputable: true,
+        loaded: 337_920,
+        total: 337_920,
+      })
+    );
+    expect(
+      screen.queryByRole("button", { name: "Cancelar o envio" })
+    ).toBeNull();
+    recording.resolve({
+      data: {
+        id: "i5",
+        status: "awaiting_confirmation",
+        paidAt: null,
+        confirmedAt: null,
+      },
+      error: null,
+    });
+  });
+
+  it("o comprovante registrado já tira o P1 do painel (sem esperar o refetch)", async () => {
+    const user = userEvent.setup();
+    calls.proofs.mockResolvedValue({
+      data: {
+        id: "i5",
+        status: "awaiting_confirmation",
+        paidAt: null,
+        confirmedAt: null,
+      },
+      error: null,
+    });
+    const { client } = renderPage({ contract: floripa(), detail: payDetail() });
+    const setData = vi.spyOn(client, "setQueryData");
+    await startUpload(user);
+    act(() => {
+      FakeXhr.last.status = 200;
+      FakeXhr.last.onload?.();
+    });
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith("Comprovante enviado")
+    );
+    // The panel's own cache is patched at once (the refetch only confirms it).
+    const patch = setData.mock.calls.find(
+      ([key]) =>
+        JSON.stringify(key) === JSON.stringify(queryKeys.installment("i5"))
+    )?.[1] as (detail: unknown) => unknown;
+    expect(patch(payDetail())).toMatchObject({
+      status: "awaiting_confirmation",
+    });
+  });
+});
+
 describe("cobrar e marcar (mockup 14, P3)", () => {
   it("P3: 'Mensagem para Rafael' com a prévia da cobrança, '+ o seu PIX copia e cola', e o link do WhatsApp com a mensagem e o código (wa.me sem número)", () => {
     renderPage({
@@ -681,5 +815,36 @@ describe("cobrar e marcar (mockup 14, P3)", () => {
       },
       error: null,
     });
+  });
+
+  it("duplo toque em 'Marcar como recebida' e em 'Marcar como paga sem comprovante': a API é chamada uma vez", async () => {
+    const user = userEvent.setup();
+    calls.markReceived.mockReturnValue(deferred<unknown>().promise);
+    const received = renderPage({
+      contract: motoDetail(),
+      detail: payDetail({
+        id: "i3",
+        sequence: 3,
+        dueDate: "2026-08-30",
+        receiver: {
+          name: "João Souza",
+          hasAccount: true,
+          contactParticipantId: null,
+        },
+        pix: PIX_JOAO,
+      }),
+    });
+    await user.dblClick(
+      panel().getByRole("button", { name: "Marcar como recebida" })
+    );
+    expect(calls.markReceived).toHaveBeenCalledTimes(1);
+    received.unmount();
+
+    calls.markPaid.mockReturnValue(deferred<unknown>().promise);
+    renderPage({ contract: aluguel(), detail: helenaDetail() });
+    await user.dblClick(
+      panel().getByRole("button", { name: "Marcar como paga sem comprovante" })
+    );
+    expect(calls.markPaid).toHaveBeenCalledTimes(1);
   });
 });
