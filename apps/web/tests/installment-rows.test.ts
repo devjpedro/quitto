@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  groupInstallmentRows,
-  rowView,
-} from "@/features/contracts/lib/installment-rows";
+import { rowView } from "@/features/contracts/lib/installment-row-view";
+import { groupInstallmentRows } from "@/features/contracts/lib/installment-rows";
 import { motoDetail } from "./contract-fixtures";
 
 const TODAY = "2026-10-05";
@@ -150,5 +148,50 @@ describe("rowView (uma vez por tela)", () => {
     });
     const onTime = { ...late, paidAt: "2026-04-15T15:00:00Z" };
     expect(rowView(onTime as never, { ...ctx, settled: true }).meta).toBeNull();
+  });
+  it("vence hoje: tag ink 'Vence hoje' sem ícone, e sem metadado", () => {
+    const today = { ...(p5 as object), dueDate: TODAY };
+    expect(rowView(today as never, ctx)).toMatchObject({
+      tag: { tone: "ink", icon: null, text: "Vence hoje" },
+      meta: null,
+    });
+  });
+
+  it("contestada: o tile é de atraso e a tag é danger com o x", () => {
+    const disputed = { ...(p5 as object), status: "disputed" };
+    expect(rowView(disputed as never, ctx)).toMatchObject({
+      tile: "overdue",
+      tag: { tone: "danger", icon: "x", text: "Contestada" },
+    });
+  });
+
+  it("amanhã: o metadado é 'amanhã', não 'em 1 dia'", () => {
+    const tomorrow = { ...(p5 as object), dueDate: "2026-10-06" };
+    expect(rowView(tomorrow as never, ctx).meta).toBe("amanhã");
+  });
+
+  it("atrasada: 1 dia no singular; passando de 60 dias, só 'Atrasada' (o grupo diz desde quando)", () => {
+    const one = { ...(p5 as object), dueDate: "2026-10-04" };
+    expect(rowView(one as never, ctx).tag?.text).toBe("Atrasada · 1 dia");
+    const sixty = { ...(p5 as object), dueDate: "2026-08-06" };
+    expect(rowView(sixty as never, ctx).tag?.text).toBe("Atrasada · 60 dias");
+    const long = { ...(p5 as object), dueDate: "2026-08-05" };
+    expect(rowView(long as never, ctx).tag?.text).toBe("Atrasada");
+  });
+
+  it("quitado de quem paga: 'paga' no nome acessível e 'paga em …' no metadado", () => {
+    const paid = {
+      ...(p1 as object),
+      dueDate: "2026-04-15",
+      status: "paid",
+      paidAt: "2026-04-22T15:00:00Z",
+    };
+    expect(
+      rowView(paid as never, { ...ctx, perspective: "pay", settled: true })
+    ).toMatchObject({
+      srState: "paga",
+      meta: "paga em 22/04 · 7 dias depois",
+      tag: null,
+    });
   });
 });

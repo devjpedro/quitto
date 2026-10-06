@@ -1,27 +1,14 @@
-import {
-  FileMagnifyingGlass,
-  FilePdf,
-  QrCode,
-  Receipt,
-  WhatsappLogo,
-} from "@phosphor-icons/react";
-import { type MouseEvent, useId } from "react";
+import { FileMagnifyingGlass, QrCode } from "@phosphor-icons/react";
+import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
-import { ProgressRing } from "@/components/ui/progress-ring";
+import { PersonText } from "@/components/ui/person-text";
 import { Tag } from "@/components/ui/tag";
-import { PersonText } from "@/features/home/components/action-card-parts";
 import {
   useMarkPaidMutation,
   useMarkReceivedMutation,
 } from "@/features/installments/api";
-import { pixCodeFor } from "@/features/installments/lib/pix-code";
-import {
-  chargeMessage,
-  groupChargeMessage,
-  whatsappUrl,
-} from "@/features/installments/lib/whatsapp-message";
 import { useActionLock } from "@/hooks/use-action-lock";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -32,13 +19,12 @@ import {
   type CardButton,
   cardButtons,
   type NextAction,
-  type NextActionView,
   nextActionView,
+  type PendingAction,
 } from "../lib/next-action";
 import type { ContractDetail } from "../types";
-
-type Variant = "onBrand" | "onBrandOutline";
-type Pending = Exclude<NextAction, { kind: "settled" }>;
+import { SettledCard } from "./settled-card";
+import { type CardVariant, WhatsappButton } from "./whatsapp-charge-button";
 
 /**
  * "Lembrar no WhatsApp" and "Marcar como recebida" side by side need about
@@ -52,16 +38,6 @@ const STACK_BELOW: Partial<Record<string, string>> = {
 /** A mark in flight: dimmed and inert as `disabled`, but it keeps the focus (WCAG 2.4.3). */
 const HELD = "aria-disabled:pointer-events-none aria-disabled:opacity-50";
 
-/**
- * A link answers to the card's lock too: the second hit of a double tap must
- * not act on the card that slid into place.
- */
-const guardLink = (tryLock: () => boolean) => (event: MouseEvent) => {
-  if (!tryLock()) {
-    event.preventDefault();
-  }
-};
-
 const OPEN_LABEL: Partial<Record<CardButton, () => string>> = {
   open_oldest: m.contract_action_open_oldest,
   pay_oldest: m.home_action_pay_oldest,
@@ -69,84 +45,6 @@ const OPEN_LABEL: Partial<Record<CardButton, () => string>> = {
   pay_pix: m.home_action_pix,
   resend: m.home_action_resend_proof,
 };
-
-function WhatsappButton({
-  action,
-  className,
-  detail,
-  kind,
-  today,
-  tryLock,
-  variant,
-  view,
-}: {
-  action: Pending;
-  className?: string;
-  detail: ContractDetail;
-  kind: "whatsapp_charge" | "whatsapp_remind";
-  today: string;
-  tryLock: () => boolean;
-  variant: Variant;
-  view: NextActionView;
-}) {
-  const locale = getLocale();
-  const label =
-    kind === "whatsapp_charge"
-      ? m.home_action_whatsapp()
-      : m.contract_action_remind();
-  const { installment } = view;
-  const paragraphs =
-    action.kind === "overdue" && action.installments.length > 1
-      ? groupChargeMessage(
-          {
-            contractTitle: detail.contract.title,
-            dueDate: installment.dueDate,
-            sequences: action.installments.map((it) => it.sequence),
-            totalCents: view.amountCents,
-          },
-          locale
-        )
-      : chargeMessage(
-          {
-            amountCents: installment.amountCents,
-            contractTitle: detail.contract.title,
-            dueDate: installment.dueDate,
-            installmentsCount: detail.installments.length,
-            pixCode: pixCodeFor(
-              detail.receiver.pix,
-              detail.receiver.name,
-              installment.amountCents
-            ),
-            sequence: installment.sequence,
-            todayISO: today,
-          },
-          locale
-        );
-  return (
-    <Button asChild className={className} size="sm" variant={variant}>
-      <a
-        aria-label={`${label} ${m.home_action_whatsapp_hint()}`}
-        href={whatsappUrl(paragraphs)}
-        onClick={guardLink(tryLock)}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        <WhatsappLogo aria-hidden="true" size={16} />
-        {kind === "whatsapp_charge" ? (
-          <>
-            {/* A narrow card (a phone) says "Cobrar"; the name keeps the whole label. */}
-            <span className="@max-[23.5rem]:hidden">{label}</span>
-            <span className="@max-[23.5rem]:inline hidden">
-              {m.contract_action_charge_short()}
-            </span>
-          </>
-        ) : (
-          label
-        )}
-      </a>
-    </Button>
-  );
-}
 
 function OpenIcon({ kind }: { kind: CardButton }) {
   if (kind === "pay_pix") {
@@ -165,7 +63,7 @@ function GreenCard({
   route,
   tryLock,
 }: {
-  action: Pending;
+  action: PendingAction;
   detail: ContractDetail;
   route: ContractRoute;
   tryLock: () => boolean;
@@ -193,7 +91,7 @@ function GreenCard({
   // when the answer came before it.
   const busy = received.isPending || paid.isPending;
   const button = (kind: CardButton, index: number) => {
-    const variant: Variant = index === 0 ? "onBrand" : "onBrandOutline";
+    const variant: CardVariant = index === 0 ? "onBrand" : "onBrandOutline";
     if (kind === "whatsapp_charge" || kind === "whatsapp_remind") {
       return (
         <WhatsappButton
@@ -266,73 +164,6 @@ function GreenCard({
       ) : null}
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         {buttons.map(button)}
-      </div>
-    </article>
-  );
-}
-
-/** Settled (DIRECAO › Contrato): the lime milestone, the ring at 100%, the statement and the receipts. */
-function SettledCard({
-  detail,
-  route,
-  tryLock,
-}: {
-  detail: ContractDetail;
-  route: ContractRoute;
-  tryLock: () => boolean;
-}) {
-  const titleId = useId();
-  const first = [...detail.installments].sort(
-    (a, b) => a.sequence - b.sequence
-  )[0];
-  return (
-    <article
-      aria-labelledby={titleId}
-      className="flex flex-col rounded-card bg-highlight px-[18px] pt-4 pb-[18px] text-on-highlight"
-      data-testid="next-action-card"
-    >
-      <div className="flex items-center gap-3.5">
-        <ProgressRing percent={100} size={44} tone="onHighlight" />
-        <div className="min-w-0">
-          <p className="text-[12.5px]">{m.contract_milestone()}</p>
-          <p
-            className="font-display font-semibold text-2xl leading-tight tracking-[-0.025em]"
-            id={titleId}
-          >
-            {m.contract_settled_title()}
-          </p>
-        </div>
-      </div>
-      <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <Button
-          asChild
-          className="bg-on-highlight text-highlight hover:bg-on-highlight/90 focus-visible:ring-offset-highlight"
-          size="sm"
-        >
-          <a
-            download
-            href={`/api/contracts/${detail.contract.id}/statement.pdf`}
-            onClick={guardLink(tryLock)}
-          >
-            <FilePdf aria-hidden="true" size={16} />
-            {m.contract_export_pdf()}
-          </a>
-        </Button>
-        {first ? (
-          <Button
-            className="text-on-highlight ring-1 ring-on-highlight/35 ring-inset hover:bg-on-highlight/10 focus-visible:ring-offset-highlight"
-            onClick={() => {
-              if (tryLock()) {
-                route.openInstallment(first.id);
-              }
-            }}
-            size="sm"
-            variant="ghost"
-          >
-            <Receipt aria-hidden="true" size={16} />
-            {m.contract_receipts()}
-          </Button>
-        ) : null}
       </div>
     </article>
   );

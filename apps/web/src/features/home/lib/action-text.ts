@@ -1,5 +1,6 @@
 import type { Locale } from "@quitto/shared";
 import type { TagTone } from "@/components/ui/tag";
+import { sinceDate } from "@/lib/date-parts";
 import {
   formatDate,
   formatMoney,
@@ -19,13 +20,6 @@ export interface KindTag {
 export interface PersonLine {
   name: string | null;
   text: string;
-}
-
-/** "30/08", or "28/10/2024" when it is another year. */
-export function sinceDate(iso: string, today: string, locale: Locale): string {
-  return iso.slice(0, 4) === today.slice(0, 4)
-    ? formatDate(iso, locale, "dayMonth")
-    : formatDate(iso, locale, "short");
 }
 
 export function kindTag(

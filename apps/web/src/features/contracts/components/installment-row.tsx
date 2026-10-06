@@ -17,7 +17,7 @@ import { NumberTile } from "@/components/ui/number-tile";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
-import type { RowView } from "../lib/installment-rows";
+import type { RowView } from "../lib/installment-row-view";
 
 const TAG_ICON: Record<
   NonNullable<NonNullable<RowView["tag"]>["icon"]>,

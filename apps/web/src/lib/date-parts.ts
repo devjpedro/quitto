@@ -1,4 +1,5 @@
 import type { Locale } from "@quitto/shared";
+import { formatDate } from "./locale-format";
 
 const monthFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const weekdayFormatters = new Map<Locale, Intl.DateTimeFormat>();
@@ -64,4 +65,11 @@ export function dayMonthLong(
       ? { day: "numeric", month: "long", year: "numeric" }
       : { day: "numeric", month: "long" }
   ).format(utc(iso));
+}
+
+/** "30/08", or "28/10/2024" when it is another year. */
+export function sinceDate(iso: string, today: string, locale: Locale): string {
+  return iso.slice(0, 4) === today.slice(0, 4)
+    ? formatDate(iso, locale, "dayMonth")
+    : formatDate(iso, locale, "short");
 }

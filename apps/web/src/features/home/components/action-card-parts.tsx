@@ -1,34 +1,11 @@
 import { InstallmentBar } from "@/components/ui/installment-bar";
 import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
+import { PersonText } from "@/components/ui/person-text";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
-import type { ActionView, PersonLine } from "../lib/action-view";
+import type { ActionView } from "../lib/action-view";
 import type { InstallmentAction } from "../types";
-
-/** The person's line with the name in bold; the message puts the name in verbatim. */
-export function PersonText({
-  line,
-  strong,
-  wrap = false,
-}: {
-  line: PersonLine;
-  strong: string;
-  wrap?: boolean;
-}) {
-  const at = line.name ? line.text.indexOf(line.name) : -1;
-  const fit = wrap ? "min-w-0" : "min-w-0 truncate";
-  if (!line.name || at < 0) {
-    return <span className={fit}>{line.text}</span>;
-  }
-  return (
-    <span className={fit}>
-      {line.text.slice(0, at)}
-      <b className={cn("font-medium", strong)}>{line.name}</b>
-      {line.text.slice(at + line.name.length)}
-    </span>
-  );
-}
 
 /**
  * An installment card's body (mockup 13): the contract and its installment

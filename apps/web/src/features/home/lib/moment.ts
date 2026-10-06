@@ -1,9 +1,9 @@
 import type { Locale } from "@quitto/shared";
+import { sinceDate } from "@/lib/date-parts";
 import { formatDate, formatMoney, formatMonthName } from "@/lib/locale-format";
 import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
-import { sinceDate } from "./action-text";
 import type { MomentMilestoneCell } from "./milestones";
 import { guideContext, onboardingView } from "./onboarding";
 

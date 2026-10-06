@@ -1,5 +1,5 @@
 import { isPaidStatus, type Locale } from "@quitto/shared";
-import { sinceDate } from "@/features/home/lib/action-text";
+import { sinceDate } from "@/lib/date-parts";
 import { m } from "@/paraglide/messages.js";
 import type { ContractDetail, ContractInstallment } from "../types";
 import {
@@ -18,6 +18,9 @@ export type NextAction =
       kind: "today" | "review" | "disputed" | "next";
       installment: ContractInstallment;
     };
+
+/** The card that asks for something (everything but "settled"). */
+export type PendingAction = Exclude<NextAction, { kind: "settled" }>;
 
 export type CardButton =
   | "whatsapp_charge"
@@ -123,10 +126,7 @@ export interface NextActionView {
   title: string;
 }
 
-function tagText(
-  action: Exclude<NextAction, { kind: "settled" }>,
-  locale: Locale
-) {
+function tagText(action: PendingAction, locale: Locale) {
   const options = { locale };
   switch (action.kind) {
     case "overdue":
@@ -151,7 +151,7 @@ function tagText(
  * Rocha", the mirror of the payer's "para Carlos Lima".
  */
 function personText(
-  action: Exclude<NextAction, { kind: "settled" }>,
+  action: PendingAction,
   name: string,
   today: string,
   locale: Locale
@@ -181,7 +181,7 @@ function personText(
  * sum) and the other party; the "desde" only on a group.
  */
 export function nextActionView(
-  action: Exclude<NextAction, { kind: "settled" }>,
+  action: PendingAction,
   detail: Pick<ContractDetail, "role" | "participants">,
   today: string,
   locale: Locale

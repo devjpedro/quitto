@@ -11,12 +11,11 @@ import {
   type Perspective,
   perspectiveOf,
 } from "../lib/contract-view";
+import { type RowContext, rowView } from "../lib/installment-row-view";
 import {
   groupInstallmentRows,
   groupTitle,
   type ListRow,
-  type RowContext,
-  rowView,
 } from "../lib/installment-rows";
 import type { ContractDetail, ContractInstallment } from "../types";
 import { GroupRow, InstallmentRow, type RowTag } from "./installment-row";
