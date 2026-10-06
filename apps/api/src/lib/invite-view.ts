@@ -83,7 +83,8 @@ export interface InviteView {
   schedulePreview: { amountCents: number; dueDate: string; sequence: number }[];
   sentAt: string;
   status: InviteStatus;
-  terms: InviteTerms;
+  /** Null (and no schedule) for another account once the invite ended, as the public preview. */
+  terms: InviteTerms | null;
   viewer: InviteViewer;
 }
 
@@ -118,6 +119,9 @@ export function buildInviteView(input: InviteViewInput): InviteView {
     userId: input.user.id,
   });
   const seesEmail = viewer === "invitee" || viewer === "owner";
+  // A leaked link opened by any account shows no more than the public
+  // preview: the money of an ended invite stays with who is in it.
+  const seesTerms = viewer !== "otherAccount" || status === "pending";
   return {
     status,
     viewer,
@@ -133,8 +137,8 @@ export function buildInviteView(input: InviteViewInput): InviteView {
     },
     role: input.slot.role,
     requiresConfirmation: input.contract.requiresConfirmation,
-    terms: input.terms,
-    schedulePreview: input.schedulePreview,
+    terms: seesTerms ? input.terms : null,
+    schedulePreview: seesTerms ? input.schedulePreview : [],
     sentAt: input.row.createdAt.toISOString(),
     expiresAt: input.row.expiresAt.toISOString(),
     acceptedAt: input.row.acceptedAt?.toISOString() ?? null,

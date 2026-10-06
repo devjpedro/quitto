@@ -184,6 +184,49 @@ describe("buildInviteView", () => {
     });
     expect(view.contract.description).toBeNull();
   });
+
+  it("outra conta, convite pendente: as condições, como a prévia pública", () => {
+    const view = buildInviteView({
+      ...input,
+      user: { email: "renata.campos@exemplo.com", id: "u-renata" },
+    });
+    expect(view.terms).toEqual(terms);
+    expect(view.schedulePreview).toHaveLength(3);
+  });
+
+  it("outra conta, convite encerrado: sem condições nem parcelas (o link vazado não mostra o dinheiro)", () => {
+    for (const ended of [
+      { ...row, acceptedAt: NOW },
+      { ...row, declinedAt: NOW },
+      { ...row, expiresAt: new Date("2026-10-01T00:00:00.000Z") },
+    ]) {
+      const view = buildInviteView({
+        ...input,
+        row: ended,
+        user: { email: "renata.campos@exemplo.com", id: "u-renata" },
+      });
+      expect(view.viewer).toBe("otherAccount");
+      expect(view.terms).toBeNull();
+      expect(view.schedulePreview).toEqual([]);
+    }
+  });
+
+  it("convite encerrado: o convidado e o dono continuam vendo as condições", () => {
+    const accepted = { ...row, acceptedAt: NOW };
+    for (const user of [
+      input.user,
+      { email: "bia.lopes@exemplo.com", id: "u-bia" },
+    ]) {
+      const view = buildInviteView({
+        ...input,
+        participates: true,
+        row: accepted,
+        user,
+      });
+      expect(view.terms).toEqual(terms);
+      expect(view.schedulePreview).toHaveLength(3);
+    }
+  });
 });
 
 describe("buildPublicPreview", () => {

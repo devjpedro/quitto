@@ -32,16 +32,20 @@ export const inviteViewSchema = t.Object({
   }),
   role: t.String(),
   requiresConfirmation: t.Boolean(),
-  terms: t.Object({
-    amountCents: nullableInt,
-    dayOfMonth: nullableInt,
-    firstDueDate: nullableString,
-    installmentsCount: t.Integer(),
-    lastDueDate: nullableString,
-    maxCents: nullableInt,
-    minCents: nullableInt,
-    totalCents: t.Integer(),
-  }),
+  // Null for another account once the invite ended (as the public preview).
+  terms: t.Union([
+    t.Object({
+      amountCents: nullableInt,
+      dayOfMonth: nullableInt,
+      firstDueDate: nullableString,
+      installmentsCount: t.Integer(),
+      lastDueDate: nullableString,
+      maxCents: nullableInt,
+      minCents: nullableInt,
+      totalCents: t.Integer(),
+    }),
+    t.Null(),
+  ]),
   schedulePreview: t.Array(
     t.Object({
       sequence: t.Integer(),

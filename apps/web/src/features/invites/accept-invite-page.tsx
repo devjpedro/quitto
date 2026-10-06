@@ -42,7 +42,9 @@ export function AcceptInvitePage() {
     );
   }
 
-  if (error || !data || data.status !== "pending") {
+  // A pending invite always has its terms (null only for another account
+  // once it ended, which the status already sends here).
+  if (error || !data || data.status !== "pending" || !data.terms) {
     return (
       <PageContainer width="narrow">
         <h1 className="font-bold text-foreground text-xl">

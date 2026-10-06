@@ -187,6 +187,8 @@ it("infers the Fase-4a participants/invites endpoints cross-package (eden#215 mi
   expectTypeOf<NonNullable<GetInviteResponse>["email"]>().toEqualTypeOf<
     string | null
   >();
+  // Null for another account once the invite ended (as the public preview).
+  expectTypeOf<null>().toMatchTypeOf<NonNullable<GetInviteResponse>["terms"]>();
 
   // GET /api/invites/:token/preview — public, the minimum.
   const previewGet = api.api.invites({ token: "t" }).preview.get;

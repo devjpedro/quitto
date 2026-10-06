@@ -107,6 +107,26 @@ describe("GET /api/invites/:token", () => {
     expect(body.emailMasked).toMatch(MASKED);
   });
 
+  it("outra conta num convite aceito: sem condições nem parcelas", async () => {
+    const email = uniqueEmail("joao");
+    const { token } = await setup(email);
+    const cookie = await signUpCookie(email);
+    await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie },
+      })
+    );
+    const other = await signUpCookie(uniqueEmail("renata"));
+    const body = await (await get(token, other)).json();
+    expect(body).toMatchObject({
+      status: "accepted",
+      viewer: "otherAccount",
+      terms: null,
+      schedulePreview: [],
+    });
+  });
+
   it("expirado: 200 com status expired (não 422)", async () => {
     const email = uniqueEmail("joao");
     const { token } = await setup(email);
