@@ -12,6 +12,7 @@ export type DatePreset =
   | "short"
   | "medium"
   | "long"
+  | "longYear"
   | "dayMonth"
   | "weekdayShort";
 
@@ -76,6 +77,7 @@ const DATE_OPTIONS: Record<DatePreset, Intl.DateTimeFormatOptions> = {
   short: { day: "2-digit", month: "2-digit", year: "numeric" },
   medium: { day: "numeric", month: "short", year: "numeric" },
   long: { weekday: "long", day: "numeric", month: "long" },
+  longYear: { weekday: "long", day: "numeric", month: "long", year: "numeric" },
   dayMonth: { day: "2-digit", month: "2-digit" },
   weekdayShort: { weekday: "short", day: "2-digit", month: "2-digit" },
 };

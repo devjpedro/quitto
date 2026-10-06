@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextField } from "@/components/ui/field";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Tag } from "@/components/ui/tag";
 import { m } from "@/paraglide/messages.js";
 import { useInvitePersonMutation } from "../api";
 import type { ContractDetail } from "../types";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** What the API accepts (ASCII, a dot in the domain): a wider net would let an address through only to be refused after the person was already added. */
+const EMAIL_RE =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 const FORM_ID = "invite-person-form";
 
 type Role = "buyer" | "seller" | "viewer";
@@ -103,13 +106,26 @@ function InviteForm({
         type="email"
         value={email}
       />
-      <SegmentedControl
-        block
-        label={m.people_role()}
-        onValueChange={setRole}
-        options={roles.map((value) => ({ value, label: ROLE_LABEL[value]() }))}
-        value={role}
-      />
+      {roles.length > 1 ? (
+        <SegmentedControl
+          block
+          label={m.people_role()}
+          onValueChange={setRole}
+          options={roles.map((value) => ({
+            value,
+            label: ROLE_LABEL[value](),
+          }))}
+          value={role}
+        />
+      ) : (
+        // One free role is no choice: said, not offered.
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-semibold text-[13px] text-ink">
+            {m.people_role()}
+          </span>
+          <Tag tone="brand">{ROLE_LABEL[role]()}</Tag>
+        </div>
+      )}
     </form>
   );
 }

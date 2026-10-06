@@ -364,6 +364,8 @@
   "people_email_required": "Diga o e-mail de quem acompanha.",
   "people_email_optional": "E-mail (opcional)",
   "people_added": "Pessoa adicionada",
+  "people_invite_failed": "Pessoa adicionada, mas o convite não saiu. Envie de novo pela lista.",
+  "common_copy_failed": "Não deu para copiar",
   "people_send_invite": "Enviar convite",
   "people_invite_sent": "Convite enviado",
   "people_name": "Nome",

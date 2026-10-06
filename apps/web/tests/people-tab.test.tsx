@@ -73,6 +73,7 @@ beforeEach(() => {
     fn.mockImplementation(() => ok({ id: "p-new" }));
   }
   toast.success.mockReset();
+  toast.error.mockReset();
   Object.assign(navigator, {
     clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
   });
@@ -324,5 +325,119 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
         tab: "people",
       } as unknown as ContractRoute)
     ).toBeNull();
+  });
+
+  it("a linha da pessoa: avatar de 40 px (o seu, em verde-claro), a tag do papel e o metadado", () => {
+    renderPeople(motoDetail());
+    const rows = within(screen.getByTestId("people-list")).getAllByRole(
+      "listitem"
+    );
+    const mine = rows[0] as HTMLElement;
+    const avatar = within(mine).getByText("JS");
+    expect(avatar).toHaveClass("size-10", "bg-brand-subtle", "text-brand");
+    expect(within(rows[1] as HTMLElement).getByText("RP")).not.toHaveClass(
+      "bg-brand-subtle"
+    );
+    expect(mine).toHaveTextContent("joao.souza@exemplo.com");
+    expect(rows[2]).toHaveTextContent("silvia@demo.quitto.dev");
+  });
+
+  it("com um papel só livre, o papel é dito (Tag), não oferecido", async () => {
+    const route = { tab: "people" } as unknown as ContractRoute;
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        {CONTRACT_SLOTS.tabAction(motoDetail(), route)}
+      </QueryClientProvider>
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Convidar pessoa" })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Convidar pessoa",
+    });
+    expect(within(dialog).queryByRole("radio")).toBeNull();
+    expect(within(dialog).getByText("Acompanha")).toBeVisible();
+  });
+
+  it("Convidar pessoa: o nome é obrigatório e o e-mail digitado tem de valer (um e-mail com acento (que a API recusa) é barrado antes de criar a pessoa)", async () => {
+    const route = { tab: "people" } as unknown as ContractRoute;
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        {CONTRACT_SLOTS.tabAction(
+          motoDetail({ participants: motoDetail().participants.slice(0, 1) }),
+          route
+        )}
+      </QueryClientProvider>
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Convidar pessoa" })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Convidar pessoa",
+    });
+    const submit = within(dialog).getByRole("button", {
+      name: "Convidar pessoa",
+    });
+    await userEvent.click(submit);
+    expect(within(dialog).getByText("Diga o nome.")).toBeVisible();
+    await userEvent.type(within(dialog).getByLabelText("Nome"), "Ana Lima");
+    await userEvent.type(
+      within(dialog).getByLabelText(EMAIL_OPTIONAL),
+      "joão@exemplo.com"
+    );
+    await userEvent.click(submit);
+    expect(within(dialog).getByText(INVALID_EMAIL)).toBeVisible();
+    expect(addPerson).not.toHaveBeenCalled();
+  });
+
+  it("a pessoa entrou mas o convite falhou: fecha o diálogo, avisa e não duplica", async () => {
+    invite.mockImplementation(() =>
+      Promise.resolve({
+        data: null,
+        error: {
+          status: 500,
+          value: { error: { code: "INTERNAL", message: "falhou" } },
+        },
+      })
+    );
+    const route = { tab: "people" } as unknown as ContractRoute;
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        {CONTRACT_SLOTS.tabAction(motoDetail(), route)}
+      </QueryClientProvider>
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Convidar pessoa" })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Convidar pessoa",
+    });
+    await userEvent.type(within(dialog).getByLabelText("Nome"), "Ana Lima");
+    await userEvent.type(
+      within(dialog).getByLabelText(EMAIL_FIELD),
+      "ana@exemplo.com"
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Convidar pessoa" })
+    );
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Pessoa adicionada, mas o convite não saiu. Envie de novo pela lista."
+      )
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(addPerson).toHaveBeenCalledTimes(1);
+  });
+
+  it("copiar o link sem permissão: avisa em vez de calar", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    renderPeople(motoDetail());
+    await userEvent.click(screen.getByRole("button", COPY_LINK));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Não deu para copiar")
+    );
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

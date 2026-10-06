@@ -141,6 +141,7 @@ export function PersonRow({
           ) : null}
           {view.actions.includes("copy_link") && inviteUrl ? (
             <IconButton
+              className="bg-surface-inset hover:bg-surface-inset-hover"
               icon={Link}
               label={m.people_copy_link()}
               onClick={() => copy(inviteUrl, m.people_link_copied())}

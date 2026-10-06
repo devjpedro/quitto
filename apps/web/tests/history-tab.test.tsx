@@ -105,6 +105,10 @@ describe("HistoryTab (mockup 14, Histórico)", () => {
       within(history).getByText("pix-moto-outubro.pdf · 184 KB")
     ).toBeVisible();
     expect(within(history).getByText("10:00")).toBeVisible();
+    // The tile is tinted by the kind of event: a proof is warning, a confirmation brand.
+    const tiles = history.querySelectorAll("[aria-hidden='true'].size-10");
+    expect(tiles[0]).toHaveClass("bg-warning-subtle", "text-warning");
+    expect(tiles[1]).toHaveClass("bg-brand-subtle", "text-brand");
     expect(
       within(history).getByText("Você confirmou o pagamento da parcela 3")
     ).toBeVisible();
@@ -168,6 +172,36 @@ describe("RecentActivity", () => {
       within(block).getByRole("button", { name: "Ver histórico" })
     );
     expect(setTab).toHaveBeenCalledWith("history");
+  });
+
+  it("dois recibos seguidos entram agrupados: 3 linhas, uma delas com '2 recibos'", () => {
+    const shared = (id: string, sequence: number) =>
+      ev({
+        id,
+        type: "receipt_share_created",
+        installmentSequence: sequence,
+        actorName: "João Souza",
+        isMe: true,
+        createdAt: "2026-09-15T12:00:00.000Z",
+      });
+    renderWith(
+      <RecentActivity
+        detail={motoDetail({
+          recentEvents: [
+            FIRST_PAGE[0] as ContractEvent,
+            shared("s2", 2),
+            shared("s1", 1),
+            SECOND_PAGE[0] as ContractEvent,
+          ],
+        })}
+        route={route}
+      />
+    );
+    const items = within(screen.getByTestId("recent-activity")).getAllByRole(
+      "listitem"
+    );
+    expect(items).toHaveLength(3);
+    expect(items[1]).toHaveTextContent("2 recibos");
   });
 
   it("sem eventos, não aparece", () => {

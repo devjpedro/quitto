@@ -60,7 +60,12 @@ const dayOf = (iso: string) => isoDateInTimeZone(new Date(iso), APP_TIME_ZONE);
 
 function dayLabel(dayIso: string, today: string, locale: Locale): string {
   const options = { locale };
-  const long = formatDate(dayIso, locale, "long");
+  // A day of another year says the year (it would read as a month ahead otherwise).
+  const long = formatDate(
+    dayIso,
+    locale,
+    dayIso.slice(0, 4) === today.slice(0, 4) ? "long" : "longYear"
+  );
   const ago = daysBetween(dayIso, today);
   if (ago === 0) {
     return m.history_today({ date: long }, options);

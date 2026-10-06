@@ -364,6 +364,8 @@
   "people_email_required": "Enter the email of who follows.",
   "people_email_optional": "Email (optional)",
   "people_added": "Person added",
+  "people_invite_failed": "Person added, but the invite did not go out. Send it again from the list.",
+  "common_copy_failed": "Could not copy",
   "people_send_invite": "Send invite",
   "people_invite_sent": "Invite sent",
   "people_name": "Name",

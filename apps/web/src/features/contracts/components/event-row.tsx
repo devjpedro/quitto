@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { IconTile } from "@/components/ui/icon-tile";
+import { cn } from "@/lib/utils";
 import type { EventIcon, EventLine } from "../lib/contract-events";
 
 const ICON: Record<EventIcon, Icon> = {
@@ -50,7 +51,15 @@ export function EventRow({
           {line.text}
         </p>
         {line.meta ? (
-          <p className="truncate text-[12.5px] text-ink-muted">{line.meta}</p>
+          <p
+            className={cn(
+              "text-[12.5px] text-ink-muted",
+              // A file name is cut at the end; what a person wrote (the reason) wraps.
+              line.icon === "upload" ? "truncate" : "line-clamp-2"
+            )}
+          >
+            {line.meta}
+          </p>
         ) : null}
       </div>
       <span className="shrink-0 text-[12.5px] text-ink-muted tabular-nums">

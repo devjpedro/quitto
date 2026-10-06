@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { unwrap, unwrapOrNull } from "@/lib/api-client";
+import { ApiError, unwrap, unwrapOrNull } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
@@ -113,18 +113,33 @@ export function useInvitePersonMutation(contractId: string) {
           email: input.email,
         })
       );
-      if (input.email) {
+      if (!input.email) {
+        return { ...created, inviteFailed: false };
+      }
+      try {
         await unwrap(
           api.api
             .contracts({ id: contractId })
             .participants({ participantId: created.id })
             .invite.post({ email: input.email })
         );
+      } catch (error) {
+        // The person exists now: closing the dialog (and saying what is left to
+        // do) beats a second submit that would add them again. A lost session
+        // is another matter, and still an error.
+        if (error instanceof ApiError && error.httpStatus === 401) {
+          throw error;
+        }
+        return { ...created, inviteFailed: true };
       }
-      return created;
+      return { ...created, inviteFailed: false };
     },
     // The toast depends on what was done, so not the static meta.successMessage.
-    onSuccess: (_created, input) => {
+    onSuccess: (done, input) => {
+      if (done.inviteFailed) {
+        toast.error(m.people_invite_failed());
+        return;
+      }
       toast.success(input.email ? m.people_invite_sent() : m.people_added());
     },
     onSettled: invalidate,

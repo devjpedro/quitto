@@ -137,4 +137,16 @@ describe("groupEvents (Histórico: um bloco por dia, os iguais seguidos numa lin
       text: "Você criou o contrato",
     });
   });
+
+  it("um dia de outro ano diz o ano no rótulo (senão lê como mês que vem)", () => {
+    const [other, same] = groupEvents(
+      [
+        ev({ id: "a", createdAt: "2026-09-14T15:00:00.000Z" }),
+        ev({ id: "b", createdAt: "2025-11-10T15:00:00.000Z" }),
+      ],
+      ctx
+    );
+    expect(other?.label).toBe("Segunda-feira, 14 de setembro");
+    expect(same?.label).toBe("Segunda-feira, 10 de novembro de 2025");
+  });
 });
