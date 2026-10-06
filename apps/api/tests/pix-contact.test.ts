@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
 import { participant, user } from "../src/db/schema";
@@ -113,6 +113,35 @@ describe("PIX guardado no contato", () => {
     expect(
       await (await saveKey(s.owner, s.contractId, s.contactId, null)).json()
     ).toEqual({ id: s.contactId, pixKey: null });
+    // What the panel reads from the database, not the echo of the response.
+    const body = await (
+      await call(s.owner, `/api/installments/${s.installmentId}`)
+    ).json();
+    expect(body.pixMissing).toBe(true);
+    expect(body.pix).toBeNull();
+  });
+
+  it("só a parte que recebe guarda a chave: a linha do próprio dono (buyer) dá 422", async () => {
+    const s = await payingToContact();
+    const [ownerRow] = await db
+      .select({ id: participant.id })
+      .from(participant)
+      .where(
+        and(
+          eq(participant.contractId, s.contractId),
+          eq(participant.role, "buyer")
+        )
+      );
+    expect(
+      (
+        await saveKey(
+          s.owner,
+          s.contractId,
+          ownerRow?.id as string,
+          "x@example.com"
+        )
+      ).status
+    ).toBe(422);
   });
 
   it("com conta, vale a da conta: guardar no contato dá 422", async () => {
@@ -170,6 +199,13 @@ describe("PIX guardado no contato", () => {
       .from(participant)
       .where(eq(participant.id, s.contactId));
     expect(stored?.pixKey).toBe("helena.duarte@exemplo.com");
+
+    // A viewer never pays: the installment carries no key (and no "missing key" nag).
+    const seen = await (
+      await call(viewer, `/api/installments/${s.installmentId}`)
+    ).json();
+    expect(seen.pix).toBeNull();
+    expect(seen.pixMissing).toBe(false);
 
     const stranger = await signUpCookie(uniqueEmail("contact-other"));
     expect(

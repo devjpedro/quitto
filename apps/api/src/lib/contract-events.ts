@@ -63,9 +63,16 @@ export function cursorOf(e: { createdAt: string; id: string }): string {
   return `${e.createdAt}|${e.id}`;
 }
 
+const CURSOR_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const CURSOR_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** null unless both halves are what Postgres accepts (an exact ISO date and a uuid), so a bad cursor is a 422, never a failed query. */
 export function parseCursor(cursor: string): { at: string; id: string } | null {
   const [at, id] = cursor.split("|");
-  return at && id && !Number.isNaN(Date.parse(at)) ? { at, id } : null;
+  return at && id && CURSOR_AT.test(at) && CURSOR_ID.test(id)
+    ? { at, id }
+    : null;
 }
 
 /**

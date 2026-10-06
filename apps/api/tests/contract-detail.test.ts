@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { auditEvent, user } from "../src/db/schema";
+import { user } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function call(cookie: string, path: string, method = "GET", body?: unknown) {
@@ -158,15 +158,13 @@ describe("GET /contracts/:id/events", () => {
       .from(user)
       .where(eq(user.email, s.ownerEmail))
       .limit(1);
-    // All 51 in the same instant (a day ago): only the id can order them across the page break (M1).
-    const sameInstant = new Date(Date.now() - 86_400_000);
-    await db.insert(auditEvent).values(
-      Array.from({ length: 51 }, () => ({
-        contractId: s.id,
-        actorUserId: joao?.id as string,
-        type: "receipt_share_created",
-        createdAt: sameInstant,
-      }))
+    // 51 events inside the same millisecond, apart by microseconds: only the
+    // id (and the date_trunc in the query) can order them across the page break (M1).
+    await db.execute(
+      sql`insert into audit_event (contract_id, actor_user_id, type, created_at)
+        select ${s.id}::uuid, ${joao?.id as string}, 'receipt_share_created',
+          date_trunc('milliseconds', now() - interval '1 day') + (g * interval '1 microsecond')
+        from generate_series(0, 50) g`
     );
     const first = await (
       await call(s.owner, `/api/contracts/${s.id}/events`)
@@ -183,6 +181,24 @@ describe("GET /contracts/:id/events", () => {
     expect(second.items.at(-1).type).toBe("contract_created");
     expect(second.nextBefore).toBeNull();
     expect(first.items.length + second.items.length).toBe(53);
+    const ids = [...first.items, ...second.items].map(
+      (e: { id: string }) => e.id
+    );
+    expect(new Set(ids).size).toBe(53);
+  });
+
+  it("cursor adulterado: 422, não 500", async () => {
+    const s = await scenario();
+    for (const before of ["lixo", "2026-10-05T12:00:00.000Z|lixo", "2026|x"]) {
+      expect(
+        (
+          await call(
+            s.owner,
+            `/api/contracts/${s.id}/events?before=${encodeURIComponent(before)}`
+          )
+        ).status
+      ).toBe(422);
+    }
   });
 
   it("sem acesso: 404", async () => {

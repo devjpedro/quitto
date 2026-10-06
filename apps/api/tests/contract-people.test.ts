@@ -26,7 +26,8 @@ const people = [
     displayName: "João Souza",
     role: "seller",
     linkedUserId: OWNER,
-    createdAt: CREATED,
+    // Not the contract's own instant: the owner's joinedAt is the contract's createdAt (M3).
+    createdAt: new Date("2026-06-28T19:40:01Z"),
   },
 ];
 const invites = [
@@ -155,6 +156,24 @@ describe("peopleView", () => {
       sentAt: "2026-10-01T12:00:00.000Z",
       url: null,
     });
+    // Declined wins over expired: the person said no, the clock does not matter.
+    const both = peopleView({
+      people: [people[0] as (typeof people)[number]],
+      invites: [
+        {
+          ...(invites[1] as (typeof invites)[number]),
+          expiresAt: new Date("2026-10-04T12:00:00Z"),
+          declinedAt: new Date("2026-10-02T12:00:00Z"),
+        },
+      ],
+      emails,
+      ownerId: OWNER,
+      contractCreatedAt: CREATED,
+      viewerId: OWNER,
+      now: NOW,
+      webOrigin: "https://app.quitto.dev",
+    });
+    expect(both[0]?.invite?.status).toBe("declined");
   });
 
   it("só o nome (sem convite): sem e-mail, sem convite, sem data de entrada", () => {

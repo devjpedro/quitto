@@ -20,6 +20,9 @@ const row = (
   metadata: null,
   createdAt: new Date(iso),
 });
+const UUID_A = "11111111-1111-4111-8111-111111111111";
+const UUID_B = "22222222-2222-4222-8222-222222222222";
+const UUID_C = "33333333-3333-4333-8333-333333333333";
 const created = createdEvent(
   {
     id: "c-moto",
@@ -64,18 +67,35 @@ describe("contract events", () => {
 
   it("página cheia (veio limit + 1): corta, e o cursor é a data e o id do último", () => {
     const rows = [
-      row("a", "2026-10-04T13:00:00Z"),
-      row("b", "2026-09-14T21:22:00Z"),
-      row("c", "2026-09-02T11:15:00Z"),
+      row(UUID_A, "2026-10-04T13:00:00Z"),
+      row(UUID_B, "2026-09-14T21:22:00Z"),
+      row(UUID_C, "2026-09-02T11:15:00Z"),
     ];
     const page = eventsPage(rows, 2, created, "u-joao");
-    expect(page.items.map((e) => e.id)).toEqual(["a", "b"]);
-    expect(page.nextBefore).toBe("2026-09-14T21:22:00.000Z|b");
+    expect(page.items.map((e) => e.id)).toEqual([UUID_A, UUID_B]);
+    expect(page.nextBefore).toBe(`2026-09-14T21:22:00.000Z|${UUID_B}`);
     expect(parseCursor(page.nextBefore as string)).toEqual({
       at: "2026-09-14T21:22:00.000Z",
-      id: "b",
+      id: UUID_B,
     });
+  });
+
+  it("uma página que cabe no limite exato não tem cursor (a fronteira é > e não >=)", () => {
+    const page = eventsPage(
+      [row("a", "2026-10-04T13:00:00Z"), row("b", "2026-09-14T21:22:00Z")],
+      2,
+      created,
+      "u-joao"
+    );
+    expect(page.items.map((e) => e.id)).toEqual(["a", "b", "created:c-moto"]);
+    expect(page.nextBefore).toBeNull();
+  });
+
+  it("cursor meio válido é recusado (o Postgres não aceita), não vira consulta", () => {
     expect(parseCursor("lixo")).toBeNull();
+    expect(parseCursor("2026-10-05T12:00:00.000Z|lixo")).toBeNull();
+    expect(parseCursor("2026|x")).toBeNull();
+    expect(parseCursor(`lixo|${UUID_A}`)).toBeNull();
   });
 
   it("última página: tudo e a criação no fim, sem cursor", () => {

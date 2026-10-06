@@ -13,12 +13,6 @@ export interface InstallmentPix {
   source: "account" | "contact";
 }
 
-/**
- * The installment's static BR Code, with the key and where it came from (the
- * account, or the contact without one). null without a key, or when the
- * stored one is no longer valid, so a stale key never breaks the screen. One
- * source for the installment detail and the home.
- */
 /** The receiver's key when it parses; a stale one is no key (planner's decision 12). */
 export function usableKey(
   recebedor: Recebedor
@@ -34,6 +28,12 @@ export function usableKey(
   }
 }
 
+/**
+ * The installment's static BR Code, with the key and where it came from (the
+ * account, or the contact without one). null without a key, or when the
+ * stored one is no longer valid, so a stale key never breaks the screen. One
+ * source for the installment detail and the home.
+ */
 export function installmentPix(
   recebedor: Recebedor,
   amountCents: number

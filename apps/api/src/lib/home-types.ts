@@ -22,7 +22,12 @@ export interface UpcomingItem {
 export interface InstallmentAction extends UpcomingItem {
   canConfirm: boolean;
   canMarkPaid: boolean;
-  /** The approver may mark it received (POST …/mark-received): pending or disputed. */
+  /**
+   * The approver may mark it received (POST …/mark-received): pending or disputed.
+   * A capability, like `canMarkPaid`: an owner paying a contact without an account is
+   * also the approver, so it is true on that pay card too; the web reads it only on
+   * receive cards.
+   */
   canMarkReceived: boolean;
   /** The whole contract: the card's bar and legend. */
   contract: ContractSummary;

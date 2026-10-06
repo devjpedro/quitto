@@ -354,7 +354,7 @@ describe("buildAgenda: ações", () => {
     expect(contractCode).not.toContain("maria@example.com");
   });
 
-  it("quem recebe pode marcar como recebida (com confirmação e a outra parte com conta); quem paga não", () => {
+  it("quem recebe pode marcar como recebida (com confirmação e a outra parte com conta); quem paga a outra parte com conta não", () => {
     const data = rows({
       contracts: [
         contractRow({
@@ -385,6 +385,27 @@ describe("buildAgenda: ações", () => {
     expect(byId.get("installment:a5")).toMatchObject({
       kind: "overdue",
       canMarkReceived: false,
+    });
+  });
+
+  it("o dono que paga um contato sem conta é o aprovador: o cartão de pagar também traz canMarkReceived", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "sala", ownerRole: "buyer" })],
+      participants: [
+        person("sala", "buyer", ME, "Eu"),
+        person("sala", "seller", null, "Helena Duarte"),
+      ],
+      users: [{ id: ME, name: "Eu", pixKey: null }],
+      installments: [
+        inst({ id: "s1", contractId: "sala", dueDate: "2026-09-30" }),
+      ],
+    });
+    expect(
+      agenda(data).actions.find((a) => a.id === "installment:s1")
+    ).toMatchObject({
+      direction: "pay",
+      canMarkPaid: true,
+      canMarkReceived: true,
     });
   });
 });

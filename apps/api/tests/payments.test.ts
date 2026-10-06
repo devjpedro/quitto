@@ -227,6 +227,9 @@ describe.if(configured)("GET installment detail", () => {
     expect(typeof body.events[0].actorUserId).toBe("string");
     expect(typeof body.events[0].actorName).toBe("string");
     expect(body.events[0].metadata.fileName).toBe("c.pdf");
+    // The Histórico reads the size from the event, not from the proof row.
+    expect(body.events[0].metadata.sizeBytes).toBe(body.proofs[0].sizeBytes);
+    expect(body.events[0].metadata.sizeBytes).toBeGreaterThan(0);
   });
 });
 
