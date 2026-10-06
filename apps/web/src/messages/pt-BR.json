@@ -191,6 +191,7 @@
   "contract_key_open_view": "em aberto",
   "contract_key_ends": "termina em {month}",
   "contract_key_settled": "quitado em {date}",
+  "contract_sep": "·",
   "contract_tabs_label": "Seções do contrato",
   "contract_tab_installments": "Parcelas",
   "contract_tab_people": "Pessoas",

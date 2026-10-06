@@ -14,7 +14,8 @@ export function SegmentedControl<V extends string>({
   onValueChange,
   block = false,
 }: {
-  block?: boolean;
+  /** `true`: full width always; `"mobile"`: full width below md only (the items share it). */
+  block?: boolean | "mobile";
   label: string;
   onValueChange: (value: V) => void;
   options: SegmentedOption<V>[];
@@ -25,7 +26,9 @@ export function SegmentedControl<V extends string>({
       aria-label={label}
       className={cn(
         "gap-0.5 rounded-[12px] bg-surface-sunken p-[3px]",
-        block ? "flex w-full" : "inline-flex"
+        block === true && "flex w-full",
+        block === "mobile" && "inline-flex max-md:flex max-md:w-full",
+        !block && "inline-flex"
       )}
       onValueChange={(next) => {
         // Radix emits "" when the pressed item is clicked again; keep a selection.
@@ -41,7 +44,8 @@ export function SegmentedControl<V extends string>({
         <ToggleGroup.Item
           className={cn(
             "inline-flex min-h-11 items-center justify-center gap-1 rounded-[9px] px-3 text-ink-muted text-sm transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[state=on]:bg-surface data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.1)] md:min-h-8",
-            block && "flex-1"
+            block === true && "flex-1",
+            block === "mobile" && "max-md:flex-1"
           )}
           key={option.value}
           value={option.value}

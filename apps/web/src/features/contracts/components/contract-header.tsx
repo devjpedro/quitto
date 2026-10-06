@@ -1,5 +1,6 @@
 import { CaretLeft, Eye } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 import { PersonAvatar } from "@/components/ui/person-avatar";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -10,7 +11,8 @@ import {
   termsLine,
 } from "../lib/contract-view";
 import type { ContractDetail } from "../types";
-import { ContractActionsMenu, ExportMenu } from "./contract-menus";
+import { ExportMenu } from "./contract-export-menu";
+import { ContractActionsMenu } from "./contract-menus";
 
 const NAME = "font-medium text-ink";
 
@@ -121,7 +123,15 @@ export function ContractHeader({ detail }: { detail: ContractDetail }) {
           </span>
         )}
         {terms ? (
-          <span className="relative max-md:basis-full md:before:absolute md:before:top-0 md:before:right-full md:before:w-5 md:before:text-center md:before:text-line-strong md:before:content-['·'_/_'']">
+          <span
+            className="relative max-md:basis-full md:before:absolute md:before:top-0 md:before:right-full md:before:w-5 md:before:text-center md:before:text-line-strong md:before:content-[var(--terms-sep)_/_'']"
+            // The "·" is a message (the same in both languages today), drawn by CSS.
+            style={
+              {
+                "--terms-sep": JSON.stringify(m.contract_sep()),
+              } as CSSProperties
+            }
+          >
             {terms}
           </span>
         ) : null}

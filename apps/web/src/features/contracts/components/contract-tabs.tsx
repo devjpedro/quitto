@@ -27,8 +27,9 @@ export function ContractTabs({
       className="flex items-center justify-between gap-3"
       data-testid="contract-tabs"
     >
-      <div className="max-md:w-full max-md:[&>div]:flex max-md:[&>div]:w-full max-md:[&_button]:flex-1">
+      <div className="max-md:w-full">
         <SegmentedControl
+          block="mobile"
           label={m.contract_tabs_label()}
           onValueChange={onTabChange}
           options={[

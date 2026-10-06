@@ -60,10 +60,12 @@ describe("contract API (features/contracts/api.ts)", () => {
     const { result } = renderHook(() => useDeleteContractMutation(), {
       wrapper: wrap(client),
     });
+    client.setQueryData(queryKeys.contract("c1"), motoDetail());
     await result.current.mutateAsync("c1");
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
+    expect(client.getQueryData(queryKeys.contract("c1"))).toBeUndefined();
   });
 
   it("leaveContract invalidates the home", async () => {
@@ -72,10 +74,12 @@ describe("contract API (features/contracts/api.ts)", () => {
     const { result } = renderHook(() => useLeaveContractMutation("c1"), {
       wrapper: wrap(client),
     });
+    client.setQueryData(queryKeys.contract("c1"), motoDetail());
     await result.current.mutateAsync();
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
+    expect(client.getQueryData(queryKeys.contract("c1"))).toBeUndefined();
   });
 
   it("updateContract (título) grava no cache do contrato e invalida a home", async () => {

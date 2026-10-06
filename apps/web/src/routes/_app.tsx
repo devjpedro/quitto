@@ -11,7 +11,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
-import { ContractMobileMenu } from "@/features/contracts/components/contract-menus";
+import { ContractMobileMenu } from "@/features/contracts/components/contract-mobile-menu";
 import {
   useActiveContracts,
   useMomentMilestone,

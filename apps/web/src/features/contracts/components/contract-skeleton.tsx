@@ -17,9 +17,16 @@ export function ContractSkeleton() {
     >
       <div className="min-w-0">
         <Skeleton className={`h-[22px] w-24 max-md:hidden ${BONE}`} />
-        <Skeleton
-          className={`h-[31px] w-56 md:mt-1.5 md:h-[35px] md:w-72 ${BONE}`}
-        />
+        <div className="flex items-start justify-between gap-2 md:mt-1.5">
+          <Skeleton className={`h-[31px] w-56 md:h-[35px] md:w-72 ${BONE}`} />
+          {/* Exportar and the "⋯": from md they sit on the title's line. */}
+          <Skeleton
+            className={`h-10 w-[108px] rounded-control max-md:hidden ${BONE}`}
+          />
+          <Skeleton
+            className={`size-10 rounded-control max-md:hidden ${BONE}`}
+          />
+        </div>
         <Skeleton className={`mt-2.5 h-6 w-72 max-w-full md:w-96 ${BONE}`} />
         <div className="mt-5 md:mt-6">
           <Skeleton className={`h-4 w-24 ${BONE}`} />
