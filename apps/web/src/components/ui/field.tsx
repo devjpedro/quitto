@@ -9,6 +9,10 @@ export interface FieldProps {
   hint?: string;
   id: string;
   label: string;
+  /** The label only for the screen reader (the column header says what it is). */
+  labelHidden?: boolean;
+  /** After the label, in ink-muted, inside the <label>. */
+  optionalLabel?: string;
   warning?: string;
 }
 
@@ -27,6 +31,46 @@ function controlState(error?: string, warning?: string): string {
   return "border border-field-line hover:border-ink-muted focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-brand";
 }
 
+/** The note under a field or an option group: an error or a warning with its icon, or a hint. */
+export function FieldNote({
+  error,
+  hint,
+  id,
+  warning,
+}: {
+  error?: string;
+  hint?: string;
+  id: string;
+  warning?: string;
+}) {
+  const note = error ?? warning ?? hint;
+  if (!note) {
+    return null;
+  }
+  const NoteIcon = error ? WarningCircle : Warning;
+  return (
+    <p
+      className={cn(
+        "mt-2 flex items-start gap-1.5 text-[12.5px] leading-[1.45]",
+        error && "font-medium text-danger",
+        !error && warning && "font-medium text-warning",
+        !(error || warning) && "text-ink-muted"
+      )}
+      id={`${id}-note`}
+    >
+      {error || warning ? (
+        <NoteIcon
+          aria-hidden="true"
+          className="mt-px shrink-0"
+          size={16}
+          weight="fill"
+        />
+      ) : null}
+      {note}
+    </p>
+  );
+}
+
 function Frame({
   children,
   className,
@@ -35,37 +79,35 @@ function Frame({
   hint,
   id,
   label,
+  labelHidden,
+  optionalLabel,
   warning,
 }: FieldProps & { children: ReactNode }) {
-  const note = error ?? warning ?? hint;
-  const NoteIcon = error ? WarningCircle : Warning;
   return (
     <div className={cn("flex flex-col", className)}>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
+      <div
+        className={cn(
+          "mb-2 flex items-baseline justify-between gap-3",
+          labelHidden && "sr-only"
+        )}
+      >
         <label className="font-semibold text-[13px] text-ink" htmlFor={id}>
           {label}
+          {optionalLabel ? (
+            <>
+              {" "}
+              <span className="font-normal text-ink-muted">
+                {optionalLabel}
+              </span>
+            </>
+          ) : null}
         </label>
         {counter ? (
           <span className="text-ink-muted text-xs tabular-nums">{counter}</span>
         ) : null}
       </div>
       {children}
-      {note ? (
-        <p
-          className={cn(
-            "mt-2 flex items-start gap-1.5 text-[12.5px] leading-[1.45]",
-            error && "text-danger",
-            !error && warning && "text-warning",
-            !(error || warning) && "text-ink-muted"
-          )}
-          id={`${id}-note`}
-        >
-          {error || warning ? (
-            <NoteIcon aria-hidden="true" className="mt-px shrink-0" size={16} />
-          ) : null}
-          {note}
-        </p>
-      ) : null}
+      <FieldNote error={error} hint={hint} id={id} warning={warning} />
     </div>
   );
 }
@@ -76,24 +118,77 @@ export function TextField({
   error,
   hint,
   id,
+  inputClassName,
   label,
+  labelHidden,
+  leading,
+  optionalLabel,
+  tall = false,
+  trailing,
   warning,
   ...input
-}: FieldProps & Omit<ComponentProps<"input">, "id">) {
+}: FieldProps &
+  Omit<ComponentProps<"input">, "id"> & {
+    /** The class of the <input> itself (the wrapper takes className). */
+    inputClassName?: string;
+    /** Inside the box, on the left: "R$", an avatar. Decorative: the label names the field. */
+    leading?: ReactNode;
+    /** The wizard's field: 48 px (16 px text, no zoom on iOS) on a phone, 46 px from md. */
+    tall?: boolean;
+    /** Inside the box, on the right: "parcelas", the calendar icon. Decorative. */
+    trailing?: ReactNode;
+  }) {
   const note = error ?? warning ?? hint;
   return (
-    <Frame {...{ className, counter, error, hint, id, label, warning }}>
-      <input
-        aria-describedby={note ? `${id}-note` : undefined}
-        aria-invalid={error ? true : undefined}
-        className={cn(
-          CONTROL,
-          "h-11 px-3 md:h-10",
-          controlState(error, warning)
-        )}
-        id={id}
-        {...input}
-      />
+    <Frame
+      {...{
+        className,
+        counter,
+        error,
+        hint,
+        id,
+        label,
+        labelHidden,
+        optionalLabel,
+        warning,
+      }}
+    >
+      <div className="relative">
+        {leading ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink-muted text-sm"
+          >
+            {leading}
+          </span>
+        ) : null}
+        <input
+          aria-describedby={note ? `${id}-note` : undefined}
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            CONTROL,
+            tall
+              ? "h-12 px-3.5 text-base md:h-[46px] md:text-[15px]"
+              : "h-11 px-3 md:h-10",
+            leading && "pl-11",
+            trailing && "pr-24",
+            // The wizard's figures line up; the Phase 2 fields keep their text as it was.
+            tall && "tabular-nums",
+            controlState(error, warning),
+            inputClassName
+          )}
+          id={id}
+          {...input}
+        />
+        {trailing ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center gap-1 text-[13.5px] text-ink-muted"
+          >
+            {trailing}
+          </span>
+        ) : null}
+      </div>
     </Frame>
   );
 }
@@ -105,12 +200,26 @@ export function TextArea({
   hint,
   id,
   label,
+  labelHidden,
+  optionalLabel,
   warning,
   ...textarea
 }: FieldProps & Omit<ComponentProps<"textarea">, "id">) {
   const note = error ?? warning ?? hint;
   return (
-    <Frame {...{ className, counter, error, hint, id, label, warning }}>
+    <Frame
+      {...{
+        className,
+        counter,
+        error,
+        hint,
+        id,
+        label,
+        labelHidden,
+        optionalLabel,
+        warning,
+      }}
+    >
       <textarea
         aria-describedby={note ? `${id}-note` : undefined}
         aria-invalid={error ? true : undefined}

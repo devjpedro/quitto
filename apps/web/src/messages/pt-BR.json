@@ -552,5 +552,6 @@
   "error_counterparty_email_self": "Esse é o seu e-mail. Use o da outra parte.",
   "error_contract_create_failed": "Não deu para criar o contrato agora. Nada foi salvo; tente de novo.",
   "warning_schedule_first_due_past": "Essa data já passou: as parcelas antes de hoje entram como atrasadas.",
-  "warning_installments_date_order": "Esta parcela vence antes da anterior."
+  "warning_installments_date_order": "Esta parcela vence antes da anterior.",
+  "wizard_optional": "opcional"
 }
