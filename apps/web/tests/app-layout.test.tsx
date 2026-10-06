@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,16 +13,21 @@ import { queryKeys } from "@/lib/query-keys";
 import { homeFixture, installmentAction } from "./home-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
-const { navigate, meGet, homeGet, outlet } = vi.hoisted(() => ({
+const { navigate, meGet, homeGet, outlet, contractMatch } = vi.hoisted(() => ({
   navigate: vi.fn(),
   meGet: vi.fn(),
   homeGet: vi.fn(),
   outlet: { view: null as (() => ReactNode) | null },
+  // The /_app/contracts/$id match the layout reads (no RouterProvider here).
+  contractMatch: {
+    value: undefined as { params: { id: string } } | undefined,
+  },
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   Outlet: () => outlet.view?.() ?? <p>page content</p>,
+  useMatch: () => contractMatch.value,
   useNavigate: () => navigate,
 }));
 vi.mock("@/lib/api", () => ({
@@ -31,6 +36,7 @@ vi.mock("@/lib/api", () => ({
       me: { get: meGet },
       home: { get: homeGet },
       notifications: { get: () => new Promise(() => undefined) },
+      contracts: () => ({ get: () => new Promise(() => undefined) }),
     },
   },
 }));
@@ -63,12 +69,14 @@ vi.mock("@/components/layout/app-frame", () => ({
   AppFrame: ({
     identity,
     children,
+    detail,
     moment,
     navCounts,
     onOpenNotifications,
     unreadCount,
   }: {
     children: ReactNode;
+    detail: { actions: ReactNode; backLabel: string; backTo: string } | null;
     identity: { name: string } | null;
     moment: MomentCardView | null;
     navCounts: { contracts: number; now: number };
@@ -76,6 +84,16 @@ vi.mock("@/components/layout/app-frame", () => ({
     unreadCount: number;
   }) => (
     <div data-testid="shell">
+      {detail ? (
+        <div data-testid="detail-bar">
+          <span>
+            back {detail.backLabel} {detail.backTo}
+          </span>
+          {detail.actions}
+        </div>
+      ) : (
+        <span>no detail</span>
+      )}
       <span>{identity?.name ?? "no identity"}</span>
       <span>unread {unreadCount}</span>
       <span>moment {moment?.label ?? "none"}</span>
@@ -115,6 +133,7 @@ beforeEach(() => {
   homeGet.mockReset();
   homeGet.mockReturnValue(new Promise(() => undefined));
   outlet.view = null;
+  contractMatch.value = undefined;
   clearIdentityCookie();
 });
 
@@ -253,6 +272,24 @@ describe("_app layout", () => {
     expect(
       screen.getByRole("button", { name: "see all from the page" })
     ).toHaveFocus();
+  });
+
+  it("on /contracts/$id the frame gets a detail bar (back to Contratos and the contract's ⋯); elsewhere, none", () => {
+    meGet.mockReturnValue(new Promise(() => undefined));
+    const { unmount } = renderWithProviders(<AppLayout />);
+    expect(screen.getByText("no detail")).toBeVisible();
+    expect(screen.queryByTestId("detail-bar")).toBeNull();
+    unmount();
+
+    contractMatch.value = { params: { id: "c-moto" } };
+    renderWithProviders(<AppLayout />);
+    const bar = within(screen.getByTestId("detail-bar"));
+    expect(bar.getByText("back Contratos /contracts")).toBeVisible();
+    // The contract is still loading: its ⋯ waits, disabled.
+    expect(
+      bar.getByRole("button", { name: "Exportar e ações do contrato" })
+    ).toBeDisabled();
+    expect(screen.queryByText("no detail")).toBeNull();
   });
 
   it("the milestone of the moment comes from the same home, as text for the sidebar", async () => {
