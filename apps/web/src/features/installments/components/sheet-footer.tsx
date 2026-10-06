@@ -7,6 +7,7 @@ import type { ContractDetail } from "@/features/contracts/types";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { installmentQueryOptions } from "../api";
+import { useReceiptActions } from "../hooks/use-receipt-actions";
 import {
   type PanelPrimary,
   panelInputOf,
@@ -15,7 +16,7 @@ import {
 import type { InstallmentDetail } from "../types";
 import { ChargeLink } from "./charge-block";
 import { PANEL_TONE, usePanel } from "./panel-context";
-import { ReceiptPrimaryButton, useReceiptActions } from "./receipt-block";
+import { ReceiptPrimaryButton } from "./receipt-actions";
 import { ConfirmButton } from "./review-block";
 
 interface FooterProps {

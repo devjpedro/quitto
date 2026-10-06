@@ -5,8 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { queryKeys } from "@/lib/query-keys";
 import { makeTestQueryClient } from "./test-utils";
 
-const { success } = vi.hoisted(() => ({ success: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { success, error: vi.fn() } }));
+const { success, failure } = vi.hoisted(() => ({
+  success: vi.fn(),
+  failure: vi.fn(),
+}));
+vi.mock("sonner", () => ({ toast: { success, error: failure } }));
 
 vi.mock("@/lib/api", () => {
   const contracts = (_p: { id: string }) => ({
@@ -15,6 +18,28 @@ vi.mock("@/lib/api", () => {
     }),
   });
   const installments = (_i: { installmentId: string }) => ({
+    "receipt-share": {
+      post: () =>
+        Promise.resolve({
+          data: null,
+          error: {
+            status: 500,
+            value: { error: { code: "INTERNAL", message: "falhou" } },
+          },
+        }),
+    },
+    dispute: {
+      post: () =>
+        Promise.resolve({
+          data: {
+            id: "i1",
+            status: "disputed",
+            paidAt: null,
+            confirmedAt: null,
+          },
+          error: null,
+        }),
+    },
     confirm: {
       post: () =>
         Promise.resolve({
@@ -33,6 +58,8 @@ vi.mock("@/lib/api", () => {
 
 import {
   useConfirmMutation,
+  useDisputeMutation,
+  useShareReceiptMutation,
   useUpdateInstallmentMutation,
 } from "../src/features/installments/api";
 import { queryClient } from "../src/lib/query";
@@ -78,6 +105,33 @@ describe("features/installments/api (revisão I3: os testes do legado contra os 
     await result.current.mutateAsync("i1");
     await waitFor(() =>
       expect(success).toHaveBeenCalledWith("Pagamento confirmado")
+    );
+  });
+
+  it("compartilhar o recibo que falha lança e diz a frase própria, uma vez (não a genérica)", async () => {
+    failure.mockClear();
+    const { result } = renderHook(() => useShareReceiptMutation("i1"), {
+      wrapper: wrap(queryClient),
+    });
+    await expect(result.current.mutateAsync()).rejects.toBeDefined();
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(failure).toHaveBeenCalledTimes(1);
+    expect(failure).toHaveBeenCalledWith(
+      "O link do recibo não foi criado. Tente de novo."
+    );
+  });
+
+  it("Enviar contestação mostra o toast 'Contestação enviada'", async () => {
+    success.mockClear();
+    const { result } = renderHook(() => useDisputeMutation("c1"), {
+      wrapper: wrap(queryClient),
+    });
+    await result.current.mutateAsync({
+      installmentId: "i1",
+      reason: "Veio R$ 240,00.",
+    });
+    await waitFor(() =>
+      expect(success).toHaveBeenCalledWith("Contestação enviada")
     );
   });
 });

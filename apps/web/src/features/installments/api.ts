@@ -7,7 +7,7 @@ import {
 import { withInstallmentPatch } from "@/features/contracts/lib/contract-cache";
 import type { ContractDetail } from "@/features/contracts/types";
 import { api } from "@/lib/api";
-import { ApiError, unwrap, unwrapOrNull } from "@/lib/api-client";
+import { unwrap, unwrapOrNull } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { optimisticUpdate } from "@/lib/optimistic";
 import { queryKeys } from "@/lib/query-keys";
@@ -181,27 +181,20 @@ export function useUpdateInstallmentMutation(contractId: string) {
 
 /**
  * "Compartilhar recibo": creates or reuses the link (POST is idempotent) and
- * answers its public URL, or null when it was not created: the caller says
- * so in its own words ("O link do recibo não foi criado"), once, instead of
- * the generic toast every failed mutation gets. A 401 still throws (the
- * session gate takes it).
+ * answers its public URL. A failure throws, and says so once in its own
+ * words ("O link do recibo não foi criado", `meta.errorMessage`) instead of
+ * the generic toast; a 401 goes to the session gate as always.
  */
 export function useShareReceiptMutation(installmentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<{ url: string } | null> => {
-      try {
-        const share = await unwrap(
-          api.api.installments({ installmentId })["receipt-share"].post()
-        );
-        return { url: `${window.location.origin}/r/${share.token}` };
-      } catch (error) {
-        if (error instanceof ApiError && error.httpStatus === 401) {
-          throw error;
-        }
-        return null;
-      }
+    mutationFn: async (): Promise<{ url: string }> => {
+      const share = await unwrap(
+        api.api.installments({ installmentId })["receipt-share"].post()
+      );
+      return { url: `${window.location.origin}/r/${share.token}` };
     },
+    meta: { errorMessage: m.panel_receipt_failed() },
     onSettled: () =>
       qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) }),
   });
