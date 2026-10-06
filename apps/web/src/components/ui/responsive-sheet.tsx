@@ -108,6 +108,22 @@ function SheetHeading({
   );
 }
 
+/**
+ * The frame's placement. viewport-fit=cover: the side panel stays off the
+ * notch of a phone on its side (md+). The bottom sheet clears the home bar
+ * itself, unless it has a footer: then the footer takes the safe area, and
+ * adding it here too would leave it twice under the main action.
+ */
+function frameClass(variant: "side" | "bottom", hasFooter: boolean): string {
+  if (variant === "side") {
+    return "top-3 right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel";
+  }
+  return cn(
+    "inset-x-0 bottom-0 max-h-[91dvh] rounded-t-panel",
+    !hasFooter && "pb-[env(safe-area-inset-bottom)]"
+  );
+}
+
 /** Side panel from md up, draggable bottom sheet below. Same content in both. */
 export function ResponsiveSheet({
   open,
@@ -162,10 +178,7 @@ export function ResponsiveSheet({
                 animate={shown}
                 className={cn(
                   "fixed z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
-                  variant === "side"
-                    ? // viewport-fit=cover: off the notch of a phone on its side (md+).
-                      "top-3 right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel"
-                    : "inset-x-0 bottom-0 max-h-[91dvh] rounded-t-panel pb-[env(safe-area-inset-bottom)]"
+                  frameClass(variant, Boolean(footer))
                 )}
                 data-variant={variant}
                 drag={canDrag ? "y" : false}

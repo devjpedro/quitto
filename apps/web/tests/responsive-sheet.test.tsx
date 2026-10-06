@@ -253,6 +253,8 @@ describe("ResponsiveSheet", () => {
       name: "Parcela 7 de 10",
     });
     expect(dialog).toHaveClass("max-h-[91dvh]");
+    // The footer takes the safe area; the frame does not add it again.
+    expect(dialog).not.toHaveClass("pb-[env(safe-area-inset-bottom)]");
     expect(
       screen
         .getByRole("button", { name: "Copiar código PIX" })
@@ -261,6 +263,18 @@ describe("ResponsiveSheet", () => {
     expect(
       screen.queryByRole("button", { name: "Próxima parcela" })
     ).toBeNull();
+  });
+
+  it("bottom sheet sem rodapé: o próprio quadro folga a safe-area", async () => {
+    window.innerWidth = 390;
+    render(
+      <ResponsiveSheet onOpenChange={() => undefined} open title="Parcela 7">
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Parcela 7" })
+    ).toHaveClass("pb-[env(safe-area-inset-bottom)]");
   });
 
   it("lateral: as setas no cabeçalho, sem o rodapé do celular", async () => {
