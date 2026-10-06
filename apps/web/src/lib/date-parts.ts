@@ -42,3 +42,8 @@ export function weekdayName(iso: string, locale: Locale): string {
     utc(iso)
   );
 }
+
+/** "mar/2027" / "Mar/2027": the month a contract ends, in the bar's key. */
+export function monthYearShort(iso: string, locale: Locale): string {
+  return `${monthShort(iso, locale)}/${iso.slice(0, 4)}`;
+}

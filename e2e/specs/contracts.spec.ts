@@ -7,7 +7,8 @@ import {
 } from "../fixtures";
 
 const MONTHLY_SUMMARY_LINE = /\/mês · 12 meses/;
-const MONTHLY_DETAIL_CHIP = /800,00\/mês · 12 meses/;
+// The terms, said once, in the other party's line (mockup 14).
+const MONTHLY_TERMS = /R\$\s800,00 todo dia \d+ · 12 parcelas/;
 
 test("criar contrato (auto) aparece na lista e no Agora", async ({ page }) => {
   await signup(page);
@@ -53,6 +54,8 @@ test("excluir contrato remove da lista", async ({ page }) => {
   await signup(page);
   const { id } = await seedContract(page.request, { title: "Para excluir" });
   await page.goto(`/contracts/${id}`);
+  // The page streams in by SSR: a click before hydration does nothing.
+  await waitForHydrated(page);
   await page.getByRole("button", { name: "Ações do contrato" }).click();
   await page.getByRole("menuitem", { name: "Excluir contrato" }).click();
   await page.getByRole("button", { name: "Excluir", exact: true }).click();
@@ -83,6 +86,6 @@ test("criar contrato mensal gera parcelas iguais e mostra a intenção", async (
   await expect(
     page.getByRole("heading", { name: "Aluguel Mensal E2E" })
   ).toBeVisible();
-  // selo da intenção no herói do detalhe
-  await expect(page.getByText(MONTHLY_DETAIL_CHIP)).toBeVisible();
+  // as condições na linha da outra parte do detalhe
+  await expect(page.getByText(MONTHLY_TERMS)).toBeVisible();
 });

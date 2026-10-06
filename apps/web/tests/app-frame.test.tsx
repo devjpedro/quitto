@@ -56,6 +56,7 @@ async function renderAt(
     component: () => (
       <AppFrame
         activeContracts={{ items: [], total: 0 }}
+        detail={null}
         identity={maria}
         moment={null}
         navCounts={{ contracts: 0, now: 0 }}
@@ -406,6 +407,38 @@ describe("AppFrame", () => {
       "href",
       "/contracts/new"
     );
+  });
+
+  it("no detalhe, a barra de cima tem ‹ Contratos, o sino e as ações, sem busca e sem avatar", async () => {
+    await renderAt("/contracts/c6", {
+      unreadCount: 3,
+      detail: {
+        backLabel: "Contratos",
+        backTo: "/contracts",
+        actions: (
+          <button aria-label="Exportar e ações do contrato" type="button" />
+        ),
+      },
+    });
+    const topBar = within(screen.getByRole("banner"));
+    // "‹ Contratos" where the logo was (DIRECAO › Layout: not a placeholder).
+    expect(topBar.getByRole("link", { name: "Contratos" })).toHaveAttribute(
+      "href",
+      "/contracts"
+    );
+    expect(topBar.queryByRole("img", { name: "Quitto" })).toBeNull();
+    expect(
+      topBar.getByRole("button", { name: "Notificações, 3 não lidas" })
+    ).toBeVisible();
+    expect(
+      topBar.getByRole("button", { name: "Exportar e ações do contrato" })
+    ).toBeVisible();
+    expect(topBar.queryByRole("button", { name: "Buscar" })).toBeNull();
+    expect(topBar.queryByRole("button", { name: ACCOUNT_TRIGGER })).toBeNull();
+    // The sidebar ignores it: its logo, search and account stay.
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(sidebar.getByRole("img", { name: "Quitto" })).toBeVisible();
+    expect(sidebar.getByRole("button", { name: "Buscar…" })).toBeVisible();
   });
 });
 

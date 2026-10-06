@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
@@ -223,4 +224,43 @@ export async function seedInvite(
   expect(inv.ok()).toBeTruthy();
   const body = (await inv.json()) as { token: string };
   return { token: body.token, participantId: participant.id };
+}
+
+/** Aceita um convite pela API (sem a tela de convite, que a Fase 3 refaz). */
+export async function acceptInvite(
+  request: APIRequestContext,
+  token: string
+): Promise<void> {
+  const res = await request.post(`/api/invites/${token}/accept`);
+  expect(res.ok()).toBeTruthy();
+}
+
+/** O pagador envia o comprovante de teste pela API: presign, PUT direto no storage e o registro. */
+export async function uploadProofApi(
+  request: APIRequestContext,
+  installmentId: string
+): Promise<void> {
+  const presign = await request.post(
+    `/api/installments/${installmentId}/proofs/presign`,
+    { data: { fileName: "comprovante.pdf", mimeType: "application/pdf" } }
+  );
+  expect(presign.ok()).toBeTruthy();
+  const { uploadUrl, objectKey } = (await presign.json()) as {
+    objectKey: string;
+    uploadUrl: string;
+  };
+  const put = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "content-type": "application/pdf" },
+    body: readFileSync(PROOF_PDF),
+  });
+  expect(put.ok).toBeTruthy();
+  const done = await request.post(`/api/installments/${installmentId}/proofs`, {
+    data: {
+      objectKey,
+      fileName: "comprovante.pdf",
+      mimeType: "application/pdf",
+    },
+  });
+  expect(done.ok()).toBeTruthy();
 }

@@ -1,20 +1,22 @@
-import {
-  type InstallmentFilter,
-  isInstallmentFilter,
-} from "./installments-filter";
+export type ContractTabParam = "people" | "history";
+
+const TABS: readonly string[] = ["people", "history"];
 
 /**
- * The contract page's search: the installment to open in the drawer, and the
- * list's filter ("Ver parcelas" on a group of overdue ones opens it on
- * "overdue"). Anything else is dropped.
+ * The contract page's search: the installment open in the panel and the tab
+ * (planner's decision 14; no tab is Parcelas). The old `status` filter is
+ * gone with the old list (decision 13). Anything else is dropped.
  */
 export function contractSearch(search: Record<string, unknown>): {
   installment?: string;
-  status?: InstallmentFilter;
+  tab?: ContractTabParam;
 } {
   return {
     installment:
       typeof search.installment === "string" ? search.installment : undefined,
-    status: isInstallmentFilter(search.status) ? search.status : undefined,
+    tab:
+      typeof search.tab === "string" && TABS.includes(search.tab)
+        ? (search.tab as ContractTabParam)
+        : undefined,
   };
 }

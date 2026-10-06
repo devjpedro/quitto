@@ -188,7 +188,7 @@ test("Cobrar no WhatsApp de um grupo cita todas as parcelas e o total", async ({
   );
 });
 
-test("grupo que você paga: Pagar a mais antiga abre a gaveta na mais antiga", async ({
+test("grupo que você paga: Pagar a mais antiga abre a mais antiga", async ({
   page,
 }) => {
   await signup(page);
@@ -205,7 +205,6 @@ test("grupo que você paga: Pagar a mais antiga abre a gaveta na mais antiga", a
   ).toHaveAttribute("href", `/contracts/${id}`);
   await group.getByRole("link", { name: "Pagar a mais antiga" }).click();
   await expect(page).toHaveURL(new RegExp(`installment=${oldest.id}`));
-  await expect(page.getByRole("dialog")).toBeVisible();
 });
 
 test("avisos iguais seguidos são uma linha; ler a linha lê o grupo", async ({

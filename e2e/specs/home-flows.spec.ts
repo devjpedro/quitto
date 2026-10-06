@@ -5,10 +5,10 @@ import {
   getContract,
   isoDaysFromToday,
   newUser,
-  PROOF_PDF,
   seedContract,
   seedInvite,
   signup,
+  uploadProofApi,
   waitForHydrated,
 } from "../fixtures";
 import { card, inviteCard } from "../home-helpers";
@@ -263,17 +263,7 @@ test("conferir comprovante: Confirmar no próprio Agora", async ({
     await approver.page.getByRole("button", { name: ACCEPT_INVITE }).click();
     await approver.page.waitForURL(`**/contracts/${id}`);
     const detail = await getContract(payer.page.request, id);
-    await payer.page.goto(
-      `/contracts/${id}?installment=${detail.installments[0].id}`
-    );
-    await waitForHydrated(payer.page);
-    await payer.page.getByLabel("Comprovante").setInputFiles(PROOF_PDF);
-    await payer.page
-      .getByRole("button", { name: "Enviar comprovante" })
-      .click();
-    await expect(
-      payer.page.getByLabel("Parcela").getByText("aguardando")
-    ).toBeVisible();
+    await uploadProofApi(payer.page.request, detail.installments[0].id);
 
     await approver.page.goto("/");
     await waitForHydrated(approver.page);
@@ -292,7 +282,7 @@ test("conferir comprovante: Confirmar no próprio Agora", async ({
   }
 });
 
-test("Próximos 30 dias: a linha abre a parcela na gaveta do contrato", async ({
+test("Próximos 30 dias: a linha abre a parcela no contrato", async ({
   page,
 }) => {
   await signup(page);
@@ -313,5 +303,4 @@ test("Próximos 30 dias: a linha abre a parcela na gaveta do contrato", async ({
     .getByRole("link", { name: AGENDA_ROW })
     .click();
   await expect(page).toHaveURL(INSTALLMENT_PARAM);
-  await expect(page.getByLabel("Parcela")).toBeVisible();
 });

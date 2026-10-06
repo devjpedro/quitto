@@ -2,6 +2,7 @@ import {
   createFileRoute,
   Outlet,
   redirect,
+  useMatch,
   useNavigate,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -10,6 +11,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
+import { ContractMobileMenu } from "@/features/contracts/components/contract-menus";
 import {
   useActiveContracts,
   useMomentMilestone,
@@ -32,6 +34,7 @@ import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
 import { queryKeys } from "@/lib/query-keys";
 import { isSessionLost } from "@/lib/session-gate";
 import { getSessionSSR } from "@/lib/ssr-session";
+import { m } from "@/paraglide/messages.js";
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
@@ -68,6 +71,12 @@ function AppLayout() {
   // Registered ONCE here: this layout owns the global ⌘K shortcut.
   const { open: searchOpen, setOpen: setSearchOpen } = useCommandPalette();
   const sessionLost = isSessionLost(me.error);
+  // A contract on a phone: the top bar goes back to the list and carries the
+  // contract's "⋯" (decision 15: decided by the route, no width JS).
+  const contractMatch = useMatch({
+    from: "/_app/contracts/$id",
+    shouldThrow: false,
+  });
 
   useLocaleSync(me.data?.locale);
   usePersistIdentityCookie(me.data);
@@ -83,6 +92,17 @@ function AppLayout() {
     <NotificationsPanelContext value={notifications.show}>
       <AppFrame
         activeContracts={activeContracts}
+        detail={
+          contractMatch
+            ? {
+                backLabel: m.contract_back(),
+                backTo: "/contracts",
+                actions: (
+                  <ContractMobileMenu contractId={contractMatch.params.id} />
+                ),
+              }
+            : null
+        }
         identity={identity}
         moment={moment}
         navCounts={navCounts}

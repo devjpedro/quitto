@@ -11,6 +11,15 @@ import { TopBar } from "./top-bar";
 export interface ShellProps {
   /** "Contratos ativos" in the sidebar: the 5 newest and the total; null while the home loads (a skeleton), none hides the group. */
   activeContracts: SidebarContracts | null;
+  /**
+   * A detail screen on a phone (DIRECAO › Layout): back instead of the logo,
+   * the bell and the screen's own actions instead of search and avatar.
+   */
+  detail: {
+    actions: ReactNode;
+    backLabel: string;
+    backTo: "/contracts";
+  } | null;
   identity: SessionIdentity | null;
   /** The milestone of the moment (lime card at the foot of the sidebar); null hides it. */
   moment: MomentCardView | null;

@@ -1,119 +1,9 @@
 import { expect, test } from "@playwright/test";
-import {
-  getContract,
-  newUser,
-  PROOF_PDF,
-  randomEmail,
-  seedContract,
-  seedInvite,
-  signup,
-  waitForHydrated,
-} from "../fixtures";
+import { newUser, seedContract, signup, waitForHydrated } from "../fixtures";
 
-const ROW_TESTID = /^installment-row-/;
-const MARK_PAID = /^Marcar como paga$/;
 const DELETE_ACCOUNT = /^Excluir conta$/;
 const CONTRACT_ACTIONS = /^Ações do contrato$/;
 const DELETE_CONTRACT = /^Excluir contrato$/;
-
-// WCAG 2.4.3 (Focus Order): closing the installment drawer must return keyboard
-// focus to the row button that opened it, not drop it on <body>. Regression
-// guard for the synchronous-unmount bug (drawer returned null on close before
-// Radix could run its FocusScope close-restoration).
-test("fechar o drawer da parcela devolve o foco ao gatilho", async ({
-  browser,
-}) => {
-  const a = await newUser(browser);
-  try {
-    const { id } = await seedContract(a.page.request, {
-      title: "Foco do teclado",
-      ownerRole: "buyer",
-      requiresConfirmation: false,
-    });
-    await a.page.goto(`/contracts/${id}`);
-
-    const row = a.page.locator('[data-testid^="installment-row-"]').first();
-    await expect(row).toBeVisible();
-    const rowTestId = await row.getAttribute("data-testid");
-
-    // Drive the open via the keyboard: focus the row and press Enter.
-    await row.focus();
-    await expect(row).toBeFocused();
-    await a.page.keyboard.press("Enter");
-
-    await expect(a.page.getByRole("dialog")).toBeVisible();
-
-    // Close via Escape; Radix should restore focus to the triggering row.
-    await a.page.keyboard.press("Escape");
-    await expect(a.page.getByRole("dialog")).toBeHidden();
-
-    await expect(row).toBeFocused();
-    const activeTestId = await a.page.evaluate(() =>
-      document.activeElement?.getAttribute("data-testid")
-    );
-    expect(activeTestId).toMatch(ROW_TESTID);
-    expect(activeTestId).toBe(rowTestId);
-  } finally {
-    await a.close();
-  }
-});
-
-// WCAG 2.4.3 (Focus Order): the payment confirm/dispute dialogs are nested INSIDE
-// the installment drawer. Closing one (Escape) must return focus to the trigger
-// button that opened it ("Marcar como paga"), not drop it on <body>, and the
-// drawer must stay open. Regression guard for controlled Radix dialogs with no
-// real Trigger (onCloseAutoFocus has nothing to restore to).
-test("fechar o diálogo de pagamento devolve o foco ao gatilho", async ({
-  browser,
-}) => {
-  const a = await newUser(browser);
-  try {
-    const { id } = await seedContract(a.page.request, {
-      title: "Foco do diálogo",
-      ownerRole: "buyer",
-      requiresConfirmation: false,
-    });
-    await a.page.goto(`/contracts/${id}`);
-
-    // Open the installment drawer via the keyboard.
-    const row = a.page.locator('[data-testid^="installment-row-"]').first();
-    await expect(row).toBeVisible();
-    await row.focus();
-    await a.page.keyboard.press("Enter");
-    await expect(a.page.getByRole("dialog")).toBeVisible();
-
-    // Focus the payment trigger and open the confirm dialog via the keyboard.
-    const trigger = a.page.getByRole("button", { name: MARK_PAID }).first();
-    await trigger.focus();
-    await expect(trigger).toBeFocused();
-    await a.page.keyboard.press("Enter");
-
-    // The confirm dialog (its own title "Marcar como paga") is now visible and
-    // focus moved into it (off the trigger).
-    const confirmDialog = a.page.getByRole("dialog", {
-      name: MARK_PAID,
-    });
-    await expect(confirmDialog).toBeVisible();
-    // O gatilho e o botão de confirmar dividem o mesmo nome acessível, e o Radix
-    // aria-esconde o fundo enquanto o diálogo está aberto — então `trigger`
-    // re-resolve para o botão DE DENTRO do diálogo aqui, e `not.toBeFocused()`
-    // passava só porque o foco estava no "Fechar" do cabeçalho. Asserta por
-    // escopo, como os outros testes deste arquivo já fazem.
-    const focusInConfirm = await confirmDialog.evaluate((el) =>
-      el.contains(document.activeElement)
-    );
-    expect(focusInConfirm).toBe(true);
-
-    // Close via Escape: dialog closes, drawer stays, focus returns to trigger.
-    await a.page.keyboard.press("Escape");
-    await expect(confirmDialog).toBeHidden();
-    // The drawer dialog must remain open.
-    await expect(a.page.getByRole("dialog")).toBeVisible();
-    await expect(trigger).toBeFocused();
-  } finally {
-    await a.close();
-  }
-});
 
 // WCAG 2.4.3 (Focus Order): the delete-account dialog on /settings is controlled
 // (opened from a plain button, no Radix Trigger). Opening it via the keyboard
@@ -172,6 +62,8 @@ test("fechar o diálogo de excluir contrato devolve o foco ao gatilho do menu", 
       requiresConfirmation: false,
     });
     await a.page.goto(`/contracts/${id}`);
+    // The page streams in by SSR: a key pressed before hydration does nothing.
+    await waitForHydrated(a.page);
 
     // Open the actions dropdown via the keyboard: focus the kebab trigger and
     // press Enter.
@@ -181,10 +73,13 @@ test("fechar o diálogo de excluir contrato devolve o foco ao gatilho do menu", 
     await expect(trigger).toBeFocused();
     await a.page.keyboard.press("Enter");
 
-    // Select the destructive item via the keyboard (first item is highlighted
-    // when the menu opens; Enter activates it).
+    // Select the destructive item via the keyboard: the owner's menu opens on
+    // "Editar título e descrição", and "Excluir contrato" is the last item
+    // (End moves there; Enter activates it).
     const deleteItem = a.page.getByRole("menuitem", { name: DELETE_CONTRACT });
     await expect(deleteItem).toBeVisible();
+    await a.page.keyboard.press("End");
+    await expect(deleteItem).toBeFocused();
     await a.page.keyboard.press("Enter");
 
     // The confirm dialog (its own title "Excluir contrato") is now visible and
@@ -254,11 +149,6 @@ test("o diálogo de excluir conta abre com o cursor no campo da frase", async ({
 // dos quatro Cancelar e o caso correspondente fica vermelho.
 const CANCELAR = /^Cancelar$/;
 const EXCLUIR = /^Excluir$/;
-const REMOVE_PARTICIPANT = /^Remover participante$/;
-const REMOVER = /^Remover$/;
-const ACCEPT_INVITE = /Aceitar convite/i;
-const CONFIRM_PAYMENT = /^Confirmar pagamento$/;
-const CONFIRMAR = /^Confirmar$/;
 
 async function assertCancelFocado(
   dialog: import("@playwright/test").Locator,
@@ -271,33 +161,6 @@ async function assertCancelFocado(
   ).not.toBeFocused();
 }
 
-test("marcar como paga abre com o foco no Cancelar, não na ação", async ({
-  browser,
-}) => {
-  const a = await newUser(browser);
-  try {
-    const { id } = await seedContract(a.page.request, {
-      title: "Foco do Cancelar",
-      ownerRole: "buyer",
-      requiresConfirmation: false,
-    });
-    await a.page.goto(`/contracts/${id}`);
-
-    const row = a.page.locator('[data-testid^="installment-row-"]').first();
-    await expect(row).toBeVisible();
-    await row.click();
-    await expect(a.page.getByRole("dialog")).toBeVisible();
-
-    await a.page.getByRole("button", { name: MARK_PAID }).first().click();
-    await assertCancelFocado(
-      a.page.getByRole("dialog", { name: MARK_PAID }),
-      MARK_PAID
-    );
-  } finally {
-    await a.close();
-  }
-});
-
 test("excluir contrato abre com o foco no Cancelar, não no Excluir", async ({
   browser,
 }) => {
@@ -309,6 +172,7 @@ test("excluir contrato abre com o foco no Cancelar, não no Excluir", async ({
       requiresConfirmation: false,
     });
     await a.page.goto(`/contracts/${id}`);
+    await waitForHydrated(a.page);
 
     await a.page.getByRole("button", { name: CONTRACT_ACTIONS }).click();
     await a.page.getByRole("menuitem", { name: DELETE_CONTRACT }).click();
@@ -318,87 +182,5 @@ test("excluir contrato abre com o foco no Cancelar, não no Excluir", async ({
     );
   } finally {
     await a.close();
-  }
-});
-
-test("remover participante abre com o foco no Cancelar, não no Remover", async ({
-  browser,
-}) => {
-  const a = await newUser(browser);
-  try {
-    const { id } = await seedContract(a.page.request, {
-      title: "Foco do Cancelar no remover",
-    });
-    // Precisa de um participante que NÃO seja o dono: o dono não tem kebab.
-    await seedInvite(a.page.request, id, {
-      displayName: "Fulano",
-      role: "viewer",
-      email: randomEmail(),
-    });
-    await a.page.goto(`/contracts/${id}`);
-
-    await a.page.getByRole("button", { name: "Gerenciar" }).click();
-    const gaveta = a.page.getByLabel("Participantes");
-    await gaveta.getByRole("button", { name: "Ações de Fulano" }).click();
-    await a.page
-      .getByRole("menuitem", { name: "Remover participante" })
-      .click();
-
-    await assertCancelFocado(
-      a.page.getByRole("dialog", { name: REMOVE_PARTICIPANT }),
-      REMOVER
-    );
-  } finally {
-    await a.close();
-  }
-});
-
-test("confirmar pagamento abre com o foco no Cancelar, não no Confirmar", async ({
-  browser,
-}) => {
-  // O "Confirmar pagamento" só existe para o aprovador e só quando a parcela
-  // está aguardando confirmação — daí o par pagador/aprovador e o comprovante.
-  const pagador = await newUser(browser);
-  const aprovador = await newUser(browser);
-  try {
-    const { id } = await seedContract(pagador.page.request, {
-      title: "Foco do Cancelar no confirmar",
-      ownerRole: "buyer",
-      requiresConfirmation: true,
-    });
-    const { token } = await seedInvite(pagador.page.request, id, {
-      displayName: "Vendedor",
-      role: "seller",
-      email: aprovador.email,
-    });
-    await aprovador.page.goto(`/invites/${token}`);
-    await aprovador.page.getByRole("button", { name: ACCEPT_INVITE }).click();
-    await aprovador.page.waitForURL(`**/contracts/${id}`);
-
-    const detail = await getContract(pagador.page.request, id);
-    const installmentId = detail.installments[0].id as string;
-
-    await pagador.page.goto(`/contracts/${id}?installment=${installmentId}`);
-    await pagador.page.getByLabel("Comprovante").setInputFiles(PROOF_PDF);
-    await pagador.page
-      .getByRole("button", { name: "Enviar comprovante" })
-      .click();
-    await expect(
-      pagador.page
-        .getByLabel("Parcela")
-        .getByText("aguardando", { exact: true })
-    ).toBeVisible();
-
-    await aprovador.page.goto(`/contracts/${id}?installment=${installmentId}`);
-    await aprovador.page
-      .getByRole("button", { name: "Confirmar pagamento" })
-      .click();
-    await assertCancelFocado(
-      aprovador.page.getByRole("dialog", { name: CONFIRM_PAYMENT }),
-      CONFIRMAR
-    );
-  } finally {
-    await pagador.close();
-    await aprovador.close();
   }
 });
