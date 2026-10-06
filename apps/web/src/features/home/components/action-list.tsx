@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useActionFocus } from "../hooks/use-action-focus";
 import { useCarouselIndex } from "../hooks/use-carousel-index";
+import { sameContractBefore } from "../lib/action-view";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";
 import { pastTheRow } from "./cards-per-row";
@@ -52,6 +53,7 @@ export function ActionList({
   const tryLock = useActionLock();
   const { sectionRef, onActionStart } = useActionFocus(actions);
   const single = actions.length === 1;
+  const repeats = sameContractBefore(actions);
   return (
     <section
       aria-label={m.home_actions_title()}
@@ -99,6 +101,7 @@ export function ActionList({
               action={action}
               first={i === 0}
               onActionStart={onActionStart}
+              sameContractBefore={repeats[i]}
               today={today}
               tryLock={tryLock}
             />

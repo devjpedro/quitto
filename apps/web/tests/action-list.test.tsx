@@ -642,7 +642,7 @@ describe("ActionList", () => {
 
   it("cartão de parcela: a pessoa com rosto, a barra do contrato inteiro e a legenda", () => {
     renderList([
-      installmentAction({ installmentId: "x0" }),
+      installmentAction({ installmentId: "x0", contractId: "c0" }),
       installmentAction(),
     ]);
     const card = screen.getAllByRole("article")[1] as HTMLElement;
@@ -655,7 +655,7 @@ describe("ActionList", () => {
 
   it("legenda no cartão estreito: quebra a linha em vez de vazar, e o 'falta' fica à direita (1024 px)", () => {
     renderList([
-      installmentAction({ installmentId: "x0" }),
+      installmentAction({ installmentId: "x0", contractId: "c0" }),
       installmentAction(),
     ]);
     const card = screen.getAllByRole("article")[1] as HTMLElement;
@@ -666,6 +666,33 @@ describe("ActionList", () => {
       "whitespace-nowrap"
     );
     expect(remaining).toHaveClass("ml-auto");
+  });
+
+  it("dois cartões do mesmo contrato: só o primeiro tem a barra e a legenda (uma vez por tela); o de outro contrato tem a dele", () => {
+    renderList([
+      installmentAction({ installmentId: "x0" }),
+      installmentAction({ installmentId: "x1", sequence: 8 }),
+      installmentAction({
+        installmentId: "x2",
+        contractId: "c2",
+        contractTitle: "Moto da Ana",
+      }),
+    ]);
+    const [first, repeat, other] = screen.getAllByRole("article") as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
+    expect(first.querySelectorAll("[data-status]")).toHaveLength(12);
+    expect(within(first).getByText("6 pagas")).toBeVisible();
+    expect(repeat.querySelectorAll("[data-status]")).toHaveLength(0);
+    expect(within(repeat).queryByText("6 pagas")).toBeNull();
+    expect(within(repeat).queryByText("falta R$ 7.500,00")).toBeNull();
+    // The rest of the card stays: the installment, the amount, the person.
+    expect(repeat).toHaveAccessibleName(nb("Aluguel do apê · parcela~8~de~12"));
+    expect(within(repeat).getByText("Maria Souza")).toBeVisible();
+    expect(other.querySelectorAll("[data-status]")).toHaveLength(12);
+    expect(within(other).getByText("6 pagas")).toBeVisible();
   });
 
   it("convite: avatar de 28 px, o título grande e as condições", () => {

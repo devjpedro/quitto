@@ -37,18 +37,26 @@ export function ActionCard({
   action,
   first,
   onActionStart,
+  sameContractBefore = false,
   today,
   tryLock,
 }: {
   action: HomeAction;
   first: boolean;
   onActionStart: (id: string) => void;
+  /** A card above is of the same contract: this one leaves the bar to it. */
+  sameContractBefore?: boolean;
   today: string;
   tryLock: () => boolean;
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const view = describeAction(action, { first, locale, today });
+  const view = describeAction(action, {
+    first,
+    locale,
+    sameContractBefore,
+    today,
+  });
   const buttons = actionButtons(action);
   const stack = STACK_BELOW[buttons.join()] ?? "@max-[15rem]:w-full";
   const { busy, run } = useActionHandlers(action, tryLock, () =>

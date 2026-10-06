@@ -40,7 +40,11 @@ export const LINK_BUTTONS: ReadonlySet<ActionButtonKind> =
 export interface ActionView {
   /** The card's amount: the group's total, or the installment's; null on an invite. */
   amountCents: number | null;
-  /** Installment cards: "4 de 12 pagas" and "falta R$ 14.400,00", under the bar. */
+  /**
+   * Installment cards: "4 de 12 pagas" and "falta R$ 14.400,00", under the
+   * bar. Null (no bar either) on a card whose contract a card above already
+   * shows: once per screen.
+   */
   legend: { done: string; remaining: string } | null;
   person: PersonLine | null;
   /** "parcela 5 de 12" / "parcelas 3 e 4 de 12"; null on an invite. */
@@ -68,7 +72,18 @@ const ROLE_NAME: Record<string, Message> = {
 /** Everything a card says, in `locale`. */
 export function describeAction(
   action: HomeAction,
-  { first, locale, today }: { first: boolean; locale: Locale; today: string }
+  {
+    first,
+    locale,
+    sameContractBefore = false,
+    today,
+  }: {
+    first: boolean;
+    locale: Locale;
+    /** A card above is of the same contract, and already shows its bar. */
+    sameContractBefore?: boolean;
+    today: string;
+  }
 ): ActionView {
   const options = { locale };
   if (action.kind === "invite") {
@@ -102,8 +117,21 @@ export function describeAction(
     amountCents: action.totalCents,
     person: personLine(action, today, locale),
     terms: null,
-    legend: legendOf(action, locale),
+    legend: sameContractBefore ? null : legendOf(action, locale),
   };
+}
+
+/** Per card, whether a card above is of the same contract (invites have none of their own). */
+export function sameContractBefore(actions: HomeAction[]): boolean[] {
+  const seen = new Set<string>();
+  return actions.map((action) => {
+    if (action.kind === "invite") {
+      return false;
+    }
+    const repeat = seen.has(action.contractId);
+    seen.add(action.contractId);
+    return repeat;
+  });
 }
 
 function payButtons(action: InstallmentAction): ActionButtonKind[] {

@@ -10,7 +10,7 @@ import type { InstallmentAction } from "../types";
 /**
  * An installment card's body (mockup 13): the contract and its installment
  * numbers, the amount, the other party with a face, and the whole contract
- * on a bar with its legend.
+ * on a bar with its legend (on the first card of the contract only).
  */
 export function InstallmentBody({
   action,
