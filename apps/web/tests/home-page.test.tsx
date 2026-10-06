@@ -78,7 +78,7 @@ const desktopSeeAll = () =>
   screen
     .getAllByRole("button", { name: "Ver todas" })
     .find((button) =>
-      button.parentElement?.classList.contains("lg:flex")
+      button.closest('[data-testid="home-see-all"]')
     ) as HTMLElement;
 
 const lowerPart = () => document.querySelector<HTMLElement>("[data-lower]");
@@ -221,6 +221,22 @@ describe("HomePage", () => {
       screen.getByText(TWO_THINGS).closest("p")?.parentElement
     ).toHaveClass("flex", "justify-between");
     expect(screen.getByText(TWO_THINGS)).toBeVisible();
+  });
+
+  it("cabeçalho: com 4 ações o Ver todas do desktop fica na linha do resumo", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [1, 2, 3, 4].map((n) =>
+          installmentAction({ installmentId: `i${n}`, sequence: n })
+        ),
+      }),
+      error: null,
+    });
+    renderHome();
+    await screen.findByText(DATE_LEAD, { exact: false });
+    const line = screen.getByText(DATE_LEAD, { exact: false }).closest("p")
+      ?.parentElement as HTMLElement;
+    expect(line).toContainElement(desktopSeeAll());
   });
 
   it("tela larga: o conteúdo para em 1840 px, com respiro de 24 a 32 px, e a parte de baixo cresce por colunas", async () => {

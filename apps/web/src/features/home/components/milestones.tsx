@@ -39,7 +39,7 @@ function CellView({
       const view = momentView(cell, locale, today);
       return (
         <>
-          <LabelRow label={view.label} percent={null} />
+          <LabelRow label={view.label} />
           <span className="mt-1.5 block truncate font-medium text-sm">
             {view.title}
           </span>

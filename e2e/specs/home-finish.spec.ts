@@ -485,6 +485,8 @@ test("axe em claro e escuro com grupo, chips de atraso, marcos e notificações"
 }, testInfo) => {
   await signup(page);
   await seedOverdueGroup(page, "Terreno E2E", "seller");
+  // Two overdue cards to receive: the chip shows (and axe goes over it, both themes).
+  await seedOverdueGroup(page, "Notebook E2E", "seller");
   await seedOneEach(page.request, "Aluguel E2E", [-2, 12], "buyer");
   // Milestones (the lime one with the ring) and a grouped line in the bell.
   await seedCloseToPayoff(page, browser);

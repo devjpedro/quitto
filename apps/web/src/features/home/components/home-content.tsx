@@ -22,10 +22,10 @@ import { UpcomingList } from "./upcoming-list";
 
 /**
  * Everything that comes from GET /api/home (streamed from the SSR on the
- * first load): the summary, the chips, the action cards (ActionsRow) and the
- * lower part (HomeLower). With one or two cards (and a contract), from
- * lateral "Próximos 30 dias" joins the actions' row and the lower part is
- * notifications and milestones (mockup 13, frame E).
+ * first load): the summary, the overdue chips (only with 2+ overdue cards on
+ * a side), the action cards (ActionsRow) and the lower part (HomeLower).
+ * With few cards (and a contract) the milestones go up under "Próximos 30
+ * dias" and the lower part keeps only the notifications (mockup 16, frame D).
  */
 export function HomeContent() {
   const { data: home } = useSuspenseQuery(homeQueryOptions);
@@ -36,6 +36,7 @@ export function HomeContent() {
   const layout = homeLayout(home);
   const date = capitalize(formatDate(home.today, locale, "long"));
   const chips = overdueChips(home);
+  const momentId = momentMilestone(home)?.id ?? null;
   const few = layout.fewActions ? (home.actions.length as 1 | 2) : null;
   const upcoming = layout.hasContract ? (
     <UpcomingList
@@ -49,7 +50,7 @@ export function HomeContent() {
     // The milestone of the moment opens the strip on a phone; from md the sidebar shows it.
     <Milestones
       milestones={home.milestones}
-      momentId={momentMilestone(home)?.id ?? null}
+      momentId={momentId}
       today={home.today}
     />
   ) : null;
@@ -76,8 +77,11 @@ export function HomeContent() {
         >
           {/* On a phone the subtitle is the date: the carousel's "1 de N" says the count. */}
           <span className="md:hidden">{date}</span>
-          <span className="max-md:hidden">
-            {m.home_date_lead({ date })} {homeSubtitle(home, layout, locale)}
+          <span className="max-md:hidden">{m.home_date_lead({ date })} </span>
+          {/* Said on a phone (the focus lands here after the last card), shown from md. */}
+          <span className="max-md:sr-only">
+            {" "}
+            {homeSubtitle(home, layout, locale)}
           </span>
         </p>
         <SeeAllButton
@@ -136,7 +140,7 @@ export function HomeContent() {
           guide={guide}
           hasContract={layout.hasContract}
           milestones={home.milestones}
-          momentId={momentMilestone(home)?.id ?? null}
+          momentId={momentId}
           today={home.today}
           upcoming={upcoming}
         />

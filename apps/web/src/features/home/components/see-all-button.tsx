@@ -21,7 +21,7 @@ export function SeeAllButton({
   }
   const Caret = expanded ? CaretUp : CaretDown;
   return (
-    <div className={classes}>
+    <div className={classes} data-testid="home-see-all">
       <Button
         aria-controls={listId}
         aria-expanded={expanded}

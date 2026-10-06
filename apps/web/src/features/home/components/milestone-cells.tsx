@@ -21,22 +21,11 @@ export function Bar({ percent }: { percent: number }) {
   );
 }
 
-/** A cell's first line: what it is, and the % on the right when there is one. */
-export function LabelRow({
-  label,
-  percent,
-}: {
-  label: string;
-  percent: number | null;
-}) {
+/** A cell's first line: what it is. */
+export function LabelRow({ label }: { label: string }) {
   return (
     <span className="flex items-baseline justify-between gap-2 text-[12.5px] text-ink-muted">
       <span>{label}</span>
-      {percent === null ? null : (
-        <b className="font-semibold text-[13px] text-ink tabular-nums">
-          {m.home_percent({ percent })}
-        </b>
-      )}
     </span>
   );
 }
@@ -56,7 +45,7 @@ export function ValueCell({
   const percent = totalCents ? sharePercent(cents, totalCents) : null;
   return (
     <>
-      <LabelRow label={label} percent={null} />
+      <LabelRow label={label} />
       <Money cents={cents} className="mt-1.5 block" size="milestone" />
       {totalCents ? (
         <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted tabular-nums">

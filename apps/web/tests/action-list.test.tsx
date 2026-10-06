@@ -141,7 +141,7 @@ const WHATSAPP_NAME = /Cobrar no WhatsApp/;
 function desktopSeeAll(): HTMLElement | undefined {
   return screen
     .queryAllByRole("button", { name: "Ver todas" })
-    .find((button) => button.parentElement?.classList.contains("lg:flex"));
+    .find((button) => button.closest('[data-testid="home-see-all"]'));
 }
 
 const MARK_RECEIVED_NAME = /Marcar como recebida/;
@@ -529,7 +529,7 @@ describe("ActionList", () => {
     expect(markPaid).not.toHaveBeenCalled();
   });
 
-  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato filtrado", () => {
+  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato", () => {
     renderList([
       installmentAction({
         id: "overdue:nb:receive",

@@ -131,9 +131,8 @@ for (const { width, perRow } of [
       expect(new Set(tops).size).toBe(1);
       await expect(
         page
+          .getByTestId("home-see-all")
           .getByRole("button", { name: "Ver todas", exact: true })
-          .filter({ visible: true })
-          .first()
       ).toBeVisible();
       // The side column exists from 1440.
       await expect(

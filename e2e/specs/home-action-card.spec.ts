@@ -74,9 +74,9 @@ async function expectTidyCards(page: Page, label: string): Promise<void> {
 
 /** Opens the hidden cards past the desktop row, when there are any. */
 async function showEveryCard(page: Page): Promise<void> {
-  // The desktop's button (its wrapper is "hidden … lg:flex"): the phone's, under the carousel, has the same name.
+  // The desktop's button: the phone's, under the carousel, has the same name.
   const seeAll = page
-    .locator(".hidden.lg\\:flex")
+    .getByTestId("home-see-all")
     .getByRole("button", { name: SEE_ALL });
   if (await seeAll.isVisible()) {
     await seeAll.click();
