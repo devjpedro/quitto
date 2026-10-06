@@ -140,11 +140,41 @@ describe("PIX guardado no contato", () => {
     ).toBe(422);
   });
 
-  it("quem não é dono não guarda (403 ou 404)", async () => {
+  it("só o dono guarda: o espectador do contrato leva 403 e a chave não muda; quem não participa, 404", async () => {
     const s = await payingToContact();
-    const other = await signUpCookie(uniqueEmail("contact-other"));
-    expect([403, 404]).toContain(
-      (await saveKey(other, s.contractId, s.contactId, "x@example.com")).status
+    await saveKey(
+      s.owner,
+      s.contractId,
+      s.contactId,
+      "helena.duarte@exemplo.com"
     );
+    const viewerEmail = uniqueEmail("contact-viewer");
+    const viewer = await signUpCookie(viewerEmail);
+    const [viewerUser] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, viewerEmail))
+      .limit(1);
+    await db.insert(participant).values({
+      contractId: s.contractId,
+      displayName: "Sílvia Souza",
+      role: "viewer",
+      linkedUserId: viewerUser?.id as string,
+    });
+    expect(
+      (await saveKey(viewer, s.contractId, s.contactId, "silvia@example.com"))
+        .status
+    ).toBe(403);
+    const [stored] = await db
+      .select({ pixKey: participant.pixKey })
+      .from(participant)
+      .where(eq(participant.id, s.contactId));
+    expect(stored?.pixKey).toBe("helena.duarte@exemplo.com");
+
+    const stranger = await signUpCookie(uniqueEmail("contact-other"));
+    expect(
+      (await saveKey(stranger, s.contractId, s.contactId, "x@example.com"))
+        .status
+    ).toBe(404);
   });
 });
