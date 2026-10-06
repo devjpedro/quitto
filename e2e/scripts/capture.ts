@@ -136,6 +136,49 @@ async function settle(page: Page, width: number, where: string): Promise<void> {
   }
   await noLoading(page, where);
   await page.evaluate(() => document.fonts.ready);
+  if (process.argv.includes("--installment")) {
+    await settlePanel(page, where);
+  }
+}
+
+/**
+ * With --installment the panel opens on load, and a shot taken during its
+ * entrance shows it half see-through over the page. Wait for the CSS
+ * animations, then for the dialog's box and opacity to hold across two frames
+ * (a spring run in JS is not in getAnimations()).
+ */
+async function settlePanel(page: Page, where: string): Promise<void> {
+  const dialog = page.locator("[role='dialog']").first();
+  await dialog.waitFor({ state: "visible", timeout: 15_000 });
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished))
+  );
+  try {
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector("[role='dialog']");
+        if (!el) {
+          return false;
+        }
+        const read = () => {
+          const r = el.getBoundingClientRect();
+          return `${r.x},${r.y},${r.width},${r.height},${getComputedStyle(el).opacity}`;
+        };
+        const w = window as unknown as { __panelRead?: string };
+        const now = read();
+        const stable =
+          w.__panelRead === now && getComputedStyle(el).opacity === "1";
+        w.__panelRead = now;
+        return stable;
+      },
+      undefined,
+      { polling: "raf", timeout: 10_000 }
+    );
+  } catch (error) {
+    throw new Error(`${where}: o painel da parcela não assentou em 10 s`, {
+      cause: error,
+    });
+  }
 }
 
 const session = await sessionCookies();
