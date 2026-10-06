@@ -13,6 +13,9 @@ mock.module("../src/lib/mailer", () => ({
 
 const { app } = await import("../src/app");
 const { signUpCookie, uniqueEmail } = await import("./helpers/auth");
+const { db } = await import("../src/db/client");
+const { invite } = await import("../src/db/schema");
+const { eq } = await import("drizzle-orm");
 
 async function createContract(cookie: string): Promise<string> {
   const res = await app.handle(
@@ -40,7 +43,7 @@ describe("invite email", () => {
     sent.length = 0;
   });
 
-  it("reenviar regenera o token e reenvia o e-mail", async () => {
+  it("reenviar mantém o token (o mesmo link) e estende o prazo", async () => {
     const cookie = await signUpCookie(uniqueEmail("owner"));
     const contractId = await createContract(cookie);
     const add = await app.handle(
@@ -63,21 +66,69 @@ describe("invite email", () => {
       )
     );
     const firstToken = (await first.json()).token as string;
+    // About to expire: the resend has to push it a week ahead again.
+    const soon = new Date(Date.now() + 60 * 60 * 1000);
+    await db
+      .update(invite)
+      .set({ expiresAt: soon })
+      .where(eq(invite.token, firstToken));
     sent.length = 0;
     const res = await app.handle(
       new Request(
         `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite/resend`,
-        {
-          method: "POST",
-          headers: { cookie },
-        }
+        { method: "POST", headers: { cookie } }
       )
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.token).not.toBe(firstToken);
+    expect(body.token).toBe(firstToken);
+    expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(
+      soon.getTime() + 6 * 24 * 60 * 60 * 1000
+    );
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe(guestEmail);
+    expect(sent[0]?.html).toContain(`/invites/${firstToken}`);
+  });
+
+  it("reenviar com a vaga de outro contrato: 404, e o convite dele fica como estava", async () => {
+    const ownerA = await signUpCookie(uniqueEmail("owner-a"));
+    const contractA = await createContract(ownerA);
+    const ownerB = await signUpCookie(uniqueEmail("owner-b"));
+    const contractB = await createContract(ownerB);
+    const add = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractB}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: ownerB },
+        body: JSON.stringify({ displayName: "Convidado de B", role: "seller" }),
+      })
+    );
+    const { id: slotOfB } = await add.json();
+    const invited = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractB}/participants/${slotOfB}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: ownerB },
+          body: JSON.stringify({ email: uniqueEmail("guest-b") }),
+        }
+      )
+    );
+    const { token: tokenOfB, expiresAt: expiresOfB } = await invited.json();
+    sent.length = 0;
+    // A owns contract A, not B: the slot of B under A's URL is not A's.
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractA}/participants/${slotOfB}/invite/resend`,
+        { method: "POST", headers: { cookie: ownerA } }
+      )
+    );
+    expect(res.status).toBe(404);
+    const [row] = await db
+      .select()
+      .from(invite)
+      .where(eq(invite.token, tokenOfB));
+    expect(row?.expiresAt.toISOString()).toBe(expiresOfB);
+    expect(sent).toHaveLength(0);
   });
 
   it("envia e-mail com o link de aceite ao convidar", async () => {

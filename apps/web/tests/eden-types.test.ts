@@ -20,12 +20,15 @@ it("infers the Eden response type cross-package (eden#215 mitigation)", () => {
 it("infers the Fase-2a contract endpoints cross-package (eden#215 mitigation)", () => {
   const api = treaty<App>("http://localhost:3000");
 
-  // POST /api/contracts — response data is `{ id: string }`, not `any`.
+  // POST /api/contracts — { id, invite: { email, sent } | null } (phase 3), not any.
   type CreateResponse = Awaited<
     ReturnType<typeof api.api.contracts.post>
   >["data"];
   expectTypeOf<CreateResponse>().not.toBeAny();
-  expectTypeOf<NonNullable<CreateResponse>>().toEqualTypeOf<{ id: string }>();
+  expectTypeOf<NonNullable<CreateResponse>>().toEqualTypeOf<{
+    id: string;
+    invite: { email: string; sent: boolean } | null;
+  }>();
 
   // GET /api/contracts — response data is an array of contract summaries, not `any`.
   type ListResponse = Awaited<ReturnType<typeof api.api.contracts.get>>["data"];

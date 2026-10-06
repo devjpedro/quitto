@@ -1,10 +1,8 @@
 import {
   AUDIT_TYPE,
-  generateMonthlySchedule,
-  generateSchedule,
+  contractRequestSchema,
   NOTIFICATION_TYPE,
   parsePixKey,
-  type ScheduleRow,
   todayISO,
 } from "@quitto/shared";
 import { and, eq, inArray } from "drizzle-orm";
@@ -13,45 +11,72 @@ import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
+import { createContract } from "../lib/contract-create";
 import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
 import { visibleContractsWhere } from "../lib/contract-visibility";
-import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import { normalizeEmail } from "../lib/email";
+import {
+  CodedError,
+  codedValidationError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../lib/errors";
+import { trySendInviteEmail } from "../lib/invite-mail";
 import { createNotifications } from "../lib/notifications";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
 
-const ScheduleAuto = t.Object({
-  mode: t.Literal("auto"),
-  totalAmountCents: t.Integer({ minimum: 1 }),
-  installmentsCount: t.Integer({ minimum: 1, maximum: 600 }),
-  firstDueDate: t.String({ format: "date" }),
-});
-
-const ScheduleCustom = t.Object({
-  mode: t.Literal("custom"),
-  installments: t.Array(
-    t.Object({
-      amountCents: t.Integer({ minimum: 1 }),
-      dueDate: t.String({ format: "date" }),
-    }),
-    { minItems: 1, maxItems: 600 }
-  ),
-});
-
-const ScheduleMonthly = t.Object({
-  mode: t.Literal("monthly"),
-  monthlyAmountCents: t.Integer({ minimum: 1 }),
-  months: t.Integer({ minimum: 1, maximum: 600 }),
-  firstDueDate: t.String({ format: "date" }),
+// Types only, no limits (planner's decision 3): the shared zod sets the
+// limits, so every mistake comes back as a code the web translates.
+const InstallmentRow = t.Object({
+  amountCents: t.Number(),
+  dueDate: t.String(),
 });
 
 const CreateContractBody = t.Object({
-  title: t.String({ minLength: 1, maxLength: 200 }),
-  description: t.Optional(t.String({ maxLength: 2000 })),
+  title: t.String(),
+  description: t.Optional(t.String()),
   ownerRole: t.Union([t.Literal("buyer"), t.Literal("seller")]),
   requiresConfirmation: t.Boolean(),
-  schedule: t.Union([ScheduleAuto, ScheduleCustom, ScheduleMonthly]),
+  schedule: t.Union([
+    t.Object({
+      mode: t.Literal("split"),
+      totalAmountCents: t.Number(),
+      installmentsCount: t.Number(),
+      firstDueDate: t.String(),
+    }),
+    t.Object({
+      mode: t.Literal("monthly"),
+      monthlyAmountCents: t.Number(),
+      months: t.Number(),
+      firstDueDate: t.String(),
+    }),
+    // Legacy, until phase 6.
+    t.Object({
+      mode: t.Literal("auto"),
+      totalAmountCents: t.Number(),
+      installmentsCount: t.Number(),
+      firstDueDate: t.String(),
+    }),
+    t.Object({
+      mode: t.Literal("custom"),
+      installments: t.Array(InstallmentRow),
+    }),
+  ]),
+  installments: t.Optional(t.Array(InstallmentRow)),
+  counterparty: t.Optional(
+    t.Object({ name: t.String(), email: t.Optional(t.String()) })
+  ),
+});
+
+const CreateContractResponse = t.Object({
+  id: t.String(),
+  invite: t.Union([
+    t.Object({ email: t.String(), sent: t.Boolean() }),
+    t.Null(),
+  ]),
 });
 
 export const contractsModule = new Elysia({ prefix: "/api" })
@@ -59,78 +84,35 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     "/contracts",
     async ({ request, body }) => {
       const { user } = await requireAuth(request.headers);
-
-      let rows: ScheduleRow[];
-      if (body.schedule.mode === "auto") {
-        rows = generateSchedule({
-          totalAmountCents: body.schedule.totalAmountCents,
-          installmentsCount: body.schedule.installmentsCount,
-          firstDueDate: body.schedule.firstDueDate,
-        });
-      } else if (body.schedule.mode === "monthly") {
-        rows = generateMonthlySchedule({
-          monthlyAmountCents: body.schedule.monthlyAmountCents,
-          months: body.schedule.months,
-          firstDueDate: body.schedule.firstDueDate,
-        });
-      } else {
-        rows = body.schedule.installments.map((it, i) => ({
-          sequence: i + 1,
-          amountCents: it.amountCents,
-          dueDate: it.dueDate,
-        }));
+      const parsed = contractRequestSchema.safeParse(body);
+      if (!parsed.success) {
+        throw codedValidationError(parsed.error.issues);
       }
-
-      const totalAmountCents = rows.reduce((acc, r) => acc + r.amountCents, 0);
-
-      const id = await db.transaction(async (tx) => {
-        const [created] = await tx
-          .insert(contract)
-          .values({
-            ownerId: user.id,
-            title: body.title,
-            description: body.description ?? null,
-            ownerRole: body.ownerRole,
-            totalAmountCents,
-            installmentsCount: rows.length,
-            requiresConfirmation: body.requiresConfirmation,
-            monthlyAmountCents:
-              body.schedule.mode === "monthly"
-                ? body.schedule.monthlyAmountCents
-                : null,
-          })
-          .returning({ id: contract.id });
-
-        if (!created) {
-          throw new Error("contract insert returned no row");
-        }
-        const contractId = created.id;
-
-        await tx.insert(installment).values(
-          rows.map((r) => ({
-            contractId,
-            sequence: r.sequence,
-            amountCents: r.amountCents,
-            dueDate: r.dueDate,
-          }))
-        );
-
-        await tx.insert(participant).values({
-          contractId,
-          displayName: user.name,
-          role: body.ownerRole, // dono ocupa o slot comprador/vendedor
-          linkedUserId: user.id,
+      const input = parsed.data;
+      const email = input.counterparty?.email;
+      if (email && normalizeEmail(email) === normalizeEmail(user.email)) {
+        throw new CodedError({
+          code: "counterparty.email.self",
+          path: "counterparty.email",
         });
-
-        return contractId;
+      }
+      const created = await createContract(
+        { id: user.id, name: user.name },
+        input
+      );
+      if (!created.invite) {
+        return { id: created.id, invite: null };
+      }
+      const sent = await trySendInviteEmail({
+        email: created.invite.email,
+        token: created.invite.token,
+        inviterName: user.name ?? "Alguém",
+        contractTitle: input.title,
+        role: created.invite.role,
       });
-
-      return { id };
+      return { id: created.id, invite: { email: created.invite.email, sent } };
     },
-    {
-      body: CreateContractBody,
-      response: t.Object({ id: t.String() }),
-    }
+    { body: CreateContractBody, response: CreateContractResponse }
   )
   .get(
     "/contracts",
