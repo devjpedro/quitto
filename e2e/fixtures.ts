@@ -264,3 +264,39 @@ export async function uploadProofApi(
   });
   expect(done.ok()).toBeTruthy();
 }
+
+/** Duas contas num contrato: o dono de um lado, a outra conta do outro (convite aceito pela API). */
+export async function twoParties(
+  browser: Browser,
+  opts: {
+    count: number;
+    firstDueDaysFromToday: number;
+    ownerRole: "buyer" | "seller";
+    requiresConfirmation: boolean;
+  }
+) {
+  const owner = await newUser(browser);
+  const other = await newUser(browser);
+  const { id } = await seedContract(owner.page.request, {
+    title: "Moto do Rafa",
+    ownerRole: opts.ownerRole,
+    requiresConfirmation: opts.requiresConfirmation,
+    schedule: {
+      mode: "monthly",
+      monthlyAmountCents: 48_000,
+      months: opts.count,
+      firstDueDate: isoDaysFromToday(opts.firstDueDaysFromToday),
+    },
+  });
+  const { token } = await seedInvite(owner.page.request, id, {
+    displayName: "Rafael Prado",
+    role: opts.ownerRole === "buyer" ? "seller" : "buyer",
+    email: other.email,
+  });
+  await acceptInvite(other.page.request, token);
+  const detail = await getContract(owner.page.request, id);
+  const installments = (
+    detail.installments as { id: string; sequence: number }[]
+  ).map(({ id: iid, sequence }) => ({ id: iid, sequence }));
+  return { owner, other, id, installments };
+}
