@@ -9,10 +9,13 @@ const [joao, rafa, silvia] = motoDetail().participants;
 const owner = { viewerIsOwner: true, locale: "pt-BR" as const };
 
 describe("personRowView (Pessoas, enxuto)", () => {
-  it("você: tag 'Você', e-mail e 'criou o contrato em 28/06', papel Recebe; sem ações", () => {
+  it("você: tag 'Você', o e-mail e, à parte, 'criou o contrato em 28/06' (a linha decide como os junta), papel Recebe; sem ações", () => {
     expect(personRowView(joao as never, owner)).toEqual({
       tag: { text: "Você", tone: "neutral", icon: null },
-      meta: "joao.souza@exemplo.com · criou o contrato em 28/06",
+      meta: {
+        email: "joao.souza@exemplo.com",
+        note: "criou o contrato em 28/06",
+      },
       role: { text: "Recebe", icon: "receive" },
       actions: [],
       removable: false,
@@ -22,7 +25,10 @@ describe("personRowView (Pessoas, enxuto)", () => {
   it("quem paga, com conta: sem tag, e-mail e 'no contrato desde 29/06'; o dono pode remover", () => {
     expect(personRowView(rafa as never, owner)).toMatchObject({
       tag: null,
-      meta: "rafa@demo.quitto.dev · no contrato desde 29/06",
+      meta: {
+        email: "rafa@demo.quitto.dev",
+        note: "no contrato desde 29/06",
+      },
       role: { text: "Paga", icon: "pay" },
       removable: true,
     });
@@ -31,7 +37,10 @@ describe("personRowView (Pessoas, enxuto)", () => {
   it("convite pendente: a tag diz que é convite; o metadado é só o e-mail e quando foi; reenviar e copiar", () => {
     expect(personRowView(silvia as never, owner)).toMatchObject({
       tag: { text: "Convite pendente", tone: "warning", icon: "envelope" },
-      meta: "silvia@demo.quitto.dev · enviado em 01/10",
+      meta: {
+        email: "silvia@demo.quitto.dev",
+        note: "enviado em 01/10",
+      },
       role: { text: "Acompanha", icon: "watch" },
       actions: ["resend", "copy_link"],
     });
@@ -50,7 +59,7 @@ describe("personRowView (Pessoas, enxuto)", () => {
     expect(
       personRowView(silviaSeen as never, { ...owner, viewerIsOwner: false })
     ).toMatchObject({
-      meta: "enviado em 01/10",
+      meta: { email: null, note: "enviado em 01/10" },
       actions: [],
       removable: false,
     });

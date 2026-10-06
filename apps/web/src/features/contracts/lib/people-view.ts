@@ -6,7 +6,8 @@ import type { ContractDetail, ContractParticipant } from "../types";
 
 export interface PersonRowView {
   actions: ("resend" | "copy_link")[];
-  meta: string | null;
+  /** The e-mail and since-when, apart: the row joins them on one line from md, on two below. */
+  meta: { email: string | null; note: string | null } | null;
   removable: boolean;
   role: { icon: "receive" | "pay" | "watch"; text: string } | null;
   tag: { icon: "envelope" | null; text: string; tone: TagTone } | null;
@@ -33,17 +34,11 @@ function roleOf(role: string, locale: Locale): PersonRowView["role"] {
     : null;
 }
 
-function joinParts(parts: (string | null)[], locale: Locale): string | null {
-  let out: string | null = null;
-  for (const part of parts) {
-    if (part !== null) {
-      out =
-        out === null
-          ? part
-          : m.contract_join({ left: out, right: part }, { locale });
-    }
-  }
-  return out;
+function metaOf(
+  email: string | null,
+  note: string | null
+): PersonRowView["meta"] {
+  return email === null && note === null ? null : { email, note };
 }
 
 function sinceOf(p: ContractParticipant, locale: Locale): string | null {
@@ -94,7 +89,7 @@ export function personRowView(
     return {
       ...base,
       tag: you,
-      meta: joinParts([p.email, sinceOf(p, locale)], locale),
+      meta: metaOf(p.email, sinceOf(p, locale)),
       actions: [],
     };
   }
@@ -107,12 +102,9 @@ export function personRowView(
     return {
       ...base,
       tag: INVITE_TAG[p.invite.status](locale),
-      meta: joinParts(
-        [
-          p.email,
-          m.people_sent({ date: day(p.invite.sentAt, locale) }, { locale }),
-        ],
-        locale
+      meta: metaOf(
+        p.email,
+        m.people_sent({ date: day(p.invite.sentAt, locale) }, { locale })
       ),
       actions,
     };

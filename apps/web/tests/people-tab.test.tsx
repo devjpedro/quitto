@@ -86,8 +86,11 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     const rows = within(list).getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     expect(within(rows[0] as HTMLElement).getByText("Você")).toBeVisible();
-    expect(within(rows[0] as HTMLElement).getByText("Recebe")).toBeVisible();
-    expect(within(rows[1] as HTMLElement).getByText("Paga")).toBeVisible();
+    // One role tag per layout: on the name's line below md, at the right from md.
+    expect(within(rows[0] as HTMLElement).getAllByText("Recebe")).toHaveLength(
+      2
+    );
+    expect(within(rows[1] as HTMLElement).getAllByText("Paga")).toHaveLength(2);
     expect(
       within(rows[2] as HTMLElement).getByText("Convite pendente")
     ).toBeVisible();
@@ -340,6 +343,33 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     );
     expect(mine).toHaveTextContent("joao.souza@exemplo.com");
     expect(rows[2]).toHaveTextContent("silvia@demo.quitto.dev");
+  });
+
+  it("a 390 o metadado tem a largura toda: o e-mail numa linha (cortado com reticências e inteiro no title, nunca quebrado no meio), o 'enviado em' na de baixo, e a tag do papel sobe para a linha do nome", () => {
+    renderPeople(motoDetail());
+    const rows = within(screen.getByTestId("people-list")).getAllByRole(
+      "listitem"
+    );
+    const silvia = rows[2] as HTMLElement;
+    const email = within(silvia).getByText("silvia@demo.quitto.dev");
+    expect(email).toHaveClass("block", "truncate", "md:inline");
+    expect(email).toHaveAttribute("title", "silvia@demo.quitto.dev");
+    expect(email.parentElement).not.toHaveClass("[overflow-wrap:anywhere]");
+    expect(within(silvia).getByText("enviado em 01/10")).toHaveClass(
+      "block",
+      "md:inline"
+    );
+    // The separator joins the two on one line from md; below, only a screen reader hears it.
+    expect(within(silvia).getByText("·")).toHaveClass("max-md:sr-only");
+    expect(silvia).toHaveTextContent(
+      "silvia@demo.quitto.dev · enviado em 01/10"
+    );
+    const [onName, onRight] = within(silvia).getAllByText("Acompanha");
+    expect(onName?.parentElement).toHaveClass("md:hidden");
+    expect(onName?.closest("li > div")).toContainElement(
+      within(silvia).getByText("Sílvia Souza")
+    );
+    expect(onRight?.parentElement).toHaveClass("max-md:hidden");
   });
 
   it("com um papel só livre, o papel é dito (Tag), não oferecido", async () => {
