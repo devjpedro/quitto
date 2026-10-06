@@ -2,6 +2,8 @@ import type { Locale } from "@quitto/shared";
 
 const monthFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const weekdayFormatters = new Map<Locale, Intl.DateTimeFormat>();
+const dayMonthFormatters = new Map<Locale, Intl.DateTimeFormat>();
+const dayMonthYearFormatters = new Map<Locale, Intl.DateTimeFormat>();
 
 function formatterFor(
   cache: Map<Locale, Intl.DateTimeFormat>,
@@ -46,4 +48,20 @@ export function weekdayName(iso: string, locale: Locale): string {
 /** "mar/2027" / "Mar/2027": the month a contract ends, in the bar's key. */
 export function monthYearShort(iso: string, locale: Locale): string {
   return `${monthShort(iso, locale)}/${iso.slice(0, 4)}`;
+}
+
+/** "30 de agosto" / "August 30"; with the year when it is not this one ("30 de janeiro de 2027"). */
+export function dayMonthLong(
+  iso: string,
+  locale: Locale,
+  today: string
+): string {
+  const withYear = iso.slice(0, 4) !== today.slice(0, 4);
+  return formatterFor(
+    withYear ? dayMonthYearFormatters : dayMonthFormatters,
+    locale,
+    withYear
+      ? { day: "numeric", month: "long", year: "numeric" }
+      : { day: "numeric", month: "long" }
+  ).format(utc(iso));
 }
