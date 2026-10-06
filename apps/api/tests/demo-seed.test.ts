@@ -4,6 +4,7 @@ import { demoScenario } from "../src/lib/demo-seed";
 import {
   assertDemoEnvironment,
   type DemoAccountKey,
+  type DemoContract,
   type DemoScenario,
   reminderDedupeKey,
   shiftMonths,
@@ -18,6 +19,13 @@ const T = "2026-10-03";
 const DAY_MS = 86_400_000;
 // Top-level regex literal (lint/performance/useTopLevelRegex).
 const TEST_WORDS = /teste|testando|administrador|lorem/;
+
+function lastProofOf(c: DemoContract, sequence: number): Date | null {
+  const times = c.proofs
+    .filter((p) => p.sequence === sequence)
+    .map((p) => Date.parse(p.at));
+  return times.length > 0 ? new Date(Math.max(...times)) : null;
+}
 
 /** The scenario as the home would read it for one account (ids are the keys). */
 function rowsFor(
@@ -46,7 +54,7 @@ function rowsFor(
         dueDate: it.dueDate,
         status: it.status,
         paidAt: it.paidAt ? new Date(it.paidAt) : null,
-        lastProofAt: it.proofAt ? new Date(it.proofAt) : null,
+        lastProofAt: lastProofOf(c, it.sequence),
       }))
     ),
     participants: mine.flatMap((c) => [
@@ -61,8 +69,8 @@ function rowsFor(
         contractId: c.key,
         displayName: c.counterpart.displayName,
         role: c.counterpart.role,
-        linkedUserId: null,
-        pixKey: null,
+        linkedUserId: c.counterpart.account,
+        pixKey: c.counterpart.pixKey,
       },
     ]),
     users: [{ id: account, name: "Dono", pixKey: null }],
@@ -156,7 +164,7 @@ describe("assertDemoEnvironment", () => {
 describe("demoScenario: os números do mockup 13", () => {
   const scenario = demoScenario(T);
 
-  it("cenário A: 5 ações na ordem aprovada, o grupo da Marina e os chips", () => {
+  it("cenário A (mockup 14): a Moto ganha a atrasada; 5 cartões de parcela + o convite = 6 pendências", () => {
     const agenda = buildAgenda(
       partyContracts("agora", rowsFor(scenario, "agora")),
       [],
@@ -164,13 +172,14 @@ describe("demoScenario: os números do mockup 13", () => {
     );
     const cards = agenda.actions as InstallmentAction[];
     expect(cards.map((a) => [a.contractTitle, a.kind, a.count])).toEqual([
+      ["Moto do Rafa", "overdue", 1],
       ["Notebook da Marina", "overdue", 2],
       ["Aluguel da sala", "overdue", 1],
       ["Empréstimo do Carlos", "due_soon", 1],
       ["Moto do Rafa", "review", 1],
     ]);
-    expect(cards[2]?.dueDate).toBe(T);
-    expect(cards[0]?.totalCents).toBe(70_000);
+    expect(cards[3]?.dueDate).toBe(T);
+    expect(cards[1]?.totalCents).toBe(70_000);
     expect(agenda.upcoming.items.map((i) => i.contractTitle)).toEqual([
       "Celular da Ana",
       "Câmera da Júlia",
@@ -182,7 +191,7 @@ describe("demoScenario: os números do mockup 13", () => {
     expect(agenda.upcoming.toReceiveCents).toBe(140_000);
     expect(agenda.overdue).toEqual({
       toPayCents: 180_000,
-      toReceiveCents: 70_000,
+      toReceiveCents: 118_000,
     });
   });
 
@@ -208,11 +217,68 @@ describe("demoScenario: os números do mockup 13", () => {
 
   it("contrato com confirmação: as pagas são 'confirmed', como o produto gera", () => {
     const moto = scenario.contracts.find((c) => c.key === "moto");
-    expect(moto?.installments.slice(0, 3).map((it) => it.status)).toEqual([
+    expect(moto?.installments.slice(0, 4).map((it) => it.status)).toEqual([
       "confirmed",
       "confirmed",
+      "pending",
       "awaiting_confirmation",
     ]);
+  });
+
+  it("mockup 14: Rafael com conta, Sílvia convidada, PIX no contato e a história da Moto", () => {
+    const byKey = new Map(scenario.contracts.map((c) => [c.key, c]));
+    const moto = byKey.get("moto");
+    expect(moto?.counterpart).toMatchObject({
+      account: "rafa",
+      displayName: "Rafael Prado",
+      role: "buyer",
+    });
+    expect(moto?.viewers).toEqual([
+      expect.objectContaining({
+        displayName: "Sílvia Souza",
+        invite: "silvia",
+      }),
+    ]);
+    expect(moto?.requiresConfirmation).toBe(true);
+    expect(byKey.get("aluguel")?.counterpart.pixKey).toBe(
+      "helena.duarte@exemplo.com"
+    );
+    expect(byKey.get("emprestimo")?.counterpart.pixKey).toBe(
+      "carlos.lima@exemplo.com"
+    );
+    expect(byKey.get("reforma")?.counterpart.pixKey).toBe(
+      "sergio.almeida@exemplo.com"
+    );
+    expect(byKey.get("curso")?.counterpart.pixKey).toBeNull();
+    expect(byKey.get("floripa")?.requiresConfirmation).toBe(true);
+    // The history: every event and proof points at an installment that exists, in time order.
+    const sequences = new Set(moto?.installments.map((it) => it.sequence));
+    for (const e of moto?.events ?? []) {
+      expect(e.sequence === null || sequences.has(e.sequence)).toBe(true);
+    }
+    expect(moto?.events.map((e) => e.type)).toEqual([
+      "participant_joined",
+      "proof_submitted",
+      "payment_confirmed",
+      "proof_submitted",
+      "payment_disputed",
+      "proof_submitted",
+      "payment_confirmed",
+      "participant_left",
+      "receipt_share_created",
+      "receipt_share_created",
+      "proof_submitted",
+    ]);
+    const times = moto?.events.map((e) => Date.parse(e.at)) ?? [];
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    expect(moto?.proofs.map((p) => [p.sequence, p.fileName])).toEqual([
+      [1, "pix-junho.pdf"],
+      [2, "comprovante-junho.pdf"],
+      [2, "pix-julho-rafael.pdf"],
+      [4, "pix-moto-outubro.pdf"],
+    ]);
+    expect(moto?.receiptShares.map((r) => r.sequence)).toEqual([1, 2]);
+    expect(scenario.contracts.every((c) => !("pixKey" in c))).toBe(true);
   });
 
   it("caso do dono: 24 atrasadas são 1 cartão, sem 'mais perto de quitar' (7%)", () => {
@@ -255,6 +321,14 @@ describe("demoScenario: os números do mockup 13", () => {
       expect(keys.has(n.contract)).toBe(true);
       expect(accounts.has(n.account)).toBe(true);
     }
+    for (const c of scenario.contracts) {
+      if (c.counterpart.account) {
+        expect(accounts.has(c.counterpart.account)).toBe(true);
+      }
+      for (const v of c.viewers) {
+        expect(accounts.has(v.invite)).toBe(true);
+      }
+    }
     const floripa = scenario.contracts.find((c) => c.key === "floripa");
     expect(floripa).toMatchObject({ owner: "bia", invite: "agora" });
     expect(
@@ -282,8 +356,7 @@ describe("reminderDedupeKey: o seed grava a chave da varredura", () => {
   const scenario = demoScenario(T);
 
   it("um cron:reminders depois do seed bate nas chaves gravadas e não duplica os avisos", () => {
-    // What the sweep would write today for the demo installments. No slot is
-    // linked to another account, so the owner pays, and receives as the seller.
+    // What the sweep would write today for the demo installments. The owner pays, except where the counterpart is linked and pays (Rafael, in Moto do Rafa).
     const swept = scenario.contracts.flatMap((c) =>
       computeReminders(
         c.installments.map((it) => ({
@@ -291,8 +364,12 @@ describe("reminderDedupeKey: o seed grava a chave da varredura", () => {
           installmentId: `${c.key}-${it.sequence}`,
           dueDate: it.dueDate,
           status: it.status,
-          payerUserId: c.owner,
-          receiverUserId: c.ownerRole === "seller" ? c.owner : null,
+          payerUserId:
+            c.counterpart.role === "buyer" && c.counterpart.account
+              ? c.counterpart.account
+              : c.owner,
+          receiverUserId:
+            c.ownerRole === "seller" ? c.owner : c.counterpart.account,
         })),
         T
       ).map((r) => r.dedupeKey)

@@ -31,8 +31,9 @@ function arg(name: string, fallback?: string): string {
 
 const account = arg("account");
 const out = arg("out");
-const path = arg("path", "/");
-const expectedPath = new URL(path, WEB).pathname;
+const name = arg("name", "home");
+let path = arg("path", "/");
+let expectedPath = new URL(path, WEB).pathname;
 const sizes = arg("sizes", DEFAULT_SIZES)
   .split(",")
   .map((size) => {
@@ -139,6 +140,66 @@ async function settle(page: Page, width: number, where: string): Promise<void> {
 }
 
 const session = await sessionCookies();
+const cookie = session.map((c) => `${c.name}=${c.value}`).join("; ");
+
+async function api<T>(route: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${WEB}/api${route}`, {
+    ...init,
+    headers: {
+      cookie,
+      origin: WEB,
+      "content-type": "application/json",
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`${route} respondeu ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
+
+if (process.argv.includes("--accept-invites")) {
+  // The spectator's view (F5): accept the account's pending invites first.
+  const home = await api<{ actions: { kind: string; token?: string }[] }>(
+    "/home"
+  );
+  for (const action of home.actions) {
+    if (action.kind === "invite" && action.token) {
+      await api(`/invites/${action.token}/accept`, { method: "POST" });
+    }
+  }
+}
+
+const contractTitle = process.argv.includes("--contract")
+  ? arg("contract")
+  : null;
+if (contractTitle) {
+  const contracts = await api<{ id: string; title: string }[]>("/contracts");
+  const target = contracts.find((c) => c.title === contractTitle);
+  if (!target) {
+    throw new Error(
+      `${account} não tem o contrato "${contractTitle}": rodou o seed:demo?`
+    );
+  }
+  const search = new URLSearchParams();
+  if (process.argv.includes("--installment")) {
+    const detail = await api<{
+      installments: { id: string; sequence: number }[];
+    }>(`/contracts/${target.id}`);
+    const wanted = Number(arg("installment"));
+    const it = detail.installments.find((i) => i.sequence === wanted);
+    if (!it) {
+      throw new Error(`"${contractTitle}" não tem a parcela ${wanted}`);
+    }
+    search.set("installment", it.id);
+  }
+  if (process.argv.includes("--tab")) {
+    search.set("tab", arg("tab"));
+  }
+  path = `/contracts/${target.id}${search.size > 0 ? `?${search}` : ""}`;
+  expectedPath = `/contracts/${target.id}`;
+}
+
 const browser = await chromium.launch();
 try {
   for (const size of sizes) {
@@ -165,7 +226,7 @@ try {
           `${account} caiu em ${landed}, não em ${expectedPath}: rodou o seed:demo?`
         );
       }
-      const file = join(out, `${account}-${size.name}-${theme}`);
+      const file = join(out, `${account}-${name}-${size.name}-${theme}`);
       const where = `${account} ${size.width}x${size.height} ${theme} (${path})`;
       await settle(page, size.width, where);
       await page.screenshot({ path: `${file}.png` });

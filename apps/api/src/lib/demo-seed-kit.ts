@@ -4,7 +4,14 @@ import { addDays } from "./dates";
 export const DEMO_DOMAIN = "demo.quitto.dev";
 export const DEMO_PASSWORD = "quitto123";
 
-export type DemoAccountKey = "agora" | "atraso" | "novo" | "tres" | "bia";
+export type DemoAccountKey =
+  | "agora"
+  | "atraso"
+  | "novo"
+  | "tres"
+  | "bia"
+  | "rafa"
+  | "silvia";
 
 export interface DemoAccount {
   createdDaysAgo: number;
@@ -21,24 +28,60 @@ export interface DemoInstallment {
   dueDate: string;
   /** ISO instant: paid on the due date, at noon in São Paulo. */
   paidAt: string | null;
-  /** ISO instant of the proof waiting for confirmation, when there is one. */
-  proofAt: string | null;
   sequence: number;
   status: "pending" | "paid" | "confirmed" | "awaiting_confirmation";
 }
 
+/** A proof file the seed uploads (a PDF that reads like a Pix receipt). */
+export interface DemoProof {
+  /** ISO instant of the upload. */
+  at: string;
+  fileName: string;
+  sequence: number;
+}
+
+/** An audit row, written as the product writes it (lib/audit.ts). */
+export interface DemoEvent {
+  /** Who acted: the owner, the linked counterpart, or nobody (an account that is gone). */
+  actor: "owner" | "counterpart" | null;
+  at: string;
+  metadata: Record<string, unknown> | null;
+  sequence: number | null;
+  type: string;
+}
+
+/** Someone invited to watch, still pending (the "Convite pendente" row). */
+export interface DemoViewer {
+  displayName: string;
+  invite: DemoAccountKey;
+  invitedAt: string;
+}
+
 export interface DemoContract {
-  counterpart: { displayName: string; role: "buyer" | "seller" };
+  counterpart: {
+    /** The counterpart's demo account when they have one (linked, invite accepted at `joinedAt`). */
+    account: DemoAccountKey | null;
+    displayName: string;
+    joinedAt: string | null;
+    /** The receiver's key kept on the contact (owner's decision, 2026-10-05). */
+    pixKey: string | null;
+    role: "buyer" | "seller";
+  };
+  /** Exact ISO instant of the creation, for the history; null uses createdDaysAgo. */
+  createdAt: string | null;
   createdDaysAgo: number;
+  events: DemoEvent[];
   installments: DemoInstallment[];
   /** The counterpart's slot is invited by e-mail to this account (left pending). */
   invite: DemoAccountKey | null;
   key: string;
   owner: DemoAccountKey;
   ownerRole: "buyer" | "seller";
-  pixKey: string | null;
+  proofs: DemoProof[];
+  receiptShares: { at: string; sequence: number }[];
   requiresConfirmation: boolean;
   title: string;
+  viewers: DemoViewer[];
 }
 
 export interface DemoNotification {
@@ -112,7 +155,6 @@ export function monthly(spec: MonthlySpec): DemoInstallment[] {
       status,
       paidAt: paid ? `${dueDate}T15:00:00.000Z` : null,
       confirmedAt: status === "confirmed" ? `${dueDate}T15:00:00.000Z` : null,
-      proofAt: null,
     };
   });
 }
@@ -145,12 +187,19 @@ export function base(
     title,
     ownerRole,
     requiresConfirmation: false,
-    pixKey: null,
     counterpart: {
+      account: null,
       displayName: counterpart,
+      joinedAt: null,
+      pixKey: null,
       role: ownerRole === "buyer" ? "seller" : "buyer",
     },
+    createdAt: null,
+    events: [],
     invite: null,
+    proofs: [],
+    receiptShares: [],
+    viewers: [],
   };
 }
 
