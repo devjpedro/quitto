@@ -16,13 +16,14 @@ const { navigate, route, served } = vi.hoisted(() => ({
       data: unknown;
       error: unknown;
     },
+    get: vi.fn(),
   },
 }));
 
 vi.mock("@/lib/api", () => ({
   api: {
     api: {
-      contracts: () => ({ get: () => Promise.resolve(served.response) }),
+      contracts: () => ({ get: () => served.get() }),
     },
   },
 }));
@@ -67,6 +68,8 @@ beforeEach(() => {
   vi.useFakeTimers({ now: new Date("2026-10-05T15:00:00Z"), toFake: ["Date"] });
   navigate.mockReset();
   route.search = {};
+  served.get.mockReset();
+  served.get.mockImplementation(() => Promise.resolve(served.response));
 });
 
 afterEach(() => {
@@ -209,7 +212,9 @@ describe("ContractPage (mockup 14, topo)", () => {
   });
 
   it("404 mostra Contrato não encontrado com o link para Contratos", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     served.response = {
       data: null,
       error: {
@@ -234,5 +239,20 @@ describe("ContractPage (mockup 14, topo)", () => {
     ).toHaveAttribute("href", "/contracts");
     // A 404 is not worth retrying: no "Tentar de novo".
     expect(screen.queryByRole("button", { name: "Tentar de novo" })).toBeNull();
+    // An answer, not an error: nothing thrown into the boundary.
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("o 404 que chega do SSR (o contrato null no cache) já mostra o não-encontrado, sem pedir de novo", () => {
+    const client = makeTestQueryClient();
+    client.setQueryDefaults(queryKeys.contract("c-moto"), {
+      gcTime: Number.POSITIVE_INFINITY,
+      staleTime: Number.POSITIVE_INFINITY,
+    });
+    client.setQueryData(queryKeys.contract("c-moto"), null);
+    renderWithProviders(<ContractPage />, { client });
+    expect(screen.getByTestId("contract-not-found")).toBeVisible();
+    expect(served.get).not.toHaveBeenCalled();
   });
 });

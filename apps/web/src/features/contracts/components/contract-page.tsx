@@ -2,7 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { SectionBoundary } from "@/components/ui/section-boundary";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { ApiError } from "@/lib/api-client";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 import { contractQueryOptions } from "../api";
@@ -18,10 +17,6 @@ import { ContractHero } from "./contract-hero";
 import { ContractNotFound } from "./contract-not-found";
 import { ContractSkeleton } from "./contract-skeleton";
 import { ContractTabs } from "./contract-tabs";
-
-function isNotFound(error: unknown): boolean {
-  return error instanceof ApiError && error.httpStatus === 404;
-}
 
 type Slot = (detail: ContractDetail, route: ContractRoute) => ReactNode;
 
@@ -60,6 +55,10 @@ export const EMPTY_SLOTS: ContractSlots = {
 function ContractContent({ slots }: { slots: ContractSlots }) {
   const route = useContractRoute();
   const { data: detail } = useSuspenseQuery(contractQueryOptions(route.id));
+  // A 404 is an answer (the query's null), so the server already renders it.
+  if (detail === null) {
+    return <ContractNotFound />;
+  }
   const card = slots.nextAction(detail, route);
   const panelOpen = route.installmentId !== null;
   return (
@@ -133,12 +132,7 @@ export function ContractPage({
   return (
     <div className="lateral:p-8 p-4 pt-2 md:p-6">
       <div className="mx-auto w-full max-w-[1840px]">
-        <SectionBoundary
-          fallback={<ContractSkeleton />}
-          renderError={(error) =>
-            isNotFound(error) ? <ContractNotFound /> : null
-          }
-        >
+        <SectionBoundary fallback={<ContractSkeleton />}>
           <ContractContent slots={slots} />
         </SectionBoundary>
       </div>

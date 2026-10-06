@@ -7,17 +7,21 @@ import {
 import { withInstallmentPatch } from "@/features/contracts/lib/contract-cache";
 import type { ContractDetail } from "@/features/contracts/types";
 import { api } from "@/lib/api";
-import { unwrap } from "@/lib/api-client";
+import { unwrap, unwrapOrNull } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { optimisticUpdate } from "@/lib/optimistic";
 import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
 
-/** GET /api/installments/:id (Task 1): what the panel draws. */
+/**
+ * GET /api/installments/:id (Task 1): what the panel draws. null: the
+ * installment does not exist or is not yours (an old notification's link).
+ */
 export const installmentQueryOptions = (id: string) =>
   queryOptions({
     queryKey: queryKeys.installment(id),
-    queryFn: () => unwrap(api.api.installments({ installmentId: id }).get()),
+    queryFn: () =>
+      unwrapOrNull(api.api.installments({ installmentId: id }).get()),
   });
 
 interface Entity {

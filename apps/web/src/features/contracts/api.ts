@@ -5,16 +5,17 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { unwrap } from "@/lib/api-client";
+import { unwrap, unwrapOrNull } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
 import type { ContractDetail } from "./types";
 
+/** null: the contract does not exist or is not yours (decision 20), and the page says so. */
 export const contractQueryOptions = (id: string) =>
   queryOptions({
     queryKey: queryKeys.contract(id),
-    queryFn: () => unwrap(api.api.contracts({ id }).get()),
+    queryFn: () => unwrapOrNull(api.api.contracts({ id }).get()),
   });
 
 /** "Editar título e descrição": the page shows the new text at once. */
@@ -66,16 +67,21 @@ export function useLeaveContractMutation(id: string) {
   });
 }
 
-/** The History tab (Task 8), 50 a page with an opaque cursor (Task 2); under the contract's key, so invalidating the contract refreshes it. */
+/**
+ * The History tab (Task 8), 50 a page with an opaque cursor (Task 2); under
+ * the contract's key, so invalidating the contract refreshes it. A null page:
+ * the contract is gone (?tab=history on a deleted contract), as the contract's
+ * own null says.
+ */
 export const contractEventsQueryOptions = (id: string) =>
   infiniteQueryOptions({
     queryKey: [...queryKeys.contract(id), "events"] as const,
     queryFn: ({ pageParam }) =>
-      unwrap(
+      unwrapOrNull(
         api.api
           .contracts({ id })
           .events.get({ query: pageParam ? { before: pageParam } : {} })
       ),
     initialPageParam: null as string | null,
-    getNextPageParam: (page) => page.nextBefore,
+    getNextPageParam: (page) => page?.nextBefore ?? null,
   });

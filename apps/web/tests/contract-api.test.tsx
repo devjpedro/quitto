@@ -3,27 +3,49 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
+  contractEventsQueryOptions,
+  contractQueryOptions,
   useDeleteContractMutation,
   useLeaveContractMutation,
   useUpdateContractMutation,
 } from "@/features/contracts/api";
 import type { ContractDetail } from "@/features/contracts/types";
+import { installmentQueryOptions } from "@/features/installments/api";
+import { makeQueryClient } from "@/lib/query";
 import { queryKeys } from "@/lib/query-keys";
 import { motoDetail } from "./contract-fixtures";
 import { makeTestQueryClient } from "./test-utils";
 
-const { patch } = vi.hoisted(() => ({ patch: vi.fn() }));
+const { patch, contractGet, eventsGet, installmentGet } = vi.hoisted(() => ({
+  patch: vi.fn(),
+  contractGet: vi.fn(),
+  eventsGet: vi.fn(),
+  installmentGet: vi.fn(),
+}));
 
 vi.mock("@/lib/api", () => {
   const contracts = (_p: { id: string }) => ({
+    get: () => contractGet(),
+    events: { get: () => eventsGet() },
     delete: () => Promise.resolve({ data: { ok: true }, error: null }),
     patch: (body: unknown) => patch(body),
     me: {
       delete: () => Promise.resolve({ data: { ok: true }, error: null }),
     },
   });
-  return { api: { api: { contracts } } };
+  const installments = (_p: { installmentId: string }) => ({
+    get: () => installmentGet(),
+  });
+  return { api: { api: { contracts, installments } } };
 });
+
+const NOT_FOUND = {
+  data: null,
+  error: {
+    status: 404,
+    value: { error: { code: "NOT_FOUND", message: "Contrato não encontrado" } },
+  },
+};
 
 function wrap(client: ReturnType<typeof makeTestQueryClient>) {
   return ({ children }: { children: ReactNode }) => (
@@ -94,5 +116,45 @@ describe("contract API (features/contracts/api.ts)", () => {
     await waitFor(() =>
       expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
+  });
+
+  // A deep link to a deleted contract (decision 20), with the app's own
+  // retry policy: the SSR answers the 404 page itself, with a single request.
+  it("contractQueryOptions: um 404 é a resposta null, com um só pedido e sem erro", async () => {
+    contractGet.mockReset().mockResolvedValue(NOT_FOUND);
+    const client = makeQueryClient();
+    await expect(
+      client.fetchQuery(contractQueryOptions("gone"))
+    ).resolves.toBeNull();
+    expect(contractGet).toHaveBeenCalledTimes(1);
+    expect(client.getQueryState(queryKeys.contract("gone"))?.status).toBe(
+      "success"
+    );
+  });
+
+  // An old notification's ?installment= (the panel, Task 9, says "not found").
+  it("installmentQueryOptions: um 404 é a resposta null, com um só pedido e sem erro", async () => {
+    installmentGet.mockReset().mockResolvedValue(NOT_FOUND);
+    const client = makeQueryClient();
+    await expect(
+      client.fetchQuery(installmentQueryOptions("gone"))
+    ).resolves.toBeNull();
+    expect(installmentGet).toHaveBeenCalledTimes(1);
+    expect(client.getQueryState(queryKeys.installment("gone"))?.status).toBe(
+      "success"
+    );
+  });
+
+  // ?tab=history on a deleted contract: the first page is null, and no more pages.
+  it("contractEventsQueryOptions: um 404 é a página null, com um só pedido e sem erro", async () => {
+    eventsGet.mockReset().mockResolvedValue(NOT_FOUND);
+    const client = makeQueryClient();
+    const data = await client.fetchInfiniteQuery(
+      contractEventsQueryOptions("gone")
+    );
+    expect(data.pages).toEqual([null]);
+    expect(eventsGet).toHaveBeenCalledTimes(1);
+    const options = contractEventsQueryOptions("gone");
+    expect(options.getNextPageParam(null, [null], null, [null])).toBeNull();
   });
 });
