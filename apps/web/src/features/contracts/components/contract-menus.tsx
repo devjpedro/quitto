@@ -6,6 +6,7 @@ import {
   SignOut,
   Table,
   Trash,
+  UserPlus,
 } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useHydrated, useNavigate } from "@tanstack/react-router";
@@ -21,6 +22,7 @@ import {
 } from "../api";
 import type { ContractDetail } from "../types";
 import { EditContractDialog } from "./edit-contract-dialog";
+import { InviteDialog } from "./invite-dialog";
 
 /** Filled, no outline (DIRECAO › Contrato): the card's fill, one step down on hover. */
 const FILLED =
@@ -65,7 +67,7 @@ export function ExportMenu({ contractId }: { contractId: string }) {
   );
 }
 
-type OpenDialog = "edit" | "delete" | "leave" | null;
+type OpenDialog = "edit" | "invite" | "delete" | "leave" | null;
 
 /**
  * The contract's "⋯": the owner edits the title and description or deletes
@@ -131,6 +133,9 @@ export function ContractActionsMenu({
             <MenuItem icon={PencilSimple} onSelect={() => setOpen("edit")}>
               {m.contract_edit()}
             </MenuItem>
+            <MenuItem icon={UserPlus} onSelect={() => setOpen("invite")}>
+              {m.contract_invite()}
+            </MenuItem>
             <MenuSeparator />
             <MenuItem
               icon={Trash}
@@ -157,6 +162,12 @@ export function ContractActionsMenu({
             onCloseAutoFocus={backToTrigger}
             onOpenChange={onOpenChange}
             open={open === "edit"}
+          />
+          <InviteDialog
+            detail={detail}
+            onCloseAutoFocus={backToTrigger}
+            onOpenChange={onOpenChange}
+            open={open === "invite"}
           />
           <ConfirmDialog
             cancelLabel={m.contract_cancel()}

@@ -1,7 +1,11 @@
 import { nextActionOf } from "../lib/next-action";
 import type { ContractSlots } from "./contract-page";
+import { HistoryTab } from "./history-tab";
 import { InstallmentList } from "./installment-list";
+import { InviteButton } from "./invite-dialog";
 import { NextActionCard } from "./next-action-card";
+import { PeopleTab } from "./people-tab";
+import { RecentActivity } from "./recent-activity";
 
 /**
  * What the route hands the contract page. Each later task swaps its own slot
@@ -18,13 +22,18 @@ export const CONTRACT_SLOTS: ContractSlots = {
     ) : null;
   },
   panel: () => null,
-  recentActivity: () => null,
-  tabAction: () => null,
+  recentActivity: (detail, route) => (
+    <RecentActivity detail={detail} route={route} />
+  ),
+  tabAction: (detail, route) =>
+    route.tab === "people" && detail.isOwner ? (
+      <InviteButton detail={detail} />
+    ) : null,
   tabBody: {
     installments: (detail, route) => (
       <InstallmentList detail={detail} route={route} />
     ),
-    people: () => null,
-    history: () => null,
+    people: (detail) => <PeopleTab detail={detail} />,
+    history: (_detail, route) => <HistoryTab route={route} />,
   },
 };
