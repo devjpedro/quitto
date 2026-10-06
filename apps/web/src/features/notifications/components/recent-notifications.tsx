@@ -1,6 +1,6 @@
 import { CaretRight } from "@phosphor-icons/react";
 import { useId } from "react";
-import { SectionTitle } from "@/features/home/components/section-title";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { HomeAction } from "@/features/home/types";
 import { m } from "@/paraglide/messages.js";
 import { useNotificationRows } from "../hooks/use-notifications-list";

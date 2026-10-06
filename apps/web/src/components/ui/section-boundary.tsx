@@ -59,10 +59,13 @@ function SectionError({
 export function SectionBoundary({
   children,
   fallback,
+  renderError,
   slowAfterMs = SLOW_AFTER_MS,
 }: {
   children: ReactNode;
   fallback: ReactNode;
+  /** A non-null result replaces the "Try again" (a 404 is not worth retrying). */
+  renderError?: (error: unknown) => ReactNode | null;
   slowAfterMs?: number;
 }) {
   const regionRef = useRef<HTMLDivElement>(null);
@@ -75,9 +78,11 @@ export function SectionBoundary({
       <QueryErrorResetBoundary>
         {({ reset }) => (
           <ErrorBoundary
-            fallbackRender={({ error, resetErrorBoundary }) => (
-              <SectionError error={error} onRetry={resetErrorBoundary} />
-            )}
+            fallbackRender={({ error, resetErrorBoundary }) =>
+              renderError?.(error) ?? (
+                <SectionError error={error} onRetry={resetErrorBoundary} />
+              )
+            }
             onReset={() => {
               reset();
               regionRef.current?.focus();

@@ -2,9 +2,15 @@ import { formatMoney, moneyParts } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
 import { getLocale } from "@/paraglide/runtime.js";
 
-// DIRECAO › Tipografia: the card's amount 34, the milestone's 24, a list's
-// 17, always tabular, with "R$" and the cents set back.
+// DIRECAO › Tipografia: the contract's hero amount 40, the card's 34, the
+// milestone's 24, a list's 17, always tabular, with "R$" and the cents set back.
 const DISPLAY = {
+  // The contract's top (mockup 14): one step above the card's 34.
+  hero: {
+    root: "text-[36px] leading-[1.12] tracking-[-0.035em] md:text-[40px]",
+    currency: "relative top-[0.5em] mr-1 align-top text-[14px]",
+    cents: "text-[0.55em] tracking-[-0.01em]",
+  },
   card: {
     root: "text-[34px] leading-[1.15] tracking-[-0.035em]",
     currency: "relative top-[0.42em] mr-[3px] align-top text-[13px]",

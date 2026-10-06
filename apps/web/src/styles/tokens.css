@@ -48,6 +48,8 @@
   --color-warning-subtle: var(--warning-subtle);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
+  --color-row-selected: var(--row-selected);
+  --color-field-line: var(--field-line);
   --color-surface-card: var(--surface-card);
   --color-surface-card-hover: var(--surface-card-hover);
   --color-surface-inset: var(--surface-inset);
@@ -89,6 +91,10 @@
   --warning-subtle: #fdf3d8;
   --danger: #b42318;
   --danger-subtle: #fdecea;
+  /* The selected row (mockup 14): brand-subtle in light; its own step in dark, where ink-muted on brand-subtle is 4.44:1. */
+  --row-selected: #e8f0ea;
+  /* Form fields only: 3:1 against the field and what is around it (WCAG 1.4.11). */
+  --field-line: #86847d;
   /* Fill, not outline (mockup 13, report §4). */
   --surface-card: #f1f0eb;
   --surface-card-hover: #eae8e1;
@@ -141,6 +147,8 @@
   /* The card one step above the panel; what sits inside it one step below.
      The hover steps down too, as in light: up from the card there is no
      room (ink-muted meets the AA floor at #32332d). */
+  --row-selected: #213528;
+  --field-line: #7a7a72;
   --surface-card: #2e2f2a;
   --surface-card-hover: #282924;
   --surface-inset: #242521;

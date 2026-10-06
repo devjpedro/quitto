@@ -5,28 +5,33 @@ import { cn } from "@/lib/utils";
 const SIZE = {
   sm: "size-6 text-[10px]",
   md: "size-7 text-[11px]",
+  lg: "size-10 text-sm",
 } as const;
 
 /**
  * The other party's face (DIRECAO › "Pessoas têm rosto"): initials on the
  * warm tone the name always gets. 24 px on a card or a row, 28 px on an
- * invite. Decorative: the name is in the text beside it. The user's own
- * avatar stays the light green one (layout/avatar.tsx).
+ * invite, 40 px on a contract. Decorative: the name is in the text beside it.
+ * `self` is the user's own face, light green, as the shell's avatar.
  */
 export function PersonAvatar({
   name,
+  self = false,
   size = "sm",
 }: {
   name: string;
+  self?: boolean;
   size?: keyof typeof SIZE;
 }) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-on-avatar leading-none tracking-[0.02em]",
-        SIZE[size],
-        avatarColor(name)
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none tracking-[0.02em]",
+        self
+          ? "bg-brand-subtle text-brand"
+          : cn("text-on-avatar", avatarColor(name)),
+        SIZE[size]
       )}
     >
       {initials(name)}

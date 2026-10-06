@@ -9,6 +9,7 @@ import { type ReactNode, useId } from "react";
 import { DateTile } from "@/components/ui/date-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
+import { SectionTitle } from "@/components/ui/section-title";
 import { Tag } from "@/components/ui/tag";
 import { weekdayName } from "@/lib/date-parts";
 import { formatMoney } from "@/lib/locale-format";
@@ -19,7 +20,6 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { upcomingTotals } from "../lib/home-totals";
 import type { Home, UpcomingItem } from "../types";
-import { SectionTitle } from "./section-title";
 
 /** "última" for a contract's last installment, "primeira" for its first. */
 function edgeTag(item: UpcomingItem): string | null {

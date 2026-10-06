@@ -28,8 +28,13 @@ const SEGMENT: Record<"panel" | "brand", Record<BarStatus, string>> = {
   },
 };
 
-const PIECE =
-  "min-w-0 rounded-[1.5px] first:rounded-l-[3px] last:rounded-r-[3px]";
+/** The panel tone of each state, for the key's swatches. */
+export const BAR_SEGMENT = SEGMENT.panel;
+
+const PIECE = {
+  card: "min-w-0 rounded-[1.5px] first:rounded-l-[3px] last:rounded-r-[3px]",
+  tall: "min-w-0 rounded-[2px] first:rounded-l-[4px] last:rounded-r-[4px]",
+} as const;
 
 /**
  * The whole contract on an action card (DIRECAO › Progresso): one segment
@@ -43,6 +48,7 @@ export function InstallmentBar({
   onBrand = false,
   overdueCount,
   paidCount,
+  size = "card",
   statuses,
 }: {
   className?: string;
@@ -50,19 +56,23 @@ export function InstallmentBar({
   onBrand?: boolean;
   overdueCount: number;
   paidCount: number;
+  /** `tall` (8 px, 3 px gaps) is the contract's top. */
+  size?: "card" | "tall";
   statuses: BarStatus[] | null;
 }) {
   const tone = SEGMENT[onBrand ? "brand" : "panel"];
+  const root = size === "tall" ? "flex h-2 gap-[3px]" : "flex h-1.5 gap-0.5";
+  const piece = PIECE[size];
   if (statuses) {
     const segments = statuses.map((status, index) => ({
       status,
       sequence: index + 1,
     }));
     return (
-      <div aria-hidden="true" className={cn("flex h-1.5 gap-0.5", className)}>
+      <div aria-hidden="true" className={cn(root, className)}>
         {segments.map(({ status, sequence }) => (
           <span
-            className={cn(PIECE, "flex-1", tone[status])}
+            className={cn(piece, "flex-1", tone[status])}
             data-status={status}
             key={sequence}
           />
@@ -77,12 +87,12 @@ export function InstallmentBar({
     ["open", rest],
   ];
   return (
-    <div aria-hidden="true" className={cn("flex h-1.5 gap-0.5", className)}>
+    <div aria-hidden="true" className={cn(root, className)}>
       {zones
         .filter(([, size]) => size > 0)
         .map(([status, size]) => (
           <span
-            className={cn(PIECE, tone[status])}
+            className={cn(piece, tone[status])}
             data-status={status}
             key={status}
             style={{ flexBasis: 0, flexGrow: size }}

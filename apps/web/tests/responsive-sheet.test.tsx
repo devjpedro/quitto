@@ -235,4 +235,72 @@ describe("ResponsiveSheet", () => {
       expect(onOpenChange).not.toHaveBeenCalled();
     });
   });
+
+  it("bottom sheet: o rodapé fica preso embaixo, fora da rolagem; o teto é 91%; as setas do cabeçalho não aparecem", async () => {
+    window.innerWidth = 390;
+    render(
+      <ResponsiveSheet
+        footer={<button type="button">Copiar código PIX</button>}
+        headerActions={<button type="button">Próxima parcela</button>}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Parcela 7 de 10",
+    });
+    expect(dialog).toHaveClass("max-h-[91dvh]");
+    expect(
+      screen
+        .getByRole("button", { name: "Copiar código PIX" })
+        .closest(".overflow-y-auto")
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Próxima parcela" })
+    ).toBeNull();
+  });
+
+  it("lateral: as setas no cabeçalho, sem o rodapé do celular", async () => {
+    window.innerWidth = 1024;
+    render(
+      <ResponsiveSheet
+        footer={<button type="button">Copiar código PIX</button>}
+        headerActions={<button type="button">Próxima parcela</button>}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    expect(
+      await screen.findByRole("button", { name: "Próxima parcela" })
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Copiar código PIX" })
+    ).toBeNull();
+  });
+
+  it("onKeyDown ouve as teclas de dentro do sheet (o painel anda com ↓ sem remontar)", async () => {
+    window.innerWidth = 1024;
+    const onKeyDown = vi.fn();
+    render(
+      <ResponsiveSheet
+        onKeyDown={onKeyDown}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <button type="button">corpo</button>
+      </ResponsiveSheet>
+    );
+    (await screen.findByRole("button", { name: "corpo" })).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(onKeyDown).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "ArrowDown" })
+    );
+  });
 });

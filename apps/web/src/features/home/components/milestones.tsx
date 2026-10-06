@@ -1,5 +1,6 @@
 import type { Locale } from "@quitto/shared";
 import { useId } from "react";
+import { SectionTitle } from "@/components/ui/section-title";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -13,7 +14,6 @@ import {
 import { momentView } from "../lib/moment";
 import type { HomeMilestones } from "../types";
 import { Bar, LabelRow, MomentCell, ValueCell } from "./milestone-cells";
-import { SectionTitle } from "./section-title";
 
 /** Label and title come from momentView, the lime card's text: the strip and the sidebar always say the same. */
 function CellView({

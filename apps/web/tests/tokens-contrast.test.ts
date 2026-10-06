@@ -67,6 +67,9 @@ const TEXT_PAIRS: [string, string][] = [
   // The inset (secondary) button's hover, in the panel and on a phone.
   ["ink", "surface-inset-hover"],
   ["ink", "page-inset-hover"],
+  ["ink", "row-selected"],
+  ["ink-muted", "row-selected"],
+  ["brand", "row-selected"],
   ["brand", "surface-card"],
   ["brand", "surface-inset"],
   ["danger", "surface-card"],
@@ -106,6 +109,10 @@ const TEXT_PAIRS: [string, string][] = [
 const NON_TEXT_PAIRS: [string, string][] = [
   ["brand", "canvas"],
   ["ink", "canvas"],
+  // Form fields: the outline against the field and what is around it (WCAG 1.4.11).
+  ["field-line", "surface"],
+  ["field-line", "surface-sunken"],
+  ["field-line", "surface-card"],
   // The installment bar's segments on its track, and the green card's
   // overdue stripe (WCAG 1.4.11).
   ["brand", "track"],

@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { SectionTitle } from "@/components/ui/section-title";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useDismissOnboarding } from "../api";
@@ -7,7 +8,6 @@ import type { OnboardingView } from "../lib/onboarding";
 import type { HomeOnboarding } from "../types";
 import { GuideHero } from "./guide-hero";
 import { OnboardingChecklist } from "./onboarding-checklist";
-import { SectionTitle } from "./section-title";
 
 /**
  * "Comece por aqui", a checklist and never a balloon tour. `hero` puts the
