@@ -16,6 +16,15 @@ vi.mock("@/lib/api", () => {
     installments: (_i: { installmentId: string }) => ({
       patch: () => Promise.resolve({ data: { id: "i1" }, error: null }),
     }),
+    participants: ({ participantId }: { participantId: string }) => ({
+      "pix-key": {
+        patch: (body: { pixKey: string | null }) =>
+          Promise.resolve({
+            data: { id: participantId, pixKey: body.pixKey },
+            error: null,
+          }),
+      },
+    }),
   });
   const installments = (_i: { installmentId: string }) => ({
     "receipt-share": {
@@ -59,6 +68,7 @@ vi.mock("@/lib/api", () => {
 import {
   useConfirmMutation,
   useDisputeMutation,
+  useSaveContactKeyMutation,
   useShareReceiptMutation,
   useUpdateInstallmentMutation,
 } from "../src/features/installments/api";
@@ -133,5 +143,35 @@ describe("features/installments/api (revisão I3: os testes do legado contra os 
     await waitFor(() =>
       expect(success).toHaveBeenCalledWith("Contestação enviada")
     );
+  });
+
+  it("guardar a chave do contato invalida todas as parcelas do contrato (as vizinhas que o painel já pré-buscou também) e o contrato, não só a da vez", async () => {
+    const client = makeTestQueryClient();
+    // Held as on the page (the test client's gcTime 0 would drop them).
+    for (const key of [["contract"], ["installment"]]) {
+      client.setQueryDefaults(key, { gcTime: Number.POSITIVE_INFINITY });
+    }
+    client.setQueryData(queryKeys.contract("c1"), {
+      installments: [{ id: "a" }, { id: "b" }],
+    });
+    for (const id of ["a", "b", "outro-contrato"]) {
+      client.setQueryData(queryKeys.installment(id), { id });
+    }
+    const { result } = renderHook(() => useSaveContactKeyMutation("c1", "a"), {
+      wrapper: wrap(client),
+    });
+    await result.current.mutateAsync({
+      participantId: "p-beatriz",
+      pixKey: "beatriz@exemplo.com",
+    });
+    const invalidated = (key: readonly unknown[]) =>
+      client.getQueryState(key)?.isInvalidated;
+    await waitFor(() =>
+      expect(invalidated(queryKeys.installment("b"))).toBe(true)
+    );
+    expect(invalidated(queryKeys.installment("a"))).toBe(true);
+    expect(invalidated(queryKeys.contract("c1"))).toBe(true);
+    // A key outside the contract is left alone (the targeted keys of query-keys).
+    expect(invalidated(queryKeys.installment("outro-contrato"))).toBe(false);
   });
 });

@@ -216,7 +216,14 @@ export function useSaveContactKeyMutation(
       ),
     meta: { successMessage: m.panel_toast_key_saved() },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) });
+      // The contact's key is the contract's: every open installment's Pix
+      // changes, the neighbours the panel already prefetched included.
+      const ids = qc
+        .getQueryData<ContractDetail>(queryKeys.contract(contractId))
+        ?.installments.map((it) => it.id) ?? [installmentId];
+      for (const id of ids) {
+        qc.invalidateQueries({ queryKey: queryKeys.installment(id) });
+      }
       qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
       qc.invalidateQueries({ queryKey: queryKeys.home });
     },
