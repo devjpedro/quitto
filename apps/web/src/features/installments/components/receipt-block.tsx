@@ -6,6 +6,7 @@ import {
   ShareNetwork,
   WhatsappLogo,
 } from "@phosphor-icons/react";
+import type { MouseEvent } from "react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -23,7 +24,7 @@ import {
 } from "../lib/panel-actions";
 import { receiptMessage, whatsappUrl } from "../lib/whatsapp-message";
 import type { InstallmentDetail } from "../types";
-import { PANEL_TONE, type PanelMode } from "./panel-context";
+import { PANEL_TONE, type PanelMode, usePanel } from "./panel-context";
 
 const PROTOCOL_RE = /^https?:\/\//;
 
@@ -40,12 +41,14 @@ function counterpartFirstName(contract: ContractDetail): string {
  * What the receipt offers, shared by the block and the bottom sheet's footer:
  * the PDF, the public link (created on demand, once), the system's share
  * sheet or the clipboard, and the WhatsApp message in the sender's voice
- * ("Recebi…" or "Paguei…", review I7).
+ * ("Recebi…" or "Paguei…", review I7). Each answers to the panel's lock
+ * (review I2 of Task 9): the second hit of a double tap does nothing.
  */
 export function useReceiptActions(
   detail: InstallmentDetail,
   contract: ContractDetail
 ) {
+  const { tryLock } = usePanel();
   const share = useShareReceiptMutation(detail.id);
   const copy = useCopy();
   const existing = detail.receiptShare?.url ?? null;
@@ -82,7 +85,16 @@ export function useReceiptActions(
     pending: share.isPending,
     /** "Enviar no WhatsApp" when the link exists: a plain link in the sender's voice. */
     whatsappHref: existing ? whatsappFor(existing, sender) : null,
+    /** A link (the PDF, the WhatsApp) answers to the lock too. */
+    guardLink: (event: MouseEvent) => {
+      if (!tryLock()) {
+        event.preventDefault();
+      }
+    },
     copyLink: async () => {
+      if (!tryLock()) {
+        return;
+      }
       const url = await linkUrl();
       if (url) {
         await copy(url, m.panel_link_copied());
@@ -90,6 +102,9 @@ export function useReceiptActions(
     },
     /** The system's share sheet where there is one, the clipboard elsewhere. */
     shareReceipt: async () => {
+      if (!tryLock()) {
+        return;
+      }
       const url = await linkUrl();
       if (!url) {
         return;
@@ -106,6 +121,9 @@ export function useReceiptActions(
      * await is blocked), and gets the wa.me once the link exists.
      */
     sendWhatsapp: () => {
+      if (!tryLock()) {
+        return;
+      }
       const win = window.open("", "_blank");
       if (win) {
         win.opener = null;
@@ -161,7 +179,7 @@ export function ReceiptPrimaryButton({
   }
   return (
     <Button asChild className={className}>
-      <a download href={actions.pdfHref}>
+      <a download href={actions.pdfHref} onClick={actions.guardLink}>
         <FilePdf aria-hidden="true" size={16} />
         {m.panel_receipt_pdf()}
       </a>
@@ -239,7 +257,12 @@ function ReceiptButtons({
     return (
       <div className="mt-3 flex flex-wrap gap-2">
         {main}
-        <a className={cn(secondary, grow)} download href={actions.pdfHref}>
+        <a
+          className={cn(secondary, grow)}
+          download
+          href={actions.pdfHref}
+          onClick={actions.guardLink}
+        >
           <FilePdf aria-hidden="true" size={16} />
           {m.panel_receipt_pdf_short()}
         </a>
@@ -261,6 +284,7 @@ function ReceiptButtons({
         className={cn(secondary, !inline && "flex-[1_0_auto]")}
         download
         href={actions.pdfHref}
+        onClick={actions.guardLink}
       >
         <FilePdf aria-hidden="true" size={16} />
         {m.panel_receipt_pdf()}
@@ -271,6 +295,7 @@ function ReceiptButtons({
       // Beside the PDF when both fit, else on a row of its own: never squeezed.
       className={cn(secondary, "flex-[1_0_auto]")}
       href={actions.whatsappHref}
+      onClick={actions.guardLink}
       rel="noopener noreferrer"
       target="_blank"
     >

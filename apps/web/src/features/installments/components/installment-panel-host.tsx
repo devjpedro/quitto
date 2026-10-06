@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 import {
   ResponsiveSheet,
   useSheetVariant,
@@ -18,7 +18,7 @@ import {
 } from "../hooks/use-panel-navigation";
 import { InstallmentPanel } from "./installment-panel";
 import { PanelProvider } from "./panel-context";
-import { PanelArrows } from "./panel-header";
+import { PANEL_TITLE_ID, PanelArrows } from "./panel-header";
 import { PanelSkeleton } from "./panel-skeleton";
 import { SheetFooter, useSheetPrimary } from "./sheet-footer";
 
@@ -36,6 +36,61 @@ function rowOrGroup(id: string): HTMLElement | null {
 /** Esc's return (DIRECAO › Contrato): the focus goes back to the installment's line, or to its group's button. */
 export function focusInstallmentRow(id: string): void {
   rowOrGroup(id)?.focus();
+}
+
+/**
+ * The column's focus scope (review I3 of Task 9): an action of the panel takes
+ * its own button away ("Confirmar recebimento" swaps the blocks, "Cancelar"
+ * and a sent dispute close the reason), and the focus would fall on <body>,
+ * where ↑ ↓ Esc are not heard. As Radix's FocusScope does in the sheet, it
+ * comes back to the title (the wrapper while the content loads). Only a focus
+ * the panel lost: one the user took elsewhere (a click on the page, a Tab out)
+ * stays there, and a page that loads with the panel open keeps its own.
+ */
+function useKeepFocus(wrapper: RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const el = wrapper.current;
+    if (!el) {
+      return;
+    }
+    let held: EventTarget | null = null;
+    const onFocusIn = (event: FocusEvent) => {
+      held = event.target;
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      const left = event.target;
+      // A browser may say focusout for a removed element too: that one stays
+      // held, for the observer to bring the focus back.
+      queueMicrotask(() => {
+        if (
+          held === left &&
+          left instanceof Node &&
+          left.isConnected &&
+          !el.contains(document.activeElement)
+        ) {
+          held = null;
+        }
+      });
+    };
+    const observer = new MutationObserver(() => {
+      const active = document.activeElement;
+      const lost = !active || active === document.body;
+      if (held instanceof Node && !held.isConnected && lost) {
+        held = null;
+        (document.getElementById(PANEL_TITLE_ID) ?? el).focus({
+          preventScroll: true,
+        });
+      }
+    });
+    el.addEventListener("focusin", onFocusIn);
+    el.addEventListener("focusout", onFocusOut);
+    observer.observe(el, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("focusin", onFocusIn);
+      el.removeEventListener("focusout", onFocusOut);
+    };
+  }, [wrapper]);
 }
 
 function DockedPanel({
@@ -59,6 +114,7 @@ function DockedPanel({
     el?.addEventListener("keydown", onKeyDown);
     return () => el?.removeEventListener("keydown", onKeyDown);
   }, [onKeyDown]);
+  useKeepFocus(wrapper);
   return (
     // The boundary's own wrapper is a flex column too, so the column can
     // shrink to the side's height and scroll inside. It holds the focus

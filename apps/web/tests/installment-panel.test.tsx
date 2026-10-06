@@ -6,6 +6,7 @@ import { ContractPage } from "@/features/contracts/components/contract-page";
 import { CONTRACT_SLOTS } from "@/features/contracts/components/contract-slots";
 import type { ContractDetail } from "@/features/contracts/types";
 import type { InstallmentDetail } from "@/features/installments/types";
+import { ACTION_LOCK_MS } from "@/hooks/use-action-lock";
 import { queryKeys } from "@/lib/query-keys";
 import { installmentDetail, motoDetail } from "./contract-fixtures";
 import { makeTestQueryClient, renderWithProviders } from "./test-utils";
@@ -339,6 +340,64 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     await waitFor(() => expect(group).toHaveFocus());
   });
 
+  it("a 1600, Enter em 'Confirmar recebimento' troca os blocos e o foco fica na coluna (no título), não no body: ↓ leva à parcela 5", async () => {
+    const user = userEvent.setup();
+    calls.confirm.mockReturnValue(deferred<Answer>().promise);
+    renderPage();
+    const docked = screen.getByTestId("installment-panel-docked");
+    act(() =>
+      screen.getByRole("button", { name: "Confirmar recebimento" }).focus()
+    );
+    await user.keyboard("{Enter}");
+    expect(await screen.findByTestId("receipt-block")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Parcela 4 de 10" })
+      ).toHaveFocus()
+    );
+    expect(docked).toContainElement(document.activeElement as HTMLElement);
+
+    await user.keyboard("{ArrowDown}");
+    expect(router.get()).toEqual({ installment: "i5" });
+  });
+
+  it("a 1600, 'Cancelar' a contestação devolve o foco ao 'Contestar' e Esc ainda fecha; a contestação enviada deixa o foco na coluna e ↓ anda", async () => {
+    const user = userEvent.setup();
+    calls.dispute.mockResolvedValue({
+      data: { id: "i4", status: "disputed", paidAt: null, confirmedAt: null },
+      error: null,
+    });
+    renderPage();
+    const docked = screen.getByTestId("installment-panel-docked");
+    await user.click(screen.getByRole("button", { name: "Contestar" }));
+    act(() => screen.getByRole("button", { name: "Cancelar" }).focus());
+    await user.keyboard("{Enter}");
+    expect(screen.queryByRole("textbox")).toBeNull();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Contestar" })).toHaveFocus()
+    );
+
+    await user.click(screen.getByRole("button", { name: "Contestar" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Por que você está contestando?" }),
+      "O valor que chegou foi R$ 240,00."
+    );
+    act(() =>
+      screen.getByRole("button", { name: "Enviar contestação" }).focus()
+    );
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(calls.dispute).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
+    await waitFor(() =>
+      expect(docked).toContainElement(document.activeElement as HTMLElement)
+    );
+    await user.keyboard("{ArrowDown}");
+    expect(router.get()).toEqual({ installment: "i5" });
+
+    await user.keyboard("{Escape}");
+    expect(router.get()).toEqual({ installment: undefined });
+  });
+
   it("ao abrir, as vizinhas são pré-buscadas (a parcela anterior e a próxima entram no cache do QueryClient)", async () => {
     const { client } = renderPage();
     await waitFor(() => {
@@ -408,6 +467,30 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(screen.getByRole("button", { name: "Contestar" })).toBeVisible();
   });
 
+  it("a 390, o duplo toque no rodapé: o 2º toque cai no 'Compartilhar recibo' que tomou o lugar do 'Confirmar recebimento' e não cria o link; passada a trava, o mesmo botão compartilha", async () => {
+    const user = userEvent.setup();
+    calls.confirm.mockReturnValue(deferred<Answer>().promise);
+    calls.share.mockResolvedValue({
+      data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
+      error: null,
+    });
+    renderPage({ width: 390 });
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar recebimento" })
+    );
+    // The optimistic confirm swaps the footer's button in place.
+    const share = await screen.findByRole("button", {
+      name: "Compartilhar recibo",
+    });
+    await user.click(share);
+    expect(calls.confirm).toHaveBeenCalledTimes(1);
+    expect(calls.share).not.toHaveBeenCalled();
+
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
+    await user.click(share);
+    await waitFor(() => expect(calls.share).toHaveBeenCalledTimes(1));
+  });
+
   it("contestar: o campo com o contador 0/500, a dica 'Rafael vê o motivo.', motivo vazio não envia, com motivo chama a contestação", async () => {
     const user = userEvent.setup();
     calls.dispute.mockResolvedValue({
@@ -469,7 +552,9 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     );
     expect(toastSuccess).toHaveBeenCalledWith("Link copiado");
 
-    // Where the system has a share sheet, it opens instead.
+    // Where the system has a share sheet, it opens instead (a tap past the
+    // panel's double-tap lock).
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
     const share = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "share", {
       configurable: true,
@@ -584,6 +669,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
       error: null,
     });
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
     await user.click(
       block.getByRole("button", { name: "Copiar link do recibo" })
     );

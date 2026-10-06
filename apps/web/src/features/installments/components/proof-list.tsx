@@ -95,7 +95,9 @@ function rowMeta(
 
 /**
  * Every proof sent for this installment (mockup 14, P5 and P6): the one that
- * counted and the disputed ones, struck through. Each name opens the file.
+ * counted and the disputed ones, struck through. Each name opens the file,
+ * and its line is the target (a stretched link, ≥ 44 px below md; review I4
+ * of Task 9): the ring goes around the line, the name stays the link's name.
  * The payer of a disputed installment reads "Seu envio".
  */
 export function ProofList({
@@ -123,13 +125,16 @@ export function ProofList({
         )}
       >
         {detail.proofs.map((proof) => (
-          <li key={proof.id}>
+          <li
+            className="relative grid min-h-11 items-center md:min-h-0"
+            key={proof.id}
+          >
             <FileRow
               meta={rowMeta(proof, detail, count)}
               mode={mode}
               name={
                 <a
-                  className="rounded-[4px] underline-offset-[3px] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="underline-offset-[3px] after:absolute after:-inset-1 after:rounded-control hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-brand"
                   href={proof.downloadUrl}
                   rel="noopener noreferrer"
                   target="_blank"

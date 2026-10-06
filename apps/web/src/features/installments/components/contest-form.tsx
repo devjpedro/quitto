@@ -20,7 +20,7 @@ export function ContestForm({
   contract: ContractDetail;
   mode: PanelMode;
 }) {
-  const { contractId, installmentId, setContestOpen } = usePanel();
+  const { contractId, installmentId, setContestOpen, tryLock } = usePanel();
   const dispute = useDisputeMutation(contractId);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -37,6 +37,9 @@ export function ContestForm({
     if (!text) {
       setError(m.panel_contest_required());
       field.current?.focus();
+      return;
+    }
+    if (!tryLock()) {
       return;
     }
     dispute.mutate(

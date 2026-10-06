@@ -7,6 +7,36 @@ import type { InstallmentDetail, ProofItem } from "../types";
 import { PANEL_TONE, type PanelMode } from "./panel-context";
 import { FileRow, proofMeta } from "./proof-list";
 
+/**
+ * A PDF as the mockup draws it (mockup 14, frames A and G): its first page as
+ * paper on the inner fill, the foot fading out (a mask, not a color). The
+ * browser's viewer draws a dark gutter around the page (about 1.5% of its
+ * width in Chrome, 3 to 5 px here): the frame is 8 px wider than the paper on
+ * each side and above it, and the paper crops it. The viewer is a picture
+ * here (inert): no wheel or focus scrolls it to its gutter, and "Abrir" opens
+ * the file.
+ */
+function PdfPaper({ mode, proof }: { mode: PanelMode; proof: ProofItem }) {
+  return (
+    <div
+      className={cn(
+        "flex h-[186px] justify-center overflow-hidden rounded-control pt-3.5",
+        PANEL_TONE[mode].inner
+      )}
+    >
+      <div className="relative w-[62%] overflow-hidden rounded-t-[6px] bg-white [mask-image:linear-gradient(to_bottom,black_calc(100%-46px),transparent)]">
+        <iframe
+          className="absolute -top-2 -left-2 h-[calc(100%+1rem)] w-[calc(100%+1rem)]"
+          inert
+          // The page alone, fit to the width: no toolbar or side panel.
+          src={`${proof.downloadUrl}#toolbar=0&navpanes=0&view=FitH`}
+          title={proof.fileName}
+        />
+      </div>
+    </div>
+  );
+}
+
 /** What the proof looks like (owner's decision 4): the image, or the PDF in the browser's viewer off the phone. */
 function Preview({ mode, proof }: { mode: PanelMode; proof: ProofItem }) {
   if (proof.mimeType.startsWith("image/")) {
@@ -26,14 +56,7 @@ function Preview({ mode, proof }: { mode: PanelMode; proof: ProofItem }) {
   if (mode === "bottom") {
     return null;
   }
-  return (
-    <iframe
-      className="h-[186px] w-full rounded-control bg-white"
-      // The page alone, fit to the width: no toolbar or side panel in 186 px.
-      src={`${proof.downloadUrl}#toolbar=0&navpanes=0&view=FitH`}
-      title={proof.fileName}
-    />
-  );
+  return <PdfPaper mode={mode} proof={proof} />;
 }
 
 /**

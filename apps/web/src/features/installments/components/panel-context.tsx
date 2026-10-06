@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useActionLock } from "@/hooks/use-action-lock";
 
 /** Where the panel is drawn: the column from lateral, the floating sheet from md, the bottom sheet below. */
 export type PanelMode = "docked" | "side" | "bottom";
@@ -53,6 +54,12 @@ interface PanelState {
   fileInputRef: RefObject<HTMLInputElement | null>;
   installmentId: string;
   setContestOpen: (open: boolean) => void;
+  /**
+   * One lock for the panel's actions (review I2): an optimistic confirm swaps
+   * its button, in place, for "Compartilhar recibo", and the second hit of a
+   * double tap must not create the public link.
+   */
+  tryLock: () => boolean;
 }
 
 const PanelContext = createContext<PanelState | null>(null);
@@ -79,6 +86,7 @@ export function PanelProvider({
     [installmentId]
   );
   const chooseFile = useCallback(() => fileInputRef.current?.click(), []);
+  const tryLock = useActionLock();
   const value = useMemo<PanelState>(
     () => ({
       busy: false,
@@ -89,8 +97,16 @@ export function PanelProvider({
       fileInputRef,
       installmentId,
       setContestOpen,
+      tryLock,
     }),
-    [chooseFile, contestOpen, contractId, installmentId, setContestOpen]
+    [
+      chooseFile,
+      contestOpen,
+      contractId,
+      installmentId,
+      setContestOpen,
+      tryLock,
+    ]
   );
   return (
     <PanelContext.Provider value={value}>{children}</PanelContext.Provider>
