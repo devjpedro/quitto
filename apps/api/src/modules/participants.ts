@@ -83,6 +83,10 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       await requireOwner(user.id, params.id);
 
       await assertRoleAvailable(params.id, body.role);
+      // Quem acompanha sem e-mail não teria como ser convidado depois (revisão T8, I4).
+      if (body.role === PARTICIPANT_ROLE.viewer && !body.email?.trim()) {
+        throw new ValidationError("Quem acompanha precisa de um e-mail");
+      }
 
       const [created] = await db
         .insert(participant)
@@ -102,6 +106,8 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       body: t.Object({
         displayName: t.String({ minLength: 1, maxLength: 120 }),
         role: roleSchema,
+        // Só confere quem acompanha; o convite em si vai por /invite.
+        email: t.Optional(t.Union([t.String({ format: "email" }), t.Null()])),
       }),
       response: t.Object({ id: t.String() }),
     }

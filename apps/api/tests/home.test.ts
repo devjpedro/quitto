@@ -106,6 +106,7 @@ async function addSlot(
     {
       displayName: "Convidado",
       role,
+      email: "convidado@exemplo.com",
     }
   );
   return ((await added.json()) as { id: string }).id;

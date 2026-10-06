@@ -31,7 +31,7 @@ async function inviteTo(
   const added = await post(
     ownerCookie,
     `/api/contracts/${contractId}/participants`,
-    { displayName: "Convidado", role }
+    { displayName: "Convidado", role, email: "convidado@exemplo.com" }
   );
   const { id } = (await added.json()) as { id: string };
   const inv = await post(

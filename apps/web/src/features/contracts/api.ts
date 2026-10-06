@@ -110,6 +110,7 @@ export function useInvitePersonMutation(contractId: string) {
         api.api.contracts({ id: contractId }).participants.post({
           displayName: input.displayName,
           role: input.role,
+          email: input.email,
         })
       );
       if (input.email) {

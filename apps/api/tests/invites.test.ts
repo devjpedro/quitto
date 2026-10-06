@@ -171,7 +171,11 @@ describe("invites", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: owner },
-        body: JSON.stringify({ displayName: "Convidado 2", role: "viewer" }),
+        body: JSON.stringify({
+          displayName: "Convidado 2",
+          role: "viewer",
+          email: "acompanha@exemplo.com",
+        }),
       })
     );
     const { id: participantId2 } = await addRes.json();

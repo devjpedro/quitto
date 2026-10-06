@@ -9,7 +9,7 @@ import {
   PaperPlaneTilt,
   UserMinus,
 } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -49,8 +49,58 @@ export function PersonRow({
   const resend = useResendInviteMutation(contractId);
   const remove = useRemoveParticipantMutation(contractId);
   const [confirming, setConfirming] = useState(false);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const RoleIcon = view.role ? ROLE_ICON[view.role.icon] : null;
   const inviteUrl = person.invite?.url ?? null;
+
+  const removeControls = view.removable ? (
+    <>
+      <Menu
+        label={m.people_row_actions({ name: person.displayName })}
+        trigger={
+          <IconButton
+            icon={DotsThreeVertical}
+            label={m.people_row_actions({ name: person.displayName })}
+            ref={menuRef}
+          />
+        }
+      >
+        <MenuItem
+          icon={UserMinus}
+          onSelect={() => setConfirming(true)}
+          tone="danger"
+        >
+          {m.people_remove()}
+        </MenuItem>
+      </Menu>
+      <ConfirmDialog
+        cancelLabel={m.contract_cancel()}
+        confirmLabel={m.people_remove_confirm()}
+        description={m.people_remove_description({
+          name: person.displayName,
+        })}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          menuRef.current?.focus();
+        }}
+        onConfirm={() =>
+          remove.mutate(person.id, {
+            onSuccess: () => setConfirming(false),
+          })
+        }
+        onOpenChange={setConfirming}
+        open={confirming}
+        pending={remove.isPending}
+        title={m.people_remove_title({ name: person.displayName })}
+        tone="danger"
+      />
+    </>
+  ) : null;
+  // Keeps the role tags on one edge between the removable rows and the owner's.
+  const ownerSpacer =
+    viewerIsOwner && !view.removable ? (
+      <span aria-hidden="true" className="size-9 shrink-0 max-md:hidden" />
+    ) : null;
 
   return (
     <li className="flex min-h-[68px] items-center gap-3.5 py-2.5 pr-4 pl-3 max-md:flex-wrap">
@@ -70,7 +120,7 @@ export function PersonRow({
           ) : null}
         </div>
         {view.meta ? (
-          <p className="text-[12.5px] text-ink-muted md:truncate">
+          <p className="text-[12.5px] text-ink-muted [overflow-wrap:anywhere] md:truncate">
             {view.meta}
           </p>
         ) : null}
@@ -106,44 +156,8 @@ export function PersonRow({
           </Tag>
         </span>
       ) : null}
-      {view.removable ? (
-        <>
-          <Menu
-            label={m.people_row_actions({ name: person.displayName })}
-            trigger={
-              <IconButton
-                icon={DotsThreeVertical}
-                label={m.people_row_actions({ name: person.displayName })}
-              />
-            }
-          >
-            <MenuItem
-              icon={UserMinus}
-              onSelect={() => setConfirming(true)}
-              tone="danger"
-            >
-              {m.people_remove()}
-            </MenuItem>
-          </Menu>
-          <ConfirmDialog
-            cancelLabel={m.contract_cancel()}
-            confirmLabel={m.people_remove_confirm()}
-            description={m.people_remove_description({
-              name: person.displayName,
-            })}
-            onConfirm={() =>
-              remove.mutate(person.id, {
-                onSuccess: () => setConfirming(false),
-              })
-            }
-            onOpenChange={setConfirming}
-            open={confirming}
-            pending={remove.isPending}
-            title={m.people_remove_title({ name: person.displayName })}
-            tone="danger"
-          />
-        </>
-      ) : null}
+      {removeControls}
+      {ownerSpacer}
     </li>
   );
 }

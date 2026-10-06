@@ -1,5 +1,5 @@
 import { UserPlus } from "@phosphor-icons/react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextField } from "@/components/ui/field";
@@ -33,19 +33,26 @@ const ROLE_LABEL: Record<Role, () => string> = {
   viewer: () => m.people_role_viewer(),
 };
 
+type InviteMutation = ReturnType<typeof useInvitePersonMutation>;
+
 function InviteForm({
   detail,
+  invite,
   onDone,
 }: {
   detail: ContractDetail;
+  invite: InviteMutation;
   onDone: () => void;
 }) {
-  const invite = useInvitePersonMutation(detail.contract.id);
   const roles = freeRoles(detail);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>(roles[0] ?? "viewer");
   const [errors, setErrors] = useState<{ email?: true; name?: true }>({});
+
+  const emailError = email.trim()
+    ? m.people_email_invalid()
+    : m.people_email_required();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -55,8 +62,12 @@ function InviteForm({
     if (!displayName) {
       next.name = true;
     }
-    if (address && !EMAIL_RE.test(address)) {
+    // Quem acompanha só entra por convite: sem e-mail não haveria como chamá-lo depois.
+    if ((address || role === "viewer") && !EMAIL_RE.test(address)) {
       next.email = true;
+    }
+    if (invite.isPending) {
+      return;
     }
     setErrors(next);
     if (next.name || next.email) {
@@ -85,9 +96,9 @@ function InviteForm({
       />
       <TextField
         autoComplete="off"
-        error={errors.email ? m.people_email_invalid() : undefined}
+        error={errors.email ? emailError : undefined}
         id="invite-person-email"
-        label={m.people_email_optional()}
+        label={role === "viewer" ? m.people_email() : m.people_email_optional()}
         onChange={(event) => setEmail(event.target.value)}
         type="email"
         value={email}
@@ -119,6 +130,7 @@ export function InviteDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
+  const invite = useInvitePersonMutation(detail.contract.id);
   return (
     <Dialog
       footer={
@@ -126,7 +138,7 @@ export function InviteDialog({
           <Button onClick={() => onOpenChange(false)} variant="ghost">
             {m.contract_cancel()}
           </Button>
-          <Button form={FORM_ID} type="submit">
+          <Button disabled={invite.isPending} form={FORM_ID} type="submit">
             {m.contract_invite()}
           </Button>
         </>
@@ -136,7 +148,11 @@ export function InviteDialog({
       open={open}
       title={m.contract_invite()}
     >
-      <InviteForm detail={detail} onDone={() => onOpenChange(false)} />
+      <InviteForm
+        detail={detail}
+        invite={invite}
+        onDone={() => onOpenChange(false)}
+      />
     </Dialog>
   );
 }
@@ -144,18 +160,28 @@ export function InviteDialog({
 /** The tabs row's action (from md): the filled "Convidar pessoa" that opens the dialog. */
 export function InviteButton({ detail }: { detail: ContractDetail }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
     <>
       <Button
         className="bg-surface-card hover:bg-surface-card-hover max-md:hidden"
         onClick={() => setOpen(true)}
+        ref={triggerRef}
         size="sm"
         variant="ghost"
       >
         <UserPlus aria-hidden="true" size={16} />
         {m.contract_invite()}
       </Button>
-      <InviteDialog detail={detail} onOpenChange={setOpen} open={open} />
+      <InviteDialog
+        detail={detail}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          triggerRef.current?.focus();
+        }}
+        onOpenChange={setOpen}
+        open={open}
+      />
     </>
   );
 }

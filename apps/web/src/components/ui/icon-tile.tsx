@@ -22,10 +22,13 @@ const TONE: Record<IconTileTone, string> = {
  * Decorative: the row's title says it (a group's title says the count).
  */
 export function IconTile({
+  className,
   count,
   icon: IconComponent,
   tone,
 }: {
+  /** For a tile that sits straight on the white panel, where its own fill would vanish. */
+  className?: string;
   count?: number;
   icon: Icon;
   tone: IconTileTone;
@@ -35,7 +38,8 @@ export function IconTile({
       aria-hidden="true"
       className={cn(
         "relative flex size-10 shrink-0 items-center justify-center rounded-control",
-        TONE[tone]
+        TONE[tone],
+        className
       )}
     >
       <IconComponent size={19} />

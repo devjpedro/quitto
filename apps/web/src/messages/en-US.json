@@ -361,6 +361,7 @@
   "people_invite_card_receives": "With an account, {name} checks each payment here.",
   "people_email": "Email",
   "people_email_invalid": "Check the email.",
+  "people_email_required": "Enter the email of who follows.",
   "people_email_optional": "Email (optional)",
   "people_added": "Person added",
   "people_send_invite": "Send invite",

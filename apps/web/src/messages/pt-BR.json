@@ -361,6 +361,7 @@
   "people_invite_card_receives": "Com conta, {name} confere cada pagamento por aqui.",
   "people_email": "E-mail",
   "people_email_invalid": "Confira o e-mail.",
+  "people_email_required": "Diga o e-mail de quem acompanha.",
   "people_email_optional": "E-mail (opcional)",
   "people_added": "Pessoa adicionada",
   "people_send_invite": "Enviar convite",

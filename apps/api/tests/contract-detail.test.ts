@@ -53,6 +53,7 @@ async function scenario() {
     await call(owner, `/api/contracts/${id}/participants`, "POST", {
       displayName: "Sílvia Souza",
       role: "viewer",
+      email: "silvia.souza@exemplo.com",
     })
   ).json();
   await call(
@@ -130,6 +131,7 @@ describe("GET /contracts/:id (Fase 2)", () => {
       await call(s.owner, `/api/contracts/${s.id}/participants`, "POST", {
         displayName: "Marcos Prado",
         role: "viewer",
+        email: "marcos.prado@exemplo.com",
       })
     ).json();
     const { token } = await (

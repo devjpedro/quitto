@@ -57,6 +57,7 @@ const EMAIL_FIELD = /^E-mail$/;
 const EMAIL_OPTIONAL = /E-mail \(opcional\)/;
 const NOTE_WORDS = /Quem acompanha|Entradas e saídas/;
 const INVALID_EMAIL = "Confira o e-mail.";
+const REQUIRED_EMAIL = "Diga o e-mail de quem acompanha.";
 
 function renderPeople(detail: ContractDetail) {
   return render(
@@ -158,8 +159,11 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     );
   });
 
-  it("Convidar pessoa sem e-mail cria só o nome; com e-mail, cria e convida", async () => {
-    const detail = motoDetail();
+  it("Convidar pessoa: quem paga ou recebe pode ficar só com o nome; quem acompanha exige e-mail", async () => {
+    // Só o dono no contrato: "Paga" está livre e é o papel inicial.
+    const detail = motoDetail({
+      participants: motoDetail().participants.slice(0, 1),
+    });
     const route = { tab: "people" } as unknown as ContractRoute;
     render(
       <QueryClientProvider client={makeQueryClient()}>
@@ -179,7 +183,8 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     await waitFor(() =>
       expect(addPerson).toHaveBeenCalledWith({
         displayName: "Marcos Prado",
-        role: "viewer",
+        role: "buyer",
+        email: null,
       })
     );
     expect(invite).not.toHaveBeenCalled();
@@ -194,8 +199,19 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
       name: "Convidar pessoa",
     });
     await userEvent.type(within(again).getByLabelText("Nome"), "Ana Lima");
+    await userEvent.click(
+      within(again).getByRole("radio", { name: "Acompanha" })
+    );
+    // Quem acompanha: o e-mail deixa de ser opcional e vazio não chama a API.
+    expect(within(again).queryByLabelText(EMAIL_OPTIONAL)).toBeNull();
+    addPerson.mockClear();
+    await userEvent.click(
+      within(again).getByRole("button", { name: "Convidar pessoa" })
+    );
+    expect(within(again).getByText(REQUIRED_EMAIL)).toBeVisible();
+    expect(addPerson).not.toHaveBeenCalled();
     await userEvent.type(
-      within(again).getByLabelText(EMAIL_OPTIONAL),
+      within(again).getByLabelText(EMAIL_FIELD),
       "ana@exemplo.com"
     );
     await userEvent.click(
@@ -204,9 +220,79 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     await waitFor(() =>
       expect(invite).toHaveBeenCalledWith("p-new", { email: "ana@exemplo.com" })
     );
+    expect(addPerson).toHaveBeenCalledWith({
+      displayName: "Ana Lima",
+      role: "viewer",
+      email: "ana@exemplo.com",
+    });
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Convite enviado")
     );
+  });
+
+  it("dois cliques em Convidar pessoa criam uma pessoa só", async () => {
+    let release: (value: unknown) => void = () => undefined;
+    addPerson.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const route = { tab: "people" } as unknown as ContractRoute;
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        {CONTRACT_SLOTS.tabAction(motoDetail(), route)}
+      </QueryClientProvider>
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Convidar pessoa" })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Convidar pessoa",
+    });
+    await userEvent.type(within(dialog).getByLabelText("Nome"), "Ana Lima");
+    await userEvent.type(
+      within(dialog).getByLabelText(EMAIL_FIELD),
+      "ana@exemplo.com"
+    );
+    const submit = within(dialog).getByRole("button", {
+      name: "Convidar pessoa",
+    });
+    await userEvent.click(submit);
+    await userEvent.click(submit);
+    await waitFor(() => expect(submit).toBeDisabled());
+    expect(addPerson).toHaveBeenCalledTimes(1);
+    release({ data: { id: "p-new" }, error: null });
+  });
+
+  it("o foco volta ao gatilho ao fechar o Convidar pessoa (Esc) e o Remover (Cancelar)", async () => {
+    const route = { tab: "people" } as unknown as ContractRoute;
+    render(
+      <QueryClientProvider client={makeQueryClient()}>
+        {CONTRACT_SLOTS.tabAction(motoDetail(), route)}
+      </QueryClientProvider>
+    );
+    const trigger = screen.getByRole("button", { name: "Convidar pessoa" });
+    await userEvent.click(trigger);
+    await screen.findByRole("dialog", { name: "Convidar pessoa" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("o foco volta ao ⋯ da linha ao cancelar o Remover", async () => {
+    renderPeople(motoDetail());
+    const menu = screen.getByRole("button", { name: "Ações de Rafael Prado" });
+    await userEvent.click(menu);
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Remover do contrato" })
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Remover Rafael Prado?",
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Cancelar" })
+    );
+    await waitFor(() => expect(menu).toHaveFocus());
   });
 
   it("quem não é dono não vê Reenviar, Copiar, ⋯, o convite tracejado nem a ação da aba", () => {

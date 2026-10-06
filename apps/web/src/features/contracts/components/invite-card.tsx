@@ -43,7 +43,7 @@ export function InviteCard({
       className="mt-3 flex gap-4 rounded-card border-[1.5px] border-line-strong border-dashed p-[18px] max-md:flex-col"
       data-testid="invite-card"
     >
-      <IconTile icon={UserPlus} tone="neutral" />
+      <IconTile className="bg-surface-card" icon={UserPlus} tone="neutral" />
       <div className="min-w-0 flex-1">
         <h3
           className="font-display font-semibold text-[17px] tracking-[-0.02em]"
