@@ -2,8 +2,35 @@ import { z } from "zod";
 import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
 import { isValidPixKey } from "./pix";
 
+export type {
+  ContractErrorCode,
+  ContractRequest,
+  ContractRequestInput,
+  ContractWarningCode,
+} from "./contract-create";
 // biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
-export { APP_TIME_ZONE, isoDateInTimeZone, todayISO } from "./date";
+export {
+  CONTRACT_ERROR_CODES,
+  CONTRACT_WARNING_CODES,
+  contractDescriptionSchema,
+  contractOwnerRoleSchema,
+  contractRequestSchema,
+  contractTitleSchema,
+  counterpartySchema,
+  installmentRowsSchema,
+  isContractErrorCode,
+  MAX_INSTALLMENTS,
+  monthlyScheduleSchema,
+  oppositeRole,
+  splitScheduleSchema,
+  toScheduleInput,
+} from "./contract-create";
+export {
+  APP_TIME_ZONE,
+  isoDateInTimeZone,
+  isRealISODate,
+  todayISO,
+} from "./date";
 export type {
   AuditType,
   ContractStatus,
@@ -45,13 +72,20 @@ export {
 export type {
   GenerateMonthlyScheduleInput,
   GenerateScheduleInput,
+  ScheduleInput,
   ScheduleRow,
+  SumMismatch,
 } from "./schedule";
 export {
   addMonths,
+  buildSchedule,
   generateMonthlySchedule,
   generateSchedule,
+  scheduleCount,
+  scheduleTotal,
   splitAmount,
+  spreadDifference,
+  sumMismatch,
 } from "./schedule";
 
 /** Frase que o usuário digita para confirmar a exclusão da conta. */

@@ -70,3 +70,111 @@ export function generateMonthlySchedule(
     firstDueDate: input.firstDueDate,
   });
 }
+
+/** The schedule as the product speaks it (spec §5): a total split in N, or a fixed amount for N months. */
+export type ScheduleInput =
+  | {
+      firstDueDate: string;
+      installmentsCount: number;
+      mode: "split";
+      totalAmountCents: number;
+    }
+  | {
+      firstDueDate: string;
+      mode: "monthly";
+      monthlyAmountCents: number;
+      months: number;
+    };
+
+/** How many installments the schedule has. */
+export function scheduleCount(schedule: ScheduleInput): number {
+  return schedule.mode === "split"
+    ? schedule.installmentsCount
+    : schedule.months;
+}
+
+/** What the installments must add up to: the total, or the month's amount times the months. */
+export function scheduleTotal(schedule: ScheduleInput): number {
+  return schedule.mode === "split"
+    ? schedule.totalAmountCents
+    : schedule.monthlyAmountCents * schedule.months;
+}
+
+/**
+ * The installments of a schedule: the rows the person adjusted one by one
+ * when there are any, otherwise the generated ones. The server stores and
+ * the wizard's preview shows exactly this (planner's decision 6).
+ */
+export function buildSchedule(
+  schedule: ScheduleInput,
+  rows?: readonly { amountCents: number; dueDate: string }[] | null
+): ScheduleRow[] {
+  if (rows && rows.length > 0) {
+    return rows.map((row, index) => ({
+      sequence: index + 1,
+      amountCents: row.amountCents,
+      dueDate: row.dueDate,
+    }));
+  }
+  if (schedule.mode === "split") {
+    return generateSchedule({
+      totalAmountCents: schedule.totalAmountCents,
+      installmentsCount: schedule.installmentsCount,
+      firstDueDate: schedule.firstDueDate,
+    });
+  }
+  return generateMonthlySchedule({
+    monthlyAmountCents: schedule.monthlyAmountCents,
+    months: schedule.months,
+    firstDueDate: schedule.firstDueDate,
+  });
+}
+
+export interface SumMismatch {
+  /** Always positive, in cents. */
+  diff: number;
+  direction: "over" | "under";
+}
+
+/** How far the adjusted installments are from the schedule's total; null when they add up. */
+export function sumMismatch(
+  schedule: ScheduleInput,
+  rows: readonly { amountCents: number }[]
+): SumMismatch | null {
+  const sum = rows.reduce((acc, row) => acc + row.amountCents, 0);
+  const diff = sum - scheduleTotal(schedule);
+  if (diff === 0) {
+    return null;
+  }
+  return { diff: Math.abs(diff), direction: diff > 0 ? "over" : "under" };
+}
+
+/**
+ * "Tirar R$ X das outras N": the difference spread over the installments the
+ * person did not change, the leftover cents on the first of them (as
+ * splitAmount does). Null when none is free or one would go under 1 cent.
+ */
+export function spreadDifference(
+  amounts: readonly number[],
+  edited: readonly boolean[],
+  mismatch: SumMismatch
+): number[] | null {
+  const free: number[] = [];
+  for (let index = 0; index < amounts.length; index += 1) {
+    if (!edited[index]) {
+      free.push(index);
+    }
+  }
+  if (free.length === 0) {
+    return null;
+  }
+  const parts = splitAmount(mismatch.diff, free.length);
+  const next = [...amounts];
+  for (let k = 0; k < free.length; k += 1) {
+    const at = free[k] as number;
+    const delta = parts[k] ?? 0;
+    next[at] =
+      (next[at] ?? 0) + (mismatch.direction === "over" ? -delta : delta);
+  }
+  return next.every((value) => value >= 1) ? next : null;
+}

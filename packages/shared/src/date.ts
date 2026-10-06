@@ -19,3 +19,17 @@ export function isoDateInTimeZone(
 export function todayISO(timeZone: string = APP_TIME_ZONE): string {
   return isoDateInTimeZone(new Date(), timeZone);
 }
+
+/** A YYYY-MM-DD that is a real calendar day (rejects 2027-02-31 and month 13). */
+export function isRealISODate(iso: string): boolean {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  if (!(y && m && d)) {
+    return false;
+  }
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return (
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
+  );
+}
