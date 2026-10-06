@@ -1,6 +1,4 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { NotificationsSkeleton } from "@/features/notifications/components/notifications-list";
-import { RECENT_COUNT } from "@/features/notifications/hooks/use-recent-notifications";
 import { cn } from "@/lib/utils";
 import { LOWER_COLUMN, LOWER_STACK, LOWER_WITH_SIDE } from "./home-grid";
 
@@ -50,10 +48,6 @@ export function HomeSkeleton() {
           <div className="lateral:flex hidden flex-col">
             <TitleBone className="w-16" />
             <Skeleton className="h-36 rounded-card bg-surface-card" />
-          </div>
-          <div className="lateral:block hidden">
-            <TitleBone className="w-40" />
-            <NotificationsSkeleton rows={RECENT_COUNT} />
           </div>
         </div>
       </div>

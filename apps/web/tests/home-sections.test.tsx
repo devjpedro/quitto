@@ -28,8 +28,8 @@ const ANA_ROW = /Celular da Ana/;
 const PIX_STEP = /^Cadastrar sua chave PIX/;
 const PIX_ROW = /Cadastrar sua chave PIX/;
 const CONTRACT_ROW = /^Criar o primeiro contrato/;
-const RECEIVE_TOTAL = /R\$\s320,00 a receber/;
-const PAY_TOTAL = /R\$\s390,00 a pagar/;
+const RECEIVE_TOTAL = /R\$\s320,00/;
+const PAY_TOTAL = /R\$\s390,00/;
 const YOU_RECEIVE = /você recebe/;
 const NINE_OF_TEN = /parcela 9 de 10/;
 
@@ -101,8 +101,12 @@ describe("seções do home", () => {
       screen.getByRole("heading", { name: "Próximos 30 dias" })
     ).toBeVisible();
     // The title adds up the rows of the list only, by direction, with the direction's icon.
-    expect(screen.getByText(RECEIVE_TOTAL)).toBeVisible();
-    expect(screen.getByText(PAY_TOTAL)).toBeVisible();
+    // The value in bold ink 600, the label after it.
+    const receive = screen.getByText(RECEIVE_TOTAL, { selector: "b" });
+    expect(receive).toBeVisible();
+    expect(receive).toHaveClass("font-semibold", "text-ink");
+    expect(receive.parentElement).toHaveTextContent("a receber");
+    expect(screen.getByText(PAY_TOTAL, { selector: "b" })).toBeVisible();
     expect(screen.queryByText("5 parcelas")).toBeNull();
     expect(screen.getByRole("link", { name: ANA_ROW })).toHaveAttribute(
       "href",
@@ -782,9 +786,13 @@ describe("UpcomingList (mockup 13)", () => {
     expect(
       screen.getByRole("heading", { name: "Próximos 30 dias" })
     ).toHaveClass("font-display", "text-ink");
-    expect(screen.getByText(RECEIVE_TOTAL)).toBeVisible();
+    expect(screen.getByText(RECEIVE_TOTAL, { selector: "b" })).toBeVisible();
+    // The totals drop whole to the next line when they do not fit beside the title.
+    expect(
+      screen.getByRole("heading", { name: "Próximos 30 dias" }).parentElement
+    ).toHaveClass("flex-wrap");
     // A direction with nothing in the list is left out.
-    expect(screen.queryByText(PAY_TOTAL)).toBeNull();
+    expect(screen.queryByText(PAY_TOTAL, { selector: "b" })).toBeNull();
   });
 
   it("o anel e o hover da primeira e da última linha seguem o canto do bloco", () => {

@@ -5,13 +5,9 @@ import type { HomeAction } from "@/features/home/types";
 import { m } from "@/paraglide/messages.js";
 import { useNotificationRows } from "../hooks/use-notifications-list";
 import { useShowNotifications } from "../hooks/use-notifications-panel";
-import {
-  RECENT_COUNT,
-  useRecentNotifications,
-} from "../hooks/use-recent-notifications";
+import { useRecentNotifications } from "../hooks/use-recent-notifications";
 import type { NotificationItem } from "../types";
 import { NotificationRow } from "./notification-row";
-import { NotificationsSkeleton } from "./notifications-list";
 
 /** No panel to close: the row navigates from the page itself. */
 const stayOnPage = () => undefined;
@@ -39,16 +35,17 @@ function RecentList({ items }: { items: NotificationItem[] }) {
  * "Notificações recentes" in the home's side column (mockup 12): the 4
  * latest, with the bell panel's rows (mockup 10). Hidden below lateral by
  * CSS, so the HTML is the same at any width; "Ver todas" opens the panel.
- * Only what no action card already says (DIRECAO › Home enxuta). Gone when
- * the list fails with nothing in cache (the panel has its own boundary) and
- * when, once loaded, nothing is left: the panel keeps its own empty state. A
- * failed refetch keeps the cached rows, as the panel does.
+ * Only what no action card already says (DIRECAO › Home enxuta). It enters
+ * only with a row: no skeleton while loading (it would flash and vanish on
+ * most accounts, and move the layout), and gone when the list fails with
+ * nothing in cache or nothing is left: the panel keeps its own empty state.
+ * A failed refetch keeps the cached rows, as the panel does.
  */
 export function RecentNotifications({ actions }: { actions: HomeAction[] }) {
   const headingId = useId();
-  const { isError, items } = useRecentNotifications(actions);
+  const { items } = useRecentNotifications(actions);
   const showAll = useShowNotifications();
-  if ((isError && !items) || items?.length === 0) {
+  if (!items || items.length === 0) {
     return null;
   }
   return (
@@ -69,12 +66,7 @@ export function RecentNotifications({ actions }: { actions: HomeAction[] }) {
       >
         {m.home_recent_notifications()}
       </SectionTitle>
-      {items ? (
-        <RecentList items={items} />
-      ) : (
-        // The loaded list's shape: up to 4 rows on the filled block.
-        <NotificationsSkeleton rows={RECENT_COUNT} />
-      )}
+      <RecentList items={items} />
     </section>
   );
 }

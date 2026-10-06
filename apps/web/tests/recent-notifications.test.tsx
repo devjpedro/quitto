@@ -108,6 +108,11 @@ function renderRecent(actions: HomeAction[] = NO_CARDS) {
 
 const region = () =>
   screen.getByRole("region", { name: "Notificações recentes" });
+// The block only enters once the list has a row.
+const findRegion = () =>
+  screen.findByRole("region", { name: "Notificações recentes" });
+const queryRegion = () =>
+  screen.queryByRole("region", { name: "Notificações recentes" });
 
 beforeEach(() => {
   getList.mockReset();
@@ -129,7 +134,7 @@ describe("RecentNotifications", () => {
     });
     const { showAll } = renderRecent();
     // Hidden below lateral by CSS: the same HTML at any width.
-    expect(region()).toHaveClass("hidden", "lateral:block");
+    expect(await findRegion()).toHaveClass("hidden", "lateral:block");
     await waitFor(() =>
       expect(
         within(region()).getAllByRole("button", { name: CONFIRMED_ROW })
@@ -147,7 +152,9 @@ describe("RecentNotifications", () => {
     postRead.mockResolvedValue({ data: { ok: true }, error: null });
     renderRecent();
     await userEvent.click(
-      await within(region()).findByRole("button", { name: CONFIRMED_ROW })
+      await within(await findRegion()).findByRole("button", {
+        name: CONFIRMED_ROW,
+      })
     );
     expect(postRead).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith({
@@ -202,28 +209,27 @@ describe("RecentNotifications", () => {
     ).toBeNull();
   });
 
-  it("carregando: o esqueleto tem as 4 linhas do bloco, no mesmo fundo", () => {
+  it("carregando: nada, nem o título nem esqueleto (o bloco só entra com linha)", () => {
     getList.mockReturnValue(new Promise(() => undefined));
     renderRecent();
-    const skeleton = region().querySelector("ul[aria-hidden='true']");
-    expect(skeleton).toHaveClass("bg-surface-card");
-    expect(skeleton?.children).toHaveLength(4);
+    expect(queryRegion()).toBeNull();
+    expect(document.querySelector("ul[aria-hidden='true']")).toBeNull();
+    expect(screen.getByText("rest of the home")).toBeVisible();
   });
 
   it("abaixo de 1440 px (celular incluído) não busca nada", () => {
     setScreenWidth(1439);
     renderRecent();
-    // The block is in the HTML (hidden by CSS), with the panel's skeleton.
-    // An enabled query would have fetched within the render's act already.
-    expect(region()).toHaveClass("hidden");
-    expect(region().querySelector("ul[aria-hidden='true']")).not.toBeNull();
+    // Nothing to show without a list, and an enabled query would have
+    // fetched within the render's act already.
+    expect(queryRegion()).toBeNull();
     expect(getList).not.toHaveBeenCalled();
   });
 
-  it("antes da hidratação não busca nada, nem em tela larga: o esqueleto, como no HTML do servidor", () => {
+  it("antes da hidratação não busca nada, nem em tela larga: o HTML do servidor não leva o bloco", () => {
     hydration.done = false;
     renderRecent();
-    expect(region().querySelector("ul[aria-hidden='true']")).not.toBeNull();
+    expect(queryRegion()).toBeNull();
     expect(getList).not.toHaveBeenCalled();
   });
 
@@ -242,7 +248,9 @@ describe("RecentNotifications", () => {
   it("uma revalidação que falha mantém as linhas em cache, como o painel", async () => {
     getList.mockResolvedValue({ data: [note("n1")], error: null });
     const { client } = renderRecent();
-    await within(region()).findByRole("button", { name: CONFIRMED_ROW });
+    await within(await findRegion()).findByRole("button", {
+      name: CONFIRMED_ROW,
+    });
     // The panel refetches on open (staleTime 0); a failed read invalidates the list.
     getList.mockResolvedValue(FAILED);
     await act(async () => {
@@ -275,7 +283,7 @@ describe("RecentNotifications", () => {
       error: null,
     });
     renderRecent();
-    const row = await within(region()).findByRole("button", {
+    const row = await within(await findRegion()).findByRole("button", {
       name: OVERDUE_GROUP_ROW,
     });
     // The tile's badge, not the "24" in the title.

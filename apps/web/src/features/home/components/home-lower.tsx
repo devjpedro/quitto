@@ -49,13 +49,12 @@ export function HomeLower({
   upcoming: ReactNode;
 }) {
   const recent = useRecentNotifications(actions);
-  // Failed with nothing in cache, or loaded and nothing without a card: the block is gone.
-  const notificationsGone =
-    (recent.isError && !recent.items) || recent.items?.length === 0;
+  // The block counts only with a row on screen: not while loading, not failed, not empty.
+  const notificationsShown = (recent.items?.length ?? 0) > 0;
   if (few) {
     const { guideRight, left, right } = fewLowerColumns({
       guide: guide !== null,
-      notifications: !notificationsGone,
+      notifications: notificationsShown,
     });
     return (
       <div
@@ -78,7 +77,7 @@ export function HomeLower({
   // A strip with only that milestone is phone-only (md:hidden): it stays out of the side column.
   const phoneOnly = onlyMomentStrip(milestones, momentId);
   const sideMilestones = hasContract && stripHasCells(milestones, momentId);
-  const columns = sideMilestones || !notificationsGone;
+  const columns = sideMilestones || notificationsShown;
   return (
     <div
       className={cn(LOWER_STACK, columns && LOWER_WITH_SIDE)}

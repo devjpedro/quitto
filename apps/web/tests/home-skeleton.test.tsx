@@ -10,7 +10,7 @@ import { HomeSkeleton } from "@/features/home/components/home-skeleton";
 const classes = (value: string) => value.split(" ");
 
 describe("HomeSkeleton", () => {
-  it("a parte de baixo tem a grade do conteúdo: a lista à esquerda; marcos e Notificações recentes à direita a partir de lateral", () => {
+  it("a parte de baixo tem a grade do conteúdo: a lista à esquerda; os marcos à direita a partir de lateral", () => {
     const { container } = render(<HomeSkeleton />);
     const lower = container.querySelector<HTMLElement>(
       "[class~='lateral:grid']"
@@ -31,18 +31,15 @@ describe("HomeSkeleton", () => {
       "bg-surface-card"
     );
     // The side blocks only from lateral, like the content's.
-    const [milestones, recent] = Array.from(side?.children ?? []);
+    // "Notificações recentes" has no bone: it only enters with a row.
+    expect(side?.children).toHaveLength(1);
+    const [milestones] = Array.from(side?.children ?? []);
     expect(milestones).toHaveClass("hidden", "lateral:flex");
-    expect(recent).toHaveClass("hidden", "lateral:block");
     // Every title bone in the SectionTitle's shape: its 23.75 px line box
     // (19 px, leading-tight) and 12 px below, as the loaded sections have.
-    for (const block of [list?.firstElementChild, milestones, recent]) {
+    for (const block of [list?.firstElementChild, milestones]) {
       expect(block?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
     }
-    // "Notificações recentes" with its own loading rows: 4 on the filled block.
-    const rows = recent?.querySelector("ul");
-    expect(rows).toHaveClass("bg-surface-card");
-    expect(rows?.children).toHaveLength(4);
   });
 
   it("os ossos de cartão e de lista são preenchidos como o que vai chegar (brancos no celular)", () => {
@@ -87,7 +84,7 @@ describe("HomeSkeleton", () => {
     const bones = [
       ...container.querySelectorAll<HTMLElement>("div[aria-hidden='true']"),
     ].filter((bone) => !bone.closest("ul"));
-    expect(bones.length).toBeGreaterThan(10);
+    expect(bones.length).toBeGreaterThan(8);
     for (const bone of bones) {
       expect(bone).toHaveClass("bg-surface-card");
       expect(bone).not.toHaveClass("bg-surface-sunken");

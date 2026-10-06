@@ -347,6 +347,8 @@ describe("HomePage", () => {
   });
 
   it("sem contrato, com um convite e o guia por terminar: o guia compacto vem embaixo, e a coluna lateral leva só as Notificações recentes", async () => {
+    setScreenWidth(1440);
+    getNotifications.mockResolvedValue({ data: [NOTICE], error: null });
     getHome.mockResolvedValue({
       data: homeFixture({
         actions: [inviteAction()],
@@ -380,7 +382,7 @@ describe("HomePage", () => {
     const left = guide.parentElement?.parentElement;
     const lower = left?.parentElement;
     expect(guide.parentElement).toHaveClass("order-last");
-    const recent = screen.getByRole("region", {
+    const recent = await screen.findByRole("region", {
       name: "Notificações recentes",
     });
     expect(recent.parentElement?.parentElement).toBe(lower);
@@ -389,6 +391,8 @@ describe("HomePage", () => {
   });
 
   it("a coluna lateral leva as Notificações recentes, só a partir de lateral e sem buscar na tela estreita", async () => {
+    setScreenWidth(1440);
+    getNotifications.mockResolvedValue({ data: [NOTICE], error: null });
     getHome.mockResolvedValue({ data: homeFixture(), error: null });
     renderHome();
     const recent = await screen.findByRole("region", {
@@ -402,8 +406,16 @@ describe("HomePage", () => {
     // This fixture has a contract but no milestones on screen: the block alone
     // keeps the side column filled, so the grid is on.
     expect(side?.parentElement).toHaveClass("lateral:grid");
-    // jsdom is 1024 px wide: below lateral nothing is fetched.
+  });
+
+  it("abaixo de lateral nada é buscado e o bloco das notificações nem entra", async () => {
+    getHome.mockResolvedValue({ data: homeFixture(), error: null });
+    renderHome();
+    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
     expect(getNotifications).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("region", { name: "Notificações recentes" })
+    ).toBeNull();
   });
 
   it("a 1440 px, se a lista de notificações falha, o bloco some e a home continua", async () => {

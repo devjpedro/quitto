@@ -110,29 +110,21 @@ async function noLoading(page: Page, where: string): Promise<void> {
  * Waits for the page to settle before a shot. networkidle is not enough: it
  * is met while the bundle still hydrates (no request for 500 ms), and only
  * then "Notificações recentes" asks for its list (useRecentNotifications waits
- * for hydration and a lateral screen). So wait for no loading state; then, on
- * the home from lateral up, for the block to leave its skeleton, but only if
- * the block is there: the first access has no lower part, and a failed list or
- * nothing but what a card already says takes the block away. Never demand it.
+ * for hydration and a lateral screen). The block has no skeleton: it enters
+ * only with a row, so on the home from lateral up wait for the notifications
+ * answer (it may be already in, hence the short limit) and then for the
+ * network to calm down. Never demand the block: the first access has no lower
+ * part, and a failed list or nothing but what a card already says leaves it out.
  */
 async function settle(page: Page, width: number, where: string): Promise<void> {
   await noLoading(page, where);
   if (expectedPath === "/" && width >= LATERAL) {
-    const recent = page.getByRole("region", { name: "Notificações recentes" });
-    if ((await recent.count()) > 0) {
-      try {
-        // The block settles past its skeleton (aria-hidden) into a list, or
-        // goes away when no notice is left that a card does not already say.
-        await recent.locator("ul[aria-hidden='true']").waitFor({
-          state: "detached",
-        });
-      } catch (error) {
-        throw new Error(
-          `${where}: "Notificações recentes" não saiu do esqueleto em 30 s (a API de notificações falhou?)`,
-          { cause: error }
-        );
-      }
-    }
+    await page
+      .waitForResponse((res) => res.url().includes("/api/notifications"), {
+        timeout: 3000,
+      })
+      .catch(() => undefined);
+    await page.waitForLoadState("networkidle");
   }
   await noLoading(page, where);
   await page.evaluate(() => document.fonts.ready);

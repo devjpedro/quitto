@@ -15,7 +15,7 @@ export function SectionTitle({
   id: string;
 }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-3">
+    <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
       <h2
         className="flex items-center gap-2 font-display font-semibold text-[19px] text-ink leading-tight tracking-[-0.02em]"
         id={id}
@@ -23,7 +23,7 @@ export function SectionTitle({
         {children}
       </h2>
       {aux ? (
-        <span className="inline-flex items-center gap-1.5 text-[13px] text-ink-muted tabular-nums">
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-ink-muted tabular-nums">
           {aux}
         </span>
       ) : null}

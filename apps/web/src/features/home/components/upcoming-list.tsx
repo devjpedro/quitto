@@ -103,21 +103,29 @@ function UpcomingTotals({
   const parts: ReactNode[] = [];
   if (totals.toReceiveCents > 0) {
     parts.push(
-      <span className="inline-flex items-center gap-1" key="receive">
+      <span
+        className="inline-flex items-center gap-1 whitespace-nowrap"
+        key="receive"
+      >
         <ArrowDownLeft aria-hidden="true" size={14} />
-        {m.home_upcoming_totals_receive({
-          amount: formatMoney(totals.toReceiveCents, locale),
-        })}
+        <b className="font-semibold text-ink">
+          {formatMoney(totals.toReceiveCents, locale)}
+        </b>
+        {m.home_upcoming_totals_receive_label()}
       </span>
     );
   }
   if (totals.toPayCents > 0) {
     parts.push(
-      <span className="inline-flex items-center gap-1" key="pay">
+      <span
+        className="inline-flex items-center gap-1 whitespace-nowrap"
+        key="pay"
+      >
         <ArrowUpRight aria-hidden="true" size={14} />
-        {m.home_upcoming_totals_pay({
-          amount: formatMoney(totals.toPayCents, locale),
-        })}
+        <b className="font-semibold text-ink">
+          {formatMoney(totals.toPayCents, locale)}
+        </b>
+        {m.home_upcoming_totals_pay_label()}
       </span>
     );
   }
