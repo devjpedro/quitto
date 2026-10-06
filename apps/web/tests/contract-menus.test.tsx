@@ -133,6 +133,27 @@ describe("ContractMobileMenu (a barra de cima do celular)", () => {
     expect(screen.getAllByRole("separator").length).toBeGreaterThan(0);
   });
 
+  it("404 já no cache antes de hidratar: o 1º render é o do servidor (desabilitado), e o ⋯ só some depois", () => {
+    // The server draws the top bar before the prefetch answers (a disabled
+    // "⋯"); the streamed null reaches the client cache before hydration, so
+    // the first client render must still match the server's HTML.
+    hydration.done = false;
+    const client = makeTestQueryClient();
+    client.setQueryDefaults(queryKeys.contract("c-moto"), {
+      gcTime: Number.POSITIVE_INFINITY,
+    });
+    client.setQueryData(queryKeys.contract("c-moto"), null);
+    const { rerender } = renderWithProviders(
+      <ContractMobileMenu contractId="c-moto" />,
+      { client }
+    );
+    expect(screen.getByRole("button", { name: MOBILE_ACTIONS })).toBeDisabled();
+
+    hydration.done = true;
+    rerender(<ContractMobileMenu contractId="c-moto" />);
+    expect(screen.queryByRole("button", { name: MOBILE_ACTIONS })).toBeNull();
+  });
+
   it("contrato que não existe (404): nenhum ⋯ morto na barra", async () => {
     contractGet.mockResolvedValue({
       data: null,

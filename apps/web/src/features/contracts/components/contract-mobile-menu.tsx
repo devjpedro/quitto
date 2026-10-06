@@ -20,19 +20,25 @@ export function ContractMobileMenu({ contractId }: { contractId: string }) {
     enabled: hydrated,
     throwOnError: false,
   });
+  const disabled = (
+    <IconButton
+      disabled
+      icon={DotsThreeVertical}
+      label={m.contract_actions_mobile()}
+    />
+  );
+  // Hydration decides first: the server drew the disabled trigger, even when
+  // the streamed null is already in the cache.
+  if (!hydrated) {
+    return disabled;
+  }
   // The page shows the 404 itself (the query resolves to null there): a "⋯"
   // that can never open is just noise.
   if (isError || data === null) {
     return null;
   }
-  if (!(hydrated && data)) {
-    return (
-      <IconButton
-        disabled
-        icon={DotsThreeVertical}
-        label={m.contract_actions_mobile()}
-      />
-    );
+  if (!data) {
+    return disabled;
   }
   return <ContractActionsMenu detail={data} variant="mobile" />;
 }

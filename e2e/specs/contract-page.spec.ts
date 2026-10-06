@@ -218,10 +218,13 @@ test("contrato de outra pessoa: 'Contrato não encontrado', e o link volta aos c
       title: "Moto do Rafa",
     });
     await signup(page);
+    const errors = collectHydrationErrors(page);
     await page.goto(`/contracts/${id}`);
     await waitForHydrated(page);
     const missing = page.getByTestId("contract-not-found");
     await expect(missing).toContainText("Contrato não encontrado");
+    // On the phone the top bar's "⋯" is drawn before the null arrives.
+    expect(errors).toEqual([]);
     await missing.getByRole("link", { name: "Contratos" }).click();
     await page.waitForURL((at) => at.pathname === "/contracts");
   } finally {
