@@ -292,6 +292,36 @@ describe("ResponsiveSheet", () => {
     ).toBeNull();
   });
 
+  it("bottom sheet com controles preenchidos: o ✕ é o quadrado de 44 px preenchido (surface-card, mockup 14 E), não um ícone solto; sem a opção, fica solto", async () => {
+    window.innerWidth = 390;
+    const { unmount } = render(
+      <ResponsiveSheet
+        filledControls
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    const close = await screen.findByRole("button", { name: "Fechar" });
+    expect(close).toHaveClass(
+      "size-11",
+      "bg-surface-card",
+      "hover:bg-surface-card-hover"
+    );
+    unmount();
+
+    render(
+      <ResponsiveSheet onOpenChange={() => undefined} open title="Notificações">
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    expect(
+      await screen.findByRole("button", { name: "Fechar" })
+    ).not.toHaveClass("bg-surface-card");
+  });
+
   it("bottom sheet sem rodapé: o próprio quadro folga a safe-area", async () => {
     window.innerWidth = 390;
     render(

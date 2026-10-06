@@ -31,8 +31,12 @@ const DISMISS_VELOCITY = 500;
 /** From md (the side panel; a phone keeps its 44 px targets): the column's filled 32 px square. */
 export const FILLED_SQUARE =
   "md:size-8 md:bg-surface-card md:hover:bg-surface-card-hover";
-/** The close of a sheet whose controls are filled: centred on the title row, with the arrows. */
-const FILLED_CLOSE_AT = "md:top-4";
+/**
+ * The close of a sheet whose controls are filled: on the phone too, a 44 px
+ * square filled like the sheet's other buttons (mockup 14, E), never a bare
+ * icon; from md, the 32 px square centred on the title row, with the arrows.
+ */
+const FILLED_CLOSE = "bg-surface-card hover:bg-surface-card-hover md:top-4";
 
 const SPRING = { type: "spring", stiffness: 420, damping: 40 } as const;
 
@@ -178,7 +182,7 @@ export function ResponsiveSheet({
   description?: string;
   /** Where the focus goes on close when what had it at open left the page, or nothing had it. */
   fallbackFocus?: () => HTMLElement | null;
-  /** Side panel only: the close button (like `headerActions`) is a filled 32 px square, as the column's, not a bare icon. */
+  /** The close button is filled, not a bare icon: a 44 px square on the phone, and from md the column's 32 px square (like `headerActions`). */
   filledControls?: boolean;
   /** Bottom sheet only: pinned under the scrolling body. */
   footer?: ReactNode;
@@ -287,7 +291,7 @@ export function ResponsiveSheet({
                   <IconButton
                     className={cn(
                       "absolute top-3 right-3",
-                      filledControls && cn(FILLED_SQUARE, FILLED_CLOSE_AT)
+                      filledControls && cn(FILLED_CLOSE, FILLED_SQUARE)
                     )}
                     icon={X}
                     label={m.sheet_close()}
