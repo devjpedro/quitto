@@ -119,6 +119,11 @@ describe("GET /contracts/:id (Fase 2)", () => {
 
   it("o espectador não recebe a chave de quem recebe", async () => {
     const s = await scenario();
+    // The legacy per-contract key (the old web still writes it until Task 6).
+    const saved = await call(s.owner, `/api/contracts/${s.id}`, "PATCH", {
+      pixKey: "joao.override@exemplo.com",
+    });
+    expect(saved.status).toBe(200);
     const viewerEmail = uniqueEmail("detail-viewer");
     const viewer = await signUpCookie(viewerEmail);
     const p = await (
@@ -139,6 +144,7 @@ describe("GET /contracts/:id (Fase 2)", () => {
     const body = await (await call(viewer, `/api/contracts/${s.id}`)).json();
     expect(body.role).toBe("viewer");
     expect(body.receiver.pix).toBeNull();
+    expect(body.contract.pixKey).toBeNull();
   });
 });
 

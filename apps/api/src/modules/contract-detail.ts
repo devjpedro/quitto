@@ -189,7 +189,8 @@ export const contractDetailModule = new Elysia({ prefix: "/api" })
           requiresConfirmation: c.requiresConfirmation,
           status: c.status,
           monthlyAmountCents: c.monthlyAmountCents,
-          pixKey: c.pixKey,
+          // Same rule as `receiver.pix`: a viewer never gets the key.
+          pixKey: access.role === "viewer" ? null : c.pixKey,
           // Legacy until Fase 6: the web now reads `receiver`.
           recebedor:
             recebedor.displayName === null && recebedor.key === null
