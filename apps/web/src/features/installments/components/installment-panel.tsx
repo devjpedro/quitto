@@ -97,6 +97,7 @@ function PanelContent({
     confirmedAt: detail.confirmedAt,
     dueDate: detail.dueDate,
     events: detail.events,
+    isApprover: contract.isApprover,
     locale: getLocale(),
     paidAt: detail.paidAt,
     payerName: payer?.displayName ?? null,
@@ -148,12 +149,20 @@ export function InstallmentPanel({
   );
   const docked = mode === "docked";
   useEffect(() => {
-    // On open (from a line, a card, a step) the title takes the focus; a
-    // page that loads with the panel open leaves the focus where it starts.
-    const active = document.activeElement;
-    if (docked && active && active !== document.body) {
-      document.getElementById(PANEL_TITLE_ID)?.focus({ preventScroll: true });
+    // On open (from a line, a card, a step) the title takes the focus. A page
+    // that loads with the panel open has the focus on <body>, where ↑ ↓ Esc
+    // are not heard: it goes to the column's wrapper (no ring, nothing moves).
+    if (!docked) {
+      return;
     }
+    const active = document.activeElement;
+    if (active && active !== document.body) {
+      document.getElementById(PANEL_TITLE_ID)?.focus({ preventScroll: true });
+      return;
+    }
+    document
+      .querySelector<HTMLElement>('[data-testid="installment-panel-docked"]')
+      ?.focus({ preventScroll: true });
   }, [docked]);
   const sequence =
     detail?.sequence ??

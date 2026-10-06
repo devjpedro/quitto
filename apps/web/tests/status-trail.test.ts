@@ -6,6 +6,7 @@ const common = {
   locale: "pt-BR" as const,
   payerName: "Rafael Prado",
   approverName: "João Souza",
+  isApprover: false,
   proofs: [],
   events: [],
   confirmedAt: null,
@@ -126,5 +127,34 @@ describe("trailSteps (o topo do painel: o valor e a trilha, sem tag e sem data p
       ["A receber", "done", "venceu 15/09"],
       ["Recebida", "done", "15/09 · marcada por você"],
     ]);
+  });
+
+  it("o dono que paga e herda a aprovação: 'você confirma', não 'João confirma'", () => {
+    const owner = {
+      ...common,
+      perspective: "pay" as const,
+      requiresConfirmation: true,
+      status: "awaiting_confirmation",
+      dueDate: "2026-10-05",
+      proofs: [{ createdAt: "2026-10-04T13:00:00.000Z", state: "current" }],
+    };
+    expect(names(trailSteps({ ...owner, isApprover: true })).at(-1)).toEqual([
+      "Confirmada",
+      "todo",
+      "falta você",
+    ]);
+    expect(names(trailSteps({ ...owner, isApprover: false })).at(-1)?.[2]).toBe(
+      "João confirma"
+    );
+    expect(
+      names(
+        trailSteps({
+          ...owner,
+          isApprover: true,
+          status: "pending",
+          proofs: [],
+        })
+      ).at(-1)?.[2]
+    ).toBe("você confirma");
   });
 });

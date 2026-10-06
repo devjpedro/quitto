@@ -10,6 +10,7 @@ import {
   createContext,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
   useContext,
   useRef,
 } from "react";
@@ -27,6 +28,12 @@ export function useSheetVariant() {
 
 const DISMISS_OFFSET_PX = 120;
 const DISMISS_VELOCITY = 500;
+/** From md (the side panel; a phone keeps its 44 px targets): the column's filled 32 px square. */
+export const FILLED_SQUARE =
+  "md:size-8 md:bg-surface-card md:hover:bg-surface-card-hover";
+/** The close of a sheet whose controls are filled: centred on the title row, with the arrows. */
+const FILLED_CLOSE_AT = "md:top-4";
+
 const SPRING = { type: "spring", stiffness: 420, damping: 40 } as const;
 
 /**
@@ -57,22 +64,36 @@ function useSheetMotion() {
  * <body>. Remember what had the focus when it opened and return it there,
  * as long as it is still in the page (WCAG 2.4.3). When it left the page, or
  * nothing had it (the ⌘K palette closes as it opens the sheet), go to
- * `fallbackFocus`. Without either, Radix's own handling stays.
+ * `fallbackFocus`. `adjustReturnFocus` may swap the opener for another
+ * target (the connected opener, or null, comes in). Without any, Radix's own
+ * handling stays.
  */
-function useReturnFocus(fallbackFocus?: () => HTMLElement | null) {
+function useReturnFocus(
+  fallbackFocus?: () => HTMLElement | null,
+  adjustReturnFocus?: (opener: HTMLElement | null) => HTMLElement | null,
+  frame?: RefObject<HTMLElement | null>
+) {
   const returnTo = useRef<HTMLElement | null>(null);
   return {
-    onOpenAutoFocus: () => {
+    onOpenAutoFocus: (event: Event) => {
       const active = document.activeElement;
       returnTo.current =
         active instanceof HTMLElement && active !== document.body
           ? active
           : null;
+      if (frame) {
+        // The frame, not the first control: a ring on "↑" would say "press me".
+        event.preventDefault();
+        frame.current?.focus({ preventScroll: true });
+      }
     },
     onCloseAutoFocus: (event: Event) => {
       const opener = returnTo.current;
       returnTo.current = null;
-      const target = opener?.isConnected ? opener : fallbackFocus?.();
+      const live = opener?.isConnected ? opener : null;
+      const target = adjustReturnFocus
+        ? (adjustReturnFocus(live) ?? fallbackFocus?.())
+        : (live ?? fallbackFocus?.());
       if (target) {
         event.preventDefault();
         target.focus();
@@ -84,10 +105,13 @@ function useReturnFocus(fallbackFocus?: () => HTMLElement | null) {
 function SheetHeading({
   actions,
   description,
+  filled,
   title,
 }: {
   actions?: ReactNode;
   description?: string;
+  /** The close is the 32 px square: the actions sit 4 px from it, not 8. */
+  filled: boolean;
   title: string;
 }) {
   return (
@@ -102,7 +126,14 @@ function SheetHeading({
       </div>
       {/* The actions sit left of the close button, which is absolute at right. */}
       {actions ? (
-        <div className="mr-10 flex shrink-0 items-center gap-1">{actions}</div>
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1",
+            filled ? "mr-10 md:mr-7" : "mr-10"
+          )}
+        >
+          {actions}
+        </div>
       ) : null}
     </div>
   );
@@ -130,16 +161,25 @@ export function ResponsiveSheet({
   onOpenChange,
   title,
   description,
+  adjustReturnFocus,
+  focusFrame = false,
   fallbackFocus,
+  filledControls = false,
   footer,
   headerActions,
   onKeyDown,
   children,
 }: {
+  /** The frame takes the focus on open (no ring on the first control); the keys and the screen reader still start inside the dialog. */
+  focusFrame?: boolean;
+  /** Swaps where the focus goes on close: gets what opened the sheet (if still in the page) and answers the target (null: the fallback). */
+  adjustReturnFocus?: (opener: HTMLElement | null) => HTMLElement | null;
   children: ReactNode;
   description?: string;
   /** Where the focus goes on close when what had it at open left the page, or nothing had it. */
   fallbackFocus?: () => HTMLElement | null;
+  /** Side panel only: the close button (like `headerActions`) is a filled 32 px square, as the column's, not a bare icon. */
+  filledControls?: boolean;
   /** Bottom sheet only: pinned under the scrolling body. */
   footer?: ReactNode;
   /** Side panel only: to the left of the close button. */
@@ -152,7 +192,12 @@ export function ResponsiveSheet({
 }) {
   const { variant, canDrag, hidden, shown, transition, dragControls } =
     useSheetMotion();
-  const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus(fallbackFocus);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus(
+    fallbackFocus,
+    adjustReturnFocus,
+    focusFrame ? frameRef : undefined
+  );
 
   return (
     <Dialog.Root onOpenChange={onOpenChange} open={open}>
@@ -200,6 +245,8 @@ export function ResponsiveSheet({
                   }
                 }}
                 onKeyDown={onKeyDown}
+                ref={frameRef}
+                tabIndex={-1}
                 transition={transition}
               >
                 <div
@@ -217,6 +264,7 @@ export function ResponsiveSheet({
                   <SheetHeading
                     actions={variant === "side" ? headerActions : undefined}
                     description={description}
+                    filled={filledControls}
                     title={title}
                   />
                 </div>
@@ -237,7 +285,10 @@ export function ResponsiveSheet({
                     element on open, and it must be the content, not "Close". */}
                 <Dialog.Close asChild>
                   <IconButton
-                    className="absolute top-3 right-3"
+                    className={cn(
+                      "absolute top-3 right-3",
+                      filledControls && cn(FILLED_SQUARE, FILLED_CLOSE_AT)
+                    )}
                     icon={X}
                     label={m.sheet_close()}
                   />

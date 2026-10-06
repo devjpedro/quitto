@@ -18,6 +18,8 @@ export interface TrailInput {
     isMe: boolean;
     type: string;
   }[];
+  /** The viewer confirms: the receiver, or the owner who pays a contact with no account (the capability, not the perspective). */
+  isApprover: boolean;
   locale: Locale;
   paidAt: string | null;
   payerName: string | null;
@@ -159,14 +161,15 @@ function proofStep(input: TrailInput, paid: boolean): TrailStep {
 
 function confirmedSub(input: TrailInput, paid: boolean): string {
   const options = { locale: input.locale };
-  const receive = input.perspective === "receive";
+  // "You confirm" follows who holds the button, not who receives.
+  const mine = input.perspective === "receive" || input.isApprover;
   if (paid) {
     return settledSub(input);
   }
-  if (input.status === INSTALLMENT_STATUS.awaitingConfirmation && receive) {
+  if (input.status === INSTALLMENT_STATUS.awaitingConfirmation && mine) {
     return m.panel_sub_missing_you({}, options);
   }
-  return receive
+  return mine
     ? m.panel_sub_you_confirm({}, options)
     : m.panel_sub_they_confirm({ name: first(input.approverName) }, options);
 }

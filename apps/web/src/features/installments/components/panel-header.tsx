@@ -1,5 +1,6 @@
 import { CaretDown, CaretUp, type Icon, X } from "@phosphor-icons/react";
 import { IconButton } from "@/components/ui/icon-button";
+import { FILLED_SQUARE } from "@/components/ui/responsive-sheet";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import type { PanelNavigation } from "../hooks/use-panel-navigation";
@@ -32,17 +33,19 @@ function SquareButton({
   );
 }
 
-/** ↑ ↓ in the floating sheet's header, beside its close button (and drawn like it). */
+/** ↑ ↓ in the floating sheet's header, beside its close button: the same filled squares as the column's. */
 export function PanelArrows({ nav }: { nav: PanelNavigation }) {
   return (
     <>
       <IconButton
+        className={FILLED_SQUARE}
         disabled={!nav.prev || nav.busy}
         icon={CaretUp}
         label={m.panel_prev()}
         onClick={nav.goPrev}
       />
       <IconButton
+        className={FILLED_SQUARE}
         disabled={!nav.next || nav.busy}
         icon={CaretDown}
         label={m.panel_next()}

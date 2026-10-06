@@ -170,10 +170,13 @@ function SheetBody({
 function SheetPanel({
   contract,
   installment,
+  open,
   route,
 }: {
   contract: ContractDetail;
   installment: ContractInstallment;
+  /** False while the sheet slides out: it still draws the installment it was showing. */
+  open: boolean;
   route: ContractRoute;
 }) {
   const nav = usePanelNavigation(contract, route, () => null);
@@ -183,8 +186,18 @@ function SheetPanel({
   const pinned = useSheetPrimary(contract);
   return (
     <ResponsiveSheet
+      adjustReturnFocus={(opener) =>
+        // ↑ ↓ moved on from the line that opened the panel: Esc goes back to
+        // the line (or group) it stopped on (DIRECAO: "devolve o foco à linha").
+        // A card's button that opened it keeps the focus.
+        opener?.closest("[data-installment-row], [data-group-ids]")
+          ? rowOrGroup(installment.id)
+          : opener
+      }
       description={contract.contract.title}
       fallbackFocus={() => rowOrGroup(installment.id)}
+      filledControls
+      focusFrame
       footer={
         pinned ? (
           <SheetFooter contract={contract} key={installment.id} />
@@ -192,12 +205,12 @@ function SheetPanel({
       }
       headerActions={<PanelArrows nav={nav} />}
       onKeyDown={onKeyDown}
-      onOpenChange={(open) => {
-        if (!open) {
+      onOpenChange={(next) => {
+        if (!next) {
           nav.close();
         }
       }}
-      open
+      open={open}
       title={m.panel_title({
         sequence: installment.sequence,
         count: contract.installments.length,
@@ -226,20 +239,28 @@ export function InstallmentPanelHost({
 }) {
   const docked = useMediaQuery(LATERAL_UP, true);
   const id = route.installmentId;
-  const installment = id
-    ? contract.installments.find((it) => it.id === id)
+  // The last installment shown: the sheet slides out still drawing it, instead
+  // of vanishing the moment the URL lets it go.
+  const lastId = useRef<string | null>(null);
+  if (id) {
+    lastId.current = id;
+  }
+  const shownId = id ?? (docked ? null : lastId.current);
+  const installment = shownId
+    ? contract.installments.find((it) => it.id === shownId)
     : undefined;
-  if (!(id && installment)) {
+  if (!(shownId && installment)) {
     return null;
   }
   return (
-    <PanelProvider contractId={contract.contract.id} installmentId={id}>
+    <PanelProvider contractId={contract.contract.id} installmentId={shownId}>
       {docked ? (
         <DockedPanel contract={contract} route={route} />
       ) : (
         <SheetPanel
           contract={contract}
           installment={installment}
+          open={Boolean(id)}
           route={route}
         />
       )}

@@ -789,4 +789,73 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       .map((button) => button.getAttribute("aria-label") ?? button.textContent);
     expect(names.filter((name) => ACTION_NAMES.test(name ?? ""))).toEqual([]);
   });
+
+  it("parcela que não existe (sem cache nem resposta): 'Parcela não encontrada', e o ✕ da coluna fecha", async () => {
+    const user = userEvent.setup();
+    renderPage({ details: { i4: null as unknown as InstallmentDetail } });
+    expect(await screen.findByText("Parcela não encontrada")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(router.get()).toEqual({ installment: undefined });
+  });
+
+  it("a 1024, ↓ ↓ e Esc devolvem o foco à linha em que o painel parou (a i6), não à que o abriu (a i4)", async () => {
+    const user = userEvent.setup();
+    renderPage({ installment: null, width: 1024 });
+    await user.click(row("i4"));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    );
+    await user.keyboard("{ArrowDown}");
+    await user.keyboard("{ArrowDown}");
+    expect(router.get()).toEqual({ installment: "i6" });
+    await user.keyboard("{Escape}");
+    expect(router.get()).toEqual({ installment: undefined });
+    await waitFor(() => expect(row("i6")).toHaveFocus());
+  });
+
+  it("a contestação enviada fecha o formulário (o toast é do cache de mutações: testado no installments-api)", async () => {
+    const user = userEvent.setup();
+    calls.dispute.mockResolvedValue({
+      data: { id: "i4", status: "disputed", paidAt: null, confirmedAt: null },
+      error: null,
+    });
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Contestar" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Por que você está contestando?" }),
+      "Veio R$ 240,00."
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Enviar contestação" })
+    );
+    await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull());
+    expect(calls.dispute).toHaveBeenCalledWith("i4", {
+      reason: "Veio R$ 240,00.",
+    });
+  });
+
+  it("↑ ↓ não andam de parcela enquanto se digita o motivo", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Contestar" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Por que você está contestando?" }),
+      "abc{ArrowDown}{ArrowUp}"
+    );
+    expect(router.get()).toEqual({ installment: "i4" });
+  });
+
+  it("a 1600, Esc dentro do diálogo 'Editar valor ou data' fecha só o diálogo, não a coluna", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(
+      screen.getByRole("button", { name: "Editar valor ou data" })
+    );
+    await screen.findByRole("dialog", { name: "Editar valor ou data" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(router.get()).toEqual({ installment: "i4" });
+    expect(screen.getByTestId("installment-panel-docked")).toBeVisible();
+  });
 });
