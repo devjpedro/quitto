@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 import { getLocale } from "@/paraglide/runtime.js";
 
 // DIRECAO › Tipografia: the contract's hero amount 40, the card's 34, the
-// milestone's 24, a list's 17, always tabular, with "R$" and the cents set back.
+// milestone's 24, the phone's wizard summary 22, a list's 17, always tabular,
+// with "R$" and the cents set back.
 const DISPLAY = {
   // The contract's top (mockup 14): one step above the card's 34.
   hero: {
@@ -20,6 +21,12 @@ const DISPLAY = {
     root: "text-2xl leading-[1.2] tracking-[-0.03em]",
     currency: "relative top-[0.38em] mr-0.5 align-top text-[11px]",
     cents: "text-sm",
+  },
+  // The phone's fixed summary in the wizard (mockup 15, .big.md).
+  summary: {
+    root: "text-[22px] leading-[1.2] tracking-[-0.03em]",
+    currency: "relative top-[0.3em] mr-0.5 align-top text-[11px]",
+    cents: "text-[0.56em]",
   },
   list: {
     root: "text-[17px] tracking-[-0.02em]",

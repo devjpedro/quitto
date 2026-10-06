@@ -1,15 +1,10 @@
 import type { Locale } from "@quitto/shared";
 import type { TagTone } from "@/components/ui/tag";
+import { inviteTerms } from "@/lib/invite-terms-text";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { m } from "@/paraglide/messages.js";
 import type { HomeAction, InstallmentAction } from "../types";
-import {
-  inviteTerms,
-  kindTag,
-  legendOf,
-  type PersonLine,
-  personLine,
-} from "./action-text";
+import { kindTag, legendOf, type PersonLine, personLine } from "./action-text";
 
 export type { PersonLine } from "./action-text";
 

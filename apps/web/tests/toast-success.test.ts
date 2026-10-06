@@ -92,4 +92,26 @@ describe("query error toasts", () => {
       .catch(() => undefined);
     expect(error).not.toHaveBeenCalled();
   });
+
+  it("uma mutação com meta.silentError não faz toast de erro", async () => {
+    error.mockClear();
+    const qc = makeQueryClient();
+    await qc
+      .getMutationCache()
+      .build(qc, { mutationFn: failing, meta: { silentError: true } })
+      .execute(undefined)
+      .catch(() => undefined);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("sem a meta, o toast de erro continua", async () => {
+    error.mockClear();
+    const qc = makeQueryClient();
+    await qc
+      .getMutationCache()
+      .build(qc, { mutationFn: failing })
+      .execute(undefined)
+      .catch(() => undefined);
+    expect(error).toHaveBeenCalledTimes(1);
+  });
 });

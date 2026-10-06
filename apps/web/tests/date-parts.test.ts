@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dayOfMonth, monthShort, weekdayName } from "@/lib/date-parts";
+import {
+  dayOfMonth,
+  monthShort,
+  weekdayLong,
+  weekdayName,
+} from "@/lib/date-parts";
 import { importInZone, ZONES } from "./time-zones";
 
 describe("date parts", () => {
@@ -14,6 +19,13 @@ describe("date parts", () => {
     expect(monthShort("2026-10-13", "en-US")).toBe("Oct");
     expect(weekdayName("2026-10-13", "pt-BR")).toBe("ter.");
     expect(weekdayName("2026-10-13", "en-US")).toBe("Tue");
+  });
+
+  it("dia da semana por extenso, sem o '-feira' (a ajuda do 1º vencimento)", () => {
+    expect(weekdayLong("2026-11-10", "pt-BR")).toBe("terça");
+    expect(weekdayLong("2026-11-14", "pt-BR")).toBe("sábado");
+    expect(weekdayLong("2026-11-15", "pt-BR")).toBe("domingo");
+    expect(weekdayLong("2026-11-10", "en-US")).toBe("Tuesday");
   });
 
   it.each(ZONES)("nunca muda o dia pelo fuso (%s)", async (zone) => {

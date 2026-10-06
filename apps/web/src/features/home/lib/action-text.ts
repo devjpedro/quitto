@@ -6,9 +6,8 @@ import {
   formatMoney,
   formatRelativeDays,
 } from "@/lib/locale-format";
-import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
-import type { InstallmentAction, InviteAction } from "../types";
+import type { InstallmentAction } from "../types";
 
 export interface KindTag {
   long: string;
@@ -130,37 +129,5 @@ export function legendOf(action: InstallmentAction, locale: Locale) {
       { amount: formatMoney(action.contract.remainingCents, locale) },
       options
     ),
-  };
-}
-
-/** "4 parcelas de R$ 300,00 · a partir de 10/11" (owner's decision 5), with the year when it is another one; the total when the amounts differ. */
-export function inviteTerms(
-  action: InviteAction,
-  today: string,
-  locale: Locale
-) {
-  const options = { locale };
-  const count = action.installmentsCount;
-  let amount: string;
-  if (action.amountCents === null) {
-    amount = m.home_invite_terms_total(
-      { count, amount: formatMoney(action.totalCents, locale) },
-      options
-    );
-  } else {
-    const each = formatMoney(action.amountCents, locale);
-    amount =
-      pluralForm(count, locale) === "one"
-        ? m.home_invite_terms_each_one({ amount: each }, options)
-        : m.home_invite_terms_each_other({ count, amount: each }, options);
-  }
-  return {
-    amount,
-    from: action.firstDueDate
-      ? m.home_invite_terms_from(
-          { date: sinceDate(action.firstDueDate, today, locale) },
-          options
-        )
-      : null,
   };
 }

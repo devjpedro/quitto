@@ -22,6 +22,14 @@
    */
   --breakpoint-lateral: 90rem;
   --breakpoint-wide: 115rem;
+  /*
+   * The wizard and the invite (DIRECAO › Telas › Wizard): the preview's stage
+   * from 1140 px, and the preview card grows from 1920 px. In rem like the
+   * others: Tailwind 4 sorts an arbitrary px variant (min-[1140px]:) before
+   * md: (48rem), and md: would win the cascade from 1140 on.
+   */
+  --breakpoint-stage: 71.25rem;
+  --breakpoint-huge: 120rem;
 
   --shadow-float:
     0 18px 40px -12px rgb(17 17 17 / 0.18), 0 4px 10px -4px rgb(17 17 17 / 0.08);
@@ -60,6 +68,8 @@
   --color-brand-hover: var(--brand-hover);
   --color-on-brand-alert: var(--on-brand-alert);
   --color-on-avatar: var(--on-avatar);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-selected-hover: var(--surface-selected-hover);
   --color-avatar-clay: var(--avatar-clay);
   --color-avatar-ochre: var(--avatar-ochre);
   --color-avatar-plum: var(--avatar-plum);
@@ -105,6 +115,11 @@
   --track: #d5d3cc;
   --nav-hover: #efede7;
   --brand-hover: #174a28;
+  /* The chosen option (mockup 15, report §4); dark is not brand-subtle (ink-muted would read 4.44). */
+  --surface-selected: #e8f0ea;
+  --surface-selected-hover: #dde9e0;
+  /* The preview stage's dot texture (decorative). */
+  --dots: rgb(17 17 17 / 0.16);
   --on-brand-alert: #ffb3a6;
   /* The phone (page-surfaces): a white card on the sunken page (mockup 13). */
   --page-card-hover: #f7f6f2;
@@ -158,6 +173,10 @@
   --track: #45463f;
   --nav-hover: #1f201c;
   --brand-hover: #24503a;
+  /* 1.068:1 below #1f3227: the repo's 1.06 floor for a hover step. */
+  --surface-selected: #1f3227;
+  --surface-selected-hover: #1b2d22;
+  --dots: rgb(236 235 230 / 0.12);
   --on-brand-alert: #ffb3a6;
   /* The phone: card #242521 on the page #1a1b18, what sits inside one step
      up, the hover one step down (between the card and the page). */

@@ -5,6 +5,7 @@ const monthFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const weekdayFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const dayMonthFormatters = new Map<Locale, Intl.DateTimeFormat>();
 const dayMonthYearFormatters = new Map<Locale, Intl.DateTimeFormat>();
+const weekdayLongFormatters = new Map<Locale, Intl.DateTimeFormat>();
 
 function formatterFor(
   cache: Map<Locale, Intl.DateTimeFormat>,
@@ -72,4 +73,11 @@ export function sinceDate(iso: string, today: string, locale: Locale): string {
   return iso.slice(0, 4) === today.slice(0, 4)
     ? formatDate(iso, locale, "dayMonth")
     : formatDate(iso, locale, "short");
+}
+
+/** "terça" / "Tuesday": a due date's weekday in a field's help and the preview's rows (pt-BR without "-feira"). */
+export function weekdayLong(iso: string, locale: Locale): string {
+  return formatterFor(weekdayLongFormatters, locale, { weekday: "long" })
+    .format(utc(iso))
+    .replace("-feira", "");
 }
