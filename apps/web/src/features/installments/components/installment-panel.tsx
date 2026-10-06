@@ -59,7 +59,11 @@ function PanelFoot({
       )}
       <button
         className={FOOT_LINK}
-        onClick={() => route.setTab("history")}
+        // Below lateral the panel is a modal sheet: the tab would change
+        // behind it. It closes with the same navigation; the column stays.
+        onClick={() =>
+          route.setTab("history", { closePanel: mode !== "docked" })
+        }
         type="button"
       >
         <ClockCounterClockwise aria-hidden="true" size={15} />

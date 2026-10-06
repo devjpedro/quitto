@@ -54,4 +54,15 @@ describe("useContractRoute", () => {
       tab: "history",
     });
   });
+
+  it("'Histórico' do sheet (closePanel): a aba sai sem o painel, na mesma navegação", () => {
+    const { result } = renderHook(() => useContractRoute());
+    result.current.setTab("history", { closePanel: true });
+    const toHistory = navigate.mock.calls[0]?.[0];
+    expect(toHistory.resetScroll).toBe(false);
+    expect(toHistory.search({ installment: "i8" })).toEqual({
+      installment: undefined,
+      tab: "history",
+    });
+  });
 });

@@ -203,7 +203,14 @@ function SheetPanel({
           : opener
       }
       description={contract.contract.title}
-      fallbackFocus={() => rowOrGroup(installment.id)}
+      // "Histórico" closes the sheet and takes the list away: the focus goes
+      // to the tab now shown.
+      fallbackFocus={() =>
+        rowOrGroup(installment.id) ??
+        document.querySelector<HTMLElement>(
+          '[data-testid="contract-tabs"] [aria-checked="true"]'
+        )
+      }
       filledControls
       focusFrame
       footer={

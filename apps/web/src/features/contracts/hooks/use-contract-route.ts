@@ -17,11 +17,12 @@ export function useContractRoute() {
   const navigate = useNavigate({ from: "/contracts/$id" });
   const tab: ContractTab = search.tab ?? "installments";
   const setTab = useCallback(
-    (next: ContractTab) =>
+    (next: ContractTab, options?: { closePanel?: boolean }) =>
       navigate({
         search: (prev) => ({
           ...prev,
           tab: next === "installments" ? undefined : next,
+          ...(options?.closePanel ? { installment: undefined } : {}),
         }),
         resetScroll: false,
       }),

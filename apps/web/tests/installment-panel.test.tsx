@@ -325,6 +325,31 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     await waitFor(() => expect(row("i6")).toHaveFocus());
   });
 
+  it("a 390, 'Histórico' no pé do sheet fecha o sheet e mostra a aba Histórico (não a troca atrás do sheet), e o foco cai no 'Histórico' das abas", async () => {
+    const user = userEvent.setup();
+    renderPage({ installment: null, width: 390 });
+    await user.click(row("i4"));
+    const sheet = await screen.findByRole("dialog", {
+      name: "Parcela 4 de 10",
+    });
+    await user.click(within(sheet).getByRole("button", { name: "Histórico" }));
+    expect(router.get()).toEqual({ installment: undefined, tab: "history" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() =>
+      expect(screen.getByRole("radio", { name: "Histórico" })).toHaveFocus()
+    );
+  });
+
+  it("a 1600, 'Histórico' no pé da coluna troca a aba e a coluna fica ao lado", async () => {
+    const user = userEvent.setup();
+    renderPage({ width: 1600 });
+    await user.click(
+      within(panel()).getByRole("button", { name: "Histórico" })
+    );
+    expect(router.get()).toEqual({ installment: "i4", tab: "history" });
+    expect(screen.getByTestId("installment-panel-docked")).toBeVisible();
+  });
+
   it("Esc numa parcela de um grupo fechado devolve o foco ao botão do grupo (a linha sai com o painel)", async () => {
     const user = userEvent.setup();
     renderPage({ installment: "i1" });
