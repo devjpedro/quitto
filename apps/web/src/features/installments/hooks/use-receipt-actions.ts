@@ -1,5 +1,4 @@
 import type { MouseEvent } from "react";
-import { perspectiveOf } from "@/features/contracts/lib/contract-view";
 import type { ContractDetail } from "@/features/contracts/types";
 import { useCopy } from "@/hooks/use-copy";
 import { ApiError } from "@/lib/api-client";
@@ -13,9 +12,10 @@ import type { InstallmentDetail } from "../types";
 /**
  * What the receipt offers, shared by the block and the bottom sheet's footer:
  * the PDF, the public link (created on demand, once), the system's share
- * sheet or the clipboard, and the WhatsApp message in the sender's voice
- * ("Recebi…" or "Paguei…", review I7). Each answers to the panel's lock
- * (review I2 of Task 9): the second hit of a double tap does nothing.
+ * sheet or the clipboard, and the WhatsApp message of whoever receives from
+ * a contact with no account ("Recebi…", review I7). Each answers to the
+ * panel's lock (review I2 of Task 9): the second hit of a double tap does
+ * nothing.
  */
 export function useReceiptActions(
   detail: InstallmentDetail,
@@ -25,16 +25,14 @@ export function useReceiptActions(
   const share = useShareReceiptMutation(detail.id);
   const copy = useCopy();
   const existing = detail.receiptShare?.url ?? null;
-  const sender: "receive" | "pay" =
-    perspectiveOf(contract.role) === "pay" ? "pay" : "receive";
-  const whatsappFor = (url: string, perspective: "receive" | "pay") =>
+  const whatsappFor = (url: string) =>
     whatsappUrl(
       receiptMessage(
         {
           amountCents: detail.amountCents,
           contractTitle: contract.contract.title,
           installmentsCount: contract.installments.length,
-          perspective,
+          perspective: "receive",
           sequence: detail.sequence,
           url,
         },
@@ -61,9 +59,7 @@ export function useReceiptActions(
     existing,
     pdfHref: `/api/installments/${detail.id}/receipt.pdf`,
     pending: share.isPending,
-    /** "Enviar no WhatsApp" when the link exists: a plain link in the sender's voice. */
-    whatsappHref: existing ? whatsappFor(existing, sender) : null,
-    /** A link (the PDF, the WhatsApp) answers to the lock too. */
+    /** A link (the PDF) answers to the lock too. */
     guardLink: (event: MouseEvent) => {
       if (!tryLock()) {
         event.preventDefault();
@@ -109,7 +105,7 @@ export function useReceiptActions(
       linkUrl()
         .then((url) => {
           if (url && win) {
-            win.location.href = whatsappFor(url, "receive");
+            win.location.href = whatsappFor(url);
           } else {
             win?.close();
           }

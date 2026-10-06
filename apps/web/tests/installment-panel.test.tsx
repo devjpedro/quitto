@@ -104,8 +104,8 @@ const WEEKDAY_LONG = /quarta-feira|30 de setembro/i;
 const ACTION_NAMES =
   /Confirmar|Contestar|Compartilhar|Enviar|Marcar|Cobrar|Editar/;
 const RECEBI = /^Oi! Recebi a parcela 2 de 10 de “Moto do Rafa”/;
-const PAGUEI = /^Oi! Paguei a parcela 2 de 10 de “Moto do Rafa”/;
 const WA = "https://wa.me/?text=";
+const WHATSAPP = /WhatsApp/;
 
 /** Every installment the panel may open: the ones a test names, then plain open ones. */
 function detailFor(contract: ContractDetail, id: string): InstallmentDetail {
@@ -697,8 +697,23 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     open.mockRestore();
   });
 
-  it("P5 do dono que paga, com o link: o wa.me do 'Enviar no WhatsApp' leva 'Paguei a parcela…'", () => {
-    renderPage({
+  it("P5 do dono, com o link: 'Compartilhar recibo' e 'Recibo em PDF', sem um 3º botão de WhatsApp (o compartilhar já chega lá), dos dois lados e no celular", () => {
+    const shared = {
+      i2: paidDetail({
+        receiptShare: { url: "http://localhost:3001/r/7fQ2kX9mVb" },
+      }),
+    };
+    const receiving = renderPage({ installment: "i2", details: shared });
+    let block = within(screen.getByTestId("receipt-block"));
+    expect(
+      block.getByRole("button", { name: "Compartilhar recibo" })
+    ).toBeVisible();
+    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
+    expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
+    expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
+    receiving.unmount();
+
+    const paying = renderPage({
       contract: motoDetail({
         role: "buyer",
         isOwner: true,
@@ -706,18 +721,18 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
         isApprover: false,
       }),
       installment: "i2",
-      details: {
-        i2: paidDetail({
-          receiptShare: { url: "http://localhost:3001/r/7fQ2kX9mVb" },
-        }),
-      },
+      details: shared,
     });
-    const link = within(screen.getByTestId("receipt-block")).getByRole("link", {
-      name: "Enviar no WhatsApp",
-    });
-    const href = link.getAttribute("href") ?? "";
-    expect(href.startsWith(WA)).toBe(true);
-    expect(decodeURIComponent(href.slice(WA.length))).toMatch(PAGUEI);
+    block = within(screen.getByTestId("receipt-block"));
+    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
+    expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
+    paying.unmount();
+
+    // The bottom sheet pins "Compartilhar recibo" in its footer: the block keeps the PDF.
+    renderPage({ installment: "i2", details: shared, width: 390 });
+    block = within(screen.getByTestId("receipt-block"));
+    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
+    expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
   });
 
   it("P6 (quem paga): o bloco danger com o rosto de quem contestou, o motivo entre aspas e o envio riscado", () => {

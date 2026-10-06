@@ -1,10 +1,4 @@
-import {
-  Copy,
-  FilePdf,
-  LinkSimple,
-  Receipt,
-  WhatsappLogo,
-} from "@phosphor-icons/react";
+import { Copy, FilePdf, LinkSimple, Receipt } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/icon-tile";
 import type { ContractDetail } from "@/features/contracts/types";
@@ -129,33 +123,15 @@ function ReceiptButtons({
         {m.panel_receipt_pdf()}
       </a>
     ) : null;
-  const whatsapp = actions.whatsappHref ? (
-    <a
-      // Beside the PDF when both fit, else on a row of its own: never squeezed.
-      className={cn(secondary, "flex-[1_0_auto]")}
-      href={actions.whatsappHref}
-      onClick={actions.guardLink}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      <WhatsappLogo aria-hidden="true" size={16} />
-      {m.panel_receipt_whatsapp()}
-    </a>
-  ) : null;
-  if (!(main || pdf || whatsapp)) {
+  if (!(main || pdf)) {
     return null;
   }
-  // Inline, the WhatsApp takes its own row under the main pair; in the
-  // bottom sheet the main is in the footer, and it sits beside the PDF.
+  // No WhatsApp of its own: "Compartilhar recibo" reaches it, once per
+  // screen (14-G P5). In the bottom sheet the main is in the footer.
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {main}
       {pdf}
-      {whatsapp && inline ? (
-        <div className="flex w-full">{whatsapp}</div>
-      ) : (
-        whatsapp
-      )}
     </div>
   );
 }
