@@ -11,6 +11,7 @@ import { inviteEmail } from "../lib/email-templates";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { sendEmail } from "../lib/mailer";
 import { ROLE_LABEL } from "../lib/role-label";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 
 const INVITE_TTL_DAYS = 7;
@@ -102,7 +103,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { id: created.id };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       body: t.Object({
         displayName: t.String({ minLength: 1, maxLength: 120 }),
         role: roleSchema,
@@ -141,7 +142,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { ok: true as const };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       response: t.Object({ ok: t.Literal(true) }),
     }
   )
@@ -183,7 +184,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { id: target.id, role: body.role };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       body: t.Object({ role: roleSchema }),
       response: t.Object({ id: t.String(), role: roleSchema }),
     }
@@ -245,7 +246,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { token, expiresAt: expiresAt.toISOString() };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       body: t.Object({
         email: t.String({ format: "email", minLength: 3, maxLength: 200 }),
       }),
@@ -305,7 +306,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { token, expiresAt: expiresAt.toISOString() };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       response: t.Object({ token: t.String(), expiresAt: t.String() }),
     }
   )
@@ -348,7 +349,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { id: target.id, pixKey };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       body: t.Object({
         pixKey: t.Union([t.String({ maxLength: 140 }), t.Null()]),
       }),

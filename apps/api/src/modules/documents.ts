@@ -13,6 +13,7 @@ import {
 } from "../lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 
 /** ASCII slug for a safe Content-Disposition filename. */
@@ -77,7 +78,7 @@ export const documentsModule = new Elysia({ prefix: "/api" })
       const bytes = await renderStatementPdf(model);
       return pdfResponse(bytes, `extrato-${slug(c.title)}.pdf`);
     },
-    { params: t.Object({ id: t.String() }) }
+    { params: t.Object({ id: idParam }) }
   )
   .get(
     "/contracts/:id/statement.csv",
@@ -98,7 +99,7 @@ export const documentsModule = new Elysia({ prefix: "/api" })
         },
       });
     },
-    { params: t.Object({ id: t.String() }) }
+    { params: t.Object({ id: idParam }) }
   )
   .get(
     "/installments/:installmentId/receipt.pdf",
@@ -127,5 +128,5 @@ export const documentsModule = new Elysia({ prefix: "/api" })
         `recibo-${slug(c.title)}-parcela-${inst.sequence}.pdf`
       );
     },
-    { params: t.Object({ installmentId: t.String() }) }
+    { params: t.Object({ installmentId: idParam }) }
   );

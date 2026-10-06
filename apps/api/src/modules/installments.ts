@@ -18,6 +18,7 @@ import { loadInstallmentForUser } from "../lib/installment-access";
 import { latestDispute, proofStates } from "../lib/installment-detail";
 import { installmentPix } from "../lib/installment-pix";
 import { findActiveShare } from "../lib/receipt-share";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { presignDownload } from "../lib/storage";
 
@@ -197,7 +198,7 @@ export const installmentsModule = new Elysia({ prefix: "/api" }).get(
     };
   },
   {
-    params: t.Object({ installmentId: t.String() }),
+    params: t.Object({ installmentId: idParam }),
     response: detailSchema,
   }
 );

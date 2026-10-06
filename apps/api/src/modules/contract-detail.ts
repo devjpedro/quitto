@@ -28,6 +28,7 @@ import { peopleView } from "../lib/contract-people";
 import { computeProgress } from "../lib/contract-progress";
 import { NotFoundError, ValidationError } from "../lib/errors";
 import { usableKey } from "../lib/installment-pix";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import {
   contractDetailResponse,
@@ -212,7 +213,7 @@ export const contractDetailModule = new Elysia({ prefix: "/api" })
       };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       response: contractDetailResponse,
     }
   )
@@ -240,7 +241,7 @@ export const contractDetailModule = new Elysia({ prefix: "/api" })
       );
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       query: t.Object({ before: t.Optional(t.String({ maxLength: 120 })) }),
       response: eventsPageResponse,
     }

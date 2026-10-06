@@ -13,6 +13,7 @@ import {
   resolvePublicReceipt,
   toPublicReceipt,
 } from "../lib/receipt-share";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { pdfResponse, slug } from "./documents";
 
@@ -47,7 +48,7 @@ const shareView = (s: { token: string; createdAt: Date }) => ({
 
 const shareSchema = t.Object({ token: t.String(), createdAt: t.String() });
 
-const params = t.Object({ installmentId: t.String() });
+const params = t.Object({ installmentId: idParam });
 
 const PUBLIC_HEADERS = {
   "cache-control": "no-store",

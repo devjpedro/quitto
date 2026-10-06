@@ -17,6 +17,7 @@ import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
 import { visibleContractsWhere } from "../lib/contract-visibility";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { createNotifications } from "../lib/notifications";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
 
@@ -256,7 +257,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       return row;
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       body: t.Object({
         pixKey: t.Optional(t.Union([t.String(), t.Null()])),
         title: t.Optional(t.String({ minLength: 1, maxLength: 200 })),
@@ -303,7 +304,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       return { id: updated.id };
     },
     {
-      params: t.Object({ id: t.String(), installmentId: t.String() }),
+      params: t.Object({ id: idParam, installmentId: idParam }),
       body: t.Object({
         amountCents: t.Optional(t.Integer({ minimum: 1 })),
         dueDate: t.Optional(t.String({ format: "date" })),
@@ -337,7 +338,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       return { ok: true as const };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       response: t.Object({ ok: t.Literal(true) }),
     }
   )
@@ -398,7 +399,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       return { ok: true as const };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       response: t.Object({ ok: t.Literal(true) }),
     }
   );

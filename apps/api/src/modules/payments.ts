@@ -16,6 +16,7 @@ import {
 } from "../lib/installment-access";
 import { nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { headObject, presignUpload } from "../lib/storage";
 
@@ -47,7 +48,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return { uploadUrl, objectKey };
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({
         fileName: t.String({ minLength: 1, maxLength: 200 }),
         mimeType: proofMimeSchema,
@@ -131,7 +132,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({
         objectKey: t.String({ minLength: 1 }),
         fileName: t.String({ minLength: 1, maxLength: 200 }),
@@ -181,7 +182,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       response: installmentEntitySchema,
     }
   )
@@ -226,7 +227,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({ reason: t.Optional(t.String({ maxLength: 500 })) }),
       response: installmentEntitySchema,
     }
@@ -271,7 +272,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       response: installmentEntitySchema,
     }
   )
@@ -321,7 +322,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       response: installmentEntitySchema,
     }
   );

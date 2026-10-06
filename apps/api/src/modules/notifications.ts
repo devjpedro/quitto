@@ -5,6 +5,7 @@ import { contract, installment, notification } from "../db/schema";
 import { visibleNotificationsWhere } from "../lib/contract-visibility";
 import { NotFoundError } from "../lib/errors";
 import { groupNotifications, RAW_LIMIT } from "../lib/notification-groups";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 
 export const notificationsModule = new Elysia({ prefix: "/api" })
@@ -161,7 +162,7 @@ export const notificationsModule = new Elysia({ prefix: "/api" })
       return { ok: true as const };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       response: t.Object({ ok: t.Literal(true) }),
     }
   );
