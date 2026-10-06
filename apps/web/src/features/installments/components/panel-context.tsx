@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import { useActionLock } from "@/hooks/use-action-lock";
+import { useProofUpload } from "../hooks/use-proof-upload";
+import { PROOF_ACCEPT } from "../lib/proof-file";
 
 /** Where the panel is drawn: the column from lateral, the floating sheet from md, the bottom sheet below. */
 export type PanelMode = "docked" | "side" | "bottom";
@@ -44,15 +46,18 @@ export const PANEL_TONE: Record<
 };
 
 interface PanelState {
-  /** Ignores ↑ ↓ while a proof is on its way (Task 10). */
+  /** Ignores ↑ ↓ while a proof is on its way (reviews I4 and M12). */
   busy: boolean;
-  /** Stops the work in flight when the panel closes (Task 10: the upload). */
+  /** Stops the work in flight when the panel closes: the upload's PUT. */
   cancelWork: () => void;
   chooseFile: () => void;
   contestOpen: boolean;
   contractId: string;
+  /** When this installment's Pix code was copied ("código copiado às 14:02"). */
+  copiedAt: string | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
   installmentId: string;
+  markCopied: () => void;
   setContestOpen: (open: boolean) => void;
   /**
    * One lock for the panel's actions (review I2): an optimistic confirm swaps
@@ -60,6 +65,8 @@ interface PanelState {
    * double tap must not create the public link.
    */
   tryLock: () => boolean;
+  /** The proof on its way: the sheet's body and its footer read the same one. */
+  upload: ReturnType<typeof useProofUpload>;
 }
 
 const PanelContext = createContext<PanelState | null>(null);
@@ -85,31 +92,68 @@ export function PanelProvider({
     (open: boolean) => setContest({ id: installmentId, open }),
     [installmentId]
   );
+  const [copied, setCopied] = useState({
+    id: installmentId,
+    at: null as string | null,
+  });
+  const copiedAt = copied.id === installmentId ? copied.at : null;
+  const markCopied = useCallback(
+    () => setCopied({ id: installmentId, at: new Date().toISOString() }),
+    [installmentId]
+  );
   const chooseFile = useCallback(() => fileInputRef.current?.click(), []);
   const tryLock = useActionLock();
+  const upload = useProofUpload(contractId, installmentId);
+  const busy = upload.state.phase === "uploading";
   const value = useMemo<PanelState>(
     () => ({
-      busy: false,
-      cancelWork: () => undefined,
+      busy,
+      cancelWork: upload.cancel,
       chooseFile,
       contestOpen,
       contractId,
+      copiedAt,
       fileInputRef,
       installmentId,
+      markCopied,
       setContestOpen,
       tryLock,
+      upload,
     }),
     [
+      busy,
       chooseFile,
       contestOpen,
       contractId,
+      copiedAt,
       installmentId,
+      markCopied,
       setContestOpen,
       tryLock,
+      upload,
     ]
   );
+  const { pick } = upload;
   return (
-    <PanelContext.Provider value={value}>{children}</PanelContext.Provider>
+    <PanelContext.Provider value={value}>
+      {children}
+      {/* One file chooser for the panel: the drop zone and the sheet's footer open it. */}
+      <input
+        accept={PROOF_ACCEPT}
+        aria-hidden="true"
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) {
+            pick(file);
+          }
+          event.target.value = "";
+        }}
+        ref={fileInputRef}
+        tabIndex={-1}
+        type="file"
+      />
+    </PanelContext.Provider>
   );
 }
 

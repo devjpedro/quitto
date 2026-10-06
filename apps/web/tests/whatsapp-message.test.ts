@@ -3,6 +3,7 @@ import {
   type ChargeMessageInput,
   chargeMessage,
   groupChargeMessage,
+  pixRequestMessage,
   receiptMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
@@ -202,5 +203,18 @@ describe("receiptMessage", () => {
     expect(receiptMessage({ ...input, perspective: "pay" }, "pt-BR")[0]).toBe(
       "Oi! Paguei a parcela 2 de 10 de “Moto do Rafa” (R$ 480,00). O recibo está aqui:"
     );
+  });
+});
+
+describe("pixRequestMessage", () => {
+  it("P2: pede a chave para pagar a parcela", () => {
+    expect(
+      pixRequestMessage(
+        { contractTitle: "Curso de inglês", sequence: 3 },
+        "pt-BR"
+      )
+    ).toEqual([
+      "Oi! Pode me mandar a sua chave PIX para eu pagar a parcela 3 de “Curso de inglês”?",
+    ]);
   });
 });

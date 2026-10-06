@@ -206,3 +206,26 @@ export function useShareReceiptMutation(installmentId: string) {
       qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) }),
   });
 }
+
+/** "Guardar a chave" (owner, a contact without an account: owner's decision 3). */
+export function useSaveContactKeyMutation(
+  contractId: string,
+  installmentId: string
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { participantId: string; pixKey: string | null }) =>
+      unwrap(
+        api.api
+          .contracts({ id: contractId })
+          .participants({ participantId: input.participantId })
+          ["pix-key"].patch({ pixKey: input.pixKey })
+      ),
+    meta: { successMessage: m.panel_toast_key_saved() },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.installment(installmentId) });
+      qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
+      qc.invalidateQueries({ queryKey: queryKeys.home });
+    },
+  });
+}

@@ -1,6 +1,11 @@
+import { Paperclip } from "@phosphor-icons/react";
+import { todayISO } from "@quitto/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import type { ContractDetail } from "@/features/contracts/types";
+import { cn } from "@/lib/utils";
+import { m } from "@/paraglide/messages.js";
 import { installmentQueryOptions } from "../api";
 import {
   type PanelPrimary,
@@ -8,7 +13,8 @@ import {
   panelView,
 } from "../lib/panel-actions";
 import type { InstallmentDetail } from "../types";
-import { usePanel } from "./panel-context";
+import { ChargeLink } from "./charge-block";
+import { PANEL_TONE, usePanel } from "./panel-context";
 import { ReceiptPrimaryButton, useReceiptActions } from "./receipt-block";
 import { ConfirmButton } from "./review-block";
 
@@ -32,9 +38,41 @@ function ReceiptFooter({ className, contract, detail, primary }: FooterProps) {
 }
 
 /**
+ * "Enviar comprovante", pinned with the file's limit under it (mockup 14,
+ * frame E). Beside the Pix, "Copiar código PIX" is the black one, so this
+ * steps back to the block's fill; alone (P2, P6) it is the primary. While a
+ * proof goes, it waits.
+ */
+function SendProofFooter({ className, contract, detail }: FooterProps) {
+  const { busy, chooseFile, tryLock } = usePanel();
+  const { blocks } = panelView(panelInputOf(contract, detail));
+  const besidePix = detail.pix !== null && blocks.includes("pix");
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        className={cn(className, besidePix && PANEL_TONE.bottom.button)}
+        disabled={busy}
+        onClick={() => {
+          if (tryLock()) {
+            chooseFile();
+          }
+        }}
+        variant={besidePix ? "inset" : "primary"}
+      >
+        <Paperclip aria-hidden="true" size={17} />
+        {m.panel_send_proof()}
+      </Button>
+      <small className="text-center text-[12.5px] text-ink-muted">
+        {m.panel_drop_limit()}
+      </small>
+    </div>
+  );
+}
+
+/**
  * The bottom sheet's pinned action by the panel's primary (mockup 14, frame
- * E). Task 10 adds "send_proof" and "whatsapp_charge"; a primary with no
- * entry pins nothing, and the sheet then has no footer at all.
+ * E); a primary with no entry pins nothing, and the sheet then has no footer
+ * at all.
  */
 export const SHEET_FOOTER: Partial<
   Record<PanelPrimary, (props: FooterProps) => ReactNode>
@@ -43,6 +81,15 @@ export const SHEET_FOOTER: Partial<
   share_receipt: (props) => <ReceiptFooter {...props} />,
   whatsapp_receipt: (props) => <ReceiptFooter {...props} />,
   receipt_pdf: (props) => <ReceiptFooter {...props} />,
+  send_proof: (props) => <SendProofFooter {...props} />,
+  whatsapp_charge: ({ className, contract, detail }) => (
+    <ChargeLink
+      className={className}
+      contract={contract}
+      detail={detail}
+      today={todayISO()}
+    />
+  ),
 };
 
 /**

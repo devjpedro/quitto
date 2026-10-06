@@ -106,6 +106,19 @@ export function receiptMessage(
   return [sentence, input.url];
 }
 
+/** P2: asking the receiver for a key, to pay this installment. */
+export function pixRequestMessage(
+  input: { contractTitle: string; sequence: number },
+  locale: Locale
+): string[] {
+  return [
+    m.whatsapp_pix_request(
+      { sequence: input.sequence, title: input.contractTitle },
+      { locale }
+    ),
+  ];
+}
+
 /** wa.me without a number: the sender picks the contact inside WhatsApp. One blank line between paragraphs. */
 export function whatsappUrl(paragraphs: string[]): string {
   return `https://wa.me/?text=${paragraphs.map(encodeURIComponent).join("%0A%0A")}`;
