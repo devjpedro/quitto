@@ -200,32 +200,6 @@ export async function receiverUsers(
   return new Map(rows.map((u) => [u.id, u]));
 }
 
-/** Who receives the money in the contract, and the key that pays them. */
-export async function resolveRecebedor(c: {
-  id: string;
-  ownerId: string;
-  ownerRole: string;
-}): Promise<Recebedor> {
-  const people =
-    c.ownerRole === "seller"
-      ? []
-      : await db
-          .select({
-            displayName: participant.displayName,
-            linkedUserId: participant.linkedUserId,
-            pixKey: participant.pixKey,
-            role: participant.role,
-          })
-          .from(participant)
-          .where(
-            and(
-              eq(participant.contractId, c.id),
-              eq(participant.role, "seller")
-            )
-          );
-  return pickRecebedor(c, people, await receiverUsers(c, people));
-}
-
 /** The contract's owner fields. Throws NotFoundError when it doesn't exist. */
 async function findOwnedContract(contractId: string): Promise<OwnedContract> {
   const [row] = await db

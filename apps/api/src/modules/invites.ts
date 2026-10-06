@@ -1,4 +1,4 @@
-import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { AUDIT_TYPE, NOTIFICATION_TYPE } from "@quitto/shared";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
@@ -9,6 +9,7 @@ import {
   participant,
   user as userTable,
 } from "../db/schema";
+import { recordEvent } from "../lib/audit";
 import { normalizeEmail } from "../lib/email";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
 import { buildInvitePreview } from "../lib/invite-preview";
@@ -171,7 +172,11 @@ export const invitesModule = new Elysia({ prefix: "/api" })
       const contractId = await db.transaction(async (tx) => {
         // slot must not already be linked (double-accept / race)
         const [slot] = await tx
-          .select({ linkedUserId: participant.linkedUserId })
+          .select({
+            linkedUserId: participant.linkedUserId,
+            displayName: participant.displayName,
+            role: participant.role,
+          })
           .from(participant)
           .where(eq(participant.id, row.participantId))
           .limit(1);
@@ -197,6 +202,14 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           .update(participant)
           .set({ linkedUserId: user.id })
           .where(eq(participant.id, row.participantId));
+        await recordEvent(tx, {
+          contractId: row.contractId,
+          actorUserId: user.id,
+          type: AUDIT_TYPE.participantJoined,
+          metadata: slot
+            ? { participantName: slot.displayName, role: slot.role }
+            : undefined,
+        });
         await tx
           .update(invite)
           .set({ acceptedByUserId: user.id, acceptedAt: new Date() })

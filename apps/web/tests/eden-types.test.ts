@@ -44,6 +44,21 @@ it("infers the Fase-2a contract endpoints cross-package (eden#215 mitigation)", 
   expectTypeOf<NonNullable<DetailResponse>["role"]>().toEqualTypeOf<string>();
   expectTypeOf<NonNullable<DetailResponse>["installments"]>().toBeArray();
 
+  // GET /api/contracts/:id (Fase 2, Task 2): people and the recent history.
+  expectTypeOf<
+    NonNullable<DetailResponse>["participants"][number]["isMe"]
+  >().toEqualTypeOf<boolean>();
+  expectTypeOf<NonNullable<DetailResponse>["recentEvents"]>().toBeArray();
+
+  // GET /api/contracts/:id/events — a page and the next cursor.
+  const eventsGet = api.api.contracts({ id: "x" }).events.get;
+  type EventsResponse = Awaited<ReturnType<typeof eventsGet>>["data"];
+  expectTypeOf<EventsResponse>().not.toBeAny();
+  expectTypeOf<NonNullable<EventsResponse>["items"]>().toBeArray();
+  expectTypeOf<NonNullable<EventsResponse>["nextBefore"]>().toEqualTypeOf<
+    string | null
+  >();
+
   // PATCH /api/contracts/:id/installments/:installmentId — two path params.
   const patch = api.api
     .contracts({ id: "x" })

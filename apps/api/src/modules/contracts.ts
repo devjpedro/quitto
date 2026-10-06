@@ -12,11 +12,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import {
-  getCapabilities,
-  getContractRole,
-  resolveRecebedor,
-} from "../lib/contract-access";
+import { getContractRole } from "../lib/contract-access";
 import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
 import { visibleContractsWhere } from "../lib/contract-visibility";
 import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
@@ -215,159 +211,65 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       ),
     }
   )
-  .get(
-    "/contracts/:id",
-    async ({ request, params }) => {
-      const { user } = await requireAuth(request.headers);
-      const access = await getCapabilities(user.id, params.id); // lança 404 se sem acesso
-
-      const [c] = await db
-        .select()
-        .from(contract)
-        .where(eq(contract.id, params.id))
-        .limit(1);
-      if (!c) {
-        throw new NotFoundError("Contrato não encontrado");
-      }
-      const items = await db
-        .select()
-        .from(installment)
-        .where(eq(installment.contractId, params.id));
-      const people = await db
-        .select()
-        .from(participant)
-        .where(eq(participant.contractId, params.id));
-      const today = todayISO();
-      const progress = computeProgress(items, today);
-      const recebedorInfo = await resolveRecebedor(c);
-      const recebedorResolvedKey = recebedorInfo.key;
-      const recebedor =
-        recebedorInfo.displayName === null && recebedorResolvedKey === null
-          ? null
-          : {
-              name: recebedorInfo.displayName,
-              hasKey: recebedorResolvedKey !== null,
-            };
-
-      return {
-        role: access.role,
-        isOwner: access.isOwner,
-        isPayer: access.isPayer,
-        isApprover: access.isApprover,
-        contract: {
-          id: c.id,
-          title: c.title,
-          description: c.description,
-          ownerRole: c.ownerRole,
-          requiresConfirmation: c.requiresConfirmation,
-          status: c.status,
-          monthlyAmountCents: c.monthlyAmountCents,
-          pixKey: c.pixKey,
-          recebedor,
-        },
-        progress: {
-          totalCents: progress.totalCents,
-          paidCents: progress.paidCents,
-          remainingCents: progress.remainingCents,
-          percent: progress.percent,
-          overdueCount: progress.overdueCount,
-        },
-        installments: items
-          .sort((a, b) => a.sequence - b.sequence)
-          .map((it) => ({
-            id: it.id,
-            sequence: it.sequence,
-            amountCents: it.amountCents,
-            dueDate: it.dueDate,
-            status: it.status,
-          })),
-        participants: people.map((p) => ({
-          id: p.id,
-          displayName: p.displayName,
-          role: p.role,
-          linked: p.linkedUserId !== null,
-          isOwner: p.linkedUserId === c.ownerId,
-        })),
-      };
-    },
-    {
-      params: t.Object({ id: t.String() }),
-      response: t.Object({
-        role: t.String(),
-        isOwner: t.Boolean(),
-        isPayer: t.Boolean(),
-        isApprover: t.Boolean(),
-        contract: t.Object({
-          id: t.String(),
-          title: t.String(),
-          description: t.Union([t.String(), t.Null()]),
-          ownerRole: t.String(),
-          requiresConfirmation: t.Boolean(),
-          status: t.String(),
-          monthlyAmountCents: t.Union([t.Integer(), t.Null()]),
-          pixKey: t.Union([t.String(), t.Null()]),
-          recebedor: t.Union([
-            t.Object({
-              name: t.Union([t.String(), t.Null()]),
-              hasKey: t.Boolean(),
-            }),
-            t.Null(),
-          ]),
-        }),
-        progress: t.Object({
-          totalCents: t.Integer(),
-          paidCents: t.Integer(),
-          remainingCents: t.Integer(),
-          percent: t.Integer(),
-          overdueCount: t.Integer(),
-        }),
-        installments: t.Array(
-          t.Object({
-            id: t.String(),
-            sequence: t.Integer(),
-            amountCents: t.Integer(),
-            dueDate: t.String(),
-            status: t.String(),
-          })
-        ),
-        participants: t.Array(
-          t.Object({
-            id: t.String(),
-            displayName: t.String(),
-            role: t.String(),
-            linked: t.Boolean(),
-            isOwner: t.Boolean(),
-          })
-        ),
-      }),
-    }
-  )
   .patch(
     "/contracts/:id",
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
       const { isOwner } = await getContractRole(user.id, params.id);
       if (!isOwner) {
-        throw new ForbiddenError("Apenas o dono edita a chave PIX");
+        throw new ForbiddenError("Apenas o dono edita o contrato");
       }
-      let pixKey: string | null = null;
-      if (body.pixKey && body.pixKey.trim() !== "") {
-        try {
-          pixKey = parsePixKey(body.pixKey).value;
-        } catch (e) {
-          throw new ValidationError((e as Error).message);
+      const patch: Partial<typeof contract.$inferInsert> = {};
+      if (body.pixKey !== undefined) {
+        patch.pixKey = null;
+        if (body.pixKey && body.pixKey.trim() !== "") {
+          try {
+            patch.pixKey = parsePixKey(body.pixKey).value;
+          } catch (e) {
+            throw new ValidationError((e as Error).message);
+          }
         }
       }
-      await db
+      if (body.title !== undefined) {
+        patch.title = body.title.trim();
+      }
+      if (body.description !== undefined) {
+        const text = body.description?.trim() ?? "";
+        patch.description = text === "" ? null : text;
+      }
+      if (patch.title === "") {
+        throw new ValidationError("O contrato precisa de um nome");
+      }
+      const [row] = await db
         .update(contract)
-        .set({ pixKey })
-        .where(eq(contract.id, params.id));
-      return { pixKey };
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(contract.id, params.id))
+        .returning({
+          id: contract.id,
+          title: contract.title,
+          description: contract.description,
+          pixKey: contract.pixKey,
+        });
+      if (!row) {
+        throw new NotFoundError("Contrato não encontrado");
+      }
+      return row;
     },
     {
       params: t.Object({ id: t.String() }),
-      body: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
-      response: t.Object({ pixKey: t.Union([t.String(), t.Null()]) }),
+      body: t.Object({
+        pixKey: t.Optional(t.Union([t.String(), t.Null()])),
+        title: t.Optional(t.String({ minLength: 1, maxLength: 200 })),
+        description: t.Optional(
+          t.Union([t.String({ maxLength: 2000 }), t.Null()])
+        ),
+      }),
+      response: t.Object({
+        id: t.String(),
+        title: t.String(),
+        description: t.Union([t.String(), t.Null()]),
+        pixKey: t.Union([t.String(), t.Null()]),
+      }),
     }
   )
   .patch(
@@ -478,6 +380,7 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           contractId: params.id,
           actorUserId: user.id,
           type: AUDIT_TYPE.participantLeft,
+          metadata: slot ? { participantName: slot.displayName } : undefined,
         });
 
         if (c) {

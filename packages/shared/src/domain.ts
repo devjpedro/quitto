@@ -62,6 +62,7 @@ export const AUDIT_TYPE = {
   paymentDisputed: "payment_disputed",
   installmentPaid: "installment_paid",
   participantLeft: "participant_left",
+  participantJoined: "participant_joined",
   receiptShareCreated: "receipt_share_created",
   receiptShareRevoked: "receipt_share_revoked",
   installmentReceived: "installment_received",

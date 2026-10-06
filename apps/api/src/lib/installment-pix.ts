@@ -19,28 +19,35 @@ export interface InstallmentPix {
  * stored one is no longer valid, so a stale key never breaks the screen. One
  * source for the installment detail and the home.
  */
-export function installmentPix(
-  recebedor: Recebedor,
-  amountCents: number
-): InstallmentPix | null {
+/** The receiver's key when it parses; a stale one is no key (planner's decision 12). */
+export function usableKey(
+  recebedor: Recebedor
+): { key: string; keyType: PixKeyType; source: "account" | "contact" } | null {
   const { key, keySource } = recebedor;
   if (!(key && keySource)) {
     return null;
   }
   try {
-    const { type } = parsePixKey(key);
-    return {
-      code: buildPixBrCode({
-        key,
-        amountCents,
-        merchantName: normalizeMerchantName(recebedor.displayName ?? ""),
-        merchantCity: "BRASIL",
-      }),
-      key,
-      keyType: type,
-      source: keySource,
-    };
+    return { key, keyType: parsePixKey(key).type, source: keySource };
   } catch {
     return null;
   }
+}
+
+export function installmentPix(
+  recebedor: Recebedor,
+  amountCents: number
+): InstallmentPix | null {
+  const usable = usableKey(recebedor);
+  return usable
+    ? {
+        ...usable,
+        code: buildPixBrCode({
+          key: usable.key,
+          amountCents,
+          merchantName: normalizeMerchantName(recebedor.displayName ?? ""),
+          merchantCity: "BRASIL",
+        }),
+      }
+    : null;
 }

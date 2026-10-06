@@ -6,6 +6,7 @@ import { runReminderSweep } from "./cron/reminders";
 import { env } from "./env";
 import { AppError, toErrorBody } from "./lib/errors";
 import { accountModule } from "./modules/account";
+import { contractDetailModule } from "./modules/contract-detail";
 import { contractsModule } from "./modules/contracts";
 import { dashboardModule } from "./modules/dashboard";
 import { documentsModule } from "./modules/documents";
@@ -39,6 +40,7 @@ export function buildApp() {
     .use(apiRoutes)
     .use(meModule)
     .use(contractsModule)
+    .use(contractDetailModule)
     .use(paymentsModule)
     .use(installmentsModule)
     .use(documentsModule)
