@@ -323,76 +323,93 @@ describe("endpoints de notificação", () => {
   });
 });
 
+/**
+ * `runReminderSweep` is global by design (it reads every open installment of
+ * every active contract), so its cost grows with the database, not with the
+ * test: a dev database that kept tens of thousands of test installments from
+ * earlier runs takes far longer than bun's 5 s default. These tests only
+ * assert on their own users' rows, so a longer limit is the honest fix.
+ */
+const SWEEP_TIMEOUT_MS = 60_000;
+
 describe("sweep de lembretes", () => {
-  it("gera lembrete para parcela vencida e é idempotente", async () => {
-    const cookie = await signUpCookie(uniqueEmail("rem-1"));
-    const payerId = await meId(cookie);
-    // contrato com primeira parcela já vencida
-    const res = await app.handle(
-      new Request("http://localhost/api/contracts", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie },
-        body: JSON.stringify({
-          title: "Vencida",
-          ownerRole: "buyer",
-          requiresConfirmation: false,
-          schedule: {
-            mode: "custom",
-            installments: [
-              { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
-            ],
-          },
-        }),
-      })
-    );
-    const contractId = (await res.json()).id as string;
-
-    await runReminderSweep();
-    await runReminderSweep(); // segunda passada não duplica
-
-    const rows = await db
-      .select()
-      .from(notification)
-      .where(
-        and(
-          eq(notification.userId, payerId),
-          eq(notification.contractId, contractId)
-        )
+  it(
+    "gera lembrete para parcela vencida e é idempotente",
+    async () => {
+      const cookie = await signUpCookie(uniqueEmail("rem-1"));
+      const payerId = await meId(cookie);
+      // contrato com primeira parcela já vencida
+      const res = await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({
+            title: "Vencida",
+            ownerRole: "buyer",
+            requiresConfirmation: false,
+            schedule: {
+              mode: "custom",
+              installments: [
+                { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+              ],
+            },
+          }),
+        })
       );
-    expect(rows.length).toBe(1);
-    expect(rows[0]?.type).toBe("installment_overdue");
-  });
+      const contractId = (await res.json()).id as string;
 
-  it("dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)", async () => {
-    const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
-    const ownerId = await meId(ownerCookie);
-    const res = await app.handle(
-      new Request("http://localhost/api/contracts", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie: ownerCookie },
-        body: JSON.stringify({
-          title: "Venda",
-          ownerRole: "seller",
-          requiresConfirmation: false,
-          schedule: {
-            mode: "auto",
-            totalAmountCents: 3000,
-            installmentsCount: 3,
-            firstDueDate: addDays(todayISO(), -2),
-          },
-        }),
-      })
-    );
-    const contractId = (await res.json()).id as string;
+      await runReminderSweep();
+      await runReminderSweep(); // segunda passada não duplica
 
-    await runReminderSweep();
+      const rows = await db
+        .select()
+        .from(notification)
+        .where(
+          and(
+            eq(notification.userId, payerId),
+            eq(notification.contractId, contractId)
+          )
+        );
+      expect(rows.length).toBe(1);
+      expect(rows[0]?.type).toBe("installment_overdue");
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-    const rows = await notifsFor(ownerId, contractId);
-    const types = rows.map((r) => r.type);
-    expect(types).toContain("installment_overdue_receivable");
-    expect(types).not.toContain("installment_overdue");
-    expect(types).not.toContain("installment_due_soon");
-  });
+  it(
+    "dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)",
+    async () => {
+      const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
+      const ownerId = await meId(ownerCookie);
+      const res = await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: ownerCookie },
+          body: JSON.stringify({
+            title: "Venda",
+            ownerRole: "seller",
+            requiresConfirmation: false,
+            schedule: {
+              mode: "auto",
+              totalAmountCents: 3000,
+              installmentsCount: 3,
+              firstDueDate: addDays(todayISO(), -2),
+            },
+          }),
+        })
+      );
+      const contractId = (await res.json()).id as string;
+
+      await runReminderSweep();
+
+      const rows = await notifsFor(ownerId, contractId);
+      const types = rows.map((r) => r.type);
+      expect(types).toContain("installment_overdue_receivable");
+      expect(types).not.toContain("installment_overdue");
+      expect(types).not.toContain("installment_due_soon");
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
   it.skipIf(!hasStorage)(
     "não gera lembrete para parcela em awaiting_confirmation",
@@ -452,6 +469,7 @@ describe("sweep de lembretes", () => {
           )
         );
       expect(rows).toHaveLength(0);
-    }
+    },
+    SWEEP_TIMEOUT_MS
   );
 });
