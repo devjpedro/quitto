@@ -5,8 +5,8 @@ import { type MouseEventHandler, type ReactNode, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
 import { SeeAllButton } from "@/features/home/components/see-all-button";
-import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
 import type { Home, HomeAction } from "@/features/home/types";
+import { ACTION_LOCK_MS } from "@/hooks/use-action-lock";
 import { queryKeys } from "@/lib/query-keys";
 import {
   homeFixture,

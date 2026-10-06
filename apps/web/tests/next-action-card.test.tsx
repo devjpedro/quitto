@@ -8,6 +8,7 @@ import { ContractPage } from "@/features/contracts/components/contract-page";
 import { CONTRACT_SLOTS } from "@/features/contracts/components/contract-slots";
 import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
 import type { ContractDetail } from "@/features/contracts/types";
+import { ACTION_LOCK_MS } from "@/hooks/use-action-lock";
 import { makeQueryClient } from "@/lib/query";
 import { queryKeys } from "@/lib/query-keys";
 import { motoDetail } from "./contract-fixtures";
@@ -27,9 +28,9 @@ vi.mock("@/lib/api", () => ({
       contracts: () => ({
         get: () => new Promise(() => undefined),
       }),
-      installments: () => ({
-        "mark-paid": { post: () => markPaid() },
-        "mark-received": { post: () => markReceived() },
+      installments: ({ installmentId }: { installmentId: string }) => ({
+        "mark-paid": { post: () => markPaid(installmentId) },
+        "mark-received": { post: () => markReceived(installmentId) },
       }),
     },
   },
@@ -59,6 +60,9 @@ const CHARGE_NAME = "Cobrar no WhatsApp (abre o WhatsApp)";
 const OF_TEN = /de 10/;
 const DATE_LIKE = /30\/08|agosto/;
 const GROUP_1_3 = /^Parcelas 1 a 3/;
+const OCTOBER_30 = /30\/10|outubro/;
+const TODAY_WORD = /hoje/g;
+const REMIND_NAME = /^Lembrar no WhatsApp/;
 
 const openInstallment = vi.fn();
 const fakeRoute = {
@@ -106,6 +110,47 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+
+/** The entity the API answers a mark with. */
+const marked = (id: string, status: string) => {
+  const it = motoDetail().installments.find((i) => i.id === id);
+  return {
+    data: {
+      ...it,
+      contractId: "c-moto",
+      status,
+      paidAt: "2026-10-05T15:00:00.000Z",
+      confirmedAt: status === "confirmed" ? "2026-10-05T15:00:00.000Z" : null,
+    },
+    error: null,
+  };
+};
+
+/** Rafael pays the Moto, no confirmation: "Já paguei" on the card. */
+const payerMoto = () => {
+  const base = motoDetail();
+  return motoDetail({
+    role: "buyer",
+    isOwner: false,
+    isPayer: true,
+    isApprover: false,
+    contract: { ...base.contract, requiresConfirmation: false },
+  });
+};
+
+/** João receives the Moto without the proof to review: the 3 overdue, then the 5. */
+const withoutReview = (): ContractDetail => {
+  const detail = motoDetail();
+  return {
+    ...detail,
+    installments: detail.installments.filter((it) => it.sequence !== 4),
+  };
+};
+
+const wait = (ms: number) =>
+  new Promise((done) => {
+    setTimeout(done, ms);
+  });
 
 const statusOf = (client: ReturnType<typeof makeClient>, id: string) =>
   client
@@ -273,15 +318,7 @@ describe("NextActionCard (o cartão verde do contrato)", () => {
     const user = userEvent.setup();
     const answer = deferred<unknown>();
     markPaid.mockReturnValue(answer.promise);
-    const base = motoDetail();
-    const detail = motoDetail({
-      role: "buyer",
-      isOwner: false,
-      isPayer: true,
-      isApprover: false,
-      contract: { ...base.contract, requiresConfirmation: false },
-    });
-    const { card, client } = renderCard(detail);
+    const { card, client } = renderCard(payerMoto());
     expect(
       within(card).getByText("João Souza").parentElement
     ).toHaveTextContent("para João Souza");
@@ -290,26 +327,120 @@ describe("NextActionCard (o cartão verde do contrato)", () => {
     );
     expect(openInstallment).toHaveBeenCalledWith("i3");
 
+    // Past the card's double-tap window (the PIX tap locked it).
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
     await user.click(within(card).getByRole("button", { name: "Já paguei" }));
     await waitFor(() => expect(statusOf(client, "i3")).toBe("paid"));
-    expect(markPaid).toHaveBeenCalledTimes(1);
-    answer.resolve({
-      data: {
-        id: "i3",
-        contractId: "c-moto",
-        sequence: 3,
-        amountCents: 48_000,
-        dueDate: "2026-08-30",
-        status: "paid",
-        paidAt: "2026-10-05T15:00:00.000Z",
-        confirmedAt: null,
-      },
-      error: null,
-    });
+    expect(markPaid.mock.calls).toEqual([["i3"]]);
+    answer.resolve(marked("i3", "paid"));
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Parcela marcada como paga")
     );
     expect(statusOf(client, "i3")).toBe("paid");
+  });
+
+  it("dois cliques a 150 ms em Já paguei marcam UMA parcela: a 5, que toma o lugar da 3, fica esperando (revisão I1)", async () => {
+    const user = userEvent.setup();
+    const answer = deferred<unknown>();
+    markPaid.mockReturnValue(answer.promise);
+    const client = renderPage(payerMoto());
+    const card = screen.getByTestId("next-action-card");
+    await user.click(within(card).getByRole("button", { name: "Já paguei" }));
+    await waitFor(() => expect(statusOf(client, "i3")).toBe("paid"));
+    // The card moved on to the 5, "Já paguei" in the same place, held while
+    // the 3 is in flight (and it keeps the focus: aria-disabled).
+    expect(within(card).getByText("Parcela 5")).toBeVisible();
+    const again = within(card).getByRole("button", { name: "Já paguei" });
+    expect(again).toHaveAttribute("aria-disabled", "true");
+    expect(again).not.toBeDisabled();
+
+    await wait(150);
+    await user.click(again);
+    expect(markPaid.mock.calls).toEqual([["i3"]]);
+    expect(statusOf(client, "i5")).toBe("pending");
+    // Past the double tap's window it still waits for the answer.
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
+    await user.click(again);
+    expect(markPaid.mock.calls).toEqual([["i3"]]);
+    expect(statusOf(client, "i5")).toBe("pending");
+
+    // Settled: the card is ready for the 5, and a new tap marks it.
+    answer.resolve(marked("i3", "paid"));
+    await waitFor(() => expect(again).not.toHaveAttribute("aria-disabled"));
+    markPaid.mockReturnValue(new Promise(() => undefined));
+    await user.click(again);
+    expect(markPaid.mock.calls).toEqual([["i3"], ["i5"]]);
+  });
+
+  it("dois cliques a 150 ms em Marcar como recebida (Cobrar + Marcar vira Lembrar + Marcar) marcam só a 3", async () => {
+    const user = userEvent.setup();
+    markReceived.mockReturnValue(new Promise(() => undefined));
+    const client = renderPage(withoutReview());
+    const card = screen.getByTestId("next-action-card");
+    const mark = within(card).getByRole("button", {
+      name: "Marcar como recebida",
+    });
+    await user.click(mark);
+    await waitFor(() => expect(statusOf(client, "i3")).toBe("confirmed"));
+    expect(within(card).getByText("Parcela 5")).toBeVisible();
+    expect(
+      within(card).getByRole("link", { name: REMIND_NAME })
+    ).toBeInTheDocument();
+    await wait(150);
+    await user.click(
+      within(card).getByRole("button", { name: "Marcar como recebida" })
+    );
+    expect(markReceived.mock.calls).toEqual([["i3"]]);
+    expect(statusOf(client, "i5")).toBe("pending");
+  });
+
+  it("com a resposta antes do segundo clique, a trava do cartão ainda engole o duplo toque", async () => {
+    const user = userEvent.setup();
+    markPaid.mockImplementation((id: string) =>
+      Promise.resolve(marked(id, "paid"))
+    );
+    const client = renderPage(payerMoto());
+    const card = screen.getByTestId("next-action-card");
+    await user.click(within(card).getByRole("button", { name: "Já paguei" }));
+    // The answer is in: nothing holds the button any more.
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    const again = within(card).getByRole("button", { name: "Já paguei" });
+    expect(again).not.toHaveAttribute("aria-disabled");
+    await wait(150);
+    await user.click(again);
+    expect(markPaid.mock.calls).toEqual([["i3"]]);
+    expect(statusOf(client, "i5")).toBe("pending");
+  });
+
+  it("vence hoje: 'Rafael Prado te deve', o 'hoje' só na tag (revisão I4)", () => {
+    const detail = withoutReview();
+    const dueToday = {
+      ...detail,
+      installments: detail.installments
+        .filter((it) => it.sequence !== 3)
+        .map((it) => (it.sequence === 5 ? { ...it, dueDate: TODAY } : it)),
+    };
+    const { card } = renderCard(dueToday);
+    expect(within(card).getByText("Faça primeiro · vence hoje")).toBeVisible();
+    expect(
+      within(card).getByText("Rafael Prado").parentElement
+    ).toHaveTextContent("Rafael Prado te deve");
+    expect(card.textContent?.match(TODAY_WORD)).toHaveLength(1);
+  });
+
+  it("Próxima: 'de Rafael Prado', sem a data da parcela (o título da linha já a diz)", () => {
+    const detail = withoutReview();
+    const next = {
+      ...detail,
+      installments: detail.installments.filter((it) => it.sequence !== 3),
+    };
+    const { card } = renderCard(next);
+    expect(within(card).getByText("Próxima")).toBeVisible();
+    expect(within(card).getByText("Parcela 5")).toBeVisible();
+    expect(
+      within(card).getByText("Rafael Prado").parentElement
+    ).toHaveTextContent("de Rafael Prado");
+    expect(card.textContent).not.toMatch(OCTOBER_30);
   });
 
   it("quitado: o marco limão com o anel a 100%, 'Contrato quitado', Extrato em PDF (download) e Recibos (abre a parcela 1)", async () => {

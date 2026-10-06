@@ -105,6 +105,17 @@ export function InstallmentList({
   // Opened or closed by hand; otherwise a group is open while the URL's
   // installment is inside it (derived, no effect: decision 28).
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  // A group closed by hand gives way once the URL moves (review I2): the new
+  // installment's group opens again, so its line is there, selected, to take
+  // the focus back. Adjusted while rendering, as React's "storing information
+  // from previous renders"; one opened by hand stays open.
+  const [seen, setSeen] = useState(route.installmentId);
+  if (seen !== route.installmentId) {
+    setSeen(route.installmentId);
+    setToggled((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([, open]) => open))
+    );
+  }
   const holdsSelected = (group: Group) =>
     group.installments.some((it) => it.id === route.installmentId);
 

@@ -2,8 +2,10 @@ import { useCallback, useRef } from "react";
 
 /**
  * A card leaves the list as soon as its action starts (optimistic), so the
- * second hit of a double tap lands on the card that slid into its place.
- * One lock for the whole list swallows taps for a short window.
+ * second hit of a double tap lands on the card that slid into its place
+ * (the home's list; the contract's card, which moves on to the next
+ * installment). One lock for the whole list (or card) swallows taps for a
+ * short window.
  */
 export const ACTION_LOCK_MS = 700;
 

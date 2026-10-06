@@ -38,12 +38,13 @@ export type RowTag = RowView["tag"];
  * The line's body (mockup 14, enxuto): the tile, the title with its tag (a
  * second line for the meta), the amount. On a phone the tag and the meta
  * share the second line. Whitespace between the parts keeps the accessible
- * name readable ("30 de agosto Atrasada · 36 dias R$ 480,00"); a flex
- * container drops it from the layout.
+ * name readable ("Parcela 3 30 de agosto Atrasada · 36 dias R$ 480,00"); a
+ * flex container drops it from the layout.
  */
 function RowBody({
   amountCents,
   amountClass,
+  lead,
   meta,
   muted,
   sr,
@@ -54,6 +55,8 @@ function RowBody({
 }: {
   amountCents: number;
   amountClass?: string;
+  /** Said before the title, only to a screen reader (the tile is aria-hidden). */
+  lead?: string;
   meta: string | null;
   muted: boolean;
   sr: ReactNode;
@@ -67,6 +70,7 @@ function RowBody({
     <>
       {tile}
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
+        {lead ? <span className="sr-only">{lead}</span> : null}{" "}
         <span className="min-w-0 truncate font-medium text-sm max-md:basis-full">
           {title}
         </span>{" "}
@@ -126,6 +130,9 @@ export function InstallmentRow({
     >
       <RowBody
         amountCents={amountCents}
+        // The "03" on the tile is drawn, not said: the name carries the
+        // number the card and the panel speak of (review I5).
+        lead={m.contract_installment_title({ sequence })}
         meta={view.meta}
         muted={view.muted}
         sr={

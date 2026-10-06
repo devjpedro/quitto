@@ -144,6 +144,12 @@ function tagText(
   }
 }
 
+/**
+ * The receiver's line under the amount. Said once per screen (decision 11,
+ * review I4): the "when" is the tag's ("vence hoje") or the list's (the
+ * line's date), so "vence hoje" reads "te deve" and "Próxima" just "de Ana
+ * Rocha", the mirror of the payer's "para Carlos Lima".
+ */
 function personText(
   action: Exclude<NextAction, { kind: "settled" }>,
   name: string,
@@ -160,17 +166,11 @@ function personText(
         )
       : m.contract_who_owes({ name }, options);
   }
-  if (action.kind === "today") {
-    return m.contract_who_pays_today({ name }, options);
-  }
   if (action.kind === "review") {
     return m.contract_who_sent_proof({ name }, options);
   }
   if (action.kind === "next") {
-    return m.contract_who_pays_on(
-      { name, date: sinceDate(action.installment.dueDate, today, locale) },
-      options
-    );
+    return m.contract_who_from({ name }, options);
   }
   return m.contract_who_owes({ name }, options);
 }

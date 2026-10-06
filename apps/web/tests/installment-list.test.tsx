@@ -54,7 +54,8 @@ const RECEIVED = /recebida/;
 const GROUP_1_2 = /^Parcelas 1 e 2/;
 const SHOW = /Mostrar as parcelas$/;
 const HIDE = /Esconder as parcelas$/;
-const ROW_30_JUN = /^30 de junho/;
+const ROW_30_JUN = /^Parcela 1 30 de junho/;
+const ROW_3 = /^Parcela 3 30 de agosto Atrasada · 36 dias R\$/;
 
 function renderList(detail: ContractDetail = motoDetail()) {
   const client = makeTestQueryClient();
@@ -62,8 +63,18 @@ function renderList(detail: ContractDetail = motoDetail()) {
     gcTime: Number.POSITIVE_INFINITY,
   });
   client.setQueryData(queryKeys.contract("c-moto"), detail);
-  renderWithProviders(<ContractPage slots={CONTRACT_SLOTS} />, { client });
-  return screen.getByTestId("installment-list");
+  const { rerender } = renderWithProviders(
+    <ContractPage slots={CONTRACT_SLOTS} />,
+    { client }
+  );
+  return {
+    list: screen.getByTestId("installment-list"),
+    /** The URL moves to another installment (the panel's arrows, the browser's back). */
+    goTo: (installment: string | null) => {
+      route.search = installment ? { installment } : {};
+      rerender(<ContractPage slots={CONTRACT_SLOTS} />);
+    },
+  };
 }
 
 function settledMoto(): ContractDetail {
@@ -93,7 +104,7 @@ afterEach(() => {
 
 describe("InstallmentList (mockup 14, enxuto)", () => {
   it("nenhuma linha tem botão além da própria linha", () => {
-    const list = renderList();
+    const { list } = renderList();
     expect(list).toHaveAccessibleName("Parcelas do contrato");
     const buttons = within(list).getAllByRole("button");
     // The paid group (1 and 2) and one line each for 3 to 10.
@@ -112,6 +123,8 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
       expect(within(list).queryByRole("button", { name })).toBeNull();
     }
     expect(buttons[0]).toHaveAccessibleName(GROUP_1_2);
+    // The tile's "03" is drawn, not said: the name says "Parcela 3" (review I5).
+    expect(row(list, "i3")).toHaveAccessibleName(ROW_3);
     expect(row(list, "i3")).toHaveTextContent(
       "30 de agosto Atrasada · 36 dias"
     );
@@ -126,7 +139,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("a linha 4 selecionada tem row-selected e o tile tingido; as outras não", () => {
     route.search = { installment: "i4" };
-    const list = renderList();
+    const { list } = renderList();
     const selected = row(list, "i4");
     expect(selected).toHaveAttribute("aria-current", "true");
     expect(selected).toHaveClass("bg-row-selected");
@@ -142,7 +155,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("a paga selecionada: o tile inset sobre o row-selected (a vizinha segue brand-subtle)", () => {
     route.search = { installment: "i1" };
-    const list = renderList();
+    const { list } = renderList();
     expect(row(list, "i1")).toHaveClass("bg-row-selected");
     expect(row(list, "i1").querySelector(".font-mono")).toHaveClass(
       "bg-surface-inset"
@@ -154,7 +167,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("clicar numa linha abre a parcela (openInstallment com o id)", async () => {
     const user = userEvent.setup();
-    const list = renderList();
+    const { list } = renderList();
     await user.click(row(list, "i5"));
     expect(navigate).toHaveBeenCalledTimes(1);
     const call = navigate.mock.calls[0]?.[0];
@@ -167,7 +180,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("o grupo das pagas abre no lugar (aria-expanded) e mostra a 1 e a 2", async () => {
     const user = userEvent.setup();
-    const list = renderList();
+    const { list } = renderList();
     const group = within(list).getByRole("button", { name: GROUP_1_2 });
     expect(group).toHaveAttribute("aria-expanded", "false");
     expect(group).toHaveAccessibleName(SHOW);
@@ -194,15 +207,56 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("uma parcela de um grupo fechado que está na URL abre o grupo", () => {
     route.search = { installment: "i2" };
-    const list = renderList();
+    const { list } = renderList();
     expect(
       within(list).getByRole("button", { name: GROUP_1_2 })
     ).toHaveAttribute("aria-expanded", "true");
     expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
   });
 
+  it("um grupo fechado à mão reabre quando a URL entra nele (revisão I2)", async () => {
+    const user = userEvent.setup();
+    const { list, goTo } = renderList();
+    const group = within(list).getByRole("button", { name: GROUP_1_2 });
+    await user.click(group);
+    await user.click(group);
+    expect(group).toHaveAttribute("aria-expanded", "false");
+
+    goTo("i2");
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("fechado à mão com a 2 na URL: fica fechado; a URL vai à 1 e volta à 2, e o grupo segue aberto", async () => {
+    const user = userEvent.setup();
+    route.search = { installment: "i2" };
+    const { list, goTo } = renderList();
+    const group = within(list).getByRole("button", { name: GROUP_1_2 });
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    await user.click(group);
+    // Closed by hand wins while the URL stays put.
+    expect(group).toHaveAttribute("aria-expanded", "false");
+    expect(row(list, "i2")).toBeNull();
+
+    goTo("i1");
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    goTo("i2");
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
+  });
+
+  it("aberto à mão: segue aberto quando a URL sai do grupo", async () => {
+    const user = userEvent.setup();
+    const { list, goTo } = renderList();
+    const group = within(list).getByRole("button", { name: GROUP_1_2 });
+    await user.click(group);
+    goTo("i5");
+    expect(group).toHaveAttribute("aria-expanded", "true");
+    expect(row(list, "i1")).toBeVisible();
+  });
+
   it("quitado: as 10 linhas, sem tag, com 'recebida' no nome acessível", () => {
-    const list = renderList(settledMoto());
+    const { list } = renderList(settledMoto());
     const buttons = within(list).getAllByRole("button");
     expect(buttons).toHaveLength(10);
     for (const button of buttons) {
@@ -213,7 +267,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
   });
 
   it("o valor da paga em ink-muted, o da aberta em ink", () => {
-    const list = renderList();
+    const { list } = renderList();
     const paid = within(
       within(list).getByRole("button", { name: GROUP_1_2 })
     ).getByText("R$ 960,00");

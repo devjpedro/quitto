@@ -1,9 +1,9 @@
 import type { KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { useActionLock } from "@/hooks/use-action-lock";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useActionFocus } from "../hooks/use-action-focus";
-import { useActionLock } from "../hooks/use-action-lock";
 import { useCarouselIndex } from "../hooks/use-carousel-index";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";

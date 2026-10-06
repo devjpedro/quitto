@@ -5,7 +5,7 @@ import {
   Receipt,
   WhatsappLogo,
 } from "@phosphor-icons/react";
-import { useId } from "react";
+import { type MouseEvent, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
@@ -22,6 +22,8 @@ import {
   groupChargeMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
+import { useActionLock } from "@/hooks/use-action-lock";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { ContractRoute } from "../hooks/use-contract-route";
@@ -47,6 +49,19 @@ const STACK_BELOW: Partial<Record<string, string>> = {
   "whatsapp_remind,mark_received": "@max-[23.5rem]:w-full",
 };
 
+/** A mark in flight: dimmed and inert as `disabled`, but it keeps the focus (WCAG 2.4.3). */
+const HELD = "aria-disabled:pointer-events-none aria-disabled:opacity-50";
+
+/**
+ * A link answers to the card's lock too: the second hit of a double tap must
+ * not act on the card that slid into place.
+ */
+const guardLink = (tryLock: () => boolean) => (event: MouseEvent) => {
+  if (!tryLock()) {
+    event.preventDefault();
+  }
+};
+
 const OPEN_LABEL: Partial<Record<CardButton, () => string>> = {
   open_oldest: m.contract_action_open_oldest,
   pay_oldest: m.home_action_pay_oldest,
@@ -61,6 +76,7 @@ function WhatsappButton({
   detail,
   kind,
   today,
+  tryLock,
   variant,
   view,
 }: {
@@ -69,6 +85,7 @@ function WhatsappButton({
   detail: ContractDetail;
   kind: "whatsapp_charge" | "whatsapp_remind";
   today: string;
+  tryLock: () => boolean;
   variant: Variant;
   view: NextActionView;
 }) {
@@ -110,6 +127,7 @@ function WhatsappButton({
       <a
         aria-label={`${label} ${m.home_action_whatsapp_hint()}`}
         href={whatsappUrl(paragraphs)}
+        onClick={guardLink(tryLock)}
         rel="noopener noreferrer"
         target="_blank"
       >
@@ -145,10 +163,12 @@ function GreenCard({
   action,
   detail,
   route,
+  tryLock,
 }: {
   action: Pending;
   detail: ContractDetail;
   route: ContractRoute;
+  tryLock: () => boolean;
 }) {
   const locale = getLocale();
   const titleId = useId();
@@ -167,6 +187,11 @@ function GreenCard({
     detail.contract.requiresConfirmation
   );
   const paid = useMarkPaidMutation(detail.contract.id);
+  // The mark moves the card on at once, to the next installment with the
+  // same button in the same place (review I1): while one is in flight no
+  // other starts, and the lock swallows the second hit of a double tap even
+  // when the answer came before it.
+  const busy = received.isPending || paid.isPending;
   const button = (kind: CardButton, index: number) => {
     const variant: Variant = index === 0 ? "onBrand" : "onBrandOutline";
     if (kind === "whatsapp_charge" || kind === "whatsapp_remind") {
@@ -178,6 +203,7 @@ function GreenCard({
           key={kind}
           kind={kind}
           today={route.today}
+          tryLock={tryLock}
           variant={variant}
           view={view}
         />
@@ -187,10 +213,14 @@ function GreenCard({
       const mutation = kind === "mark_received" ? received : paid;
       return (
         <Button
-          className={stack}
-          disabled={mutation.isPending && mutation.variables === id}
+          aria-disabled={busy || undefined}
+          className={cn(stack, HELD)}
           key={kind}
-          onClick={() => mutation.mutate(id)}
+          onClick={() => {
+            if (!busy && tryLock()) {
+              mutation.mutate(id);
+            }
+          }}
           size="sm"
           variant={variant}
         >
@@ -204,7 +234,11 @@ function GreenCard({
       <Button
         className={stack}
         key={kind}
-        onClick={() => route.openInstallment(id)}
+        onClick={() => {
+          if (tryLock()) {
+            route.openInstallment(id);
+          }
+        }}
         size="sm"
         variant={variant}
       >
@@ -241,9 +275,11 @@ function GreenCard({
 function SettledCard({
   detail,
   route,
+  tryLock,
 }: {
   detail: ContractDetail;
   route: ContractRoute;
+  tryLock: () => boolean;
 }) {
   const titleId = useId();
   const first = [...detail.installments].sort(
@@ -276,6 +312,7 @@ function SettledCard({
           <a
             download
             href={`/api/contracts/${detail.contract.id}/statement.pdf`}
+            onClick={guardLink(tryLock)}
           >
             <FilePdf aria-hidden="true" size={16} />
             {m.contract_export_pdf()}
@@ -284,7 +321,11 @@ function SettledCard({
         {first ? (
           <Button
             className="text-on-highlight ring-1 ring-on-highlight/35 ring-inset hover:bg-on-highlight/10 focus-visible:ring-offset-highlight"
-            onClick={() => route.openInstallment(first.id)}
+            onClick={() => {
+              if (tryLock()) {
+                route.openInstallment(first.id);
+              }
+            }}
             size="sm"
             variant="ghost"
           >
@@ -300,7 +341,8 @@ function SettledCard({
 /**
  * The next action's card: green with what to do now (in the home's order),
  * lime once the contract is settled. The viewer has none (the slot returns
- * null before this renders).
+ * null before this renders). The lock lives here, above both: the last mark
+ * turns the green card into the lime one under the second hit too.
  */
 export function NextActionCard({
   action,
@@ -311,8 +353,16 @@ export function NextActionCard({
   detail: ContractDetail;
   route: ContractRoute;
 }) {
+  const tryLock = useActionLock();
   if (action.kind === "settled") {
-    return <SettledCard detail={detail} route={route} />;
+    return <SettledCard detail={detail} route={route} tryLock={tryLock} />;
   }
-  return <GreenCard action={action} detail={detail} route={route} />;
+  return (
+    <GreenCard
+      action={action}
+      detail={detail}
+      route={route}
+      tryLock={tryLock}
+    />
+  );
 }

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   cardButtons,
+  type NextAction,
   nextActionOf,
+  nextActionView,
 } from "@/features/contracts/lib/next-action";
 import { motoDetail } from "./contract-fixtures";
 
 const TODAY = "2026-10-05";
+/** Intl's and the messages' no-break spaces, read as plain ones. */
+const plain = (text: string) => text.replace(/\s+/g, " ");
 
 describe("nextActionOf (a ordem da home: atrasadas → vence hoje → comprovante → a próxima)", () => {
   it("quem recebe a Moto: a atrasada 3 vem antes do comprovante 4", () => {
@@ -191,5 +195,61 @@ describe("cardButtons", () => {
       "statement",
       "receipts",
     ]);
+  });
+});
+
+describe("nextActionView: o título do grupo do cartão (revisão I3)", () => {
+  const titleOn = (
+    today: string,
+    review: number[]
+  ): { action: NextAction | null; title: string | null } => {
+    // From the 3 on, each one pending, or in review when asked.
+    const detail = motoDetail();
+    const withReview = {
+      ...detail,
+      installments: detail.installments.map((it) => {
+        if (it.sequence < 3) {
+          return it;
+        }
+        const status = review.includes(it.sequence)
+          ? "awaiting_confirmation"
+          : "pending";
+        return { ...it, status };
+      }),
+    };
+    const action = nextActionOf(withReview, today);
+    if (!action || action.kind === "settled") {
+      return { action, title: null };
+    }
+    const view = nextActionView(action, withReview, today, "pt-BR");
+    return { action, title: plain(view.title) };
+  };
+
+  it("seguidas: 'Parcelas 3 e 4', 'Parcelas 3 a 5'", () => {
+    expect(titleOn("2026-10-05", []).title).toBe("Parcelas 3 e 4");
+    expect(titleOn("2026-11-05", []).title).toBe("Parcelas 3 a 5");
+  });
+
+  it("a Moto em 05/01/2027 (a 4 em conferência no meio): 'Parcelas 3 e 5 a 7', e o valor das quatro", () => {
+    const { action, title } = titleOn("2027-01-05", [4]);
+    expect(
+      action?.kind === "overdue"
+        ? action.installments.map((it) => it.sequence)
+        : null
+    ).toEqual([3, 5, 6, 7]);
+    expect(title).toBe("Parcelas 3 e 5 a 7");
+    const view = nextActionView(
+      action as Exclude<NextAction, { kind: "settled" }>,
+      motoDetail(),
+      "2027-01-05",
+      "pt-BR"
+    );
+    expect(view.amountCents).toBe(192_000);
+  });
+
+  it("mais de três pedaços: quantas e entre quais ('4 parcelas entre 3 e 9')", () => {
+    expect(titleOn("2027-03-05", [4, 6, 8]).title).toBe(
+      "4 parcelas entre 3 e 9"
+    );
   });
 });
