@@ -37,6 +37,8 @@ export interface DemoProof {
   /** ISO instant of the upload. */
   at: string;
   fileName: string;
+  /** ISO instant the PDF prints as the payment's date, when it is not the upload's (a receipt that belongs to another installment). */
+  paidAt?: string;
   sequence: number;
 }
 

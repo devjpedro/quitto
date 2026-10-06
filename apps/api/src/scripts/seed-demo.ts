@@ -25,6 +25,7 @@ import {
   type DemoContract,
   reminderDedupeKey,
 } from "../lib/demo-seed-kit";
+import { newShareToken } from "../lib/receipt-share";
 import { deleteObjects, presignUpload } from "../lib/storage";
 
 const DAY_MS = 86_400_000;
@@ -133,6 +134,7 @@ async function insertPeople(
     displayName: ctx.ownerName,
     role: spec.ownerRole,
     linkedUserId: ctx.ownerId,
+    createdAt,
   });
   const [slot] = await db
     .insert(participant)
@@ -186,9 +188,10 @@ async function insertProofs(ctx: Ctx): Promise<Map<string, number>> {
   const { spec, counterpartUser } = ctx;
   const payerIsCounterpart =
     spec.counterpart.role === "buyer" && counterpartUser !== undefined;
-  const payerName = payerIsCounterpart
-    ? spec.counterpart.displayName
-    : ctx.ownerName;
+  const payerName =
+    spec.counterpart.role === "buyer"
+      ? spec.counterpart.displayName
+      : ctx.ownerName;
   const receiverName =
     spec.counterpart.role === "buyer"
       ? ctx.ownerName
@@ -204,10 +207,10 @@ async function insertProofs(ctx: Ctx): Promise<Map<string, number>> {
     const bytes = await proofPdf([
       "Comprovante de Pix",
       BRL.format(row.amountCents / 100),
-      BRASILIA.format(new Date(p.at)),
+      BRASILIA.format(new Date(p.paidAt ?? p.at)),
       `Para: ${receiverName}`,
       `De: ${payerName}`,
-      `Instituição: Banco do ${payerName.split(" ")[0]}`,
+      "Instituição: Cooperativa de Crédito Vale Verde",
     ]);
     await uploadProof(objectKey, bytes);
     await db.insert(proof).values({
@@ -259,7 +262,7 @@ async function insertHistory(
     if (installmentId) {
       await db.insert(receiptShare).values({
         installmentId,
-        token: randomBytes(32).toString("base64url"),
+        token: newShareToken(),
         createdByUserId: ctx.ownerId,
         createdAt: new Date(r.at),
       });

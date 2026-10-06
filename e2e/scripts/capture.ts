@@ -6,7 +6,15 @@ import { chromium, type Page } from "@playwright/test";
 // phone, the owner's laptop and a wide monitor, in light and dark. Signs in
 // as a demo account (bun run seed:demo in apps/api, right before) and saves
 // the viewport and the full page. --sizes swaps the widths (e.g. the 1536
-// and 1840 tiers of open question 3).
+// and 1840 tiers of open question 3). A contract's screen:
+//   --contract <title>   opens that contract (needs --name, so the files do
+//                        not mix with the home's);
+//   --installment <n>    opens the panel of installment n (shots wait for the
+//                        panel's animation);
+//   --tab people|history opens that tab;
+//   --name <label>       the label of the files (default "home");
+//   --accept-invites     accepts the pending invites first. It changes the
+//                        database: run seed:demo again afterwards.
 const WEB = process.env.WEB_URL ?? "http://localhost:3001";
 const DEFAULT_SIZES = "390x844,1512x860,1920x1080";
 const THEMES = ["light", "dark"] as const;
@@ -31,7 +39,10 @@ function arg(name: string, fallback?: string): string {
 
 const account = arg("account");
 const out = arg("out");
-const name = arg("name", "home");
+const name = arg(
+  "name",
+  process.argv.includes("--contract") ? undefined : "home"
+);
 let path = arg("path", "/");
 let expectedPath = new URL(path, WEB).pathname;
 const sizes = arg("sizes", DEFAULT_SIZES)

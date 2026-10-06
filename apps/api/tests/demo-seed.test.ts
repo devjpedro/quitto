@@ -277,6 +277,12 @@ describe("demoScenario: os números do mockup 13", () => {
       [2, "pix-julho-rafael.pdf"],
       [4, "pix-moto-outubro.pdf"],
     ]);
+    // Every proof_submitted event names a file the seed uploads (the Histórico reads the size by sequence and name).
+    expect(
+      moto?.events
+        .filter((e) => e.type === "proof_submitted")
+        .map((e) => [e.sequence, (e.metadata as { fileName: string }).fileName])
+    ).toEqual(moto?.proofs.map((p) => [p.sequence, p.fileName]));
     expect(moto?.receiptShares.map((r) => r.sequence)).toEqual([1, 2]);
     expect(scenario.contracts.every((c) => !("pixKey" in c))).toBe(true);
   });
@@ -393,7 +399,7 @@ describe("reminderDedupeKey: o seed grava a chave da varredura", () => {
 
   it("aviso de evento (comprovante) e aviso sem parcela não têm chave, como no produto", () => {
     expect(
-      reminderDedupeKey(NOTIFICATION_TYPE.proofSubmitted, "moto-3", "agora")
+      reminderDedupeKey(NOTIFICATION_TYPE.proofSubmitted, "moto-4", "agora")
     ).toBeNull();
     expect(
       reminderDedupeKey(NOTIFICATION_TYPE.installmentOverdue, null, "agora")

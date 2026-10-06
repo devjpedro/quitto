@@ -110,6 +110,8 @@ function scenarioA(t: string): DemoContract[] {
           sequence: 2,
           fileName: "comprovante-junho.pdf",
           at: at(t, -67, "22:30"),
+          // The one Rafael is told is installment 1's: it prints installment 1's date.
+          paidAt: at(t, -97, "15:03"),
         },
         {
           sequence: 2,
@@ -423,12 +425,13 @@ function notifications(t: string): DemoNotification[] {
 }
 
 /**
- * The demo data of this phase (mockup 13 + mockup 14: Moto with its history, Pix on the contact, Rafael and Sílvia): scenario A for `agora`, the
+ * The demo data of this phase (mockup 13 + mockup 14: Moto with its history,
+ * Pix on the contact, Rafael and Sílvia): scenario A for `agora`, the
  * owner's case (24 overdue installments) for `atraso`, a new account with
  * the guide for `novo` and exactly three actions for `tres`. Every date is
  * relative to `todayISO`, so the screens stay the same any day; with
- * 2026-10-03 they are the mockup's. Credible names and numbers that add up
- * (DIRECAO › Checklist).
+ * 2026-10-03 they are mockup 13's, with 2026-10-05 mockup 14's. Credible
+ * names and numbers that add up (DIRECAO › Checklist).
  */
 export function demoScenario(todayISO: string): DemoScenario {
   return {
