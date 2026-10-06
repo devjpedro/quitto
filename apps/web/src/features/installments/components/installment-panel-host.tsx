@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import {
   ResponsiveSheet,
   useSheetVariant,
@@ -17,7 +17,7 @@ import {
   usePanelNavigation,
 } from "../hooks/use-panel-navigation";
 import { InstallmentPanel } from "./installment-panel";
-import { PanelProvider } from "./panel-context";
+import { PanelProvider, usePanel } from "./panel-context";
 import { PANEL_TITLE_ID, PanelArrows } from "./panel-header";
 import { PanelSkeleton } from "./panel-skeleton";
 import { SheetFooter, useSheetPrimary } from "./sheet-footer";
@@ -180,6 +180,14 @@ function SheetPanel({
   route: ContractRoute;
 }) {
   const nav = usePanelNavigation(contract, route, () => null);
+  const { cancelWork } = usePanel();
+  // Closed by any road, the browser's Back included (not only nav.close): the
+  // proof on its way stops while the sheet slides out (M12).
+  useEffect(() => {
+    if (!open) {
+      cancelWork();
+    }
+  }, [cancelWork, open]);
   // No Esc here: in the sheet, Radix closes it.
   const onKeyDown = usePanelKeys({ onNext: nav.goNext, onPrev: nav.goPrev });
   // A footer only with something to pin: an empty one would still draw its line.
@@ -222,6 +230,26 @@ function SheetPanel({
 }
 
 /**
+ * The panel's openings: `shown` is the last installment shown (the sheet
+ * slides out still drawing it, instead of vanishing the moment the URL lets it
+ * go), and `session` goes up each time the panel opens from closed. Kept as
+ * state adjusted on the id's change, not a ref written during render.
+ */
+function useOpening(id: string | null) {
+  const [opening, setOpening] = useState({ id, shown: id, session: 0 });
+  if (opening.id === id) {
+    return opening;
+  }
+  const next = {
+    id,
+    shown: id ?? opening.shown,
+    session: opening.id === null ? opening.session + 1 : opening.session,
+  };
+  setOpening(next);
+  return next;
+}
+
+/**
  * One tree for the panel (planner's decisions 16 and 34): from lateral a
  * docked column, below it the ResponsiveSheet (floating from md, bottom sheet
  * below). Neither remounts when the installment changes: only the content
@@ -239,13 +267,8 @@ export function InstallmentPanelHost({
 }) {
   const docked = useMediaQuery(LATERAL_UP, true);
   const id = route.installmentId;
-  // The last installment shown: the sheet slides out still drawing it, instead
-  // of vanishing the moment the URL lets it go.
-  const lastId = useRef<string | null>(null);
-  if (id) {
-    lastId.current = id;
-  }
-  const shownId = id ?? (docked ? null : lastId.current);
+  const opening = useOpening(id);
+  const shownId = id ?? (docked ? null : opening.shown);
   const installment = shownId
     ? contract.installments.find((it) => it.id === shownId)
     : undefined;
@@ -253,7 +276,13 @@ export function InstallmentPanelHost({
     return null;
   }
   return (
-    <PanelProvider contractId={contract.contract.id} installmentId={shownId}>
+    // A new opening starts clean (no dispute form, refused file or "copiado
+    // às" from the last time); ↑ ↓ and the slide-out keep the same provider.
+    <PanelProvider
+      contractId={contract.contract.id}
+      installmentId={shownId}
+      key={opening.session}
+    >
       {docked ? (
         <DockedPanel contract={contract} route={route} />
       ) : (

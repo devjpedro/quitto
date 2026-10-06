@@ -467,6 +467,26 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(screen.getByRole("button", { name: "Contestar" })).toBeVisible();
   });
 
+  it("a 390, o sheet fechado zera o painel: contestar, Esc e reabrir a mesma parcela não traz o formulário de volta", async () => {
+    const user = userEvent.setup();
+    renderPage({ installment: null, width: 390 });
+    await user.click(row("i4"));
+    await user.click(await screen.findByRole("button", { name: "Contestar" }));
+    expect(
+      screen.getByRole("textbox", { name: "Por que você está contestando?" })
+    ).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(router.get()).toEqual({ installment: undefined });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(row("i4"));
+    expect(
+      await screen.findByRole("dialog", { name: "Parcela 4 de 10" })
+    ).toBeVisible();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Contestar" })).toBeVisible();
+  });
+
   it("a 390, o duplo toque no rodapé: o 2º toque cai no 'Compartilhar recibo' que tomou o lugar do 'Confirmar recebimento' e não cria o link; passada a trava, o mesmo botão compartilha", async () => {
     const user = userEvent.setup();
     calls.confirm.mockReturnValue(deferred<Answer>().promise);

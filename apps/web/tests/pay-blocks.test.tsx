@@ -1,4 +1,11 @@
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -299,6 +306,15 @@ function deferred<T>() {
     resolve = r;
   });
   return { promise, resolve };
+}
+
+/**
+ * The chooser's answer, without a pointer: the input sits outside the modal
+ * sheet (the app opens it with input.click()), and a user.upload click there
+ * would dismiss the sheet.
+ */
+function chooseFile(file: File) {
+  fireEvent.change(fileInput(), { target: { files: [file] } });
 }
 
 /** Picks a good PDF and waits for its PUT to be on its way. */
@@ -617,6 +633,33 @@ describe("enviar o comprovante (mockup 14, P7)", () => {
 });
 
 describe("o envio sai do ar (M12 e bordas)", () => {
+  it("a 390, a URL que tira o ?installment= durante o envio (o Voltar do navegador) aborta o PUT", async () => {
+    renderPage({ contract: floripa(), detail: payDetail(), width: 390 });
+    await screen.findByRole("dialog");
+    chooseFile(pdf());
+    await waitFor(() => expect(FakeXhr.last?.method).toBe("PUT"));
+    act(() => router.set({}));
+    await waitFor(() => expect(FakeXhr.last.aborted).toBe(true));
+    expect(calls.proofs).not.toHaveBeenCalled();
+  });
+
+  it("a 390, o alerta do arquivo recusado não volta quando o sheet fecha e a mesma parcela reabre", async () => {
+    const user = userEvent.setup();
+    renderPage({ contract: floripa(), detail: payDetail(), width: 390 });
+    // Below lateral the sheet swaps in after hydration's media query.
+    const sheet = await screen.findByRole("dialog");
+    chooseFile(new File(["heic"], "IMG_2231.heic", { type: "image/heic" }));
+    // Scoped to the sheet: a role query over the whole page outlasts findBy's 1 s.
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent(BAD_TYPE);
+    await user.click(within(sheet).getByRole("button", { name: "Fechar" }));
+    expect(router.get()).toEqual({ installment: undefined });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    act(() => router.set({ installment: "i5" }));
+    const reopened = await screen.findByRole("dialog");
+    expect(within(reopened).queryByRole("alert")).toBeNull();
+  });
+
   it("a 1600, trocar de parcela durante o envio aborta o PUT e não registra o comprovante", async () => {
     const user = userEvent.setup();
     renderPage({ contract: floripa(), detail: payDetail() });
