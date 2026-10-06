@@ -98,6 +98,16 @@ describe("contract events", () => {
     expect(parseCursor(`lixo|${UUID_A}`)).toBeNull();
   });
 
+  it("cursor com a forma certa e a data impossível (mês 13, 25 h, 30/02) é recusado", () => {
+    expect(parseCursor(`2026-13-01T00:00:00.000Z|${UUID_A}`)).toBeNull();
+    expect(parseCursor(`2026-10-05T25:00:00.000Z|${UUID_A}`)).toBeNull();
+    expect(parseCursor(`2026-02-30T12:00:00.000Z|${UUID_A}`)).toBeNull();
+    expect(parseCursor(`2026-10-05T12:00:00.000Z|${UUID_A}`)).toEqual({
+      at: "2026-10-05T12:00:00.000Z",
+      id: UUID_A,
+    });
+  });
+
   it("última página: tudo e a criação no fim, sem cursor", () => {
     const page = eventsPage(
       [row("a", "2026-10-04T13:00:00Z")],

@@ -189,7 +189,13 @@ describe("GET /contracts/:id/events", () => {
 
   it("cursor adulterado: 422, não 500", async () => {
     const s = await scenario();
-    for (const before of ["lixo", "2026-10-05T12:00:00.000Z|lixo", "2026|x"]) {
+    for (const before of [
+      "lixo",
+      "2026-10-05T12:00:00.000Z|lixo",
+      "2026|x",
+      // The right shape and an impossible date: Postgres' ::timestamp fails.
+      "2026-13-01T00:00:00.000Z|11111111-1111-4111-8111-111111111111",
+    ]) {
       expect(
         (
           await call(

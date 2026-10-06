@@ -67,12 +67,20 @@ const CURSOR_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const CURSOR_ID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A date that exists: the shape alone lets month 13 or 30/02 through. */
+function isExactIso(at: string): boolean {
+  const time = Date.parse(at);
+  return (
+    CURSOR_AT.test(at) &&
+    !Number.isNaN(time) &&
+    new Date(time).toISOString() === at
+  );
+}
+
 /** null unless both halves are what Postgres accepts (an exact ISO date and a uuid), so a bad cursor is a 422, never a failed query. */
 export function parseCursor(cursor: string): { at: string; id: string } | null {
   const [at, id] = cursor.split("|");
-  return at && id && CURSOR_AT.test(at) && CURSOR_ID.test(id)
-    ? { at, id }
-    : null;
+  return at && id && isExactIso(at) && CURSOR_ID.test(id) ? { at, id } : null;
 }
 
 /**
