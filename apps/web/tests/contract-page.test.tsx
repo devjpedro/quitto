@@ -176,7 +176,7 @@ describe("ContractPage (mockup 14, topo)", () => {
     expect(screen.getAllByRole("menuitem")).toHaveLength(1);
   });
 
-  it("trocar de aba navega com tab=people sem replace; voltar para Parcelas tira o tab", async () => {
+  it("trocar de aba navega com tab=people sem replace e sem rolar ao topo; voltar para Parcelas tira o tab", async () => {
     const user = userEvent.setup();
     const { unmount } = renderContract(motoDetail());
     // Pessoas carries the count; Parcelas none.
@@ -188,6 +188,8 @@ describe("ContractPage (mockup 14, topo)", () => {
     expect(navigate).toHaveBeenCalledTimes(1);
     const toPeople = navigate.mock.calls[0]?.[0];
     expect(toPeople.replace).toBeUndefined();
+    // The tabs sit below the hero: the page stays where the tap was.
+    expect(toPeople.resetScroll).toBe(false);
     expect(toPeople.search({ installment: "i4" })).toEqual({
       installment: "i4",
       tab: "people",
@@ -200,6 +202,7 @@ describe("ContractPage (mockup 14, topo)", () => {
     await user.click(screen.getByRole("radio", { name: "Parcelas" }));
     const toInstallments = navigate.mock.calls[0]?.[0];
     expect(toInstallments.replace).toBeUndefined();
+    expect(toInstallments.resetScroll).toBe(false);
     expect(toInstallments.search({ tab: "people" })).toEqual({
       tab: undefined,
     });

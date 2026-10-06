@@ -7,7 +7,9 @@ export type ContractTab = "installments" | "people" | "history";
 /**
  * The page's place in the URL (planner's decision 14): a tab change is a
  * history entry (the browser's back returns to the previous tab); opening,
- * stepping through and closing an installment replace it.
+ * stepping through and closing an installment replace it. None of them
+ * scrolls to the top (the router's default on every navigation): the tabs and
+ * the list sit below the hero, and the page stays where the tap was.
  */
 export function useContractRoute() {
   const { id } = useParams({ from: "/_app/contracts/$id" });
@@ -21,6 +23,7 @@ export function useContractRoute() {
           ...prev,
           tab: next === "installments" ? undefined : next,
         }),
+        resetScroll: false,
       }),
     [navigate]
   );
@@ -29,6 +32,7 @@ export function useContractRoute() {
       navigate({
         search: (prev) => ({ ...prev, installment: installmentId }),
         replace: true,
+        resetScroll: false,
       }),
     [navigate]
   );
@@ -37,6 +41,7 @@ export function useContractRoute() {
       navigate({
         search: (prev) => ({ ...prev, installment: undefined }),
         replace: true,
+        resetScroll: false,
       }),
     [navigate]
   );
