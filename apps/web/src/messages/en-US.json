@@ -75,7 +75,7 @@
   "home_installments_spread": "{n}\u00a0installments between {first}\u00a0and\u00a0{last}\u00a0of\u00a0{count}",
   "home_sequence_range": "{from}\u00a0to\u00a0{to}",
   "home_first_overdue_many": "{count} overdue",
-  "home_tag_overdue_many": "{count} overdue · since {date}",
+  "home_tag_overdue_many": "{count} overdue",
   "home_detail_owes_you_since": "{name} owes you · since {date}",
   "home_detail_pay_to_since": "to {name} · since {date}",
   "home_detail_review_from": "Proof from {name}",

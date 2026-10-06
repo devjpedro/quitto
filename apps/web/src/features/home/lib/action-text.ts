@@ -32,15 +32,11 @@ export function kindTag(
   switch (action.kind) {
     case "overdue":
       if (action.count > 1) {
+        // The count only: "desde" the oldest is on the person's line, once
+        // per screen.
         return {
           tone: "danger",
-          long: m.home_tag_overdue_many(
-            {
-              count: action.count,
-              date: sinceDate(action.dueDate, today, locale),
-            },
-            options
-          ),
+          long: m.home_tag_overdue_many({ count: action.count }, options),
           short: m.home_first_overdue_many({ count: action.count }, options),
         };
       }

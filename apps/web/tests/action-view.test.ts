@@ -168,10 +168,10 @@ describe("describeAction: cartão simples", () => {
 });
 
 describe("describeAction: grupo de atrasadas", () => {
-  it("a receber: contagem e 'desde' na tag, o total, as parcelas e quem deve", () => {
+  it("a receber: a contagem na tag e o 'desde' só na linha de quem deve (uma vez por tela), o total e as parcelas", () => {
     expect(describeAction(marinaGroup(), ctx)).toMatchObject({
       tone: "danger",
-      tag: "2 atrasadas · desde 30/08",
+      tag: "2 atrasadas",
       title: "Notebook da Marina",
       sequence: nb("parcelas~3 e 4~de~12"),
       amountCents: 70_000,
@@ -186,7 +186,7 @@ describe("describeAction: grupo de atrasadas", () => {
     );
   });
 
-  it("de outro ano: o 'desde' leva o ano; a faixa vira 'a'", () => {
+  it("de outro ano: o 'desde' da linha de quem deve leva o ano; a faixa vira 'a'", () => {
     const view = describeAction(
       marinaGroup({
         contractTitle: "Venda do terreno",
@@ -197,7 +197,8 @@ describe("describeAction: grupo de atrasadas", () => {
       }),
       ctx
     );
-    expect(view.tag).toBe("24 atrasadas · desde 28/10/2024");
+    expect(view.tag).toBe("24 atrasadas");
+    expect(view.person?.text).toBe("Marina Pires te deve · desde 28/10/2024");
     expect(view.sequence).toBe(nb("parcelas~5~a~28~de~60"));
   });
 
@@ -272,7 +273,7 @@ describe("describeAction: grupo de atrasadas", () => {
     expect(
       describeAction(marinaGroup(), { ...ctx, locale: "en-US" })
     ).toMatchObject({
-      tag: "2 overdue · since 08/30",
+      tag: "2 overdue",
       sequence: nb("installments~3 and 4~of~12"),
       person: { text: "Marina Pires owes you · since 08/30" },
       legend: { done: "2 received", remaining: "R$3,500.00 left" },
