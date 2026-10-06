@@ -2,7 +2,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
+import {
+  ResponsiveSheet,
+  useSheetVariant,
+} from "@/components/ui/responsive-sheet";
 
 const originalWidth = window.innerWidth;
 afterEach(() => {
@@ -120,6 +123,30 @@ describe("ResponsiveSheet", () => {
       "data-variant",
       "bottom"
     );
+  });
+
+  it("useSheetVariant says which variant the content is in, and null outside a sheet", () => {
+    function Variant() {
+      return <p data-testid="variant">{String(useSheetVariant())}</p>;
+    }
+    window.innerWidth = 390;
+    const { unmount } = render(
+      <ResponsiveSheet onOpenChange={vi.fn()} open title="A">
+        <Variant />
+      </ResponsiveSheet>
+    );
+    expect(screen.getByTestId("variant")).toHaveTextContent("bottom");
+    unmount();
+    window.innerWidth = 1024;
+    const second = render(
+      <ResponsiveSheet onOpenChange={vi.fn()} open title="B">
+        <Variant />
+      </ResponsiveSheet>
+    );
+    expect(screen.getByTestId("variant")).toHaveTextContent("side");
+    second.unmount();
+    render(<Variant />);
+    expect(screen.getByTestId("variant")).toHaveTextContent("null");
   });
 
   it("gives the focus back to the button that opened it, on Escape and on Close", async () => {

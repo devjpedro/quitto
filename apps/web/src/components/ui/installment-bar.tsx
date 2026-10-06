@@ -89,13 +89,13 @@ export function InstallmentBar({
   return (
     <div aria-hidden="true" className={cn(root, className)}>
       {zones
-        .filter(([, size]) => size > 0)
-        .map(([status, size]) => (
+        .filter(([, weight]) => weight > 0)
+        .map(([status, weight]) => (
           <span
             className={cn(piece, tone[status])}
             data-status={status}
             key={status}
-            style={{ flexBasis: 0, flexGrow: size }}
+            style={{ flexBasis: 0, flexGrow: weight }}
           />
         ))}
     </div>

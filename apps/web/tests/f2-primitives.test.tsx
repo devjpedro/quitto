@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { TextArea, TextField } from "@/components/ui/field";
 import { InstallmentBar } from "@/components/ui/installment-bar";
@@ -12,6 +12,8 @@ import { PersonAvatar } from "@/components/ui/person-avatar";
 import { SectionBoundary } from "@/components/ui/section-boundary";
 
 const MONEY_TEXT = /R\$\s?3\.840,00/;
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("TextField / TextArea", () => {
   it("o rótulo nomeia o campo, a dica o descreve e o contorno é field-line", () => {
@@ -37,6 +39,15 @@ describe("TextField / TextArea", () => {
     expect(input).not.toHaveClass("border-field-line");
   });
 
+  it("com aviso: anel warning, sem contorno cinza, a frase descreve o campo e não é erro", () => {
+    render(<TextField id="key" label="Chave PIX" warning="Confira a chave" />);
+    const input = screen.getByRole("textbox", { name: "Chave PIX" });
+    expect(input).toHaveClass("ring-warning");
+    expect(input).not.toHaveClass("border-field-line");
+    expect(input).toHaveAccessibleDescription("Confira a chave");
+    expect(input).not.toHaveAttribute("aria-invalid");
+  });
+
   it("TextArea com contador à direita do rótulo, e o que se digita chega ao onChange", async () => {
     const onChange = vi.fn();
     render(
@@ -54,6 +65,9 @@ describe("TextField / TextArea", () => {
       "Veio R$ 240,00"
     );
     expect(onChange).toHaveBeenCalled();
+    expect(
+      screen.getByRole("textbox", { name: "Por que você está contestando?" })
+    ).toHaveValue("Veio R$ 240,00");
   });
 });
 
@@ -110,6 +124,7 @@ describe("NumberTile", () => {
       "bg-surface-inset",
       "text-brand"
     );
+    expect(container.firstElementChild).not.toHaveClass("bg-brand-subtle");
   });
 
   it("um intervalo usa o corpo menor", () => {
@@ -170,6 +185,7 @@ describe("Money hero, PersonAvatar e SectionBoundary", () => {
       "bg-brand-subtle",
       "text-brand"
     );
+    expect(container.firstElementChild).not.toHaveClass("text-on-avatar");
   });
 
   it("renderError substitui o Tentar de novo quando devolve algo", () => {
@@ -187,6 +203,21 @@ describe("Money hero, PersonAvatar e SectionBoundary", () => {
     );
     expect(screen.getByText("Contrato não encontrado")).toBeVisible();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("renderError que devolve null cai no Tentar de novo", () => {
+    function Boom(): never {
+      throw new Error("500");
+    }
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(
+      <SectionBoundary fallback={null} renderError={() => null}>
+        <Boom />
+      </SectionBoundary>
+    );
+    expect(
+      screen.getByRole("button", { name: "Tentar de novo" })
+    ).toBeVisible();
   });
 });
 

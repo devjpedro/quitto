@@ -144,11 +144,11 @@
   --warning-subtle: #3a3120;
   --danger: #ff8a7a;
   --danger-subtle: #3d2420;
+  --row-selected: #213528;
+  --field-line: #7a7a72;
   /* The card one step above the panel; what sits inside it one step below.
      The hover steps down too, as in light: up from the card there is no
      room (ink-muted meets the AA floor at #32332d). */
-  --row-selected: #213528;
-  --field-line: #7a7a72;
   --surface-card: #2e2f2a;
   --surface-card-hover: #282924;
   --surface-inset: #242521;
