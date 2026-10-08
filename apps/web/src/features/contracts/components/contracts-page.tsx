@@ -1,7 +1,7 @@
 import { Plus } from "@phosphor-icons/react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SectionBoundary } from "@/components/ui/section-boundary";
 import { contractsQueryOptions } from "@/hooks/use-contracts";
@@ -18,7 +18,7 @@ import { ContractsToolbar } from "./contracts-toolbar";
 
 const route = getRouteApi("/_app/contracts/");
 
-function ContractsContent() {
+function ContractsContent({ onEmpty }: { onEmpty: (empty: boolean) => void }) {
   const { data } = useSuspenseQuery(contractsQueryOptions);
   const search = route.useSearch();
   const navigate = route.useNavigate();
@@ -27,6 +27,8 @@ function ContractsContent() {
       navigate({ search: next, replace: true, resetScroll: false }),
     [navigate]
   );
+  const none = data.length === 0;
+  useEffect(() => onEmpty(none), [none, onEmpty]);
   const { cards, counts, totals } = contractsFilter(data, search);
   const today = todayISO();
   return (
@@ -63,9 +65,10 @@ function ContractsContent() {
  */
 export function ContractsPage() {
   useDocumentTitle(m.page_title_contracts());
-  const { data } = useQuery(contractsQueryOptions);
   // No contracts: the empty state has the one "Novo contrato" (decision 11).
-  const hasNone = data !== undefined && data.length === 0;
+  // Reported by the list below: a second reader of the query out here would
+  // change how the section's own error reaches its boundary.
+  const [hasNone, setHasNone] = useState(false);
   return (
     <div className="lateral:p-8 p-4 md:p-6" data-testid="contracts-page">
       <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-4 md:gap-5">
@@ -83,7 +86,7 @@ export function ContractsPage() {
           )}
         </div>
         <SectionBoundary fallback={<ContractsSkeleton />}>
-          <ContractsContent />
+          <ContractsContent onEmpty={setHasNone} />
         </SectionBoundary>
       </div>
     </div>
