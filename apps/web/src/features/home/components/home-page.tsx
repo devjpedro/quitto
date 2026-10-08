@@ -13,8 +13,7 @@ import { HomeSkeleton } from "./home-skeleton";
  * (they only need what the shell knows); the rest streams in one section,
  * since it is one request. The panel's breathing room is 24 px, 32 px from
  * lateral, and the content stops at 1840 px, centred in the panel, header
- * included (mockup 12). Legacy pages keep their own padding (PageContainer),
- * so neither lives on the shell's main.
+ * included (mockup 12). The padding lives here, not on the shell's main.
  */
 export function HomePage() {
   useDocumentTitle(m.page_title_now());
