@@ -215,6 +215,23 @@ describe("StepReview", () => {
     expect(within(extras).queryByText("Notebook da Renata")).toBeNull();
   });
 
+  it("o convite inteiro (e-mail longo, com title) e o ícone centrado na linha única", () => {
+    const { wizard } = steps();
+    const email = "rafaela.albuquerque.de.souza@demo.quitto.dev";
+    toStep(wizard, 4, { ...ready, counterpartyEmail: email });
+    const line = within(screen.getByTestId("review-extras")).getByText(
+      `Convite para ${email}`
+    );
+    expect(line).toHaveAttribute("title", `Convite para ${email}`);
+    expect(line.closest("li")).toHaveClass("items-center");
+    // A row with a label keeps the tile at the top.
+    expect(
+      within(screen.getByTestId("review-full"))
+        .getByText("Valores e datas")
+        .closest("li")
+    ).toHaveClass("items-start");
+  });
+
   it("Editar volta ao passo", async () => {
     const user = userEvent.setup();
     const { wizard } = steps();
