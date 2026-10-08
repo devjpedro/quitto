@@ -49,15 +49,19 @@ const SPRING = { type: "spring", stiffness: 420, damping: 40 } as const;
 function useSheetMotion() {
   const isWide = useMediaQuery(MD_UP);
   const reduceMotion = useReducedMotion();
+  const hiddenReduced = { opacity: 0 };
   const dragControls = useDragControls();
   const variant: "side" | "bottom" = isWide ? "side" : "bottom";
+  // It fades as it travels: the way out is the way in, and what is still
+  // crossing the canvas margin or the page's end is already see-through.
   const offscreen = isWide ? { x: "100%" } : { y: "100%" };
   return {
     variant,
     dragControls,
     canDrag: variant === "bottom" && !reduceMotion,
-    hidden: reduceMotion ? { opacity: 0 } : offscreen,
+    hidden: reduceMotion ? hiddenReduced : offscreen,
     shown: reduceMotion ? { opacity: 1 } : { x: 0, y: 0 },
+    exit: reduceMotion ? hiddenReduced : { ...offscreen, opacity: 0 },
     transition: reduceMotion ? { duration: 0.15 } : SPRING,
   };
 }
@@ -201,7 +205,7 @@ export function ResponsiveSheet({
   open: boolean;
   title: string;
 }) {
-  const { variant, canDrag, hidden, shown, transition, dragControls } =
+  const { variant, canDrag, hidden, exit, shown, transition, dragControls } =
     useSheetMotion();
   const frameRef = useRef<HTMLDivElement>(null);
   const { onOpenAutoFocus, onCloseAutoFocus } = useReturnFocus(
@@ -242,7 +246,7 @@ export function ResponsiveSheet({
                 dragControls={canDrag ? dragControls : undefined}
                 dragElastic={{ top: 0, bottom: 0.6 }}
                 dragListener={false}
-                exit={hidden}
+                exit={exit}
                 initial={hidden}
                 onDragEnd={(_, info) => {
                   if (!canDrag) {

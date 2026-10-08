@@ -215,6 +215,21 @@ describe("ResponsiveSheet", () => {
     );
   });
 
+  it("fades while it leaves, so nothing crosses the canvas or the page's end", async () => {
+    const sheet = (open: boolean) => (
+      <ResponsiveSheet onOpenChange={vi.fn()} open={open} title="Parcela">
+        <p>x</p>
+      </ResponsiveSheet>
+    );
+    const { rerender } = render(sheet(true));
+    rerender(sheet(false));
+    await waitFor(() => {
+      const dialog = screen.getByRole("dialog", { hidden: true });
+      expect(dialog.style.opacity).not.toBe("");
+      expect(Number(dialog.style.opacity)).toBeLessThan(1);
+    });
+  });
+
   describe("drag to dismiss", () => {
     // jsdom does not derive pageY from clientY, and motion reads pageY.
     async function dragDown(target: HTMLElement, distance = 200) {
