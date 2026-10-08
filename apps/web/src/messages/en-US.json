@@ -543,6 +543,7 @@
   "error_schedule_first_due_required": "Enter the first due date.",
   "error_date_invalid": "That date doesn't exist. Check the day and month.",
   "error_installments_amount_min": "Enter this installment's amount.",
+  "error_amount_too_high": "That amount is too high for a contract.",
   "error_installments_sum_over": "The installments add up to {diff} more than the total.",
   "error_installments_sum_under": "The installments are {diff} short of the total.",
   "error_installments_count_mismatch": "The number of installments changed. Review the list one by one.",

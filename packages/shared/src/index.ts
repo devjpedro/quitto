@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRealISODate } from "./date";
 import { PARTICIPANT_ROLE } from "./domain";
 import { isValidPixKey } from "./pix";
 
@@ -115,7 +116,9 @@ export interface ApiErrorBody {
 
 const isoDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)")
+  // A real day with a four-digit year: not 2027-02-31, not 0202-11-10.
+  .refine(isRealISODate, "Data inválida (use AAAA-MM-DD)");
 
 export const updateInstallmentSchema = z
   .object({

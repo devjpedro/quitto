@@ -543,6 +543,7 @@
   "error_schedule_first_due_required": "Informe a data do 1º vencimento.",
   "error_date_invalid": "Essa data não existe. Confira o dia e o mês.",
   "error_installments_amount_min": "Informe o valor desta parcela.",
+  "error_amount_too_high": "Esse valor é alto demais para um contrato.",
   "error_installments_sum_over": "A soma passa {diff} do total combinado.",
   "error_installments_sum_under": "Faltam {diff} para a soma fechar o total.",
   "error_installments_count_mismatch": "O número de parcelas mudou. Revise a lista uma a uma.",

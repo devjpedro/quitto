@@ -22,6 +22,7 @@ export const CONTRACT_ERROR_CODES = [
   "schedule.firstDue.required",
   "date.invalid",
   "installments.amount.min",
+  "amount.tooHigh",
   "installments.sum.over",
   "installments.sum.under",
   "installments.count.mismatch",
@@ -47,6 +48,8 @@ export function isContractErrorCode(value: string): value is ContractErrorCode {
 }
 
 export const MAX_INSTALLMENTS = 600;
+/** The largest amount a Postgres `integer` column holds: R$ 21.474.836,47. */
+export const MAX_AMOUNT_CENTS = 2_147_483_647;
 const ISO_DATE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 
 const dueDate = z
@@ -82,7 +85,8 @@ export const splitScheduleSchema = z.object({
   totalAmountCents: z
     .number({ error: "schedule.total.required" })
     .int("schedule.total.min")
-    .min(1, "schedule.total.min"),
+    .min(1, "schedule.total.min")
+    .max(MAX_AMOUNT_CENTS, "amount.tooHigh"),
   installmentsCount: installmentCount,
   firstDueDate: dueDate,
 });
@@ -92,7 +96,8 @@ export const monthlyScheduleSchema = z.object({
   monthlyAmountCents: z
     .number({ error: "schedule.monthly.required" })
     .int("schedule.monthly.required")
-    .min(1, "schedule.monthly.required"),
+    .min(1, "schedule.monthly.required")
+    .max(MAX_AMOUNT_CENTS, "amount.tooHigh"),
   months: installmentCount,
   firstDueDate: dueDate,
 });
@@ -101,7 +106,8 @@ const installmentRowSchema = z.object({
   amountCents: z
     .number({ error: "installments.amount.min" })
     .int("installments.amount.min")
-    .min(1, "installments.amount.min"),
+    .min(1, "installments.amount.min")
+    .max(MAX_AMOUNT_CENTS, "amount.tooHigh"),
   dueDate,
 });
 

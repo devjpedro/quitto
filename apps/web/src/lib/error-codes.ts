@@ -44,6 +44,7 @@ const ERROR_TEXT: Record<ContractErrorCode, Text> = {
   "date.invalid": (_p, locale) => m.error_date_invalid({}, { locale }),
   "installments.amount.min": (_p, locale) =>
     m.error_installments_amount_min({}, { locale }),
+  "amount.tooHigh": (_p, locale) => m.error_amount_too_high({}, { locale }),
   "installments.sum.over": (p, locale) =>
     m.error_installments_sum_over({ diff: money(p.diff, locale) }, { locale }),
   "installments.sum.under": (p, locale) =>

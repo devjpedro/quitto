@@ -15,7 +15,7 @@ export function addMonths(iso: string, months: number): string {
   const year = y + Math.floor(total / 12);
   const month = (total % 12) + 1;
   const day = Math.min(d, daysInMonth(year, month));
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /** Splits a total (in cents) into `count` parts; the remainder cents go to the first parts. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  addMonths,
   buildSchedule,
   type ScheduleInput,
   scheduleCount,
@@ -150,5 +151,12 @@ describe("spreadDifference", () => {
         direction: "over",
       })
     ).toBeNull();
+  });
+});
+
+describe("addMonths", () => {
+  it("o ano sai sempre com 4 dígitos", () => {
+    expect(addMonths("0999-12-10", 1)).toBe("1000-01-10");
+    expect(addMonths("0202-11-10", 1)).toBe("0202-12-10");
   });
 });

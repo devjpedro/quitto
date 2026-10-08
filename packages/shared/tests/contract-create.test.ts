@@ -260,9 +260,9 @@ describe("oppositeRole / codes / datas", () => {
     expect(oppositeRole("buyer")).toBe("seller");
   });
 
-  it("os 21 códigos, sem repetição", () => {
-    expect(CONTRACT_ERROR_CODES).toHaveLength(21);
-    expect(new Set(CONTRACT_ERROR_CODES).size).toBe(21);
+  it("os 22 códigos, sem repetição", () => {
+    expect(CONTRACT_ERROR_CODES).toHaveLength(22);
+    expect(new Set(CONTRACT_ERROR_CODES).size).toBe(22);
   });
 
   it("isRealISODate recusa 31/02 e 2026-13-01", () => {
@@ -270,5 +270,64 @@ describe("oppositeRole / codes / datas", () => {
     expect(isRealISODate("2028-02-29")).toBe(true);
     expect(isRealISODate("2027-02-31")).toBe(false);
     expect(isRealISODate("2026-13-01")).toBe(false);
+  });
+
+  it("o ano tem 4 dígitos: 0202-11-10 (um 202 digitado) não é data", () => {
+    expect(isRealISODate("0202-11-10")).toBe(false);
+    expect(isRealISODate("1000-01-01")).toBe(true);
+    expect(
+      issues({
+        ...valid,
+        schedule: { ...valid.schedule, firstDueDate: "0202-11-10" },
+      })
+    ).toEqual([
+      {
+        code: "date.invalid",
+        path: "schedule.firstDueDate",
+        params: undefined,
+      },
+    ]);
+  });
+});
+
+describe("o teto dos valores em centavos (int4)", () => {
+  const MAX = 2_147_483_647;
+
+  it("o total, o mensal e a parcela passam do teto: amount.tooHigh", () => {
+    expect(
+      issues({
+        ...valid,
+        schedule: { ...valid.schedule, totalAmountCents: MAX + 1 },
+      }).map((i) => i.code)
+    ).toEqual(["amount.tooHigh"]);
+    expect(
+      issues({
+        ...valid,
+        schedule: {
+          mode: "monthly",
+          monthlyAmountCents: MAX + 1,
+          months: 12,
+          firstDueDate: "2026-11-05",
+        },
+      }).map((i) => i.code)
+    ).toEqual(["amount.tooHigh"]);
+    expect(
+      issues({
+        ...valid,
+        schedule: {
+          mode: "custom",
+          installments: [{ amountCents: MAX + 1, dueDate: "2026-11-10" }],
+        },
+      }).map((i) => i.code)
+    ).toEqual(["amount.tooHigh"]);
+  });
+
+  it("o próprio teto ainda passa", () => {
+    expect(
+      issues({
+        ...valid,
+        schedule: { ...valid.schedule, totalAmountCents: MAX },
+      })
+    ).toEqual([]);
   });
 });
