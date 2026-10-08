@@ -28,8 +28,3 @@ export const ROLE_LABEL: Record<string, string> = {
   [OWNER_ROLE.neutral]: "neutro",
   counterparty: "contraparte",
 };
-
-/** Exemplos genéricos de placeholder de formulário (sem nomes/relações pessoais). */
-export const PLACEHOLDER = {
-  contractTitle: "Ex.: Aluguel do apartamento",
-} as const;
