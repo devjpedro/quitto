@@ -38,3 +38,12 @@ export function authErrorMessage(
   }
   return mode === "signin" ? m.auth_error_signin() : m.auth_error_signup();
 }
+
+/** A link that could not be sent (forgot password, confirm again): the limit has its own sentence; the rest is "try again". */
+export function sendFailure(
+  error: { code?: string; status?: number } | null | undefined
+): string {
+  const limited =
+    error?.code?.toUpperCase() === "TOO_MANY_REQUESTS" || error?.status === 429;
+  return limited ? m.auth_error_too_many() : m.auth_error_send_failed();
+}

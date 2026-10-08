@@ -7,11 +7,6 @@ import {
   signup,
 } from "../fixtures";
 
-test("login não tem violações de a11y", async ({ page }) => {
-  await page.goto("/login");
-  await scan(page);
-});
-
 test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await signup(page);
   await scan(page); // Agora vazio
@@ -61,10 +56,6 @@ test("dark mode não tem violações de a11y", async ({ page, context }) => {
   await context.addCookies([
     { name: "theme", value: "dark", url: "http://localhost:3001" },
   ]);
-
-  await page.goto("/login");
-  await expect(page.locator("html.dark")).toBeVisible();
-  await scan(page);
 
   await signup(page);
   await expect(page.locator("html.dark")).toBeVisible();

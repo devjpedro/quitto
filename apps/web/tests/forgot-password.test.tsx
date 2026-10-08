@@ -3,29 +3,66 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 const { requestPasswordReset } = vi.hoisted(() => ({
-  requestPasswordReset: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+  requestPasswordReset: vi.fn(),
 }));
 vi.mock("@/lib/auth-client", () => ({ requestPasswordReset }));
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
+}));
 
-import { ForgotPasswordPage } from "../src/features/auth/forgot-password-page";
+import { ForgotPasswordPage } from "../src/features/auth/components/forgot-password-page";
 
-const BTN_ENVIAR = /enviar/i;
-const TXT_ENVIAMOS = /enviamos um link/i;
+const SUBMIT = "Mandar o link";
+
+async function submit(email = "a@b.com") {
+  await userEvent.type(screen.getByLabelText("E-mail"), email);
+  await userEvent.click(screen.getByRole("button", { name: SUBMIT }));
+}
 
 describe("forgot password", () => {
-  it("envia o pedido de reset com o e-mail digitado", async () => {
+  it("manda o pedido com o e-mail e o redirectTo /reset-password", async () => {
+    requestPasswordReset.mockResolvedValue({ data: {}, error: null });
     render(<ForgotPasswordPage />);
-    await userEvent.type(screen.getByLabelText("E-mail"), "a@b.com");
-    await userEvent.click(screen.getByRole("button", { name: BTN_ENVIAR }));
-    expect(requestPasswordReset).toHaveBeenCalledWith(
-      expect.objectContaining({ email: "a@b.com" })
-    );
+    await submit();
+    expect(requestPasswordReset).toHaveBeenCalledWith({
+      email: "a@b.com",
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
   });
 
-  it("mostra confirmação neutra após enviar (não revela se a conta existe)", async () => {
+  it("a confirmação é neutra e cita o e-mail digitado", async () => {
+    requestPasswordReset.mockResolvedValue({ data: {}, error: null });
     render(<ForgotPasswordPage />);
-    await userEvent.type(screen.getByLabelText("E-mail"), "a@b.com");
-    await userEvent.click(screen.getByRole("button", { name: BTN_ENVIAR }));
-    expect(await screen.findByText(TXT_ENVIAMOS)).toBeInTheDocument();
+    await submit("quem@exemplo.com");
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent(
+      "Se quem@exemplo.com tiver conta, o link chega em alguns minutos e vale por 1 hora."
+    );
+    expect(
+      screen.getByRole("heading", { name: "Confira seu e-mail" })
+    ).toBeVisible();
+  });
+
+  it("limite de tentativas: a frase de muitas tentativas", async () => {
+    requestPasswordReset.mockResolvedValue({
+      data: null,
+      error: { code: "TOO_MANY_REQUESTS", status: 429 },
+    });
+    render(<ForgotPasswordPage />);
+    await submit();
+    expect(
+      await screen.findByText(
+        "Muitas tentativas seguidas. Espere um pouco e tente de novo."
+      )
+    ).toBeVisible();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("‹ Entrar no topo leva ao login", () => {
+    render(<ForgotPasswordPage />);
+    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute(
+      "href",
+      "/login"
+    );
   });
 });

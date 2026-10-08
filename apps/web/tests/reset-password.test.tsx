@@ -1,26 +1,95 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { resetPassword } = vi.hoisted(() => ({
-  resetPassword: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+const mocks = vi.hoisted(() => ({
+  resetPassword: vi.fn(),
+  search: { token: "tok-123" } as { error?: string; token?: string },
 }));
-vi.mock("@/lib/auth-client", () => ({ resetPassword }));
-vi.mock("@tanstack/react-router", () => ({
-  useSearch: () => ({ token: "tok-123" }),
+vi.mock("@/lib/auth-client", () => ({ resetPassword: mocks.resetPassword }));
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
+  useSearch: () => mocks.search,
 }));
 
-import { ResetPasswordPage } from "../src/features/auth/reset-password-page";
+import { ResetPasswordPage } from "../src/features/auth/components/reset-password-page";
 
-const BTN_REDEFINIR = /redefinir/i;
+afterEach(() => {
+  mocks.search = { token: "tok-123" };
+  vi.clearAllMocks();
+});
+
+async function submit(password = "newpass123") {
+  await userEvent.type(screen.getByLabelText("Nova senha"), password);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Salvar a nova senha" })
+  );
+}
 
 describe("reset password", () => {
-  it("envia a nova senha com o token da URL", async () => {
+  it("manda a nova senha com o token da URL", async () => {
+    mocks.resetPassword.mockResolvedValue({ data: {}, error: null });
     render(<ResetPasswordPage />);
-    await userEvent.type(screen.getByLabelText("Nova senha"), "newpass123");
-    await userEvent.click(screen.getByRole("button", { name: BTN_REDEFINIR }));
-    expect(resetPassword).toHaveBeenCalledWith(
-      expect.objectContaining({ newPassword: "newpass123", token: "tok-123" })
+    await submit();
+    expect(mocks.resetPassword).toHaveBeenCalledWith({
+      newPassword: "newpass123",
+      token: "tok-123",
+    });
+  });
+
+  it("?error=INVALID_TOKEN ou sem token: Este link não vale mais e Pedir outro link", () => {
+    mocks.search = { error: "INVALID_TOKEN" };
+    const { unmount } = render(<ResetPasswordPage />);
+    expect(
+      screen.getByRole("heading", { name: "Este link não vale mais" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Pedir outro link" })
+    ).toHaveAttribute("href", "/forgot-password");
+    unmount();
+    mocks.search = {};
+    render(<ResetPasswordPage />);
+    expect(
+      screen.getByRole("heading", { name: "Este link não vale mais" })
+    ).toBeVisible();
+  });
+
+  it("INVALID_TOKEN na resposta: o mesmo estado", async () => {
+    mocks.resetPassword.mockResolvedValue({
+      data: null,
+      error: { code: "INVALID_TOKEN" },
+    });
+    render(<ResetPasswordPage />);
+    await submit();
+    expect(
+      await screen.findByRole("heading", { name: "Este link não vale mais" })
+    ).toBeVisible();
+  });
+
+  it("senha curta: o erro no campo", async () => {
+    mocks.resetPassword.mockResolvedValue({
+      data: null,
+      error: { code: "PASSWORD_TOO_SHORT" },
+    });
+    render(<ResetPasswordPage />);
+    await submit("curta");
+    const field = screen.getByLabelText("Nova senha");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(
+      "A senha precisa de pelo menos 8 caracteres."
+    );
+  });
+
+  it("feito: Senha trocada e Entrar", async () => {
+    mocks.resetPassword.mockResolvedValue({ data: {}, error: null });
+    render(<ResetPasswordPage />);
+    await submit();
+    expect(
+      await screen.findByRole("heading", { name: "Senha trocada" })
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute(
+      "href",
+      "/login"
     );
   });
 });

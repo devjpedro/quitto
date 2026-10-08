@@ -36,6 +36,8 @@ export default defineConfig({
         "**/contracts-list.spec.ts",
         "**/installments*.spec.ts",
         "**/people*.spec.ts",
+        "**/auth.spec.ts",
+        "**/smoke.spec.ts",
       ],
     },
   ],
