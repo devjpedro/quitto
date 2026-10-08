@@ -8,6 +8,7 @@ import {
   seedInvite,
   signup,
   uploadProofApi,
+  waitForHydrated,
 } from "../fixtures";
 
 const ACCEPT_INVITE = /Aceitar convite/i;
@@ -35,6 +36,7 @@ async function setupWithProof(browser: Browser): Promise<NotifSetup> {
     email: b.email,
   });
   await b.page.goto(`/invites/${token}`);
+  await waitForHydrated(b.page);
   await b.page.getByRole("button", { name: ACCEPT_INVITE }).click();
   await b.page.waitForURL(`**/contracts/${id}`);
   const detail = await getContract(a.page.request, id);

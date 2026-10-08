@@ -16,11 +16,11 @@ import { Route as FocusRouteImport } from './routes/_focus'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as RTokenRouteImport } from './routes/r.$token'
+import { Route as InvitesTokenRouteImport } from './routes/invites.$token'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
 import { Route as FocusContractsNewRouteImport } from './routes/_focus/contracts.new'
-import { Route as AppInvitesTokenRouteImport } from './routes/_app/invites.$token'
 import { Route as AppContractsIdRouteImport } from './routes/_app/contracts.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -56,6 +56,11 @@ const RTokenRoute = RTokenRouteImport.update({
   path: '/r/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitesTokenRoute = InvitesTokenRouteImport.update({
+  id: '/invites/$token',
+  path: '/invites/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -76,11 +81,6 @@ const FocusContractsNewRoute = FocusContractsNewRouteImport.update({
   path: '/contracts/new',
   getParentRoute: () => FocusRoute,
 } as any)
-const AppInvitesTokenRoute = AppInvitesTokenRouteImport.update({
-  id: '/invites/$token',
-  path: '/invites/$token',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppContractsIdRoute = AppContractsIdRouteImport.update({
   id: '/contracts/$id',
   path: '/contracts/$id',
@@ -94,9 +94,9 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/contracts/$id': typeof AppContractsIdRoute
-  '/invites/$token': typeof AppInvitesTokenRoute
   '/contracts/new': typeof FocusContractsNewRoute
   '/contracts/': typeof AppContractsIndexRoute
 }
@@ -107,9 +107,9 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/contracts/$id': typeof AppContractsIdRoute
-  '/invites/$token': typeof AppInvitesTokenRoute
   '/contracts/new': typeof FocusContractsNewRoute
   '/contracts': typeof AppContractsIndexRoute
 }
@@ -122,10 +122,10 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/contracts/$id': typeof AppContractsIdRoute
-  '/_app/invites/$token': typeof AppInvitesTokenRoute
   '/_focus/contracts/new': typeof FocusContractsNewRoute
   '/_app/contracts/': typeof AppContractsIndexRoute
 }
@@ -138,9 +138,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/notifications'
     | '/settings'
+    | '/invites/$token'
     | '/r/$token'
     | '/contracts/$id'
-    | '/invites/$token'
     | '/contracts/new'
     | '/contracts/'
   fileRoutesByTo: FileRoutesByTo
@@ -151,9 +151,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/notifications'
     | '/settings'
+    | '/invites/$token'
     | '/r/$token'
     | '/contracts/$id'
-    | '/invites/$token'
     | '/contracts/new'
     | '/contracts'
   id:
@@ -165,10 +165,10 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_app/notifications'
     | '/_app/settings'
+    | '/invites/$token'
     | '/r/$token'
     | '/_app/'
     | '/_app/contracts/$id'
-    | '/_app/invites/$token'
     | '/_focus/contracts/new'
     | '/_app/contracts/'
   fileRoutesById: FileRoutesById
@@ -179,6 +179,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  InvitesTokenRoute: typeof InvitesTokenRoute
   RTokenRoute: typeof RTokenRoute
 }
 
@@ -233,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invites/$token': {
+      id: '/invites/$token'
+      path: '/invites/$token'
+      fullPath: '/invites/$token'
+      preLoaderRoute: typeof InvitesTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -261,13 +269,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FocusContractsNewRouteImport
       parentRoute: typeof FocusRoute
     }
-    '/_app/invites/$token': {
-      id: '/_app/invites/$token'
-      path: '/invites/$token'
-      fullPath: '/invites/$token'
-      preLoaderRoute: typeof AppInvitesTokenRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/contracts/$id': {
       id: '/_app/contracts/$id'
       path: '/contracts/$id'
@@ -283,7 +284,6 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContractsIdRoute: typeof AppContractsIdRoute
-  AppInvitesTokenRoute: typeof AppInvitesTokenRoute
   AppContractsIndexRoute: typeof AppContractsIndexRoute
 }
 
@@ -292,7 +292,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppContractsIdRoute: AppContractsIdRoute,
-  AppInvitesTokenRoute: AppInvitesTokenRoute,
   AppContractsIndexRoute: AppContractsIndexRoute,
 }
 
@@ -314,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  InvitesTokenRoute: InvitesTokenRoute,
   RTokenRoute: RTokenRoute,
 }
 export const routeTree = rootRouteImport

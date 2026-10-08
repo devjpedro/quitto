@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
@@ -268,6 +269,18 @@ if (contractTitle) {
   }
   path = `/contracts/${target.id}${search.size > 0 ? `?${search}` : ""}`;
   expectedPath = `/contracts/${target.id}`;
+}
+
+/** The seed's invite link: apps/api/src/lib/demo-seed-kit.ts (demoInviteToken) computes the same. */
+function demoInviteToken(contractKey: string): string {
+  return createHash("sha256")
+    .update(`quitto-demo-invite:${contractKey}`)
+    .digest("hex");
+}
+
+if (process.argv.includes("--invite")) {
+  path = `/invites/${demoInviteToken(arg("invite"))}`;
+  expectedPath = path;
 }
 
 // The full Chromium, not the headless shell: only it has the PDF viewer the

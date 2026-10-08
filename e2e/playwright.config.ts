@@ -32,6 +32,7 @@ export default defineConfig({
         "**/home*.spec.ts",
         "**/contract-*.spec.ts",
         "**/wizard*.spec.ts",
+        "**/invite*.spec.ts",
       ],
     },
   ],
