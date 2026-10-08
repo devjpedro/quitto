@@ -295,3 +295,21 @@ it("infers GET /api/home cross-package (eden#215 mitigation)", () => {
     NonNullable<HomeData>["onboarding"]["activePartyContracts"]
   >().toEqualTypeOf<number>();
 });
+
+it("infers the Fase-4 installments list cross-package", () => {
+  const api = treaty<App>("http://localhost:3000");
+  type ListResponse = Awaited<
+    ReturnType<typeof api.api.installments.get>
+  >["data"];
+  expectTypeOf<ListResponse>().not.toBeAny();
+  type Item = NonNullable<ListResponse>["items"][number];
+  expectTypeOf<Item["direction"]>().toEqualTypeOf<"pay" | "receive">();
+  expectTypeOf<NonNullable<ListResponse>["today"]>().toEqualTypeOf<string>();
+  // The query accepts the window, the side, the state and pastDue.
+  expectTypeOf(api.api.installments.get).parameter(0).not.toBeAny();
+
+  // The detail keeps its own type.
+  const detailGet = api.api.installments({ installmentId: "x" }).get;
+  type DetailResponse = Awaited<ReturnType<typeof detailGet>>["data"];
+  expectTypeOf<NonNullable<DetailResponse>["proofs"]>().toBeArray();
+});

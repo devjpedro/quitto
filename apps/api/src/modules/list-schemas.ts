@@ -46,3 +46,23 @@ export const contractListItemSchema = t.Object({
   endDate: nullableString,
   settled: t.Boolean(),
 });
+
+const installmentListItemSchema = t.Object({
+  installmentId: t.String(),
+  contractId: t.String(),
+  contractTitle: t.String(),
+  sequence: t.Integer(),
+  installmentsCount: t.Integer(),
+  amountCents: t.Integer(),
+  dueDate: t.String(),
+  status: t.String(),
+  direction: directionSchema,
+  counterpartyName: nullableString,
+  paidAt: nullableString,
+});
+
+export const installmentListSchema = t.Object({
+  today: t.String(),
+  hasContracts: t.Boolean(),
+  items: t.Array(installmentListItemSchema),
+});
