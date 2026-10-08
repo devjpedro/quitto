@@ -151,6 +151,20 @@ describe("o convite com sessão", () => {
     ).toBeVisible();
   });
 
+  it("outra conta, convite expirado: sem palco, sem 'passo 2', com o mini-cartão", () => {
+    const { container } = frame({
+      ...FLORIPA,
+      status: "expired",
+      viewer: "otherAccount",
+      email: null,
+      terms: null,
+      schedulePreview: [],
+    });
+    expect(container).not.toHaveTextContent("passo 2");
+    expect(container).not.toHaveTextContent("As parcelas aparecem aqui");
+    expect(screen.getByTestId("invite-mini")).not.toHaveClass("stage:hidden");
+  });
+
   it("o dono: o status, Copiar link e Reenviar e-mail", async () => {
     const user = userEvent.setup();
     const { container } = frame({

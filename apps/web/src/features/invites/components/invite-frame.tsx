@@ -45,8 +45,9 @@ export function InviteFrame({
         />
       }
       stage={
-        // The owner sees the invite they sent (H6), not a contract from the invitee's side.
-        screen.kind === "owner" ? undefined : (
+        // The owner sees the invite they sent (H6), and an ended invite seen from another
+        // account has no terms: neither gets the wizard's placeholders.
+        screen.kind === "owner" || screen.view.terms === null ? undefined : (
           <PreviewStage>
             <ContractPreviewCard
               locale={locale}

@@ -77,6 +77,7 @@ export function InviteStatus({
   const inviter = firstName(view.inviterName);
   const mini = (
     <InviteMiniCard
+      always={view.terms === null}
       person={{
         name: view.inviterName,
         strong: view.inviterName,
