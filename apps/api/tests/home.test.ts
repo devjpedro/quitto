@@ -11,7 +11,7 @@ import {
   proof,
   user,
 } from "../src/db/schema";
-import { addDays } from "../src/lib/dates";
+import { addDays, endOfMonth } from "../src/lib/dates";
 import { previousMonth } from "../src/lib/home-milestones";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
@@ -42,6 +42,7 @@ interface HomeBody {
   milestones: {
     previousMonthAllClear: { month: string; paidCount: number } | null;
   };
+  monthInstallmentsCount: number;
   onboarding: {
     accountCreatedOn: string;
     activePartyContracts: number;
@@ -49,6 +50,7 @@ interface HomeBody {
     hasContract: boolean;
     hasPixKey: boolean;
   };
+  peopleCount: number;
   today: string;
   unreadCount: number;
   upcoming: {
@@ -717,5 +719,44 @@ describe("GET /api/home", () => {
   it("a conta diz em que dia foi criada, no calendário de São Paulo", async () => {
     const home = await getHome(await signUpCookie(uniqueEmail("home-created")));
     expect(home.onboarding.accountCreatedOn).toBe(today);
+  });
+});
+
+describe("GET /api/home — contagens da sidebar", () => {
+  it("monthInstallmentsCount conta as não pagas até o fim do mês (ou hoje + 6, o que vier depois), as atrasadas inclusive", async () => {
+    const cookie = await signUpCookie(uniqueEmail("home-month"));
+    const id = await createContract(cookie, "Contagem", addDays(today, 30));
+    const reach = [endOfMonth(today), addDays(today, 6)]
+      .sort()
+      .at(-1) as string;
+    const dates = [addDays(today, -60), reach, addDays(reach, 1)];
+    const rows = await db
+      .select({ id: installment.id, sequence: installment.sequence })
+      .from(installment)
+      .where(eq(installment.contractId, id));
+    for (const [index, date] of dates.entries()) {
+      const row = rows.find((r) => r.sequence === index + 1);
+      await db
+        .update(installment)
+        .set({ dueDate: date })
+        .where(eq(installment.id, row?.id as string));
+    }
+    expect((await getHome(cookie)).monthInstallmentsCount).toBe(2);
+    // A paid one leaves the count.
+    await db
+      .update(installment)
+      .set({ status: "paid" })
+      .where(
+        eq(installment.id, rows.find((r) => r.sequence === 1)?.id as string)
+      );
+    expect((await getHome(cookie)).monthInstallmentsCount).toBe(1);
+  });
+
+  it("peopleCount é o número de pessoas", async () => {
+    const cookie = await signUpCookie(uniqueEmail("home-people"));
+    expect((await getHome(cookie)).peopleCount).toBe(0);
+    const id = await createContract(cookie, "Com gente", addDays(today, 5));
+    await addSlot(cookie, id, "seller");
+    expect((await getHome(cookie)).peopleCount).toBe(1);
   });
 });

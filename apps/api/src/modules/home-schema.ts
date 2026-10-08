@@ -131,6 +131,8 @@ export const homeSchema = t.Object({
   }),
   unreadCount: t.Integer(),
   activeContractsCount: t.Integer(),
+  monthInstallmentsCount: t.Integer(),
+  peopleCount: t.Integer(),
   activeContracts: t.Array(
     t.Object({
       contractId: t.String(),

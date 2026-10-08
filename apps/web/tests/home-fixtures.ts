@@ -149,6 +149,8 @@ export function homeFixture(over: Partial<Home> = {}): Home {
     },
     unreadCount: 0,
     activeContractsCount: 0,
+    monthInstallmentsCount: 0,
+    peopleCount: 0,
     activeContracts: [],
     ...over,
   };

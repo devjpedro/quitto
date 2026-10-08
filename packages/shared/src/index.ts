@@ -63,6 +63,7 @@ export {
   PARTICIPANT_ROLE,
   REMINDER_WINDOW_DAYS,
 } from "./domain";
+export { normalizeName } from "./name";
 export type { PixKeyType } from "./pix";
 export {
   buildPixBrCode,

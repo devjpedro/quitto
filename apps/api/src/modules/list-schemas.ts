@@ -66,3 +66,37 @@ export const installmentListSchema = t.Object({
   hasContracts: t.Boolean(),
   items: t.Array(installmentListItemSchema),
 });
+
+const personContractSchema = t.Object({
+  contractId: t.String(),
+  title: t.String(),
+  direction: directionSchema,
+  installmentsCount: t.Integer(),
+  paidCount: t.Integer(),
+  remainingCents: t.Integer(),
+  overdueCount: t.Integer(),
+  reviewCount: t.Integer(),
+  nextDueDate: nullableString,
+  settled: t.Boolean(),
+});
+
+export const peopleSchema = t.Object({
+  people: t.Array(
+    t.Object({
+      key: t.String(),
+      name: t.String(),
+      account: t.Union([
+        t.Literal("linked"),
+        t.Literal("invited"),
+        t.Literal("none"),
+      ]),
+      email: nullableString,
+      owesYouCents: t.Integer(),
+      youOweCents: t.Integer(),
+      overdueCount: t.Integer(),
+      reviewCount: t.Integer(),
+      lastContractAt: t.String(),
+      contracts: t.Array(personContractSchema),
+    })
+  ),
+});

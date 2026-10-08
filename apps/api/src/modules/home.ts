@@ -1,4 +1,4 @@
-import { todayISO } from "@quitto/shared";
+import { isPaidStatus, todayISO } from "@quitto/shared";
 import { and, count, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../db/client";
@@ -11,16 +11,18 @@ import {
 } from "../db/schema";
 import { loadContractRows } from "../lib/contract-rows";
 import { visibleNotificationsWhere } from "../lib/contract-visibility";
+import { addDays, endOfMonth } from "../lib/dates";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
-import { partyContracts } from "../lib/home-parties";
+import { type PartyContract, partyContracts } from "../lib/home-parties";
 import { activeContracts } from "../lib/home-progress";
 import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
 import { loadInviteTerms } from "../lib/invite-terms";
+import { groupPeople } from "../lib/people";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
 
@@ -107,6 +109,21 @@ async function loadUnreadCount(userId: string): Promise<number> {
   return row?.value ?? 0;
 }
 
+/** Unpaid installments due up to the later of the month's end and today + 6: the default window of the Parcelas list. */
+function monthInstallmentsCount(
+  parties: PartyContract[],
+  today: string
+): number {
+  const to = [endOfMonth(today), addDays(today, 6)].sort().at(-1) ?? today;
+  return parties.reduce(
+    (sum, p) =>
+      sum +
+      p.installments.filter((i) => !isPaidStatus(i.status) && i.dueDate <= to)
+        .length,
+    0
+  );
+}
+
 export const homeModule = new Elysia({ prefix: "/api" }).get(
   "/home",
   async ({ request }) => {
@@ -137,6 +154,15 @@ export const homeModule = new Elysia({ prefix: "/api" }).get(
       // followed ones included (parties drops viewers, so count the rows);
       // a paid-off one is not active.
       activeContractsCount: activeContracts(rows).length,
+      // Sidebar counts (planner's D13): what "Parcelas" lists by default
+      // (unpaid, up to the end of the month or a week ahead) and the people.
+      monthInstallmentsCount: monthInstallmentsCount(parties, today),
+      peopleCount: groupPeople(
+        { id: user.id, email: user.email },
+        rows,
+        today,
+        new Date()
+      ).length,
       // "Contratos ativos" in the sidebar: no extra read, the rows are loaded (planner's decision 1).
       activeContracts: sidebarContracts(rows, today),
     };

@@ -24,3 +24,10 @@ export function formatISODateBR(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
+
+/** The last day of the ISO date's month (YYYY-MM-DD), leap years included. */
+export function endOfMonth(iso: string): string {
+  const { y, m } = parseISODate(iso);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+}

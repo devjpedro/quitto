@@ -23,6 +23,7 @@ import { meModule } from "./modules/me";
 import { notificationsModule } from "./modules/notifications";
 import { participantsModule } from "./modules/participants";
 import { paymentsModule } from "./modules/payments";
+import { peopleModule } from "./modules/people";
 import { receiptSharesModule } from "./modules/receipt-shares";
 
 const apiRoutes = new Elysia({ prefix: "/api" }).get(
@@ -66,6 +67,7 @@ export function buildApp() {
     .use(notificationsModule)
     .use(dashboardModule)
     .use(homeModule)
+    .use(peopleModule)
     .use(accountModule)
     .use(
       internalCronModule({
