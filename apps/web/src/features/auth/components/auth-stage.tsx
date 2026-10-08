@@ -37,13 +37,16 @@ function Tagline() {
 function Column({
   children,
   className,
+  decorative = true,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** False when the column carries what the form does not repeat (the invite's who, what and terms). */
+  decorative?: boolean;
 }) {
   return (
     <div
-      aria-hidden="true"
+      aria-hidden={decorative ? "true" : undefined}
       className={cn(
         "absolute top-20 left-1/2 -ml-80 hidden h-[440px] w-[640px] origin-top lg:block lg:max-xl:scale-[.8]",
         className
@@ -93,7 +96,7 @@ function InviteStage({
   const role = roleLabel(preview.role);
   return (
     <>
-      <Column className="top-24 -ml-[200px] w-[400px]">
+      <Column className="top-24 -ml-[200px] w-[400px]" decorative={false}>
         <InvitePiece preview={preview} terms={raw} />
       </Column>
       <div className="absolute inset-x-12 bottom-[46px] max-lg:hidden">

@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  hydrated: true,
   resetPassword: vi.fn(),
   search: { token: "tok-123" } as { error?: string; token?: string },
 }));
 vi.mock("@/lib/auth-client", () => ({ resetPassword: mocks.resetPassword }));
 vi.mock("@tanstack/react-router", async () => ({
   Link: (await import("./router-link-stub")).LinkStub,
+  useHydrated: () => mocks.hydrated,
   useSearch: () => mocks.search,
 }));
 
@@ -16,6 +18,7 @@ import { ResetPasswordPage } from "../src/features/auth/components/reset-passwor
 
 afterEach(() => {
   mocks.search = { token: "tok-123" };
+  mocks.hydrated = true;
   vi.clearAllMocks();
 });
 
@@ -27,6 +30,14 @@ async function submit(password = "newpass123") {
 }
 
 describe("reset password", () => {
+  it("antes de hidratar o botão fica desabilitado e o form é POST (um envio nativo perderia o token)", () => {
+    mocks.hydrated = false;
+    render(<ResetPasswordPage />);
+    const button = screen.getByRole("button", { name: "Salvar a nova senha" });
+    expect(button).toBeDisabled();
+    expect(button.closest("form")).toHaveAttribute("method", "post");
+  });
+
   it("manda a nova senha com o token da URL", async () => {
     mocks.resetPassword.mockResolvedValue({ data: {}, error: null });
     render(<ResetPasswordPage />);

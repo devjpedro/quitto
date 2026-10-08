@@ -2,12 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-const { requestPasswordReset } = vi.hoisted(() => ({
+const { hydrated, requestPasswordReset } = vi.hoisted(() => ({
+  hydrated: { value: true },
   requestPasswordReset: vi.fn(),
 }));
 vi.mock("@/lib/auth-client", () => ({ requestPasswordReset }));
 vi.mock("@tanstack/react-router", async () => ({
   Link: (await import("./router-link-stub")).LinkStub,
+  useHydrated: () => hydrated.value,
 }));
 
 import { ForgotPasswordPage } from "../src/features/auth/components/forgot-password-page";
@@ -20,6 +22,15 @@ async function submit(email = "a@b.com") {
 }
 
 describe("forgot password", () => {
+  it("antes de hidratar o botão fica desabilitado e o form é POST", () => {
+    hydrated.value = false;
+    render(<ForgotPasswordPage />);
+    const button = screen.getByRole("button", { name: SUBMIT });
+    expect(button).toBeDisabled();
+    expect(button.closest("form")).toHaveAttribute("method", "post");
+    hydrated.value = true;
+  });
+
   it("manda o pedido com o e-mail e o redirectTo /reset-password", async () => {
     requestPasswordReset.mockResolvedValue({ data: {}, error: null });
     render(<ForgotPasswordPage />);

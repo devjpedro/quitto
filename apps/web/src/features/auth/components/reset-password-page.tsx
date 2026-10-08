@@ -1,5 +1,5 @@
 import { CheckCircle, LinkBreak } from "@phosphor-icons/react";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link, useHydrated, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PasswordField } from "@/components/ui/password-field";
@@ -49,6 +49,8 @@ export function ResetPasswordPage() {
   const [done, setDone] = useState(false);
   const [invalid, setInvalid] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Before hydration a submit is a native one and would drop the token from the URL.
+  const hydrated = useHydrated();
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -83,7 +85,7 @@ export function ResetPasswordPage() {
       <h1 className="font-display font-semibold text-[26px] leading-[1.2] tracking-[-0.03em] md:text-[28px]">
         {m.auth_reset_title()}
       </h1>
-      <form className="mt-4 grid gap-4" onSubmit={submit}>
+      <form className="mt-4 grid gap-4" method="post" onSubmit={submit}>
         <PasswordField
           autoComplete="new-password"
           error={error ?? undefined}
@@ -95,7 +97,7 @@ export function ResetPasswordPage() {
           tall
           value={password}
         />
-        <Button block disabled={loading} size="lg" type="submit">
+        <Button block disabled={loading || !hydrated} size="lg" type="submit">
           {loading ? m.auth_pending() : m.auth_reset_submit()}
         </Button>
       </form>

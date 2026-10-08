@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  hydrated: true,
   search: {} as { mode?: "signup"; redirect?: string },
   signInEmail: vi.fn(),
   signUpEmail: vi.fn(),
@@ -10,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@tanstack/react-router", async () => ({
   Link: (await import("./router-link-stub")).LinkStub,
-  useHydrated: () => true,
+  useHydrated: () => mocks.hydrated,
   useSearch: () => mocks.search,
 }));
 vi.mock("@/lib/auth-client", () => ({
@@ -29,6 +30,7 @@ const VERIFY_URL = "/verify-email?redirect=%2Fcontracts";
 
 afterEach(() => {
   mocks.search = {};
+  mocks.hydrated = true;
   vi.clearAllMocks();
   overwriteGetLocale(() => "pt-BR");
 });
@@ -41,6 +43,16 @@ function typeSignin(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("a tela de entrar e criar conta", () => {
+  it("antes de hidratar o botão fica desabilitado e o form é POST (um envio nativo perderia o ?redirect)", () => {
+    mocks.hydrated = false;
+    mocks.search = { mode: "signup", redirect: "/invites/tok" };
+    renderWithProviders(<LoginPage />);
+    expect(screen.getByRole("button", { name: SIGNUP_SUBMIT })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: SIGNUP_SUBMIT }).closest("form")
+    ).toHaveAttribute("method", "post");
+  });
+
   it("o modo vem da URL: ?mode=signup mostra o Nome e Criar conta", () => {
     mocks.search = { mode: "signup" };
     renderWithProviders(<LoginPage />);
@@ -189,7 +201,10 @@ describe("a tela de entrar e criar conta", () => {
     ]) {
       expect(field).toHaveAttribute("aria-invalid", "true");
       expect(field).toHaveAttribute("aria-describedby", "auth-error");
+      // The 2 px danger ring of every field in error (field.tsx), not only the sentence.
+      expect(field.className).toContain("ring-danger");
     }
+    expect(alert.querySelector("svg")).not.toBeNull();
   });
 
   it("em en-US, os textos em inglês", () => {

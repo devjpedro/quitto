@@ -1,4 +1,5 @@
 import { EnvelopeSimple } from "@phosphor-icons/react";
+import { useHydrated } from "@tanstack/react-router";
 import type { FormEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Emphasis } from "@/components/ui/emphasis";
@@ -36,6 +37,8 @@ export function EmailRequest({
   text: string;
   title: ReactNode;
 }) {
+  // Before hydration a submit is a native one and would reload the page.
+  const hydrated = useHydrated();
   if (sent) {
     return (
       <StateHeading
@@ -55,7 +58,7 @@ export function EmailRequest({
         {title}
       </h1>
       <p className="mt-2 text-ink-muted text-sm leading-[1.45]">{text}</p>
-      <form className="mt-4 grid gap-4" onSubmit={onSubmit}>
+      <form className="mt-4 grid gap-4" method="post" onSubmit={onSubmit}>
         <TextField
           autoComplete="email"
           error={error ?? undefined}
@@ -68,7 +71,7 @@ export function EmailRequest({
           type="email"
           value={email}
         />
-        <Button block disabled={loading} size="lg" type="submit">
+        <Button block disabled={loading || !hydrated} size="lg" type="submit">
           {loading ? m.auth_pending() : submitLabel}
         </Button>
       </form>

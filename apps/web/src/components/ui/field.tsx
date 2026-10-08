@@ -24,8 +24,12 @@ export interface FieldProps {
 const CONTROL =
   "w-full rounded-control bg-surface text-ink text-sm placeholder:text-ink-muted transition-colors focus-visible:outline-none";
 
-function controlState(error?: string, warning?: string): string {
-  if (error) {
+function controlState(
+  error?: string,
+  warning?: string,
+  invalid?: boolean
+): string {
+  if (error || invalid) {
     return "border border-transparent ring-2 ring-danger";
   }
   if (warning) {
@@ -185,7 +189,11 @@ export function TextField({
             action && "pr-12",
             // The wizard's figures line up; the Phase 2 fields keep their text as it was.
             tall && "tabular-nums",
-            controlState(error, warning),
+            controlState(
+              error,
+              warning,
+              input["aria-invalid"] === true || input["aria-invalid"] === "true"
+            ),
             inputClassName
           )}
           id={id}

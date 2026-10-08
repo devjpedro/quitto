@@ -1,5 +1,5 @@
-import { GoogleLogo } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import { GoogleLogo, WarningCircle } from "@phosphor-icons/react";
+import { Link, useHydrated } from "@tanstack/react-router";
 import type { FormEvent, Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { Emphasis } from "@/components/ui/emphasis";
@@ -48,6 +48,8 @@ export function LoginForm({
   const signup = mode === "signup";
   const head = heading(mode, invite !== null);
   const invalid = error ? true : undefined;
+  // Before hydration a submit is a native one and would reload the page without the query string (the invite, the mode).
+  const hydrated = useHydrated();
   return (
     <>
       <h1 className="font-display font-semibold text-[26px] leading-[1.2] tracking-[-0.03em] md:text-[28px]">
@@ -75,7 +77,7 @@ export function LoginForm({
         {m.auth_or()}
         <i className="h-px flex-1 bg-line-strong" />
       </div>
-      <form className="mt-4 grid gap-4" onSubmit={onSubmit}>
+      <form className="mt-4 grid gap-4" method="post" onSubmit={onSubmit}>
         {signup ? (
           <TextField
             autoComplete="name"
@@ -139,17 +141,23 @@ export function LoginForm({
         />
         {error ? (
           <p
-            className="font-medium text-danger text-sm"
+            className="flex items-start gap-1.5 font-medium text-[12.5px] text-danger leading-[1.45]"
             id="auth-error"
             role="alert"
           >
+            <WarningCircle
+              aria-hidden="true"
+              className="mt-px shrink-0"
+              size={16}
+              weight="fill"
+            />
             {error}
           </p>
         ) : null}
         <Button
           block
           className="mt-2"
-          disabled={loading}
+          disabled={loading || !hydrated}
           size="lg"
           type="submit"
         >
