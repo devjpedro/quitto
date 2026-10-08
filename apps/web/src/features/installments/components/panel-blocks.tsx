@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
 import { perspectiveOf } from "@/features/contracts/lib/contract-view";
 import type { ContractDetail } from "@/features/contracts/types";
 import { m } from "@/paraglide/messages.js";
 import type { PanelBlock } from "../lib/panel-actions";
-import type { InstallmentDetail } from "../types";
+import type { InstallmentDetail, PanelRoute } from "../types";
 import { ChargeBlock } from "./charge-block";
 import { DisputeBlock } from "./dispute-block";
 import { MarkPaidLink } from "./mark-paid-link";
@@ -21,7 +20,7 @@ export interface PanelBlockProps {
   contract: ContractDetail;
   detail: InstallmentDetail;
   mode: PanelMode;
-  route: ContractRoute;
+  route: PanelRoute;
 }
 
 /**

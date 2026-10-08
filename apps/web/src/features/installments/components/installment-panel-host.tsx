@@ -4,7 +4,6 @@ import {
   useSheetVariant,
 } from "@/components/ui/responsive-sheet";
 import { SectionBoundary } from "@/components/ui/section-boundary";
-import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
 import type {
   ContractDetail,
   ContractInstallment,
@@ -16,6 +15,7 @@ import {
   type PanelNavigation,
   usePanelNavigation,
 } from "../hooks/use-panel-navigation";
+import type { PanelRoute } from "../types";
 import { InstallmentPanel } from "./installment-panel";
 import { PanelProvider, usePanel } from "./panel-context";
 import { PANEL_TITLE_ID, PanelArrows } from "./panel-header";
@@ -96,12 +96,14 @@ function useKeepFocus(wrapper: RefObject<HTMLDivElement | null>): void {
 function DockedPanel({
   contract,
   route,
+  showContract,
 }: {
   contract: ContractDetail;
-  route: ContractRoute;
+  route: PanelRoute;
+  showContract: boolean;
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
-  const nav = usePanelNavigation(contract, route, () => wrapper.current);
+  const nav = usePanelNavigation(route, () => wrapper.current);
   const onKeyDown = usePanelKeys({
     onClose: nav.close,
     onNext: nav.goNext,
@@ -132,6 +134,7 @@ function DockedPanel({
           mode="docked"
           nav={nav}
           route={route}
+          showContract={showContract}
         />
       </SectionBoundary>
     </div>
@@ -146,7 +149,7 @@ function SheetBody({
 }: {
   contract: ContractDetail;
   nav: PanelNavigation;
-  route: ContractRoute;
+  route: PanelRoute;
 }) {
   const mode = useSheetVariant() ?? "side";
   return (
@@ -177,9 +180,9 @@ function SheetPanel({
   installment: ContractInstallment;
   /** False while the sheet slides out: it still draws the installment it was showing. */
   open: boolean;
-  route: ContractRoute;
+  route: PanelRoute;
 }) {
-  const nav = usePanelNavigation(contract, route, () => null);
+  const nav = usePanelNavigation(route, () => null);
   const { cancelWork } = usePanel();
   // Closed by any road, the browser's Back included (not only nav.close): the
   // proof on its way stops while the sheet slides out (M12).
@@ -268,9 +271,12 @@ function useOpening(id: string | null) {
 export function InstallmentPanelHost({
   contract,
   route,
+  showContract = false,
 }: {
   contract: ContractDetail;
-  route: ContractRoute;
+  route: PanelRoute;
+  /** The docked header names the contract (Parcelas). */
+  showContract?: boolean;
 }) {
   const docked = useMediaQuery(LATERAL_UP, true);
   const id = route.installmentId;
@@ -291,7 +297,11 @@ export function InstallmentPanelHost({
       key={opening.session}
     >
       {docked ? (
-        <DockedPanel contract={contract} route={route} />
+        <DockedPanel
+          contract={contract}
+          route={route}
+          showContract={showContract}
+        />
       ) : (
         <SheetPanel
           contract={contract}

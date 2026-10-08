@@ -1,8 +1,12 @@
-import { ClockCounterClockwise, PencilSimple } from "@phosphor-icons/react";
+import {
+  ArrowUpRight,
+  ClockCounterClockwise,
+  PencilSimple,
+} from "@phosphor-icons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 import { Money } from "@/components/ui/money";
-import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
 import { perspectiveOf } from "@/features/contracts/lib/contract-view";
 import type { ContractDetail } from "@/features/contracts/types";
 import { cn } from "@/lib/utils";
@@ -12,7 +16,7 @@ import { installmentQueryOptions } from "../api";
 import type { PanelNavigation } from "../hooks/use-panel-navigation";
 import { panelInputOf, panelView } from "../lib/panel-actions";
 import { trailSteps } from "../lib/status-trail";
-import type { InstallmentDetail } from "../types";
+import type { InstallmentDetail, PanelRoute } from "../types";
 import { EditInstallmentDialog } from "./edit-installment-dialog";
 import { PANEL_BLOCKS } from "./panel-blocks";
 import { type PanelMode, usePanel } from "./panel-context";
@@ -32,7 +36,7 @@ function PanelFoot({
   contract: ContractDetail;
   detail: InstallmentDetail;
   mode: PanelMode;
-  route: ContractRoute;
+  route: PanelRoute;
 }) {
   const [editing, setEditing] = useState(false);
   return (
@@ -61,9 +65,7 @@ function PanelFoot({
         className={FOOT_LINK}
         // Below lateral the panel is a modal sheet: the tab would change
         // behind it. It closes with the same navigation; the column stays.
-        onClick={() =>
-          route.setTab("history", { closePanel: mode !== "docked" })
-        }
+        onClick={() => route.openHistory({ closePanel: mode !== "docked" })}
         type="button"
       >
         <ClockCounterClockwise aria-hidden="true" size={15} />
@@ -91,7 +93,7 @@ function PanelContent({
   contract: ContractDetail;
   detail: InstallmentDetail;
   mode: PanelMode;
-  route: ContractRoute;
+  route: PanelRoute;
 }) {
   const { busy } = usePanel();
   const perspective = perspectiveOf(contract.role);
@@ -143,11 +145,14 @@ export function InstallmentPanel({
   mode,
   nav,
   route,
+  showContract = false,
 }: {
   contract: ContractDetail;
   mode: PanelMode;
   nav: PanelNavigation;
-  route: ContractRoute;
+  route: PanelRoute;
+  /** The docked header names the contract (Parcelas: the panel is away from its page). */
+  showContract?: boolean;
 }) {
   const { installmentId } = usePanel();
   const { data: detail } = useSuspenseQuery(
@@ -177,6 +182,18 @@ export function InstallmentPanel({
   const header = docked ? (
     <PanelHeader
       nav={nav}
+      subtitle={
+        showContract ? (
+          <Link
+            className="mt-0.5 inline-flex max-w-full items-center gap-1 rounded-[4px] text-[13px] text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            params={{ id: contract.contract.id }}
+            to="/contracts/$id"
+          >
+            <span className="truncate">{contract.contract.title}</span>
+            <ArrowUpRight aria-hidden="true" className="shrink-0" size={12} />
+          </Link>
+        ) : null
+      }
       title={m.panel_title({ sequence, count: contract.installments.length })}
     />
   ) : null;

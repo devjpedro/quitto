@@ -13,6 +13,9 @@ import { chromium, type Page } from "@playwright/test";
 //   --installment <n>    opens the panel of installment n (shots wait for the
 //                        panel's animation);
 //   --tab people|history opens that tab;
+//   --click <prefix>     after loading, clicks the first visible element whose
+//                        data-testid starts with <prefix> (a list's row or
+//                        card) and waits for the panel or sheet it opens;
 //   --name <label>       the label of the files (default "home");
 //   --accept-invites     accepts the pending invites first. It changes the
 //                        database: run seed:demo again afterwards.
@@ -141,9 +144,20 @@ async function settle(page: Page, width: number, where: string): Promise<void> {
   }
   await noLoading(page, where);
   await page.evaluate(() => document.fonts.ready);
-  if (process.argv.includes("--installment")) {
+  if (process.argv.includes("--installment") || clickPrefix) {
     await settlePanel(page, where);
   }
+}
+
+const clickPrefix = process.argv.includes("--click") ? arg("click") : null;
+
+/** The first visible element of a list (a row, a card) opens its panel or sheet. */
+async function clickFirst(page: Page, prefix: string, where: string) {
+  const target = page.locator(`[data-testid^="${prefix}"]:visible`).first();
+  await target.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {
+    throw new Error(`${where}: nenhum [data-testid^="${prefix}"] visível`);
+  });
+  await target.click();
 }
 
 /** How long the PDF viewer takes to paint the page after its frame loads. */
@@ -317,6 +331,10 @@ try {
       }
       const file = join(out, `${account}-${name}-${size.name}-${theme}`);
       const where = `${account} ${size.width}x${size.height} ${theme} (${path})`;
+      if (clickPrefix) {
+        await noLoading(page, where);
+        await clickFirst(page, clickPrefix, where);
+      }
       await settle(page, size.width, where);
       await page.screenshot({ path: `${file}.png` });
       if (size.mobile) {

@@ -19,6 +19,7 @@ import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as InvitesTokenRouteImport } from './routes/invites.$token'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppInstallmentsRouteImport } from './routes/_app/installments'
 import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
 import { Route as FocusContractsNewRouteImport } from './routes/_focus/contracts.new'
 import { Route as AppContractsIdRouteImport } from './routes/_app/contracts.$id'
@@ -71,6 +72,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInstallmentsRoute = AppInstallmentsRouteImport.update({
+  id: '/installments',
+  path: '/installments',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContractsIndexRoute = AppContractsIndexRouteImport.update({
   id: '/contracts/',
   path: '/contracts/',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/installments': typeof AppInstallmentsRoute
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/installments': typeof AppInstallmentsRoute
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_app/installments': typeof AppInstallmentsRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/installments'
     | '/notifications'
     | '/settings'
     | '/invites/$token'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/installments'
     | '/notifications'
     | '/settings'
     | '/invites/$token'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/_app/installments'
     | '/_app/notifications'
     | '/_app/settings'
     | '/invites/$token'
@@ -255,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/installments': {
+      id: '/_app/installments'
+      path: '/installments'
+      fullPath: '/installments'
+      preLoaderRoute: typeof AppInstallmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/contracts/': {
       id: '/_app/contracts/'
       path: '/contracts'
@@ -280,6 +299,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppInstallmentsRoute: typeof AppInstallmentsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -288,6 +308,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppInstallmentsRoute: AppInstallmentsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,

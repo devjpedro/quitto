@@ -1,11 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
-import type { ContractRoute } from "@/features/contracts/hooks/use-contract-route";
-import type { ContractDetail } from "@/features/contracts/types";
 import { installmentQueryOptions } from "../api";
 import { focusInstallmentRow } from "../components/installment-panel-host";
 import { usePanel } from "../components/panel-context";
-import { neighborsOf } from "../lib/neighbors";
+import type { PanelRoute } from "../types";
 
 const focusLost = () => {
   const active = document.activeElement;
@@ -40,13 +38,12 @@ function returnFocus(id: string): void {
  * panel's useSuspenseQuery), so no rule about effects for data is broken.
  */
 export function usePanelNavigation(
-  contract: ContractDetail,
-  route: ContractRoute,
+  route: PanelRoute,
   focusTarget: () => HTMLElement | null
 ) {
   const { busy, cancelWork, installmentId } = usePanel();
   const queryClient = useQueryClient();
-  const { prev, next } = neighborsOf(contract.installments, installmentId);
+  const { prev, next } = route.neighbors(installmentId);
 
   useEffect(() => {
     for (const neighbour of [prev, next]) {

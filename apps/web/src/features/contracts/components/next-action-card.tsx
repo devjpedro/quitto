@@ -1,6 +1,8 @@
 import { FileMagnifyingGlass, QrCode } from "@phosphor-icons/react";
+import { isPaidStatus, type Locale } from "@quitto/shared";
 import { useId } from "react";
 import { Button } from "@/components/ui/button";
+import { InstallmentBar } from "@/components/ui/installment-bar";
 import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
 import { PersonText } from "@/components/ui/person-text";
@@ -9,11 +11,13 @@ import {
   useMarkPaidMutation,
   useMarkReceivedMutation,
 } from "@/features/installments/api";
+import type { CardRoute } from "@/features/installments/types";
 import { useActionLock } from "@/hooks/use-action-lock";
+import { formatMoney } from "@/lib/locale-format";
+import { sequencesLabel } from "@/lib/sequences-label";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import type { ContractRoute } from "../hooks/use-contract-route";
 import { perspectiveOf } from "../lib/contract-view";
 import {
   type CardButton,
@@ -22,6 +26,7 @@ import {
   nextActionView,
   type PendingAction,
 } from "../lib/next-action";
+import { barView, legendEntries } from "../lib/status-counts";
 import type { ContractDetail } from "../types";
 import { SettledCard } from "./settled-card";
 import { type CardVariant, WhatsappButton } from "./whatsapp-charge-button";
@@ -56,17 +61,75 @@ function OpenIcon({ kind }: { kind: CardButton }) {
   return null;
 }
 
+/** "Moto do Rafa · parcela 3 de 10": the card away from its contract. */
+function contractTitle(
+  action: PendingAction,
+  detail: ContractDetail,
+  locale: Locale
+): string {
+  const items =
+    action.kind === "overdue" ? action.installments : [action.installment];
+  return `${detail.contract.title} ${m.contract_sep()} ${sequencesLabel(
+    items.map((it) => it.sequence),
+    detail.installments.length,
+    locale
+  )}`;
+}
+
+/** The contract's bar on the green card, with how many are paid and what is left (mockup 17, C). */
+function ContractProgress({
+  detail,
+  route,
+}: {
+  detail: ContractDetail;
+  route: CardRoute;
+}) {
+  const locale = getLocale();
+  const bar = barView(detail.installments, route.today);
+  const paid = legendEntries(
+    detail.installments,
+    route.today,
+    perspectiveOf(detail.role),
+    detail.contract.requiresConfirmation,
+    locale
+  ).find((entry) => entry.status === "paid");
+  const leftCents = detail.installments
+    .filter((it) => !isPaidStatus(it.status))
+    .reduce((sum, it) => sum + it.amountCents, 0);
+  return (
+    <div className="mt-3.5">
+      <InstallmentBar
+        installmentsCount={detail.installments.length}
+        onBrand
+        overdueCount={bar.overdueCount}
+        paidCount={bar.paidCount}
+        statuses={bar.statuses}
+      />
+      <p className="mt-1.5 flex justify-between gap-2 text-[12.5px] text-on-brand-muted tabular-nums">
+        <span>{paid ? `${paid.count} ${paid.label}` : null}</span>
+        <span>
+          {m.home_progress_remaining({
+            amount: formatMoney(leftCents, locale),
+          })}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 /** The green card (mockup 14, enxuto): no bar (the top has it), no "de 10", no date. */
 function GreenCard({
   action,
   detail,
   route,
   tryLock,
+  withContract,
 }: {
   action: PendingAction;
   detail: ContractDetail;
-  route: ContractRoute;
+  route: CardRoute;
   tryLock: () => boolean;
+  withContract: boolean;
 }) {
   const locale = getLocale();
   const titleId = useId();
@@ -153,7 +216,7 @@ function GreenCard({
     >
       <Tag tone="highlight">{view.tag}</Tag>
       <p className="mt-3.5 truncate font-medium text-sm" id={titleId}>
-        {view.title}
+        {withContract ? contractTitle(action, detail, locale) : view.title}
       </p>
       <Money cents={view.amountCents} className="mt-0.5 block" size="card" />
       {view.person ? (
@@ -162,6 +225,7 @@ function GreenCard({
           <PersonText line={view.person} strong="text-on-brand" />
         </p>
       ) : null}
+      {withContract ? <ContractProgress detail={detail} route={route} /> : null}
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         {buttons.map(button)}
       </div>
@@ -179,10 +243,13 @@ export function NextActionCard({
   action,
   detail,
   route,
+  withContract = false,
 }: {
   action: NextAction;
   detail: ContractDetail;
-  route: ContractRoute;
+  route: CardRoute;
+  /** Away from the contract (Parcelas): says which contract, and shows its bar. */
+  withContract?: boolean;
 }) {
   const tryLock = useActionLock();
   if (action.kind === "settled") {
@@ -194,6 +261,7 @@ export function NextActionCard({
       detail={detail}
       route={route}
       tryLock={tryLock}
+      withContract={withContract}
     />
   );
 }

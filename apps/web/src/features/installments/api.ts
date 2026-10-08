@@ -12,6 +12,7 @@ import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 import { optimisticUpdate } from "@/lib/optimistic";
 import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
+import type { MonthQuery } from "./lib/month-range";
 
 /**
  * GET /api/installments/:id (Task 1): what the panel draws. null: the
@@ -22,6 +23,26 @@ export const installmentQueryOptions = (id: string) =>
     queryKey: queryKeys.installment(id),
     queryFn: () =>
       unwrapOrNull(api.api.installments({ installmentId: id }).get()),
+  });
+
+/**
+ * GET /api/installments: one month of the Parcelas list, unfiltered (the
+ * screen filters, so a chip changes at once). `pastDue` carries the overdue
+ * of earlier months, on the current month.
+ */
+export const installmentsListQueryOptions = (q: MonthQuery) =>
+  queryOptions({
+    queryKey: queryKeys.installmentsList(q),
+    queryFn: () =>
+      unwrap(
+        api.api.installments.get({
+          query: {
+            from: q.from,
+            to: q.to,
+            ...(q.pastDue ? { pastDue: "include" as const } : {}),
+          },
+        })
+      ),
   });
 
 interface Entity {

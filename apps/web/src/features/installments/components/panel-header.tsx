@@ -1,4 +1,5 @@
 import { CaretDown, CaretUp, type Icon, X } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { FILLED_SQUARE } from "@/components/ui/responsive-sheet";
 import { cn } from "@/lib/utils";
@@ -63,22 +64,28 @@ export function PanelArrows({ nav }: { nav: PanelNavigation }) {
 export function PanelHeader({
   className,
   nav,
+  subtitle,
   title,
 }: {
   className?: string;
   nav: PanelNavigation;
+  /** Which contract, when the panel is away from its page (Parcelas). */
+  subtitle?: ReactNode;
   title: string;
 }) {
   return (
     <div className={cn("flex min-h-9 items-center gap-1.5", className)}>
-      {/* As wide as its words, so the keyboard's ring hugs them. */}
-      <h2
-        className="mr-auto min-w-0 truncate rounded-[6px] font-display font-semibold text-[19px] leading-[1.2] tracking-[-0.02em] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
-        id={PANEL_TITLE_ID}
-        tabIndex={-1}
-      >
-        {title}
-      </h2>
+      <div className="mr-auto min-w-0">
+        {/* As wide as its words, so the keyboard's ring hugs them. */}
+        <h2
+          className="max-w-full truncate rounded-[6px] font-display font-semibold text-[19px] leading-[1.2] tracking-[-0.02em] outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
+          id={PANEL_TITLE_ID}
+          tabIndex={-1}
+        >
+          {title}
+        </h2>
+        {subtitle}
+      </div>
       <SquareButton
         disabled={!nav.prev || nav.busy}
         icon={CaretUp}

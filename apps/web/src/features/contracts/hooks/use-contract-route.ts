@@ -6,6 +6,10 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useCallback } from "react";
+import { neighborsOf } from "@/features/installments/lib/neighbors";
+import type { PanelRoute } from "@/features/installments/types";
+import { goBack } from "@/lib/history-back";
+import type { ContractDetail } from "../types";
 
 declare module "@tanstack/react-router" {
   interface HistoryState {
@@ -15,19 +19,6 @@ declare module "@tanstack/react-router" {
 }
 
 export type ContractTab = "installments" | "people" | "history";
-
-type AppRouter = ReturnType<typeof useRouter>;
-
-/** history.back(), settled once the router resolved the entry under it (as navigate's promise is). */
-function goBack(router: AppRouter): Promise<void> {
-  return new Promise((resolve) => {
-    const stop = router.subscribe("onResolved", () => {
-      stop();
-      resolve();
-    });
-    router.history.back();
-  });
-}
 
 /**
  * The page's place in the URL (planner's decision 14): a tab change is a
@@ -104,3 +95,25 @@ export function useContractRoute() {
 }
 
 export type ContractRoute = ReturnType<typeof useContractRoute>;
+
+/**
+ * The contract page's installment panel route: the same open/close the page
+ * does, ↑ ↓ along the contract's installments by sequence, and "Histórico"
+ * as the tab.
+ */
+export function useContractPanelRoute(
+  detail: ContractDetail,
+  route: ContractRoute
+): PanelRoute {
+  const { closeInstallment, installmentId, openInstallment, setTab, today } =
+    route;
+  const installments = detail.installments;
+  return {
+    closeInstallment,
+    installmentId,
+    neighbors: (id) => neighborsOf(installments, id),
+    openHistory: (options) => setTab("history", options),
+    openInstallment,
+    today,
+  };
+}

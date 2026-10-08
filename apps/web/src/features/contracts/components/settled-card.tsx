@@ -2,8 +2,8 @@ import { FilePdf, Receipt } from "@phosphor-icons/react";
 import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import type { CardRoute } from "@/features/installments/types";
 import { m } from "@/paraglide/messages.js";
-import type { ContractRoute } from "../hooks/use-contract-route";
 import { guardLink } from "../lib/guard-link";
 import type { ContractDetail } from "../types";
 
@@ -14,7 +14,7 @@ export function SettledCard({
   tryLock,
 }: {
   detail: ContractDetail;
-  route: ContractRoute;
+  route: CardRoute;
   tryLock: () => boolean;
 }) {
   const titleId = useId();

@@ -13,7 +13,7 @@ export const CHIP =
  * mask clips whatever the list paints past its box, and an inset ring would
  * paint under the chips.
  */
-const FRAME =
+export const CHIP_FRAME =
   "min-w-0 rounded-control has-focus-visible:ring-2 has-focus-visible:ring-brand max-md:-mx-4";
 
 /**
@@ -21,7 +21,7 @@ const FRAME =
  * the gutter padding lets the last chip scroll fully into view. From md it
  * wraps.
  */
-const STRIP =
+export const CHIP_STRIP =
   "flex gap-1.5 focus-visible:outline-none max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none] md:flex-wrap";
 
 /**
@@ -29,7 +29,7 @@ const STRIP =
  * that does not depend on where a chip happens to end. A mask, not a color,
  * so it works on any background, light or dark; gone at the end of the scroll.
  */
-const FADE_RIGHT =
+export const CHIP_FADE =
   "max-md:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)]";
 
 /** A line of chips (a list's `li`s): one scrolling line on a phone, wrapping from md. */
@@ -47,10 +47,10 @@ export function ChipStrip({
     Children.count(children)
   );
   return (
-    <div className={FRAME}>
+    <div className={CHIP_FRAME}>
       <ul
         aria-label={label}
-        className={cn(STRIP, moreToTheRight && FADE_RIGHT)}
+        className={cn(CHIP_STRIP, moreToTheRight && CHIP_FADE)}
         ref={stripRef}
         // A tab stop only while it scrolls (useScrollsSideways).
         tabIndex={scrolls ? 0 : undefined}
