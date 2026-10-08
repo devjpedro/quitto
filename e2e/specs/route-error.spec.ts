@@ -66,8 +66,8 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
   for (const name of [
     "Agora",
     "Contratos",
-    "Conta",
-    "Criar contrato",
+    "Ajustes",
+    "Novo contrato",
     "Notificações",
   ]) {
     await expect(
@@ -94,7 +94,7 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
   expect(new URL(page.url()).pathname).toBe("/");
 
   await palette
-    .getByRole("option", { name: "Criar contrato", exact: true })
+    .getByRole("option", { name: "Novo contrato", exact: true })
     .click();
   await expect(page).toHaveURL(NEW_CONTRACT_URL);
   await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);

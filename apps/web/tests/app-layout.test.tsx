@@ -43,7 +43,7 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/ssr-session", () => ({ getSessionSSR: vi.fn() }));
 // The palette as far as the shell is concerned: its "Notificações" closes it
 // (the focused option leaves the page) and opens the bell panel.
-vi.mock("@/components/command-palette", () => ({
+vi.mock("@/components/command-palette/command-palette", () => ({
   CommandPalette: ({
     onOpenChange,
     onOpenNotifications,

@@ -21,6 +21,8 @@ import { chromium, type Page } from "@playwright/test";
 //                        cookie (en-US files get an "-en" suffix);
 //   --receipt moto:1     opens the seed's public receipt link of that
 //                        contract and installment (use with --anon);
+//   --palette            opens the ⌘K palette before the shot (a phone taps
+//                        the magnifier); --query <text> types in it;
 //   --accept-invites     accepts the pending invites first. It changes the
 //                        database: run seed:demo again afterwards.
 const WEB = process.env.WEB_URL ?? "http://localhost:3001";
@@ -230,6 +232,31 @@ async function settlePanel(page: Page, where: string): Promise<void> {
   }
 }
 
+const SEARCH_BUTTON = /^(Buscar|Search)$/;
+
+/** Opens ⌘K (a phone taps the magnifier), types the query if any, and waits for its entrance. */
+async function openPalette(page: Page, mobile: boolean): Promise<void> {
+  await page
+    .locator("html[data-shortcuts-ready]")
+    .waitFor({ state: "attached" });
+  if (mobile) {
+    await page
+      .getByRole("button", { name: SEARCH_BUTTON })
+      .filter({ visible: true })
+      .first()
+      .click();
+  } else {
+    await page.keyboard.press("ControlOrMeta+k");
+  }
+  await page.getByRole("dialog").getByRole("combobox").waitFor();
+  if (process.argv.includes("--query")) {
+    await page.keyboard.type(arg("query"));
+  }
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished))
+  );
+}
+
 const session = anon ? [] : await sessionCookies();
 const cookie = session.map((c) => `${c.name}=${c.value}`).join("; ");
 
@@ -358,6 +385,9 @@ try {
         await clickFirst(page, clickPrefix, where);
       }
       await settle(page, size.width, where);
+      if (process.argv.includes("--palette")) {
+        await openPalette(page, size.mobile);
+      }
       await page.screenshot({ path: `${file}.png` });
       if (size.mobile) {
         // A fullPage shot paints the phone's fixed tab bar where the first

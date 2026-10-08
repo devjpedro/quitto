@@ -18,6 +18,18 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
+// The palette also reads Pessoas and /me, and the language action saves on the
+// account: no request leaves the test (they never answer unless a test seeds them).
+const { patchMe } = vi.hoisted(() => ({ patchMe: vi.fn() }));
+vi.mock("@/lib/api", () => ({
+  api: {
+    api: {
+      people: { get: () => new Promise(() => undefined) },
+      me: { get: () => new Promise(() => undefined), patch: patchMe },
+    },
+  },
+}));
+
 // A paleta consome `contractsQueryOptions`, e o que precisa ser observado é a
 // `queryFn` — é ela que dispara o `GET /api/contracts`. Mockar o hook esconderia
 // exatamente a pergunta desta suíte: a paleta busca com a paleta fechada?
@@ -39,14 +51,17 @@ vi.mock("@/lib/auth-client", () => ({
   signOut: () => signOut(),
 }));
 
-import { CommandPalette } from "@/components/command-palette";
+import { CommandPalette } from "@/components/command-palette/command-palette";
 
 interface Contrato {
   description: string | null;
   id: string;
+  installmentsCount: number;
   nextDueDate: string | null;
   overdueCount: number;
+  paidCount: number;
   participantNames: string[];
+  percent: number;
   title: string;
 }
 
@@ -57,6 +72,9 @@ function makeContrato(over: Partial<Contrato> & { id: string }): Contrato {
     participantNames: [],
     overdueCount: 0,
     nextDueDate: null,
+    installmentsCount: 12,
+    paidCount: 4,
+    percent: 33,
     ...over,
   };
 }
@@ -111,8 +129,10 @@ function groupHeadings(): string[] {
 }
 
 const INPUT = "combobox";
-const CRIAR_ZZZZ = /Criar contrato "zzzz"/;
-const CRIAR_QUALQUER = /Criar contrato "/;
+const MOTO = /Moto/;
+const ALUGUEL_RE = /Aluguel/;
+const CRIAR_ZZZZ = /Criar contrato “zzzz”/;
+const CRIAR_QUALQUER = /Criar contrato “/;
 const CONTRATO_DE_TESTE = /Em dia|Atrasado/;
 
 describe("CommandPalette", () => {
@@ -148,7 +168,7 @@ describe("CommandPalette", () => {
   it("mostra Ir para e Ações mesmo sem contratos carregados", () => {
     renderPalette(undefined);
     expect(groupHeadings()).toEqual(["Ir para", "Ações"]);
-    expect(screen.getByText("Criar contrato")).toBeInTheDocument();
+    expect(screen.getByText("Novo contrato")).toBeInTheDocument();
   });
 
   it("abre o grupo Contratos assim que a lista chega", () => {
@@ -198,7 +218,7 @@ describe("CommandPalette", () => {
 
     expect(contratos).toHaveLength(5);
     expect(contratos[0]).toContain("Atrasado");
-    expect(contratos[0]).toContain("2 vencidas");
+    expect(contratos[0]).toContain("2 atrasadas");
     expect(contratos.at(-1)).toContain("Em dia 4");
   });
 
@@ -287,20 +307,81 @@ describe("CommandPalette", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("no mobile a paleta abre no sheet, não no dialog", () => {
-    setViewport(MOBILE_WIDTH);
-    renderPalette([ALUGUEL]);
-    // O Sheet entra pela direita; o Dialog é centralizado. A classe do
-    // contêiner é o que distingue os dois no DOM.
-    const painel = screen.getByRole("dialog");
-    expect(painel.className).toContain("inset-y-0");
-    expect(screen.getByRole(INPUT)).toBeInTheDocument();
+  it("uma árvore só: o mesmo diálogo em qualquer largura", () => {
+    const widths = [DESKTOP_WIDTH, MOBILE_WIDTH].map((width) => {
+      setViewport(width);
+      const { unmount } = renderPalette([ALUGUEL]);
+      const painel = screen.getByRole("dialog");
+      const shape = {
+        tela_cheia: painel.className.includes("inset-0"),
+        centrado: painel.className.includes("md:-translate-x-1/2"),
+        campo: screen.getAllByRole(INPUT).length,
+      };
+      unmount();
+      return shape;
+    });
+    expect(widths[0]).toEqual(widths[1]);
+    expect(widths[0]).toEqual({ tela_cheia: true, centrado: true, campo: 1 });
   });
 
-  it("no desktop a paleta abre no dialog", () => {
+  it("Ir para Ajustes navega para /settings", async () => {
+    renderPalette([]);
+    await userEvent.click(screen.getByRole("option", { name: "Ajustes" }));
+    expect(navigate).toHaveBeenCalledWith({ to: "/settings" });
+  });
+
+  it("Parcelas e Pessoas estão em Ir para", () => {
+    renderPalette([]);
+    expect(screen.getByRole("option", { name: "Parcelas" })).toBeVisible();
+    expect(screen.getByRole("option", { name: "Pessoas" })).toBeVisible();
+  });
+
+  it("as seções dos Ajustes entram por palavra-chave", async () => {
+    renderPalette([]);
+    await userEvent.type(screen.getByRole(INPUT), "pix");
+    await userEvent.click(
+      screen.getByRole("option", { name: "Ajustes · Recebimento (PIX)" })
+    );
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/settings/$section",
+      params: { section: "pix" },
+    });
+  });
+
+  it("Mudar para English chama a troca de idioma com en-US", async () => {
+    patchMe.mockResolvedValue({ data: { locale: "en-US" }, error: null });
+    renderPalette([]);
+    await userEvent.click(
+      screen.getByRole("option", { name: "Mudar para English (US)" })
+    );
+    expect(patchMe).toHaveBeenCalledWith({ locale: "en-US" });
+  });
+
+  it("o contrato atrasado mostra a tag com o texto, não só a cor", () => {
+    renderPalette([makeContrato({ id: "x", title: "Moto", overdueCount: 1 })]);
+    expect(screen.getByRole("option", { name: MOTO })).toHaveTextContent(
+      "1 atrasada"
+    );
+  });
+
+  it("cada contrato mostra o progresso (as parcelas pagas)", () => {
     renderPalette([ALUGUEL]);
-    const painel = screen.getByRole("dialog");
-    expect(painel.className).toContain("-translate-x-1/2");
+    expect(screen.getByRole("option", { name: ALUGUEL_RE })).toHaveTextContent(
+      "4/12"
+    );
+  });
+
+  it("em en-US, os grupos e as ações em inglês", () => {
+    overwriteGetLocale(() => "en-US");
+    renderPalette([ALUGUEL]);
+    expect(groupHeadings()).toEqual(["Contracts", "Go to", "Actions"]);
+    expect(
+      screen.getByRole("option", { name: "Switch to Português (Brasil)" })
+    ).toBeVisible();
+    expect(
+      screen.getByRole("option", { name: "Use the dark theme" })
+    ).toBeVisible();
+    overwriteGetLocale(() => "pt-BR");
   });
 
   it.each([
@@ -313,7 +394,7 @@ describe("CommandPalette", () => {
       // cabeçalho de grupo caía a 3,86:1 no claro.
       setViewport(width);
       renderPalette([ALUGUEL]);
-      expect(screen.getByRole("dialog")).toHaveClass("bg-surface-raised");
+      expect(screen.getByRole("dialog")).toHaveClass("bg-surface");
     }
   );
 
@@ -376,101 +457,96 @@ function renderInShell({ open }: { open: boolean }) {
   return client;
 }
 
-// Each width takes its own container: the Dialog on desktop, the Sheet on a phone.
 describe.each([
-  { device: "desktop", width: DESKTOP_WIDTH, container: "-translate-x-1/2" },
-  { device: "celular", width: MOBILE_WIDTH, container: "inset-y-0" },
-])(
-  "CommandPalette com o /api/contracts falhando, no $device",
-  ({ width, container }) => {
-    beforeEach(() => {
-      navigate.mockReset();
-      paletteOpenChange.mockReset();
-      contractsQueryFn.mockReset();
-      contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
-      setViewport(width);
-    });
+  { device: "desktop", width: DESKTOP_WIDTH },
+  { device: "celular", width: MOBILE_WIDTH },
+])("CommandPalette com o /api/contracts falhando, no $device", ({ width }) => {
+  beforeEach(() => {
+    navigate.mockReset();
+    paletteOpenChange.mockReset();
+    contractsQueryFn.mockReset();
+    contractsQueryFn.mockImplementation(() => new Promise(() => undefined));
+    setViewport(width);
+  });
 
-    afterEach(() => {
-      setViewport(DESKTOP_WIDTH);
-    });
+  afterEach(() => {
+    setViewport(DESKTOP_WIDTH);
+  });
 
-    it("fechada: a falha da lista nunca derruba o shell", async () => {
-      const client = renderInShell({ open: false });
-      // The list failed somewhere else (the contracts page, or a fetch the
-      // palette started before it closed): the error lands in the cache entry
-      // the palette shares.
-      await act(async () => {
-        await client.prefetchQuery({
-          queryKey: queryKeys.contracts,
-          queryFn: () => Promise.reject(SERVER_ERROR),
-        });
+  it("fechada: a falha da lista nunca derruba o shell", async () => {
+    const client = renderInShell({ open: false });
+    // The list failed somewhere else (the contracts page, or a fetch the
+    // palette started before it closed): the error lands in the cache entry
+    // the palette shares.
+    await act(async () => {
+      await client.prefetchQuery({
+        queryKey: queryKeys.contracts,
+        queryFn: () => Promise.reject(SERVER_ERROR),
       });
-      await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    });
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-      expect(client.getQueryState(queryKeys.contracts)?.status).toBe("error");
-      expect(screen.getByText("shell")).toBeVisible();
-      expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+    expect(client.getQueryState(queryKeys.contracts)?.status).toBe("error");
+    expect(screen.getByText("shell")).toBeVisible();
+    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+  });
+
+  it("aberta: a lista falha ali dentro e os comandos fixos continuam", async () => {
+    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+    renderInShell({ open: true });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar os contratos."
+    );
+    expect(screen.getByText("shell")).toBeVisible();
+    expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
+    for (const name of [
+      "Agora",
+      "Contratos",
+      "Ajustes",
+      "Novo contrato",
+      "Notificações",
+    ]) {
+      expect(screen.getByRole("option", { name })).toBeVisible();
+    }
+
+    await userEvent.click(
+      screen.getByRole("option", { name: "Novo contrato" })
+    );
+    expect(navigate).toHaveBeenCalledWith({ to: "/contracts/new" });
+  });
+
+  it("aberta: Tentar de novo busca a lista outra vez e a mostra", async () => {
+    contractsQueryFn
+      .mockRejectedValueOnce(SERVER_ERROR)
+      .mockResolvedValueOnce([ALUGUEL]);
+    renderInShell({ open: true });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Tentar de novo" })
+    );
+
+    expect(
+      await screen.findByRole("option", { name: ALUGUEL_RE })
+    ).toBeVisible();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(contractsQueryFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("aberta: Tentar de novo pelo teclado (Tab e Enter) busca de novo, sem rodar outro comando", async () => {
+    contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
+    renderInShell({ open: true });
+    const retry = await screen.findByRole("button", {
+      name: "Tentar de novo",
     });
 
-    it("aberta: a lista falha ali dentro e os comandos fixos continuam", async () => {
-      contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
-      renderInShell({ open: true });
+    // The cursor starts in the field, and the next tab stop is the button.
+    await userEvent.tab();
+    expect(retry).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
 
-      expect(await screen.findByRole("alert")).toHaveTextContent(
-        "Não foi possível carregar os contratos."
-      );
-      expect(screen.getByRole("dialog").className).toContain(container);
-      expect(screen.getByText("shell")).toBeVisible();
-      expect(screen.queryByText(ROUTE_ERROR)).toBeNull();
-      for (const name of [
-        "Agora",
-        "Contratos",
-        "Conta",
-        "Criar contrato",
-        "Notificações",
-      ]) {
-        expect(screen.getByRole("option", { name })).toBeVisible();
-      }
-
-      await userEvent.click(
-        screen.getByRole("option", { name: "Criar contrato" })
-      );
-      expect(navigate).toHaveBeenCalledWith({ to: "/contracts/new" });
-    });
-
-    it("aberta: Tentar de novo busca a lista outra vez e a mostra", async () => {
-      contractsQueryFn
-        .mockRejectedValueOnce(SERVER_ERROR)
-        .mockResolvedValueOnce([ALUGUEL]);
-      renderInShell({ open: true });
-
-      await userEvent.click(
-        await screen.findByRole("button", { name: "Tentar de novo" })
-      );
-
-      expect(
-        await screen.findByRole("option", { name: "Aluguel do apê" })
-      ).toBeVisible();
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(contractsQueryFn).toHaveBeenCalledTimes(2);
-    });
-
-    it("aberta: Tentar de novo pelo teclado (Tab e Enter) busca de novo, sem rodar outro comando", async () => {
-      contractsQueryFn.mockRejectedValueOnce(SERVER_ERROR);
-      renderInShell({ open: true });
-      const retry = await screen.findByRole("button", {
-        name: "Tentar de novo",
-      });
-
-      // The cursor starts in the field, and the next tab stop is the button.
-      await userEvent.tab();
-      expect(retry).toHaveFocus();
-      await userEvent.keyboard("{Enter}");
-
-      await vi.waitFor(() => expect(contractsQueryFn).toHaveBeenCalledTimes(2));
-      expect(navigate).not.toHaveBeenCalled();
-      expect(paletteOpenChange).not.toHaveBeenCalled();
-    });
-  }
-);
+    await vi.waitFor(() => expect(contractsQueryFn).toHaveBeenCalledTimes(2));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(paletteOpenChange).not.toHaveBeenCalled();
+  });
+});

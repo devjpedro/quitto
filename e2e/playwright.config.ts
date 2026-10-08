@@ -39,6 +39,7 @@ export default defineConfig({
         "**/auth.spec.ts",
         "**/settings.spec.ts",
         "**/public-receipt.spec.ts",
+        "**/command-palette.spec.ts",
         "**/smoke.spec.ts",
       ],
     },

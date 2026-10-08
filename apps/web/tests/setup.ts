@@ -14,7 +14,7 @@ const noop = () => undefined;
 // `cmdk` quebra por ReferenceError/TypeError antes de chegar na asserção:
 //   - `ResizeObserver`: o `CommandList` observa a própria altura (`--cmdk-list-height`).
 //   - `Element.prototype.scrollIntoView`: o `cmdk` rola até o item selecionado.
-//   - `window.matchMedia`: o `useIsDesktop` escolhe Dialog (sm+) ou Sheet.
+//   - `window.matchMedia`: hooks de largura (`useMediaQuery`).
 
 class ResizeObserverStub {
   observe = noop;

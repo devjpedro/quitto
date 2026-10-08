@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import type { ComponentProps } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { CommandPalette } from "@/components/command-palette";
+import { CommandPalette } from "@/components/command-palette/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
