@@ -94,7 +94,7 @@ export async function sendReminderEmails(
       locale: pickLocale(r.locale),
       items,
       homeUrl: `${deps.webOrigin}/`,
-      settingsUrl: `${deps.webOrigin}/settings`,
+      settingsUrl: `${deps.webOrigin}/settings/reminders`,
     });
     try {
       await deps.send({ to: r.email, subject, html });

@@ -71,7 +71,7 @@ describe("e-mail de lembrete na varredura", () => {
       const mine = r1.sent.filter((s) => s.to === email);
       expect(mine).toHaveLength(1);
       expect(mine[0]?.html).toContain("Contrato rem-on");
-      expect(mine[0]?.html).toContain("https://app.test/settings");
+      expect(mine[0]?.html).toContain("https://app.test/settings/reminders");
 
       const r2 = recorder();
       await runReminderSweep({ emailEnabled: true, send: r2.send, webOrigin });

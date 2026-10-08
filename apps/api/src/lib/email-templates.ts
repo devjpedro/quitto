@@ -19,9 +19,10 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const FONT = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+// Single quotes: the font goes inside style="…", and a double quote would close the attribute.
+const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 const INK = "#111111";
-const MUTED = "#6F6F6A";
+const MUTED = "#62625D";
 const LINE = "#E9E7E1";
 const BRAND = "#1F5A32";
 const DANGER = "#B42318";
@@ -41,7 +42,7 @@ function layout(args: {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px">
       <tr><td align="center">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:20px">
-          <tr><td style="padding:32px">
+          <tr><td style="padding:32px;font-family:${FONT};color:${INK}">
             <img src="${escapeHtml(env.WEB_ORIGIN)}/icon-192.png" width="40" height="40" alt="Quitto" style="display:block;border-radius:10px;margin:0 0 24px">
             <h1 style="font-size:22px;line-height:1.25;font-weight:700;color:${INK};margin:0 0 12px">${args.heading}</h1>
             ${args.bodyHtml}
@@ -49,7 +50,7 @@ function layout(args: {
               <a href="${escapeHtml(args.ctaUrl)}" style="background:${INK};color:#FFFFFF;font-weight:600;text-decoration:none;padding:14px 22px;border-radius:10px;display:inline-block">${args.ctaLabel}</a>
             </p>
           </td></tr>
-          <tr><td style="padding:16px 32px 24px;border-top:1px solid ${LINE};font-size:12px;line-height:1.5;color:${MUTED}">${args.footerHtml}</td></tr>
+          <tr><td style="padding:16px 32px 24px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.5;color:${MUTED}">${args.footerHtml}</td></tr>
         </table>
       </td></tr>
     </table>
@@ -102,6 +103,12 @@ export interface InviteEmailTerms {
   firstDueDate: string | null;
   installmentsCount: number;
   totalCents: number;
+}
+
+const WHITESPACE = /\s+/;
+
+function firstName(name: string): string {
+  return name.trim().split(WHITESPACE)[0] ?? name;
 }
 
 function inviterAvatar(name: string): string {
@@ -160,7 +167,9 @@ export function inviteEmail(args: {
       bodyHtml: body,
       ctaLabel: t.invite.cta,
       ctaUrl: args.acceptUrl,
-      footerHtml: t.footerDefault,
+      footerHtml: t.invite.footer({
+        inviter: escapeHtml(firstName(args.inviterName)),
+      }),
     }),
   };
 }
@@ -191,20 +200,19 @@ function reminderRow(
 ): string {
   const t = EMAIL_TEXT[locale].reminder;
   const day = Number(i.dueDate.slice(8, 10));
-  const when = i.overdue
-    ? t.overdueSince({ date: formatISODate(i.dueDate, locale) })
-    : t.dueOn({ date: formatISODate(i.dueDate, locale) });
-  let tag = "";
+  // The tile already says the date: the line says which installment, the direction and the state.
+  let state = "";
   if (i.overdue) {
-    tag = `<span style="color:${DANGER};font-weight:600">${t.overdueTag}</span> · `;
+    state = ` · <span style="color:${DANGER};font-weight:600">${t.overdueTag}</span>`;
   } else if (i.dueDate === today) {
-    tag = `<span style="color:${BRAND};font-weight:600">${t.dueToday}</span> · `;
+    state = ` · <span style="color:${INK};font-weight:600">${t.dueToday}</span>`;
   }
   const direction = i.direction === "pay" ? t.pay : t.receive;
   const border = last ? "" : `border-bottom:1px solid ${LINE};`;
   return `<tr>
-    <td width="44" valign="top" style="padding:12px 12px 12px 0;${border}"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;border-radius:10px;background:${TILE};text-align:center"><span style="display:block;font-size:17px;font-weight:700;line-height:20px;color:${INK}">${day}</span><span style="display:block;font-size:10px;font-weight:600;line-height:12px;color:${MUTED}">${escapeHtml(monthShort(i.dueDate, locale))}</span></td></tr></table></td>
-    <td valign="top" style="padding:12px 0;${border}"><a href="${escapeHtml(i.contractUrl)}" style="color:${BRAND};font-size:15px;font-weight:600;text-decoration:none">${escapeHtml(i.contractTitle)}</a><br><span style="font-size:13px;line-height:1.6;color:${MUTED}">${tag}${t.installment({ n: i.sequence })} · ${formatCents(i.amountCents, locale)} · ${when} · ${direction}</span></td>
+    <td width="44" valign="middle" style="padding:12px 12px 12px 12px;${border}"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;border-radius:10px;background:#FFFFFF;text-align:center"><span style="display:block;font-size:17px;font-weight:700;line-height:20px;color:${INK}">${day}</span><span style="display:block;font-size:10px;font-weight:600;line-height:12px;color:${MUTED}">${escapeHtml(monthShort(i.dueDate, locale))}</span></td></tr></table></td>
+    <td valign="middle" style="padding:12px 0;${border}"><a href="${escapeHtml(i.contractUrl)}" style="color:${BRAND};font-size:15px;font-weight:600;text-decoration:none">${escapeHtml(i.contractTitle)}</a><br><span style="font-size:13px;line-height:1.6;color:${MUTED}">${t.installment({ n: i.sequence })} · ${direction}${state}</span></td>
+    <td align="right" valign="middle" style="padding:12px 14px 12px 12px;${border}white-space:nowrap;font-size:15px;font-weight:600;color:${INK}">${formatCents(i.amountCents, locale)}</td>
   </tr>`;
 }
 
@@ -235,7 +243,7 @@ export function reminderDigestEmail(args: {
       reminderRow(i, args.locale, today, idx === args.items.length - 1)
     )
     .join("");
-  const body = `<p style="${P};margin-bottom:8px">${t.intro({ name: escapeHtml(args.name) })}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
+  const body = `<p style="${P};margin-bottom:8px">${t.intro({ name: escapeHtml(args.name) })}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${TILE};border-radius:14px">${rows}</table>`;
   const footer = `${t.footer} <a href="${escapeHtml(args.settingsUrl)}" style="color:${MUTED}">${t.optOut}</a>`;
   return {
     subject,

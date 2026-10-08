@@ -6,6 +6,7 @@ export interface EmailText {
     aContract: string;
     body: (a: { inviter: string; role: string; title: string }) => string;
     cta: string;
+    footer: (a: { inviter: string }) => string;
     heading: string;
     hint: string;
     someone: string;
@@ -15,14 +16,12 @@ export interface EmailText {
   };
   reminder: {
     cta: string;
-    dueOn: (a: { date: string }) => string;
     dueToday: string;
     heading: string;
     installment: (a: { n: number }) => string;
     intro: (a: { name: string }) => string;
     optOut: string;
     footer: string;
-    overdueSince: (a: { date: string }) => string;
     overdueTag: string;
     pay: string;
     receive: string;
@@ -58,6 +57,8 @@ export const EMAIL_TEXT: Record<Locale, EmailText> = {
         `<strong>${inviter}</strong> te convidou para o contrato <strong>${title}</strong>, como <strong>${role}</strong>.`,
       hint: "Ainda não tem conta? Crie com este e-mail e o convite fica esperando por você.",
       cta: "Ver o convite",
+      footer: ({ inviter }) =>
+        `Não conhece ${inviter}? Pode ignorar este e-mail: nada muda até você aceitar.`,
       someone: "Alguém",
       aContract: "um contrato",
       termsEven: ({ count, amount, date }) =>
@@ -80,8 +81,6 @@ export const EMAIL_TEXT: Record<Locale, EmailText> = {
       heading: "Lembretes de parcelas",
       intro: ({ name }) => `Oi, ${name}. Estas parcelas pedem sua atenção:`,
       installment: ({ n }) => `parcela ${n}`,
-      dueOn: ({ date }) => `vence em ${date}`,
-      overdueSince: ({ date }) => `venceu em ${date}`,
       dueToday: "vence hoje",
       overdueTag: "atrasada",
       pay: "a pagar",
@@ -113,6 +112,8 @@ export const EMAIL_TEXT: Record<Locale, EmailText> = {
         `<strong>${inviter}</strong> invited you to the contract <strong>${title}</strong> as <strong>${role}</strong>.`,
       hint: "No account yet? Create one with this email and the invite will be waiting for you.",
       cta: "See the invite",
+      footer: ({ inviter }) =>
+        `Don't know ${inviter}? You can ignore this email: nothing changes until you accept.`,
       someone: "Someone",
       aContract: "a contract",
       termsEven: ({ count, amount, date }) =>
@@ -132,8 +133,6 @@ export const EMAIL_TEXT: Record<Locale, EmailText> = {
       intro: ({ name }) =>
         `Hi ${name}. These installments need your attention:`,
       installment: ({ n }) => `installment ${n}`,
-      dueOn: ({ date }) => `due on ${date}`,
-      overdueSince: ({ date }) => `was due on ${date}`,
       dueToday: "due today",
       overdueTag: "overdue",
       pay: "to pay",

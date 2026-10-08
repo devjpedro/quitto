@@ -12,6 +12,8 @@ import { formatCents } from "../src/lib/money";
 
 const LOCALES: Locale[] = ["pt-BR", "en-US"];
 const TEAL = /0f766e/i;
+const AMOUNT_CELL =
+  /<td align="right"[^>]*white-space:nowrap[^>]*>R\$\s?1\.250,00<\/td>/;
 
 function allEmails(locale: Locale) {
   return [
@@ -112,7 +114,41 @@ describe("email-templates", () => {
   });
 });
 
+describe("o visual dos e-mails (mockup 18, decisões 10)", () => {
+  it("a fonte não quebra o atributo style e vale também no cartão e no rodapé", () => {
+    for (const locale of LOCALES) {
+      for (const { html } of allEmails(locale)) {
+        expect(html).not.toContain('"Segoe UI"');
+        expect(html).toContain("font-family:-apple-system,'Segoe UI'");
+        expect(html.match(/font-family:-apple-system/g)?.length).toBe(3);
+      }
+    }
+  });
+
+  it("o cinza do texto de apoio é #62625D (contraste ≥ 4,5:1 sobre #F3F2EE)", () => {
+    for (const { html } of allEmails("pt-BR")) {
+      expect(html).toContain("#62625D");
+      expect(html).not.toContain("#6F6F6A");
+    }
+  });
+});
+
 describe("inviteEmail", () => {
+  it("o rodapé cita quem convidou (o primeiro nome) e diz que nada muda até aceitar", () => {
+    const base = {
+      acceptUrl: "https://app.test/invites/t",
+      contractTitle: "Moto",
+      inviterName: "Bia <i> Lopes",
+      role: "buyer",
+    };
+    expect(inviteEmail({ ...base, locale: "pt-BR" }).html).toContain(
+      "Não conhece Bia? Pode ignorar este e-mail: nada muda até você aceitar."
+    );
+    expect(inviteEmail({ ...base, locale: "en-US" }).html).toContain(
+      "Don't know Bia? You can ignore this email: nothing changes until you accept."
+    );
+  });
+
   it("o papel na palavra da casa (quem paga / the payer), e o nome e o título escapados", () => {
     const base = {
       acceptUrl: "https://app.test/invites/tok123",
@@ -234,7 +270,20 @@ describe("reminderDigestEmail", () => {
     expect(html).toContain("OUT");
     expect(html).toContain("vence hoje");
     expect(html).toContain("atrasada");
-    expect(html).toContain("venceu em 01/10/2026");
+  });
+
+  it("o lembrete não repete a data ao lado do tile, e o valor fica numa célula à direita", () => {
+    const { html } = reminderDigestEmail({
+      name: "Ana",
+      items: [{ ...item, dueDate: "2026-10-05", overdue: true }],
+      locale: "pt-BR",
+      today: "2026-10-08",
+      ...urls,
+    });
+    expect(html).not.toContain("05/10/2026");
+    expect(html).toContain("OUT");
+    expect(html).toMatch(AMOUNT_CELL);
+    expect(html).toContain("background:#F3F2EE;border-radius:14px");
   });
 
   it("escapa HTML e URLs em atributos href", () => {
