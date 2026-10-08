@@ -67,7 +67,7 @@ function SequenceRow({
         <span className="block truncate font-medium text-sm">
           {view.title}
           {view.sequence && action.kind !== "invite" && action.count === 1 ? (
-            <span className="font-normal text-ink-muted">
+            <span className="font-normal text-ink-muted max-md:hidden">
               {" "}
               {m.home_dot_after({ text: view.sequence })}
             </span>
