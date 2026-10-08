@@ -118,6 +118,15 @@ describe("PeoplePage", () => {
     );
   });
 
+  it("os cartões de uma linha têm a mesma altura: o botão enche a célula e os contratos ficam no pé", async () => {
+    renderPage([CARLOS, ANA]);
+    const card = await screen.findByTestId("person-card-aaaaaaaaaaaaaaaa");
+    expect(card).toHaveClass("md:h-full");
+    const list = within(card).getByRole("list", { hidden: true });
+    expect(list).toHaveClass("mt-auto");
+    expect(list.parentElement).toHaveClass("md:flex", "h-full");
+  });
+
   it("Esc fecha e devolve o foco ao cartão", async () => {
     const user = userEvent.setup();
     renderPage([CARLOS]);

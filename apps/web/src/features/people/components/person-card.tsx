@@ -92,7 +92,7 @@ function Row({ person }: { person: Person }) {
 function Card({ person }: { person: Person }) {
   const view = personView(person, getLocale());
   return (
-    <div className="hidden flex-col gap-3 md:flex">
+    <div className="hidden h-full flex-col gap-3 md:flex">
       <div className="flex items-start gap-3">
         <PersonAvatar name={person.name} size="lg" />
         <div className="min-w-0 flex-1">
@@ -116,7 +116,8 @@ function Card({ person }: { person: Person }) {
           ))
         )}
       </div>
-      <ul className="flex flex-col gap-1.5 rounded-control bg-surface-inset px-3 py-2.5">
+      {/* mt-auto: the contracts sit at the foot, so a taller neighbour stretches the gap, not this list. */}
+      <ul className="mt-auto flex flex-col gap-1.5 rounded-control bg-surface-inset px-3 py-2.5">
         {person.contracts.map((contract) => (
           <li
             className="flex items-center gap-2.5 text-[13px]"
@@ -148,7 +149,7 @@ export function PersonCard({
 }) {
   return (
     <button
-      className="w-full rounded-[inherit] p-4 text-left transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:focus-visible:ring-inset md:rounded-card md:bg-surface-card md:active:scale-[.97] motion-reduce:md:active:scale-100"
+      className="w-full rounded-[inherit] p-4 text-left transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:focus-visible:ring-inset md:h-full md:rounded-card md:bg-surface-card md:active:scale-[.97] motion-reduce:md:active:scale-100"
       data-person-key={person.key}
       data-testid={`person-card-${person.key}`}
       onClick={() => onOpen(person.key)}
