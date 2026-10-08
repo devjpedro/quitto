@@ -22,7 +22,7 @@ export function useWizardSubmit() {
     creating: create.isPending,
     submit: (values: WizardValues, report: (issue: FieldIssue) => void) => {
       const body = toRequest(values);
-      if (!body || create.isPending) {
+      if (!body || create.isPending || create.isSuccess) {
         return;
       }
       create.mutate(body, {
@@ -40,6 +40,7 @@ export function useWizardSubmit() {
             to: "/contracts/$id",
             params: { id: created.id },
             search: {},
+            replace: true,
           });
         },
         onError: (error) => {
