@@ -22,12 +22,12 @@ export const SHELL_COLUMN =
 export function ShellLogoRow({ link }: { link?: { label: string; to: "/" } }) {
   const logo = <Logo size={24} />;
   if (!link) {
-    return <div className="flex h-11 items-center px-2.5">{logo}</div>;
+    return <div className="flex h-11 shrink-0 items-center px-2.5">{logo}</div>;
   }
   return (
     <Link
       aria-label={link.label}
-      className="flex h-11 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+      className="flex h-11 shrink-0 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
       to={link.to}
     >
       {logo}

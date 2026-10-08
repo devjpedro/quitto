@@ -68,6 +68,8 @@ export function Sidebar({
   return (
     // The frame's height (12 px on top, the bottom safe area or 12 px below);
     // a short screen (a phone on its side) scrolls it, the account menu included.
+    // Every block is shrink-0: in a column that overflows, flex would squeeze the
+    // search field (44 px) to 28 px instead of letting the column scroll.
     <aside className={SHELL_COLUMN}>
       <ShellLogoRow
         link={{
@@ -76,7 +78,7 @@ export function Sidebar({
         }}
       />
       <button
-        className="group mt-4 flex h-11 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="group mt-4 flex h-11 shrink-0 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onOpenSearch}
         type="button"
       >
@@ -90,7 +92,10 @@ export function Sidebar({
           ⌘K
         </span>
       </button>
-      <nav aria-label={m.nav_primary()} className="mt-4 flex flex-col gap-0.5">
+      <nav
+        aria-label={m.nav_primary()}
+        className="mt-4 flex shrink-0 flex-col gap-0.5"
+      >
         <p className="mb-1 px-3 text-ink-muted text-xs">
           {m.nav_section_wallet()}
         </p>
@@ -135,7 +140,7 @@ export function Sidebar({
         </Link>
         <SidebarContractsGroup contracts={activeContracts} />
       </nav>
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex shrink-0 flex-col gap-3">
         {moment ? <MomentCard moment={moment} /> : null}
         <AccountMenu identity={identity} variant="full" />
       </div>

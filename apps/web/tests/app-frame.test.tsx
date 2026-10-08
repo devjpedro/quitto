@@ -402,6 +402,11 @@ describe("AppFrame", () => {
     expect(sidebar.getByRole("link", { name: "Agora" })).toHaveClass(
       "min-h-11"
     );
+    // A column taller than the screen scrolls; it never squeezes the field.
+    expect(sidebar.getByRole("navigation")).toHaveClass("shrink-0");
+    expect(
+      sidebar.getByRole("button", { name: (name) => name.startsWith("Buscar") })
+    ).toHaveClass("shrink-0");
   });
 
   it("has a skip link to the main content", async () => {
