@@ -77,9 +77,9 @@ export function StepParty({ wizard }: { wizard: ContractWizard }) {
             <PartySuggestions
               onPick={(person) => {
                 wizard.setValue("counterpartyName", person.name);
-                if (person.email && values.counterpartyEmail.trim() === "") {
-                  wizard.setValue("counterpartyEmail", person.email);
-                }
+                // The e-mail belongs to the person picked: one typed (or taken
+                // from the last pick) never stays with another's name.
+                wizard.setValue("counterpartyEmail", person.email ?? "");
                 document.getElementById(fieldId("counterpartyEmail"))?.focus();
               }}
               people={suggestions}

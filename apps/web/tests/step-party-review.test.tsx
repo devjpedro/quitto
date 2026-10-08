@@ -71,17 +71,25 @@ describe("StepParty: sugestões", () => {
     ).toHaveFocus();
   });
 
-  it("não troca um e-mail já digitado", async () => {
+  it("escolher outra pessoa limpa o e-mail da anterior (e o nome vira o dela)", async () => {
     const user = userEvent.setup();
-    const { wizard } = steps(vi.fn(), [CARLOS]);
+    const { wizard } = steps(vi.fn(), [CARLOS, ANA]);
     toStep(wizard, 3, NOTEBOOK);
     await user.click(screen.getByRole("radio", { name: OTHER }));
-    await user.type(
-      screen.getByRole("textbox", { name: "E-mail para o convite opcional" }),
-      "outro@exemplo.com"
-    );
     await user.click(screen.getByRole("button", { name: "Usar Carlos Lima" }));
-    expect(wizard().values.counterpartyEmail).toBe("outro@exemplo.com");
+    expect(wizard().values.counterpartyEmail).toBe("carlos@exemplo.com");
+    // A whole name hides the suggestions: clear it to pick someone else.
+    await user.clear(screen.getByRole("textbox", { name: "Nome" }));
+    await user.click(screen.getByRole("button", { name: "Usar Ana Rocha" }));
+    expect(wizard().values.counterpartyName).toBe("Ana Rocha");
+    expect(wizard().values.counterpartyEmail).toBe("");
+    const email = screen.getByRole("textbox", {
+      name: "E-mail para o convite opcional",
+    });
+    await user.type(email, "outro@exemplo.com");
+    await user.clear(screen.getByRole("textbox", { name: "Nome" }));
+    await user.click(screen.getByRole("button", { name: "Usar Carlos Lima" }));
+    expect(wizard().values.counterpartyEmail).toBe("carlos@exemplo.com");
   });
 
   it("sem pessoas, nenhuma linha de sugestões", async () => {
