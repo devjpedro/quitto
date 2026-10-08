@@ -203,7 +203,7 @@ describe("demoScenario: os números do mockup 13", () => {
       T
     );
     expect(ms.settled).toEqual({
-      // + the Geladeira da Paula (5 × R$ 240,00), paid off.
+      // + the Geladeira do Carlos (5 × R$ 240,00), paid off.
       paidCents: 1_140_000,
       payableTotalCents: 2_780_000,
       receivedCents: 554_000,
@@ -221,6 +221,7 @@ describe("demoScenario: os números do mockup 13", () => {
   it("a Geladeira é o quitado da agora", () => {
     const geladeira = scenario.contracts.find((c) => c.key === "geladeira");
     expect(geladeira?.owner).toBe("agora");
+    expect(geladeira?.counterpart.displayName).toBe("Carlos Lima");
     expect(geladeira?.installments).toHaveLength(5);
     expect(geladeira?.installments.every((it) => it.status === "paid")).toBe(
       true

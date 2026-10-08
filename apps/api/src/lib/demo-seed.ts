@@ -252,9 +252,9 @@ function scenarioA(t: string): DemoContract[] {
       ...base(
         "geladeira",
         "agora",
-        "Geladeira da Paula",
+        "Geladeira do Carlos",
         "buyer",
-        "Paula Freitas"
+        "Carlos Lima"
       ),
       createdDaysAgo: 200,
       installments: monthly({
