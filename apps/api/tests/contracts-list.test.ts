@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { app } from "../src/app";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
+import { partyScenario } from "./helpers/party-scenario";
 
 function createContract(cookie: string, title: string, description?: string) {
   return app.handle(
@@ -89,5 +90,62 @@ describe("GET /api/contracts — campos da busca ⌘K", () => {
     });
     expect(typeof item.percent).toBe("number");
     expect(typeof item.overdueCount).toBe("number");
+  });
+});
+
+describe("GET /api/contracts — o cartão da lista", () => {
+  it("só os contratos visíveis, com direction null para quem acompanha", async () => {
+    const s = await partyScenario("Cartão visível");
+    const ofOwner = await (await listContracts(s.owner)).json();
+    expect(ofOwner.find((c: { id: string }) => c.id === s.id)).toMatchObject({
+      direction: "receive",
+      counterpartyName: "Rafael Prado",
+    });
+    const ofPayer = await (await listContracts(s.payer)).json();
+    expect(ofPayer.find((c: { id: string }) => c.id === s.id)).toMatchObject({
+      direction: "pay",
+    });
+    const ofViewer = await (await listContracts(s.viewer)).json();
+    expect(ofViewer.find((c: { id: string }) => c.id === s.id)).toMatchObject({
+      direction: null,
+      counterpartyName: null,
+    });
+    const ofOutsider = await (await listContracts(s.outsider)).json();
+    expect(ofOutsider).toEqual([]);
+  });
+
+  it("sem sessão, 401", async () => {
+    const res = await app.handle(new Request("http://localhost/api/contracts"));
+    expect(res.status).toBe(401);
+  });
+
+  it("o cartão de um contrato recém-criado: paidCount 0, remainingCents = total, next = parcela 1", async () => {
+    const cookie = await signUpCookie(uniqueEmail("fresh"));
+    await createContract(cookie, "Recém-criado");
+    const body = await (await listContracts(cookie)).json();
+    const item = body.find(
+      (c: { title: string }) => c.title === "Recém-criado"
+    );
+    expect(item).toMatchObject({
+      paidCount: 0,
+      remainingCents: 300_000,
+      settled: false,
+      monthly: false,
+      installmentAmountCents: 100_000,
+      next: { sequence: 1, dueDate: "2026-09-10", amountCents: 100_000 },
+      endDate: "2026-11-10",
+    });
+    expect(item.statuses).toHaveLength(3);
+  });
+
+  it("a ordem é do mais novo para o mais antigo", async () => {
+    const cookie = await signUpCookie(uniqueEmail("order"));
+    await createContract(cookie, "Primeiro");
+    await createContract(cookie, "Segundo");
+    const body = await (await listContracts(cookie)).json();
+    expect(body.map((c: { title: string }) => c.title)).toEqual([
+      "Segundo",
+      "Primeiro",
+    ]);
   });
 });

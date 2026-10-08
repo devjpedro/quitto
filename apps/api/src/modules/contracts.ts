@@ -5,15 +5,15 @@ import {
   parsePixKey,
   todayISO,
 } from "@quitto/shared";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, installment, participant, proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
+import { contractCards } from "../lib/contract-cards";
 import { createContract } from "../lib/contract-create";
-import { computeNextDueDate, computeProgress } from "../lib/contract-progress";
-import { visibleContractsWhere } from "../lib/contract-visibility";
+import { loadContractRows } from "../lib/contract-rows";
 import { normalizeEmail } from "../lib/email";
 import {
   CodedError,
@@ -27,6 +27,7 @@ import { createNotifications } from "../lib/notifications";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
+import { contractListItemSchema } from "./list-schemas";
 
 // Types only, no limits (planner's decision 3): the shared zod sets the
 // limits, so every mistake comes back as a code the web translates.
@@ -118,81 +119,10 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     "/contracts",
     async ({ request }) => {
       const { user } = await requireAuth(request.headers);
-
-      const rows = await db
-        .select()
-        .from(contract)
-        .where(visibleContractsWhere(user.id));
-
-      if (rows.length === 0) {
-        return [];
-      }
-
-      const ids = rows.map((r) => r.id);
-      const items = await db
-        .select()
-        .from(installment)
-        .where(inArray(installment.contractId, ids));
-
-      const people = await db
-        .select({
-          contractId: participant.contractId,
-          displayName: participant.displayName,
-        })
-        .from(participant)
-        .where(inArray(participant.contractId, ids));
-
-      const namesByContract = new Map<string, string[]>();
-      for (const person of people) {
-        const current = namesByContract.get(person.contractId);
-        if (current) {
-          current.push(person.displayName);
-        } else {
-          namesByContract.set(person.contractId, [person.displayName]);
-        }
-      }
-
-      const today = todayISO();
-
-      return rows.map((c) => {
-        const contractInstallments = items.filter(
-          (it) => it.contractId === c.id
-        );
-        const progress = computeProgress(contractInstallments, today);
-        return {
-          id: c.id,
-          title: c.title,
-          description: c.description,
-          participantNames: namesByContract.get(c.id) ?? [],
-          ownerRole: c.ownerRole,
-          status: c.status,
-          totalCents: progress.totalCents,
-          paidCents: progress.paidCents,
-          percent: progress.percent,
-          overdueCount: progress.overdueCount,
-          installmentsCount: c.installmentsCount,
-          nextDueDate: computeNextDueDate(contractInstallments),
-        };
-      });
+      const rows = await loadContractRows(user.id);
+      return contractCards(user.id, rows, todayISO());
     },
-    {
-      response: t.Array(
-        t.Object({
-          id: t.String(),
-          title: t.String(),
-          description: t.Union([t.String(), t.Null()]),
-          participantNames: t.Array(t.String()),
-          ownerRole: t.String(),
-          status: t.String(),
-          totalCents: t.Integer(),
-          paidCents: t.Integer(),
-          percent: t.Integer(),
-          overdueCount: t.Integer(),
-          installmentsCount: t.Integer(),
-          nextDueDate: t.Union([t.String(), t.Null()]),
-        })
-      ),
-    }
+    { response: t.Array(contractListItemSchema) }
   )
   .patch(
     "/contracts/:id",

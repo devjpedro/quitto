@@ -38,6 +38,13 @@ it("infers the Fase-2a contract endpoints cross-package (eden#215 mitigation)", 
   expectTypeOf<ListItem["id"]>().toEqualTypeOf<string>();
   expectTypeOf<ListItem["percent"]>().toEqualTypeOf<number>();
   expectTypeOf<ListItem["totalCents"]>().toEqualTypeOf<number>();
+  // Phase 4: the list card.
+  expectTypeOf<ListItem["direction"]>().toEqualTypeOf<
+    "pay" | "receive" | null
+  >();
+  expectTypeOf<ListItem["statuses"]>().toEqualTypeOf<
+    ("paid" | "overdue" | "review" | "today" | "open")[] | null
+  >();
 
   // GET /api/contracts/:id — path param accessed by calling the segment as a function.
   // `typeof` can't wrap a call expression, so we capture the call result in a value first.

@@ -1,115 +1,28 @@
 import { todayISO } from "@quitto/shared";
-import { and, count, desc, eq, gt, inArray, isNull, max } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../db/client";
 import {
   contract,
-  installment,
   invite,
   notification,
   participant,
-  proof,
   user as userTable,
 } from "../db/schema";
-import {
-  visibleContractsWhere,
-  visibleNotificationsWhere,
-} from "../lib/contract-visibility";
+import { loadContractRows } from "../lib/contract-rows";
+import { visibleNotificationsWhere } from "../lib/contract-visibility";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
-import { type HomeContractRows, partyContracts } from "../lib/home-parties";
+import { partyContracts } from "../lib/home-parties";
 import { activeContracts } from "../lib/home-progress";
 import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
 import { loadInviteTerms } from "../lib/invite-terms";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
-
-const EMPTY_ROWS: HomeContractRows = {
-  contracts: [],
-  installments: [],
-  participants: [],
-  users: [],
-};
-
-/** Contracts the user sees (owned or linked), with every row the home needs. 3 sequential round trips at most. */
-async function loadContractRows(userId: string): Promise<HomeContractRows> {
-  const contracts = await db
-    .select({
-      id: contract.id,
-      title: contract.title,
-      ownerId: contract.ownerId,
-      ownerRole: contract.ownerRole,
-      requiresConfirmation: contract.requiresConfirmation,
-      status: contract.status,
-      installmentsCount: contract.installmentsCount,
-      createdAt: contract.createdAt,
-    })
-    .from(contract)
-    .where(visibleContractsWhere(userId));
-  if (contracts.length === 0) {
-    return EMPTY_ROWS;
-  }
-  const ids = contracts.map((c) => c.id);
-  const [installmentRows, participants, proofs] = await Promise.all([
-    db
-      .select({
-        id: installment.id,
-        contractId: installment.contractId,
-        sequence: installment.sequence,
-        amountCents: installment.amountCents,
-        dueDate: installment.dueDate,
-        status: installment.status,
-        paidAt: installment.paidAt,
-      })
-      .from(installment)
-      .where(inArray(installment.contractId, ids)),
-    db
-      .select({
-        contractId: participant.contractId,
-        displayName: participant.displayName,
-        role: participant.role,
-        linkedUserId: participant.linkedUserId,
-        pixKey: participant.pixKey,
-      })
-      .from(participant)
-      .where(inArray(participant.contractId, ids)),
-    // Latest proof per installment: when the payer acted in a contract with
-    // confirmation ("Tudo em dia" counts it, not the confirmation time).
-    db
-      .select({ installmentId: proof.installmentId, at: max(proof.createdAt) })
-      .from(proof)
-      .innerJoin(installment, eq(proof.installmentId, installment.id))
-      .where(inArray(installment.contractId, ids))
-      .groupBy(proof.installmentId),
-  ]);
-  const lastProofAt = new Map(proofs.map((p) => [p.installmentId, p.at]));
-  const installments = installmentRows.map((row) => ({
-    ...row,
-    lastProofAt: lastProofAt.get(row.id) ?? null,
-  }));
-  // Owners (seller-owned receive key + name) and linked sellers (their key).
-  const userIds = [
-    ...new Set([
-      ...contracts.map((c) => c.ownerId),
-      ...participants.flatMap((p) =>
-        p.role === "seller" && p.linkedUserId ? [p.linkedUserId] : []
-      ),
-    ]),
-  ];
-  const users = await db
-    .select({
-      id: userTable.id,
-      name: userTable.name,
-      pixKey: userTable.pixKey,
-    })
-    .from(userTable)
-    .where(inArray(userTable.id, userIds));
-  return { contracts, installments, participants, users };
-}
 
 /** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot, and its latest copy decides. */
 async function loadInvites(email: string): Promise<HomeInviteRow[]> {
