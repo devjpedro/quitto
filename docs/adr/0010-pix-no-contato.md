@@ -28,5 +28,5 @@ adotou "uma chave por conta" e a tela **Pessoas** precisava de um lugar para a c
 ## Consequences
 
 - Um contrato com chave diferente da do contato perdia o override; a consulta de impacto do
-  checklist de ops conta esses casos antes de rodar a 0020.
+  checklist de ops conta esses casos antes do deploy do redesign, quando o override deixou de valer.
 - Continua sem PSP e sem confirmação automática (ADR-0005).
