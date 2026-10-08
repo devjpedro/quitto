@@ -1,9 +1,10 @@
 import {
   queryOptions,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useHydrated, useNavigate } from "@tanstack/react-router";
 import { api } from "@/lib/api";
 import { ApiError, unwrap } from "@/lib/api-client";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
@@ -93,4 +94,57 @@ export function useResendInvite(view: InviteView, token: string) {
       invalidateContractViews(qc, view.contractId);
     },
   });
+}
+
+type PreviewGet = ReturnType<
+  ReturnType<typeof api.api.invites>["preview"]["get"]
+>;
+export type PublicInvitePreview = NonNullable<Awaited<PreviewGet>["data"]>;
+
+export type PreviewLookup =
+  | { kind: "preview"; preview: PublicInvitePreview }
+  | { kind: "rateLimited" }
+  | { kind: "missing" };
+
+/**
+ * What anyone with the link may see (owner's decision 12): no session
+ * needed. A 404 is a screen, not an error; a 429 (30 a minute per visitor)
+ * is a screen too ("tente de novo daqui a pouco"), never a broken page.
+ */
+export const invitePreviewQueryOptions = (token: string) =>
+  queryOptions({
+    queryKey: [...queryKeys.invite(token), "preview"] as const,
+    queryFn: async (): Promise<PreviewLookup> => {
+      try {
+        const preview = await unwrap(api.api.invites({ token }).preview.get());
+        return { kind: "preview", preview };
+      } catch (error) {
+        if (error instanceof ApiError && error.httpStatus === 404) {
+          return { kind: "missing" };
+        }
+        if (error instanceof ApiError && error.httpStatus === 429) {
+          return { kind: "rateLimited" };
+        }
+        throw error;
+      }
+    },
+  });
+
+/**
+ * The invite on the login screen (planner's decision 37): nothing when
+ * there is none or it failed. Only after hydration, like the shell's
+ * selectors (features/home/shell-selectors.ts): the loader's prefetch is not
+ * awaited, so the server HTML may lack it while the client cache has it,
+ * and drawing it on the first render would be a hydration mismatch.
+ */
+export function useInvitePreview(
+  token: string | null
+): PublicInvitePreview | null {
+  const hydrated = useHydrated();
+  const { data } = useQuery({
+    ...invitePreviewQueryOptions(token ?? ""),
+    enabled: token !== null,
+    throwOnError: false,
+  });
+  return hydrated && data?.kind === "preview" ? data.preview : null;
 }

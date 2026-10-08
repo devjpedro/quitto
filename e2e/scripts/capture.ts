@@ -38,7 +38,8 @@ function arg(name: string, fallback?: string): string {
   return value;
 }
 
-const account = arg("account");
+const anon = process.argv.includes("--anon");
+const account = anon ? "anon" : arg("account");
 const out = arg("out");
 const name = arg(
   "name",
@@ -210,7 +211,7 @@ async function settlePanel(page: Page, where: string): Promise<void> {
   }
 }
 
-const session = await sessionCookies();
+const session = anon ? [] : await sessionCookies();
 const cookie = session.map((c) => `${c.name}=${c.value}`).join("; ");
 
 async function api<T>(route: string, init?: RequestInit): Promise<T> {

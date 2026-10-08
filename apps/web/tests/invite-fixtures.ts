@@ -1,4 +1,4 @@
-import type { InviteView } from "@/features/invites/api";
+import type { InviteView, PublicInvitePreview } from "@/features/invites/api";
 
 export const FLORIPA: InviteView = {
   status: "pending",
@@ -39,3 +39,19 @@ export const FLORIPA: InviteView = {
 
 /** Monday, 5 Oct 2026, 12:00 in São Paulo: "a partir de 10/11" without the year. */
 export const INVITE_NOW = new Date("2026-10-05T15:00:00.000Z");
+
+/** What anyone with the link sees (Task 3): no schedule, no other parties, the e-mail masked. */
+export const FLORIPA_PUBLIC: PublicInvitePreview = {
+  status: "pending",
+  inviterName: "Bia Lopes",
+  contractTitle: "Viagem para Floripa (dividida)",
+  role: "buyer",
+  terms: {
+    amountCents: 30_000,
+    firstDueDate: "2026-11-10",
+    installmentsCount: 4,
+    totalCents: 120_000,
+  },
+  emailMasked: "j•••@exemplo.com",
+  expiresAt: "2026-10-11T16:00:00.000Z",
+};

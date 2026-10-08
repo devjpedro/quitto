@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { inviteLookupQueryOptions } from "@/features/invites/api";
+import {
+  inviteLookupQueryOptions,
+  invitePreviewQueryOptions,
+} from "@/features/invites/api";
 import { InviteFallback } from "@/features/invites/components/invite-fallback";
 import { InvitePage } from "@/features/invites/components/invite-page";
 import { useApiWarmup } from "@/hooks/use-api-warmup";
@@ -17,6 +20,11 @@ export const Route = createFileRoute("/invites/$token")({
   }),
   loader: ({ context, params }) => {
     context.queryClient.prefetchQuery(inviteLookupQueryOptions(params.token));
+    if (context.session === "anon") {
+      context.queryClient.prefetchQuery(
+        invitePreviewQueryOptions(params.token)
+      );
+    }
   },
   head: () => ({
     meta: [

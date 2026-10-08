@@ -1,7 +1,9 @@
-import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@tanstack/react-router", () => ({ useSearch: () => ({}) }));
+vi.mock("@tanstack/react-router", () => ({
+  useHydrated: () => true,
+  useSearch: () => ({}),
+}));
 vi.mock("@/lib/auth-client", () => ({
   signIn: { email: vi.fn(), social: vi.fn() },
   signUp: { email: vi.fn() },
@@ -13,6 +15,7 @@ import {
   IDENTITY_COOKIE,
   serializeIdentityCookie,
 } from "../src/lib/identity-cookie";
+import { renderWithProviders } from "./test-utils";
 
 afterEach(() => {
   // biome-ignore lint/suspicious/noDocumentCookie: test cleanup of the first-party identity cookie
@@ -28,7 +31,7 @@ describe("login page", () => {
     );
     expect(document.cookie).toContain(IDENTITY_COOKIE);
 
-    render(<LoginPage />);
+    renderWithProviders(<LoginPage />);
 
     expect(document.cookie).not.toContain(IDENTITY_COOKIE);
   });

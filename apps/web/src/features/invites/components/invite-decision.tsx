@@ -129,7 +129,7 @@ export function InviteDecision({
       <InviteBar className="max-md:flex-row-reverse">
         <Button
           aria-busy={accept.isPending || undefined}
-          block
+          className="flex-1"
           onClick={() => accept.mutate()}
           size="lg"
         >

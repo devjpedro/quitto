@@ -5,6 +5,16 @@ import { Button } from "@/components/legacy-ui/button";
 import { Input } from "@/components/legacy-ui/input";
 import { Label } from "@/components/legacy-ui/label";
 import { PasswordInput } from "@/components/password-input";
+import { Emphasis } from "@/components/ui/emphasis";
+import {
+  type AuthMode,
+  describedBy,
+  heading,
+  submitLabel,
+} from "@/features/auth/lib/login-copy";
+import { useInvitePreview } from "@/features/invites/api";
+import { LoginInviteContext } from "@/features/invites/components/login-invite-context";
+import { inviteTokenOf } from "@/features/invites/lib/invite-redirect";
 import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { clearIdentityCookie } from "@/hooks/use-identity-cookie";
@@ -12,15 +22,12 @@ import { sendVerificationEmail, signIn, signUp } from "@/lib/auth-client";
 import { authErrorMessage } from "@/lib/auth-error-message";
 import { PAGE_TITLE } from "@/lib/page-title";
 import { safeRedirect } from "@/lib/safe-redirect";
+import { m } from "@/paraglide/messages.js";
 
 const PRESS =
   "active:scale-[0.97] transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)]";
 
 const UNVERIFIED_EMAIL_RE = /verif/i;
-
-function submitLabel(mode: "signin" | "signup") {
-  return mode === "signin" ? "Entrar" : "Criar conta";
-}
 
 export function LoginPage() {
   useDocumentTitle(PAGE_TITLE.login);
@@ -31,11 +38,19 @@ export function LoginPage() {
   useEffect(() => {
     clearIdentityCookie();
   }, []);
-  const search = useSearch({ strict: false }) as { redirect?: string };
+  const search = useSearch({ strict: false }) as {
+    mode?: "signup";
+    redirect?: string;
+  };
+  const inviteToken = inviteTokenOf(search.redirect);
+  const invite = useInvitePreview(inviteToken);
   // window não existe no SSR; target só é usado em handlers (client), então guardamos.
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const target = safeRedirect(search.redirect, origin);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<AuthMode>(
+    search.mode === "signup" ? "signup" : "signin"
+  );
+  const head = heading(mode, inviteToken !== null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,14 +121,11 @@ export function LoginPage() {
       <div className="flex flex-1 items-center justify-center bg-background px-6 py-10 md:px-10">
         <div className="w-full max-w-sm">
           <header className="mb-6">
+            {invite ? <LoginInviteContext preview={invite} /> : null}
             <h1 className="font-bold text-2xl text-foreground tracking-tight">
-              {mode === "signin" ? "Entre na sua conta" : "Crie sua conta"}
+              {head.title}
             </h1>
-            <p className="mt-1 text-muted-foreground text-sm">
-              {mode === "signin"
-                ? "Bem-vindo de volta ao Quitto."
-                : "É rápido e grátis."}
-            </p>
+            <p className="mt-1 text-muted-foreground text-sm">{head.sub}</p>
           </header>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] sm:p-6">
@@ -148,7 +160,7 @@ export function LoginPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="email">E-mail</Label>
                 <Input
-                  aria-describedby={error ? "auth-error" : undefined}
+                  aria-describedby={describedBy(error, invite !== null)}
                   aria-invalid={error ? true : undefined}
                   id="email"
                   onChange={(e) => setEmail(e.target.value)}
@@ -156,6 +168,14 @@ export function LoginPage() {
                   type="email"
                   value={email}
                 />
+                {invite ? (
+                  <p className="text-muted-foreground text-xs" id="email-hint">
+                    <Emphasis
+                      strong={invite.emailMasked}
+                      text={m.login_invite_hint({ masked: invite.emailMasked })}
+                    />
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -170,7 +190,7 @@ export function LoginPage() {
                   )}
                 </div>
                 <PasswordInput
-                  aria-describedby={error ? "auth-error" : undefined}
+                  aria-describedby={describedBy(error, false)}
                   aria-invalid={error ? true : undefined}
                   id="password"
                   onChange={(e) => setPassword(e.target.value)}
@@ -192,7 +212,9 @@ export function LoginPage() {
                 disabled={loading}
                 type="submit"
               >
-                {loading ? "Aguarde..." : submitLabel(mode)}
+                {loading
+                  ? "Aguarde..."
+                  : submitLabel(mode, inviteToken !== null)}
               </Button>
             </form>
           </div>

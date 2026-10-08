@@ -147,7 +147,7 @@ export function OwnerInvite({
         ) : null}
       </div>
       <InviteBar>
-        <Button asChild block size="lg">
+        <Button asChild className="flex-1" size="lg">
           <Link
             params={{ id: view.contractId }}
             search={{}}

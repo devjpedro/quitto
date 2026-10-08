@@ -33,7 +33,7 @@ function GoNow({ primary = false }: { primary?: boolean }) {
   return (
     <Button
       asChild
-      block={primary}
+      className={primary ? "w-full" : "flex-1"}
       size="lg"
       variant={primary ? "primary" : "secondary"}
     >
@@ -44,7 +44,7 @@ function GoNow({ primary = false }: { primary?: boolean }) {
 
 function OpenContract({ view }: { view: InviteView }) {
   return (
-    <Button asChild block size="lg">
+    <Button asChild className="flex-1" size="lg">
       <Link params={{ id: view.contractId }} search={{}} to="/contracts/$id">
         {m.invite_open_contract()}
       </Link>
@@ -131,7 +131,7 @@ export function InviteStatus({
         {mini}
         <InviteBar>
           <GoNow />
-          <Button asChild block size="lg">
+          <Button asChild className="flex-1" size="lg">
             <a href={ask} rel="noopener noreferrer" target="_blank">
               <WhatsappLogo aria-hidden="true" size={18} />
               {m.invite_ask_whatsapp()}
@@ -186,7 +186,11 @@ export function InviteStatus({
       {mini}
       <InviteBar>
         <GoNow />
-        <Button block onClick={() => switchAccount(token)} size="lg">
+        <Button
+          className="flex-1"
+          onClick={() => switchAccount(token)}
+          size="lg"
+        >
           {m.invite_switch_account()}
         </Button>
       </InviteBar>
