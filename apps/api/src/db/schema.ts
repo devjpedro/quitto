@@ -28,6 +28,8 @@ export const user = pgTable("user", {
   locale: text("locale"),
   // Set when the user dismisses the "Comece por aqui" checklist on the home.
   onboardingDismissedAt: timestamp("onboarding_dismissed_at"),
+  // Set when the user finishes or skips the guided tour (first access); null = it shows once. "Refazer" in Ajustes clears it.
+  tourCompletedAt: timestamp("tour_completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

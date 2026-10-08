@@ -16,6 +16,7 @@ export const ME: SessionUser = {
   hasPassword: true,
   locale: null,
   pixKey: null,
+  tourCompletedAt: "2025-09-12T15:30:00.000Z",
 };
 
 /** Ajustes with /me already in the cache (so nothing is fetched) and the account as given. */

@@ -359,6 +359,8 @@ for (const demoAccount of scenario.accounts) {
       emailVerified: true,
       pixKey: demoAccount.pixKey,
       createdAt: daysAgo(demoAccount.createdDaysAgo),
+      // The tour is for the first access: only the new account (novo) still has it to see.
+      tourCompletedAt: demoAccount.key === "novo" ? null : new Date(),
     })
     .where(eq(user.id, created.id));
   users.set(demoAccount.key, {

@@ -20,6 +20,8 @@ export interface SessionUser extends SessionIdentity {
   /** null = the user never chose a language (the browser decides until they do). */
   locale: Locale | null;
   pixKey: string | null;
+  /** ISO instant the guided tour was finished or skipped; null = it still shows once (first access). */
+  tourCompletedAt: string | null;
 }
 
 export type SessionResult =

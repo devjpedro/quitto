@@ -136,6 +136,7 @@ describe("opt-in de lembrete por e-mail", () => {
       pixKey: "joao@example.com",
       emailRemindersOptIn: true,
       locale: null,
+      tourCompletedAt: null,
     });
 
     const r2 = await patch(cookie, { pixKey: null });
@@ -143,6 +144,7 @@ describe("opt-in de lembrete por e-mail", () => {
       pixKey: null,
       emailRemindersOptIn: true,
       locale: null,
+      tourCompletedAt: null,
     });
     expect((await (await get(cookie)).json()).emailRemindersOptIn).toBe(true);
   });
@@ -174,6 +176,7 @@ describe("idioma da conta", () => {
       pixKey: "joao@example.com",
       emailRemindersOptIn: false,
       locale: "en-US",
+      tourCompletedAt: null,
     });
     expect((await (await get(cookie)).json()).locale).toBe("en-US");
   });
@@ -181,5 +184,45 @@ describe("idioma da conta", () => {
   it("rejeita idioma fora da lista", async () => {
     const cookie = await signUpCookie(uniqueEmail("me-loc3"));
     expect((await patch(cookie, { locale: "fr" })).status).toBe(422);
+  });
+});
+
+describe("tour guiado", () => {
+  const get = (cookie: string) =>
+    app.handle(new Request("http://localhost/api/me", { headers: { cookie } }));
+  const patch = (cookie: string, body: unknown) =>
+    app.handle(
+      new Request("http://localhost/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify(body),
+      })
+    );
+
+  it("conta nova: ainda não viu o tour (null)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-tour"));
+    expect((await (await get(cookie)).json()).tourCompletedAt).toBeNull();
+  });
+
+  it("concluir grava a hora e o GET devolve; refazer zera", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-tour2"));
+    const before = Date.now();
+    const done = await (await patch(cookie, { tourCompleted: true })).json();
+    expect(Date.parse(done.tourCompletedAt)).toBeGreaterThanOrEqual(
+      before - 1000
+    );
+    expect((await (await get(cookie)).json()).tourCompletedAt).toBe(
+      done.tourCompletedAt
+    );
+    const again = await (await patch(cookie, { tourCompleted: false })).json();
+    expect(again.tourCompletedAt).toBeNull();
+    expect((await (await get(cookie)).json()).tourCompletedAt).toBeNull();
+  });
+
+  it("não mexe nos outros campos", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-tour3"));
+    await patch(cookie, { locale: "en-US" });
+    const res = await (await patch(cookie, { tourCompleted: true })).json();
+    expect(res.locale).toBe("en-US");
   });
 });

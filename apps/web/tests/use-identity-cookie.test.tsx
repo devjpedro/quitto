@@ -18,6 +18,7 @@ const maria: SessionUser = {
   emailRemindersAvailable: false,
   hasPassword: true,
   locale: null,
+  tourCompletedAt: null,
 };
 
 function identityCookieWrites(spy: { mock: { calls: unknown[][] } }) {
