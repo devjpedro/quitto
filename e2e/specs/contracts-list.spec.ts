@@ -74,14 +74,19 @@ test("lista: o cartão com o %, a barra e o rodapé; Concluídos e Recebo filtra
   await expect(overdueCard).toHaveCount(0);
 });
 
-test("vazio: os contornos e Novo contrato", async ({ page }) => {
+test("vazio: o palco sem cartão fantasma, Novo contrato e o tour", async ({
+  page,
+}) => {
   await signup(page);
   await page.goto("/contracts");
   await waitForHydrated(page);
   const empty = page.getByTestId("contracts-empty");
-  await expect(empty).toContainText("Seus acordos aparecem aqui");
+  await expect(empty).toContainText("Nenhum contrato ainda");
   await expect(
     empty.getByRole("link", { name: "Novo contrato" })
+  ).toBeVisible();
+  await expect(
+    empty.getByRole("button", { name: "Fazer o tour" })
   ).toBeVisible();
 });
 

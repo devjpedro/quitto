@@ -123,7 +123,7 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   // with it. A fastForward would also fire, inside the jump, the 15 s timeout
   // of every read started meanwhile, which no real wait aborts.
   await advanceDateNow(page, 60_000);
-  await page.getByRole("link", { name: "Novo contrato" }).hover();
+  await nav.getByRole("link", { name: "Novo contrato" }).hover();
   const row = page.locator(`a[href="/contracts/${id}"]`).first();
   await row.hover();
   await row.click();

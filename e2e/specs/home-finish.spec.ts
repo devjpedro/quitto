@@ -122,8 +122,7 @@ async function expectCloseToPayoff(
   if (isMobile) {
     const cell = page
       .getByRole("region", { name: "Marcos" })
-      .getByRole("listitem")
-      .first();
+      .locator(".bg-highlight");
     // The phone's variant: the % on the label, only the name below (no fraction).
     await expect(cell).toContainText("Mais perto de quitar · 67%");
     await expect(cell).toContainText("Moto E2E");
@@ -258,12 +257,12 @@ test.describe("tela larga", () => {
     await seedOneEach(page.request, "Ativo E2E", [20, 21, 22, 23, 24, 25]);
     await home(page);
     const list = page.getByRole("list", { name: "Contratos ativos" });
-    await expect(list.getByRole("link")).toHaveCount(5);
+    await expect(list.getByRole("link")).toHaveCount(3);
     const newest = list.getByRole("link").first();
     await expect(newest).toContainText("Ativo E2E 6");
     // Every row has the logo's ring. Nothing paid: the track alone (no arc)
     // and the fraction beside it says the same, 0/1.
-    await expect(list.locator(RING_SVG)).toHaveCount(5);
+    await expect(list.locator(RING_SVG)).toHaveCount(3);
     const ring = newest.locator(RING_SVG);
     await expect(ring).toBeVisible();
     await expect(ring.locator("circle")).toHaveCount(1);
@@ -273,7 +272,7 @@ test.describe("tela larga", () => {
     ).toHaveAttribute("href", "/contracts");
   });
 
-  test("poucas ações a 1512 e 1920: Próximos 30 dias na linha das ações, sem esticar cartão e sem divergência de hidratação", async ({
+  test("uma ação a 1512 e 1920: Próximos 30 dias ao lado do cartão, sem esticar o cartão e sem divergência de hidratação", async ({
     page,
   }) => {
     const hydrationErrors = collectHydrationErrors(page);
@@ -308,13 +307,17 @@ test.describe("tela larga", () => {
     for (const width of [1512, 1920]) {
       await page.setViewportSize({ width, height: 900 });
       await home(page);
-      await expect(page.getByRole("article")).toHaveCount(3);
+      // Only the first action is a card; the others are "Na sequência".
+      await expect(page.getByRole("article")).toHaveCount(1);
+      await expect(
+        page.getByRole("region", { name: "Na sequência" })
+      ).toBeVisible();
       const first = await box(page.getByRole("article").first());
       expect(Math.abs(first.width - (fewWidths.get(width) ?? 0))).toBeLessThan(
         2
       );
     }
-    // The few-actions row is decided by the data, so the server HTML and the hydration agree.
+    // The layout is decided by the data, so the server HTML and the hydration agree.
     expect(hydrationErrors).toEqual([]);
   });
 
@@ -329,28 +332,9 @@ test.describe("tela larga", () => {
     );
     expect(upcoming.y).toBeGreaterThan(first.y + first.height);
   });
-
-  test("a 1024 o cartão estreito empilha os botões, cada um na largura toda (O2)", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1024, height: 900 });
-    await signup(page);
-    await seedOneEach(page.request, "Estreito E2E", [-30, -20, -10], "seller");
-    await home(page);
-    const narrow = card(page, "Estreito E2E 2 · parcela 1 de 1");
-    const whatsapp = await box(narrow.getByRole("link", { name: WHATSAPP }));
-    const received = await box(
-      narrow.getByRole("button", { name: "Marcar como recebida" })
-    );
-    // The pair does not fit a ~200 px card (decision 16, O2): one under the
-    // other, each the card's full width.
-    expect(received.y).toBeGreaterThan(whatsapp.y + 4);
-    expect(Math.abs(whatsapp.width - received.width)).toBeLessThan(2);
-    expect(whatsapp.width).toBeGreaterThan((await box(narrow)).width - 40);
-  });
 });
 
-test("celular: o cartão é branco sobre o fundo, e Ver parcelas vira um ícone de 44 px com nome", async ({
+test("celular: Ver parcelas vira um ícone de 44 px com nome, no cartão em destaque", async ({
   page,
 }, testInfo) => {
   // biome-ignore lint/suspicious/noSkippedTests: the phone layout exists only in the mobile project
@@ -368,10 +352,6 @@ test("celular: o cartão é branco sobre o fundo, e Ver parcelas vira um ícone 
   const icon = await box(see);
   expect(Math.round(icon.width)).toBe(44);
   expect(Math.round(icon.height)).toBe(44);
-  await expect(card(page, "Outro E2E 1 · parcela 1 de 1")).toHaveCSS(
-    "background-color",
-    "rgb(255, 255, 255)"
-  );
   await expect(page.locator("#app-shell")).toHaveCSS(
     "background-color",
     "rgb(241, 240, 235)"
@@ -379,76 +359,21 @@ test("celular: o cartão é branco sobre o fundo, e Ver parcelas vira um ícone 
   await expectNoPageScrollX(page);
 });
 
-test("celular: o chip de atraso aparece com 2 cartões a receber, numa linha; a página não rola", async ({
+test("Próximos 30 dias mostra 3 linhas e 'Mais N em Parcelas', que leva à lista", async ({
   page,
-}, testInfo) => {
-  // biome-ignore lint/suspicious/noSkippedTests: the chip strip is measured at the phone's width
-  test.skip(testInfo.project.name !== "mobile", "só no celular");
-  // The strip's tab stop is the client's (the server cannot measure): it must
-  // not make the hydration diverge.
-  const hydrationErrors = collectHydrationErrors(page);
+}) => {
   await signup(page);
-  // Two overdue cards to receive (two contracts): the only case with a chip.
-  await seedOverdueGroup(page, "Terreno E2E", "seller");
-  await seedOverdueGroup(page, "Notebook E2E", "seller");
-  await home(page);
-  const strip = page.getByRole("list", { name: "Resumo" });
-  const chips = strip.getByRole("listitem");
-  await expect(chips).toHaveCount(1);
-  await expect(chips).toContainText("a receber em atraso");
-  // One line, and one chip does not scroll: no tab stop on the strip.
-  expect(await strip.getAttribute("tabindex")).toBeNull();
-  expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(
-    false
-  );
-  await expectNoPageScrollX(page);
-  await scan(page);
-  expect(hydrationErrors).toEqual([]);
-});
-
-test("celular: a última linha de Próximos 30 dias, focada pelo teclado, nunca fica sob a tab bar", async ({
-  page,
-}, testInfo) => {
-  // biome-ignore lint/suspicious/noSkippedTests: the fixed tab bar exists only at the phone's width
-  test.skip(testInfo.project.name !== "mobile", "só no celular");
-  await signup(page);
-  // Eight installments ahead (none is an action yet): the list runs past the screen.
+  // Eight installments ahead (none is an action yet).
   await seedOneEach(
     page.request,
     "Agenda E2E",
     [10, 12, 14, 16, 18, 20, 22, 24]
   );
   await home(page);
-  const rows = page
-    .getByRole("region", { name: "Próximos 30 dias" })
-    .getByRole("link");
-  await expect(rows).toHaveCount(8);
-  const bar = await box(
-    page
-      .getByRole("navigation", { name: "Navegação principal" })
-      .filter({ visible: true })
-  );
-  // The last row right behind the fixed bar, still inside the viewport: the
-  // case scroll-padding is for. Without it the browser sees the row as
-  // visible, and the focus would leave it under the bar.
-  await rows.last().evaluate((el) => {
-    const bottom = el.getBoundingClientRect().bottom + window.scrollY;
-    window.scrollTo({
-      top: bottom - window.innerHeight + 4,
-      behavior: "instant",
-    });
-  });
-  const behind = await box(rows.last());
-  expect(behind.y + behind.height).toBeGreaterThan(bar.y);
-  // Tab into it from the row before, as a keyboard user does.
-  await rows
-    .nth(6)
-    .evaluate((el) => (el as HTMLElement).focus({ preventScroll: true }));
-  await page.keyboard.press("Tab");
-  await expect(rows.last()).toBeFocused();
-  const row = await box(rows.last());
-  expect(row.y).toBeGreaterThanOrEqual(0);
-  expect(row.y + row.height).toBeLessThanOrEqual(bar.y);
+  const section = page.getByRole("region", { name: "Próximos 30 dias" });
+  await expect(section.getByRole("listitem")).toHaveCount(3);
+  await section.getByRole("link", { name: "Mais 5 em Parcelas" }).click();
+  await page.waitForURL("**/installments");
 });
 
 test("marco do momento: 2 de 3 pagas é Mais perto de quitar, com o anel da logo no tanto pago", async ({
@@ -467,18 +392,17 @@ test("marco do momento: 2 de 3 pagas é Mais perto de quitar, com o anel da logo
     "stroke-dasharray",
     "37.89 56.55"
   );
-  // The sidebar's card says what is left, and the next date (40 days ahead);
-  // the phone's cell is short and does not.
+  // The sidebar's card is two lines now (mockup 20): no "Falta 1 parcela" detail.
   if (!isMobile) {
     await expect(
       page
         .getByRole("complementary")
-        .getByText("Falta 1 parcela, em", { exact: false })
-    ).toBeVisible();
+        .getByText("Falta 1 parcela", { exact: false })
+    ).toHaveCount(0);
   }
 });
 
-test("axe em claro e escuro com grupo, chips de atraso, marcos e notificações", async ({
+test("axe em claro e escuro com grupo, marcos e notificações", async ({
   browser,
   context,
   page,

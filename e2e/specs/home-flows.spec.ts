@@ -79,7 +79,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
     },
   });
   // A payer past the guide: while it shows, the green guide card takes the
-  // place of "Nada pendente agora" (next test).
+  // place of "Tudo em dia" (next test).
   const dismissed = await page.request.post("/api/me/onboarding/dismiss");
   expect(dismissed.ok()).toBe(true);
   await page.goto("/");
@@ -92,23 +92,19 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
     page.getByText("Parcela marcada como paga", { exact: true })
   ).toBeVisible();
   await expect(first).toHaveCount(0);
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toBeVisible();
+  await expect(page.getByText("Tudo em dia", { exact: true })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toBeVisible();
+  await expect(page.getByText("Tudo em dia", { exact: true })).toBeVisible();
   await expect(card(page, "Aluguel E2E · parcela 1 de 3")).toHaveCount(0);
   // 1 of 3 paid is 33%, below the half "Mais perto de quitar" asks for: the
   // milestone of the moment is what was paid this month. Desktop shows it in
   // the sidebar's lime card; a phone opens the strip with it.
   if (testInfo.project.name === "mobile") {
     await expect(
-      page.getByRole("region", { name: "Marcos" }).getByRole("listitem").first()
+      page.getByRole("region", { name: "Marcos" }).locator(".bg-highlight")
     ).toContainText(PAID_THIS_MONTH);
   } else {
     await expect(
@@ -117,7 +113,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
   }
 });
 
-test("nada pendente com o guia ativo: o guia verde fica no lugar de Nada pendente agora", async ({
+test("nada pendente com o guia ativo: o guia verde fica no lugar de Tudo em dia", async ({
   page,
 }) => {
   await signup(page);
@@ -141,9 +137,7 @@ test("nada pendente com o guia ativo: o guia verde fica no lugar de Nada pendent
   await expect(
     page.getByRole("heading", { level: 2, name: "Cadastre sua chave PIX." })
   ).toBeVisible();
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toHaveCount(0);
+  await expect(page.getByText("Tudo em dia", { exact: true })).toHaveCount(0);
 });
 
 test("recebedor: Cobrar no WhatsApp leva a cobrança com o PIX, e Marcar como recebida funciona", async ({
@@ -188,13 +182,14 @@ test("convites no Agora: recusar e aceitar ali mesmo, e o recusado não volta", 
   const owner = await newUser(browser);
   const guest = await newUser(browser);
   try {
-    const declined = await seedContract(owner.page.request, {
-      title: "Convite Recusar",
-    });
+    // Newest invite first: "Recusar" is the action card, "Aceitar" a line in "Na sequência".
     const accepted = await seedContract(owner.page.request, {
       title: "Convite Aceitar",
     });
-    for (const id of [declined.id, accepted.id]) {
+    const declined = await seedContract(owner.page.request, {
+      title: "Convite Recusar",
+    });
+    for (const id of [accepted.id, declined.id]) {
       await seedInvite(owner.page.request, id, {
         displayName: "Vendedor",
         role: "seller",
@@ -206,23 +201,30 @@ test("convites no Agora: recusar e aceitar ali mesmo, e o recusado não volta", 
     await guest.page.goto("/");
     // A click before hydration lands on the server HTML and is lost.
     await waitForHydrated(guest.page);
-    await inviteCard(guest.page, "Convite Recusar")
-      .getByRole("button", { name: "Recusar" })
-      .click();
-    await expect(
-      guest.page.getByText("Convite recusado", { exact: true })
-    ).toBeVisible();
-    await expect(inviteCard(guest.page, "Convite Recusar")).toHaveCount(0);
+    // Only the first action is a card with buttons; the next one slides into its place.
+    const decline = async () => {
+      await inviteCard(guest.page, "Convite Recusar")
+        .getByRole("button", { name: "Recusar" })
+        .click();
+      await expect(
+        guest.page.getByText("Convite recusado", { exact: true })
+      ).toBeVisible();
+      await expect(inviteCard(guest.page, "Convite Recusar")).toHaveCount(0);
+    };
+    const accept = async () => {
+      await inviteCard(guest.page, "Convite Aceitar")
+        .getByRole("button", { name: "Aceitar" })
+        .click();
+      await expect(
+        guest.page.getByText("Convite aceito", { exact: true })
+      ).toBeVisible();
+      await expect(inviteCard(guest.page, "Convite Aceitar")).toHaveCount(0);
+    };
+    await decline();
     // A deliberate tap, after the double-tap lock: a tap inside that window
     // lands on the card that slid into place and is swallowed.
     await advanceDateNow(guest.page, ACTION_LOCK_MS + 100);
-    await inviteCard(guest.page, "Convite Aceitar")
-      .getByRole("button", { name: "Aceitar" })
-      .click();
-    await expect(
-      guest.page.getByText("Convite aceito", { exact: true })
-    ).toBeVisible();
-    await expect(inviteCard(guest.page, "Convite Aceitar")).toHaveCount(0);
+    await accept();
 
     await guest.page.reload();
     await waitForHydrated(guest.page);

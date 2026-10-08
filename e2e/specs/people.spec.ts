@@ -70,12 +70,12 @@ test("o sheet lista o contrato e leva a ele", async ({ browser }) => {
   }
 });
 
-test("vazio: Só você por enquanto", async ({ page }) => {
+test("vazio: Ninguém por aqui ainda", async ({ page }) => {
   await signup(page);
   await page.goto("/people");
   await waitForHydrated(page);
   await expect(page.getByTestId("people-empty")).toContainText(
-    "Só você por enquanto"
+    "Ninguém por aqui ainda"
   );
 });
 

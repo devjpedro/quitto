@@ -44,7 +44,8 @@ export async function waitForHydrated(page: Page): Promise<void> {
 /** Registra um usuário novo pela UI e espera cair no Agora. Retorna o e-mail. */
 export async function signup(
   page: Page,
-  email = randomEmail()
+  email = randomEmail(),
+  { skipTour = true }: { skipTour?: boolean } = {}
 ): Promise<string> {
   // The mode is in the URL (?mode=signup), so the form is right before hydration;
   // typing waits for it, since a controlled field filled early is lost to hydration.
@@ -56,6 +57,11 @@ export async function signup(
   await page.getByRole("button", { name: CREATE_ACCOUNT }).click();
   await page.waitForURL("**/"); // Agora
   await waitForHydrated(page); // Agora hidratado antes de qualquer clique
+  // A conta nova abre o tour guiado: pular grava como visto e libera a tela.
+  if (skipTour) {
+    await page.getByRole("button", { name: "Pular o tour" }).click();
+    await page.getByRole("dialog").waitFor({ state: "detached" });
+  }
   return email;
 }
 
