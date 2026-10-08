@@ -1,14 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Dialog } from "@/components/ui/dialog";
 import { TextField } from "@/components/ui/field";
-import {
-  formatBRL,
-  formatISODateBR,
-  maskBRDate,
-  parseBRDateToISO,
-  parseBRLToCents,
-} from "@/lib/format";
+import { formatBRL, parseBRLToCents } from "@/lib/format";
 import { buildInstallmentPatch } from "@/lib/installment-form";
 import { m } from "@/paraglide/messages.js";
 import { useUpdateInstallmentMutation } from "../api";
@@ -31,13 +26,13 @@ function Form({
   update: ReturnType<typeof useUpdateInstallmentMutation>;
 }) {
   const [amount, setAmount] = useState(formatBRL(detail.amountCents));
-  const [date, setDate] = useState(formatISODateBR(detail.dueDate));
+  const [date, setDate] = useState(detail.dueDate);
   const [errors, setErrors] = useState<Errors>({});
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const cents = parseBRLToCents(amount);
-    const dueDate = parseBRDateToISO(date);
+    const dueDate = date || null;
     const next: Errors = {};
     if (cents === null || cents <= 0) {
       next.amount = m.panel_edit_invalid_amount();
@@ -80,12 +75,11 @@ function Form({
         onChange={(event) => setAmount(event.target.value)}
         value={amount}
       />
-      <TextField
+      <DateField
         error={errors.date}
         id="installment-due"
-        inputMode="numeric"
         label={m.panel_edit_date()}
-        onChange={(event) => setDate(maskBRDate(event.target.value))}
+        onValueChange={setDate}
         value={date}
       />
     </form>

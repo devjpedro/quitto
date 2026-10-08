@@ -232,7 +232,10 @@ describe("InstallmentsPage", () => {
       "Notebook da Marina"
     );
     expect(screen.queryByTestId("installment-run-r3")).toBeNull();
-    expect(document.querySelector("[aria-expanded]")).toBeNull();
+    // The month Select is the only control that expands: no row opens a group.
+    expect(
+      document.querySelectorAll("[aria-expanded]:not([role='combobox'])")
+    ).toHaveLength(0);
   });
 
   it("um mês futuro vazio oferece voltar ao mês de hoje, não o próximo", async () => {

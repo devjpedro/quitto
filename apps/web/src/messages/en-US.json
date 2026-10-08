@@ -1120,5 +1120,12 @@
   "wizard_adjusted_tag": "adjusted",
   "wizard_adjusted_help_one": "The installment's amount",
   "wizard_adjusted_help_other": "The sum of the {count} installments",
-  "wizard_adjust_undo": "Undo adjustments"
+  "wizard_adjust_undo": "Undo adjustments",
+  "date_field_open": "Open the calendar",
+  "date_calendar_prev": "Previous month",
+  "date_calendar_next": "Next month",
+  "date_calendar_month": "Month and year",
+  "date_calendar_today": "Today",
+  "date_calendar_none": "No date chosen",
+  "installments_month_select": "Choose the month"
 }

@@ -32,6 +32,12 @@ const elementProto = Element.prototype as unknown as {
 };
 elementProto.scrollIntoView ??= noop;
 
+// Radix Select/Popover ask for the pointer capture a click takes; jsdom has none.
+const pointerProto = Element.prototype as unknown as Record<string, unknown>;
+pointerProto.hasPointerCapture ??= () => false;
+pointerProto.setPointerCapture ??= noop;
+pointerProto.releasePointerCapture ??= noop;
+
 // jsdom defines `window.scrollTo` only to log "Not implemented" on every call
 // (sheets and dialogs lock the scroll); `??=` would keep that stub.
 window.scrollTo = noop as typeof window.scrollTo;

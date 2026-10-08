@@ -1120,5 +1120,12 @@
   "wizard_adjusted_tag": "ajustado",
   "wizard_adjusted_help_one": "A soma da parcela",
   "wizard_adjusted_help_other": "A soma das {count} parcelas",
-  "wizard_adjust_undo": "Desfazer ajustes"
+  "wizard_adjust_undo": "Desfazer ajustes",
+  "date_field_open": "Abrir o calendário",
+  "date_calendar_prev": "Mês anterior",
+  "date_calendar_next": "Próximo mês",
+  "date_calendar_month": "Mês e ano",
+  "date_calendar_today": "Hoje",
+  "date_calendar_none": "Nenhuma data escolhida",
+  "installments_month_select": "Escolher o mês"
 }

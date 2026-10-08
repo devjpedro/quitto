@@ -66,7 +66,9 @@ async function schedule(
   await page.getByRole("radio", { name: SPLIT_OPTION }).click();
   await page.getByLabel("Valor total", { exact: true }).fill(total);
   await page.getByLabel("Parcelas", { exact: true }).fill("12");
-  await page.getByLabel("1º vencimento").fill(due);
+  // The date field is typed as dd/mm/aaaa (B6), not the native input's ISO.
+  const [year, month, day] = due.split("-");
+  await page.getByLabel("1º vencimento").fill(`${day}/${month}/${year}`);
   await page.getByLabel("1º vencimento").blur();
 }
 

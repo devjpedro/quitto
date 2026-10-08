@@ -2,6 +2,7 @@ import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { IconButton } from "@/components/ui/icon-button";
+import { MonthSelect } from "@/components/ui/month-select";
 import { m } from "@/paraglide/messages.js";
 import type { InstallmentsSearch } from "../lib/installments-search";
 import { monthTitle, shiftMonth } from "../lib/month-range";
@@ -62,10 +63,13 @@ export function InstallmentsToolbar({
           onClick={() => onMonth(shiftMonth(month, -1))}
         />
         <div className="flex min-w-0 flex-col items-center md:flex-row md:gap-3">
-          <span
-            aria-live="polite"
-            className="min-w-36 text-center font-display font-semibold text-[15px] tracking-[-0.01em]"
-          >
+          <MonthSelect
+            label={m.installments_month_select()}
+            locale={locale}
+            month={month}
+            onMonthChange={onMonth}
+          />
+          <span aria-live="polite" className="sr-only">
             {monthTitle(month, locale)}
           </span>
           {current ? null : (

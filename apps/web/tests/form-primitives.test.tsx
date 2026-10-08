@@ -116,7 +116,32 @@ describe("MoneyField", () => {
 });
 
 describe("DateField", () => {
-  it("é a data nativa e devolve o ISO", async () => {
+  it("digita dd/mm/aaaa e devolve o ISO, com as barras no lugar", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    function Controlled() {
+      const [value, setValue] = useState("");
+      return (
+        <DateField
+          id="first"
+          label="1º vencimento"
+          onValueChange={(iso) => {
+            onValueChange(iso);
+            setValue(iso);
+          }}
+          value={value}
+        />
+      );
+    }
+    render(<Controlled />);
+    const input = screen.getByLabelText("1º vencimento");
+    expect(input).toHaveAttribute("placeholder", "dd/mm/aaaa");
+    await user.type(input, "10112026");
+    expect(input).toHaveValue("10/11/2026");
+    expect(onValueChange).toHaveBeenLastCalledWith("2026-11-10");
+  });
+
+  it("data pela metade ou impossível: devolve vazio e guarda o que foi digitado", async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
     render(
@@ -128,12 +153,12 @@ describe("DateField", () => {
       />
     );
     const input = screen.getByLabelText("1º vencimento");
-    expect(input).toHaveAttribute("type", "date");
-    // The icon's room only (pr-10), not the text suffix's pr-24: the date fits a narrow column.
-    expect(input).toHaveClass("pr-10");
-    expect(input).not.toHaveClass("pr-24");
-    await user.type(input, "2026-11-10");
-    expect(onValueChange).toHaveBeenLastCalledWith("2026-11-10");
+    await user.type(input, "3102");
+    expect(input).toHaveValue("31/02");
+    expect(onValueChange).toHaveBeenLastCalledWith("");
+    await user.type(input, "2026");
+    expect(input).toHaveValue("31/02/2026");
+    expect(onValueChange).toHaveBeenLastCalledWith("");
   });
 
   it("o aviso não marca inválido, mas descreve", () => {

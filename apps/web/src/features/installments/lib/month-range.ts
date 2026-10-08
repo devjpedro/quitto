@@ -1,5 +1,5 @@
 import type { Locale } from "@quitto/shared";
-import { capitalize } from "@/lib/format";
+import { monthLabel } from "@/components/ui/month-select";
 
 const WEEK_AHEAD = 6;
 
@@ -69,10 +69,5 @@ export function monthQuery(month: string, today: string): MonthQuery {
 
 /** "Outubro de 2026" / "October 2026". */
 export function monthTitle(month: string, locale: Locale): string {
-  const formatted = new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${month}-01T00:00:00Z`));
-  return capitalize(formatted);
+  return monthLabel(month, locale);
 }
