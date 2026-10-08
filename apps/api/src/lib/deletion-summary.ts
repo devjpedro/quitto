@@ -41,9 +41,14 @@ export async function loadDeletionSummary(
       )
     );
   const byKey = new Map<string, string>();
-  for (const { name } of others) {
-    const key = normalizeName(name);
-    if (!byKey.has(key)) {
+  // Spellings of one name ("Rafael Prado", "rafael  prado") show as one: the
+  // tidy one (single spaces), then the lowest in code order, whatever order
+  // the rows come in.
+  for (const { name: raw } of others) {
+    const name = raw.trim().replace(/\s+/g, " ");
+    const key = normalizeName(raw);
+    const kept = byKey.get(key);
+    if (kept === undefined || name < kept) {
       byKey.set(key, name);
     }
   }
