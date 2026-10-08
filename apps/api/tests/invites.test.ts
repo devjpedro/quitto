@@ -379,6 +379,29 @@ describe("invites", () => {
     expect((await res.json()).length).toBe(0);
   });
 
+  it("GET /invites/mine exclui convites recusados", async () => {
+    const ts = Date.now();
+    const owner = await signUpCookie(`mine-own4-${ts}@e.com`);
+    const email = `mine-declined-${ts}@e.com`;
+    const { token } = await setupInvite(owner, email);
+    const invitee = await signUpCookie(email);
+    const declined = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/decline`, {
+        method: "POST",
+        headers: { cookie: invitee },
+      })
+    );
+    expect(declined.status).toBe(200);
+
+    const res = await app.handle(
+      new Request("http://localhost/api/invites/mine", {
+        headers: { cookie: invitee },
+      })
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).length).toBe(0);
+  });
+
   it("aceitar notifica o dono", async () => {
     const ownerCookie = await signUpCookie(uniqueEmail("owner"));
     const inviteeEmail = uniqueEmail("guest");

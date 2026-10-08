@@ -72,6 +72,8 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           and(
             eq(invite.email, email),
             isNull(invite.acceptedAt),
+            isNull(invite.declinedAt),
+            isNull(participant.linkedUserId),
             gt(invite.expiresAt, new Date())
           )
         )

@@ -5,7 +5,12 @@ import { db } from "../db/client";
 import { contract, invite, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { normalizeEmail } from "../lib/email";
-import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../lib/errors";
 import {
   inviteExpiry,
   newInviteToken,
@@ -252,15 +257,11 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         throw new NotFoundError("Nenhum convite pendente para reenviar");
       }
 
-      // Owner's decision 15: the same invite, the same link, a fresh deadline.
-      const expiresAt = inviteExpiry();
-      await db
-        .update(invite)
-        .set({ expiresAt })
-        .where(eq(invite.id, pending.id));
-
       const [target] = await db
-        .select({ role: participant.role })
+        .select({
+          linkedUserId: participant.linkedUserId,
+          role: participant.role,
+        })
         .from(participant)
         .where(
           and(
@@ -269,6 +270,18 @@ export const participantsModule = new Elysia({ prefix: "/api" })
           )
         )
         .limit(1);
+      // A copy of an invite whose slot another copy already filled: nothing to resend.
+      if (target?.linkedUserId) {
+        throw new ConflictError("Esta vaga já foi preenchida");
+      }
+
+      // Owner's decision 15: the same invite, the same link, a fresh deadline.
+      const expiresAt = inviteExpiry();
+      await db
+        .update(invite)
+        .set({ expiresAt })
+        .where(eq(invite.id, pending.id));
+
       const [c] = await db
         .select({ title: contract.title })
         .from(contract)

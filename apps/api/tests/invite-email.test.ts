@@ -131,6 +131,68 @@ describe("invite email", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("reenviar para uma vaga já ocupada: 409, sem e-mail e sem mexer no prazo", async () => {
+    const owner = await signUpCookie(uniqueEmail("owner-409"));
+    const contractId = await createContract(owner);
+    const add = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: owner },
+        body: JSON.stringify({ displayName: "Convidado", role: "seller" }),
+      })
+    );
+    const { id: participantId } = await add.json();
+    const guestEmail = uniqueEmail("guest-409");
+    const invited = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: owner },
+          body: JSON.stringify({ email: guestEmail }),
+        }
+      )
+    );
+    const { token } = await invited.json();
+    const guest = await signUpCookie(guestEmail);
+    const accepted = await app.handle(
+      new Request(`http://localhost/api/invites/${token}/accept`, {
+        method: "POST",
+        headers: { cookie: guest },
+      })
+    );
+    expect(accepted.status).toBe(200);
+    // A superseded copy: pending, for the slot the first copy already filled.
+    const [first] = await db
+      .select()
+      .from(invite)
+      .where(eq(invite.token, token));
+    const { id: _id, ...rest } = first as NonNullable<typeof first>;
+    const soon = new Date(Date.now() + 60 * 60 * 1000);
+    const copyToken = `copy-${token.slice(0, 20)}`;
+    await db.insert(invite).values({
+      ...rest,
+      token: copyToken,
+      acceptedAt: null,
+      declinedAt: null,
+      expiresAt: soon,
+    });
+    sent.length = 0;
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite/resend`,
+        { method: "POST", headers: { cookie: owner } }
+      )
+    );
+    expect(res.status).toBe(409);
+    const [copy] = await db
+      .select()
+      .from(invite)
+      .where(eq(invite.token, copyToken));
+    expect(copy?.expiresAt.toISOString()).toBe(soon.toISOString());
+    expect(sent).toHaveLength(0);
+  });
+
   it("envia e-mail com o link de aceite ao convidar", async () => {
     const cookie = await signUpCookie(uniqueEmail("owner"));
     const contractId = await createContract(cookie);
