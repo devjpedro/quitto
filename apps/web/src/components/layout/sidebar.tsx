@@ -14,7 +14,7 @@ import { SidebarContractsGroup } from "./sidebar-contracts";
 // On the canvas (structure B): hover with nav-hover, focus inside the row; the active row stays black.
 // Its focus ring stays outside, on the canvas: inside, brand on the black row is 2.31:1 (1.73:1 dark).
 const LINK =
-  "flex min-h-10 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:not-data-[status=active]:ring-inset data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
+  "flex min-h-11 items-center gap-2.5 rounded-control px-3 text-ink text-sm transition-colors hover:bg-nav-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:not-data-[status=active]:ring-inset data-[status=active]:bg-ink data-[status=active]:text-ink-inverse";
 
 /** The number at the end of a row. Hidden from AT: the row's name carries it. */
 function RowCount({ active, count }: { active: boolean; count: number }) {
@@ -76,7 +76,7 @@ export function Sidebar({
         }}
       />
       <button
-        className="group mt-4 flex h-10 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="group mt-4 flex h-11 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onOpenSearch}
         type="button"
       >

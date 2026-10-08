@@ -391,6 +391,19 @@ describe("AppFrame", () => {
     expect(within(home).getByRole("img", { name: "Quitto" })).toBeVisible();
   });
 
+  it("gives the sidebar search field the 44 px of the menu rows", async () => {
+    await renderAt("/");
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(
+      sidebar.getByRole("button", {
+        name: (name) => name.startsWith("Buscar"),
+      })
+    ).toHaveClass("h-11");
+    expect(sidebar.getByRole("link", { name: "Agora" })).toHaveClass(
+      "min-h-11"
+    );
+  });
+
   it("has a skip link to the main content", async () => {
     await renderAt("/");
     expect(
