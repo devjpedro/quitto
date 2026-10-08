@@ -147,7 +147,7 @@ export function StepFrame({
         {stage}
         <section
           className={cn(
-            "relative flex min-h-dvh flex-col md:min-h-0 md:overflow-y-auto",
+            "relative flex min-h-dvh flex-col md:min-h-0 md:flex-1 md:overflow-y-auto",
             "md:mx-auto md:w-full md:max-w-[476px] md:px-2 md:pt-3.5 md:pb-5",
             // stage: is in rem (Task 4), so it comes after md: in the CSS and wins from 1140.
             stage &&
