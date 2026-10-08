@@ -74,7 +74,9 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
       palette.getByRole("option", { name, exact: true })
     ).toBeVisible();
   }
-  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Algo deu errado" })
+  ).toHaveCount(0);
 
   // By keyboard: Tab from the field reaches Tentar de novo, and Enter reads
   // the list again there, without running the highlighted command (Agora).
@@ -97,5 +99,7 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
     .getByRole("option", { name: "Novo contrato", exact: true })
     .click();
   await expect(page).toHaveURL(NEW_CONTRACT_URL);
-  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Algo deu errado" })
+  ).toHaveCount(0);
 });

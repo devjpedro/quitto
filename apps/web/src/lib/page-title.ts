@@ -1,12 +1,7 @@
 const BRAND = "Quitto";
 
 export const PAGE_TITLE = {
-  login: `${BRAND} · Entrar`,
   contractNew: `${BRAND} · Novo contrato`,
   contractDetail: `${BRAND} · Contrato`,
-  settings: `${BRAND} · Conta`,
   acceptInvite: `${BRAND} · Convite`,
-  forgotPassword: `${BRAND} · Esqueci minha senha`,
-  resetPassword: `${BRAND} · Redefinir senha`,
-  publicReceipt: `${BRAND} · Recibo`,
 } as const;
