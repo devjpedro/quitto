@@ -123,6 +123,8 @@ test("mobile: a lupa do topo abre a busca", async ({ page }) => {
     "Agora",
     "Contratos",
     "",
+    "Parcelas",
+    "Pessoas",
   ]);
   await expect(
     bottomNav.getByRole("link", { name: "Novo contrato" })
