@@ -20,8 +20,11 @@ sentido dentro do app. O `wa.me` não anexa arquivo, então o WhatsApp exige um 
 - Página pública mostra o **mínimo**: parcela X paga, valor, data, título do contrato, nomes das partes.
 - **Extrato completo** (cronograma + status) **não** vai pra página pública — fica no lado do dono
   (download / e-mail).
-- Token com **revogação disponível** por padrão (custo ~zero); **expiração desligada por padrão**
-  (escolha do usuário), mas fácil de ligar.
+- **Expiração desligada por padrão** (escolha do usuário), mas fácil de ligar.
+- ~~Token com revogação disponível por padrão.~~ **Removida no redesign (2026-10-08):** o dono só
+  "Compartilha recibo", que cria ou reaproveita o link. O `DELETE` e a UI de revogar saíram; a coluna
+  `revoked_at` e o evento `receipt_share_revoked` ficam, para que os links já revogados sigam 404
+  e o histórico antigo continue legível.
 
 ## Consequences
 

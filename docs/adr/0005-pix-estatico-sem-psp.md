@@ -19,7 +19,7 @@ segurança/compliance que a `requisitos.md §4` lista como "pagamento real / int
 ## Decisão
 
 Fazer só o **estático**. A chave é guardada em **ambos** os níveis: **default no perfil** do dono +
-**override por contrato** (nullable; cai no default se ausente). A preocupação de segurança do usuário é
+**override por contrato** (nullable; cai no default se ausente; ~~superado pela ADR-0010: a chave vive na conta e no contato, e o override saiu~~). A preocupação de segurança do usuário é
 válida pro dinâmico e **se dissolve** no estático: a chave é a **do próprio dono** (RBAC: só ele edita a
 própria chave), validada em formato.
 O risco clássico (pagar pra chave errada) é mitigado porque só o dono define a chave, dentro do próprio contrato.
