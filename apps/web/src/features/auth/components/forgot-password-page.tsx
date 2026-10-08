@@ -42,7 +42,15 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthFrame stage={<AuthStage invite={null} kind="showcase" />}>
+    <AuthFrame
+      stage={
+        <AuthStage
+          invite={null}
+          kind={sent ? "check-email" : "showcase"}
+          mail="reset"
+        />
+      }
+    >
       <BackToSignin />
       <EmailRequest
         email={email}

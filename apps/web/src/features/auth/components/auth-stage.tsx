@@ -57,17 +57,10 @@ function Column({
   );
 }
 
-function ShowcaseStage() {
+/** The phone: the header with two pieces (mockup 19, A2). */
+function PhoneHeader() {
   return (
     <>
-      <Column>
-        <ActionPiece className="absolute top-[62px] left-[150px]" />
-        <MomentPiece className="absolute top-0 left-[404px] w-[252px]" />
-        <ReceiptPiece className="absolute top-[318px] left-1.5 w-[232px] -rotate-3" />
-        <PaidPiece className="absolute top-[362px] left-[330px]" />
-      </Column>
-      <Tagline />
-      {/* The phone: the header with two pieces (mockup 19, A2). */}
       <p className="absolute top-[66px] left-5 whitespace-pre-line font-display font-semibold text-[36px] text-on-brand leading-none tracking-[-0.04em] lg:hidden">
         {m.auth_stage_headline()}
       </p>
@@ -81,6 +74,21 @@ function ShowcaseStage() {
           compact
         />
       </div>
+    </>
+  );
+}
+
+function ShowcaseStage() {
+  return (
+    <>
+      <Column>
+        <ActionPiece className="absolute top-[62px] left-[150px]" />
+        <MomentPiece className="absolute top-0 left-[404px] w-[252px]" />
+        <ReceiptPiece className="absolute top-[318px] left-1.5 w-[232px] -rotate-3" />
+        <PaidPiece className="absolute top-[362px] left-[330px]" />
+      </Column>
+      <Tagline />
+      <PhoneHeader />
     </>
   );
 }
@@ -140,9 +148,12 @@ function InviteStage({
 export function AuthStage({
   invite,
   kind,
+  mail = "verify",
 }: {
   invite: PublicInvitePreview | null;
   kind: AuthStageKind;
+  /** Which e-mail the "check-email" stage shows. */
+  mail?: "reset" | "verify";
 }) {
   const raw = invite?.terms ?? null;
   const asInvite = kind === "invite" && invite !== null && raw !== null;
@@ -158,12 +169,10 @@ export function AuthStage({
       {kind === "check-email" ? (
         <>
           <Column className="top-[118px] -ml-[210px] w-[420px]">
-            <MailPiece />
+            <MailPiece mail={mail} />
           </Column>
           <Tagline />
-          <p className="absolute top-[66px] left-5 whitespace-pre-line font-display font-semibold text-[36px] text-on-brand leading-none tracking-[-0.04em] lg:hidden">
-            {m.auth_stage_headline()}
-          </p>
+          <PhoneHeader />
         </>
       ) : null}
       {kind === "showcase" || (kind === "invite" && !asInvite) ? (

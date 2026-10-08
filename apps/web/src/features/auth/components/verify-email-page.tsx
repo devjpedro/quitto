@@ -46,7 +46,11 @@ export function VerifyEmailPage() {
   }
 
   return (
-    <AuthFrame stage={<AuthStage invite={null} kind="showcase" />}>
+    <AuthFrame
+      stage={
+        <AuthStage invite={null} kind={sent ? "check-email" : "showcase"} />
+      }
+    >
       <BackToSignin />
       <EmailRequest
         email={email}

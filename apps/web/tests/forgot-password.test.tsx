@@ -41,6 +41,17 @@ describe("forgot password", () => {
     });
   });
 
+  it("depois de enviar, a vitrine mostra o e-mail de nova senha que vai chegar", async () => {
+    requestPasswordReset.mockResolvedValue({ data: {}, error: null });
+    const { container } = render(<ForgotPasswordPage />);
+    await submit();
+    await screen.findByRole("status");
+    expect(container).toHaveTextContent(
+      "Assunto: Crie uma nova senha no Quitto"
+    );
+    expect(container).toHaveTextContent("Criar nova senha");
+  });
+
   it("a confirmação é neutra e cita o e-mail digitado", async () => {
     requestPasswordReset.mockResolvedValue({ data: {}, error: null });
     render(<ForgotPasswordPage />);
