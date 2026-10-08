@@ -206,6 +206,15 @@ export function useContractWizard({
         ? validateAdjusted(current)
         : validateStep(step, current, context);
       if (found.length > 0) {
+        // Left the "one by one" list with it wrong: step 2 draws no such field, so reopen it.
+        if (
+          !adjusting &&
+          current.installments !== null &&
+          found[0]?.field.startsWith("installments")
+        ) {
+          setStep(2);
+          setAdjusting(true);
+        }
         show(found);
         return;
       }

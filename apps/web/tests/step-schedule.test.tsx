@@ -152,6 +152,23 @@ describe("Ajustar uma a uma", () => {
     expect(screen.getByText("Confere")).toBeVisible();
   });
 
+  it("sair do uma a uma com a soma errada e Continuar volta à lista com a frase", async () => {
+    const user = userEvent.setup();
+    const { wizard } = schedule();
+    toStep(wizard, 2, NOTEBOOK);
+    await user.click(screen.getByRole("button", { name: ADJUST }));
+    const first = screen.getByRole("textbox", { name: "Valor da parcela 1" });
+    await user.clear(first);
+    await user.type(first, "1600");
+    await user.tab();
+    act(() => wizard().back());
+    expect(screen.getByTestId("step")).toHaveTextContent(ONLY_STEP_2);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByTestId("step")).toHaveTextContent("2-adjust");
+    expect(document.getElementById("wizard-installments")).toHaveFocus();
+    expect(screen.getByText("R$ 1.100,00 a mais")).toBeVisible();
+  });
+
   it("voltar ao passo 2 e mudar a quantidade descarta a lista (decisão 24)", async () => {
     const user = userEvent.setup();
     const { wizard } = schedule();
