@@ -104,7 +104,9 @@ test("sem resultado, cria contrato com o texto digitado", async ({ page }) => {
   await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(NEW_CONTRACT_URL);
-  await expect(page.getByLabel("Título")).toHaveValue("consórcio da moto");
+  await expect(page.getByLabel("Nome do contrato")).toHaveValue(
+    "consórcio da moto"
+  );
 });
 
 test("mobile: a lupa do topo abre a busca", async ({ page }) => {

@@ -40,6 +40,7 @@ export function TabBar() {
             aria-label={m.nav_new_contract()}
             className="-mt-4 flex size-12 items-center justify-center rounded-[14px] bg-brand-surface text-on-brand shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[.97] motion-reduce:active:scale-100"
             to="/contracts/new"
+            viewTransition={{ types: ["sheet-up"] }}
           >
             <Plus aria-hidden="true" size={22} weight="bold" />
           </Link>

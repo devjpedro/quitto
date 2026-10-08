@@ -12,14 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as FocusRouteImport } from './routes/_focus'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
+import { Route as FocusContractsNewRouteImport } from './routes/_focus/contracts.new'
 import { Route as AppInvitesTokenRouteImport } from './routes/_app/invites.$token'
-import { Route as AppContractsNewRouteImport } from './routes/_app/contracts.new'
 import { Route as AppContractsIdRouteImport } from './routes/_app/contracts.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -35,6 +36,10 @@ const LoginRoute = LoginRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FocusRoute = FocusRouteImport.update({
+  id: '/_focus',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -66,14 +71,14 @@ const AppContractsIndexRoute = AppContractsIndexRouteImport.update({
   path: '/contracts/',
   getParentRoute: () => AppRoute,
 } as any)
+const FocusContractsNewRoute = FocusContractsNewRouteImport.update({
+  id: '/contracts/new',
+  path: '/contracts/new',
+  getParentRoute: () => FocusRoute,
+} as any)
 const AppInvitesTokenRoute = AppInvitesTokenRouteImport.update({
   id: '/invites/$token',
   path: '/invites/$token',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppContractsNewRoute = AppContractsNewRouteImport.update({
-  id: '/contracts/new',
-  path: '/contracts/new',
   getParentRoute: () => AppRoute,
 } as any)
 const AppContractsIdRoute = AppContractsIdRouteImport.update({
@@ -91,26 +96,27 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/r/$token': typeof RTokenRoute
   '/contracts/$id': typeof AppContractsIdRoute
-  '/contracts/new': typeof AppContractsNewRoute
   '/invites/$token': typeof AppInvitesTokenRoute
+  '/contracts/new': typeof FocusContractsNewRoute
   '/contracts/': typeof AppContractsIndexRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof AppIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/notifications': typeof AppNotificationsRoute
   '/settings': typeof AppSettingsRoute
   '/r/$token': typeof RTokenRoute
-  '/': typeof AppIndexRoute
   '/contracts/$id': typeof AppContractsIdRoute
-  '/contracts/new': typeof AppContractsNewRoute
   '/invites/$token': typeof AppInvitesTokenRoute
+  '/contracts/new': typeof FocusContractsNewRoute
   '/contracts': typeof AppContractsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_focus': typeof FocusRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -119,8 +125,8 @@ export interface FileRoutesById {
   '/r/$token': typeof RTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/contracts/$id': typeof AppContractsIdRoute
-  '/_app/contracts/new': typeof AppContractsNewRoute
   '/_app/invites/$token': typeof AppInvitesTokenRoute
+  '/_focus/contracts/new': typeof FocusContractsNewRoute
   '/_app/contracts/': typeof AppContractsIndexRoute
 }
 export interface FileRouteTypes {
@@ -134,25 +140,26 @@ export interface FileRouteTypes {
     | '/settings'
     | '/r/$token'
     | '/contracts/$id'
-    | '/contracts/new'
     | '/invites/$token'
+    | '/contracts/new'
     | '/contracts/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/notifications'
     | '/settings'
     | '/r/$token'
-    | '/'
     | '/contracts/$id'
-    | '/contracts/new'
     | '/invites/$token'
+    | '/contracts/new'
     | '/contracts'
   id:
     | '__root__'
     | '/_app'
+    | '/_focus'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
@@ -161,13 +168,14 @@ export interface FileRouteTypes {
     | '/r/$token'
     | '/_app/'
     | '/_app/contracts/$id'
-    | '/_app/contracts/new'
     | '/_app/invites/$token'
+    | '/_focus/contracts/new'
     | '/_app/contracts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  FocusRoute: typeof FocusRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -195,6 +203,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_focus': {
+      id: '/_focus'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof FocusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -239,18 +254,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContractsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_focus/contracts/new': {
+      id: '/_focus/contracts/new'
+      path: '/contracts/new'
+      fullPath: '/contracts/new'
+      preLoaderRoute: typeof FocusContractsNewRouteImport
+      parentRoute: typeof FocusRoute
+    }
     '/_app/invites/$token': {
       id: '/_app/invites/$token'
       path: '/invites/$token'
       fullPath: '/invites/$token'
       preLoaderRoute: typeof AppInvitesTokenRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/contracts/new': {
-      id: '/_app/contracts/new'
-      path: '/contracts/new'
-      fullPath: '/contracts/new'
-      preLoaderRoute: typeof AppContractsNewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/contracts/$id': {
@@ -268,7 +283,6 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContractsIdRoute: typeof AppContractsIdRoute
-  AppContractsNewRoute: typeof AppContractsNewRoute
   AppInvitesTokenRoute: typeof AppInvitesTokenRoute
   AppContractsIndexRoute: typeof AppContractsIndexRoute
 }
@@ -278,15 +292,25 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppContractsIdRoute: AppContractsIdRoute,
-  AppContractsNewRoute: AppContractsNewRoute,
   AppInvitesTokenRoute: AppInvitesTokenRoute,
   AppContractsIndexRoute: AppContractsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface FocusRouteChildren {
+  FocusContractsNewRoute: typeof FocusContractsNewRoute
+}
+
+const FocusRouteChildren: FocusRouteChildren = {
+  FocusContractsNewRoute: FocusContractsNewRoute,
+}
+
+const FocusRouteWithChildren = FocusRoute._addFileChildren(FocusRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  FocusRoute: FocusRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
