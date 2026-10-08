@@ -286,7 +286,10 @@ if (process.argv.includes("--invite")) {
 
 // The full Chromium, not the headless shell: only it has the PDF viewer the
 // installment panel's proof preview shows (owner's decision 4).
-const browser = await chromium.launch({ channel: "chromium" });
+const browser = await chromium.launch({
+  args: ["--lang=pt-BR"],
+  channel: "chromium",
+});
 try {
   for (const size of sizes) {
     for (const theme of THEMES) {

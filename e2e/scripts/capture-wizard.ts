@@ -178,7 +178,7 @@ async function geometry(page: Page) {
 }
 
 const session = await sessionCookies();
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ["--lang=pt-BR"] });
 const report: Record<string, unknown> = {};
 try {
   for (const frame of frames) {
