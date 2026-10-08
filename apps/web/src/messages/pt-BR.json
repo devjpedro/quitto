@@ -917,7 +917,7 @@
   "auth_error_signin": "Não deu para entrar. Confira os dados e tente de novo.",
   "auth_error_signup": "Não deu para criar a conta. Confira os dados e tente de novo.",
   "auth_check_title": "Confira seu e-mail",
-  "auth_check_text": "Mandamos um link para {email}. Abra-o para entrar.",
+  "auth_check_text": "Mandamos um link para {email}. Abra-⁠o para entrar.",
   "auth_check_unverified": "Falta confirmar {email}. Abra o link que mandamos para entrar.",
   "auth_check_resend": "Reenviar o link",
   "auth_check_resent": "Link reenviado.",

@@ -222,7 +222,11 @@ export function PaletteCommands({
           ref={inputRef}
           value={query}
         />
-        <Tag aria-hidden="true" className="max-md:hidden" tone="sunken">
+        <Tag
+          aria-hidden="true"
+          className="self-center max-md:hidden"
+          tone="sunken"
+        >
           {m.palette_esc()}
         </Tag>
       </div>

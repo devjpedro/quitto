@@ -126,7 +126,7 @@ export function InviteChips({ preview }: { preview: PublicInvitePreview }) {
   return (
     <ol
       aria-label={m.auth_stage_invite_tag()}
-      className="absolute inset-x-5 bottom-5 flex gap-1.5"
+      className="absolute inset-x-5 bottom-5 flex gap-1.5 lg:hidden"
     >
       <li>
         <Tag className={cn(chip, "bg-on-brand text-brand-surface")}>

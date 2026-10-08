@@ -76,11 +76,16 @@ test("esqueci a senha: a confirmação neutra", async ({ page }) => {
   await page.getByRole("link", { name: "Esqueci a senha" }).click();
   await page.waitForURL("**/forgot-password");
   await waitForHydrated(page);
-  await page.locator("#email").fill("ninguem@e2e.test");
-  await page.getByRole("button", { name: "Mandar o link" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Se ninguem@e2e.test tiver conta"
-  );
+  // The route's own chunk may hydrate after the root: a click before it is a
+  // native submit that reloads the page, so try again until the answer shows.
+  await expect(async () => {
+    await page.locator("#email").fill("ninguem@e2e.test");
+    await page.getByRole("button", { name: "Mandar o link" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "Se ninguem@e2e.test tiver conta",
+      { timeout: 2000 }
+    );
+  }).toPass({ timeout: 15_000 });
 });
 
 test("nova senha com link inválido oferece pedir outro", async ({ page }) => {

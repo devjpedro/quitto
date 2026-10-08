@@ -31,7 +31,9 @@ export function SegmentedControl<V extends string>({
       aria-label={label}
       className={cn(
         "gap-0.5 rounded-[12px] p-[3px]",
-        tone === "onBrand" ? "bg-on-brand/12" : "bg-surface-sunken max-md:bg-canvas",
+        tone === "onBrand"
+          ? "bg-on-brand/12"
+          : "bg-surface-sunken max-md:bg-canvas",
         block === true && "flex w-full",
         block === "mobile" && "inline-flex max-md:flex max-md:w-full",
         !block && "inline-flex"

@@ -252,8 +252,18 @@ async function openPalette(page: Page, mobile: boolean): Promise<void> {
   if (process.argv.includes("--query")) {
     await page.keyboard.type(arg("query"));
   }
+  // The finite ones only (a skeleton's pulse never ends), and a cancelled one is over too.
   await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((a) => a.finished))
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (a) =>
+            a.effect?.getComputedTiming().iterations !==
+            Number.POSITIVE_INFINITY
+        )
+        .map((a) => a.finished.catch(() => undefined))
+    )
   );
 }
 

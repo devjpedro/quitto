@@ -42,12 +42,15 @@ function Losing({ people }: { people: Summary["people"] }) {
     <div className="mt-4 flex items-center gap-3 rounded-control bg-surface-card px-3 py-2.5">
       <span aria-hidden="true" className="flex">
         {shown.map((person) => (
-          <span className="-ml-1.5 first:ml-0" key={person.name}>
+          <span
+            className="-ml-1 rounded-full ring-2 ring-surface-card first:ml-0"
+            key={person.name}
+          >
             <PersonAvatar name={person.name} size="sm" />
           </span>
         ))}
         {extra > 0 ? (
-          <span className="-ml-1.5 inline-flex size-6 items-center justify-center rounded-full bg-surface-inset font-semibold text-[10px] text-ink-muted tabular-nums">
+          <span className="-ml-1 inline-flex size-6 items-center justify-center rounded-full bg-surface-inset font-semibold text-[10px] text-ink-muted tabular-nums ring-2 ring-surface-card">
             +{extra}
           </span>
         ) : null}

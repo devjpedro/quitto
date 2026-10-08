@@ -50,7 +50,9 @@ export function Dialog({
             ) : null}
           </div>
           {children ? (
-            <div className="mt-4 min-h-0 overflow-y-auto">{children}</div>
+            <div className="-mx-1 mt-3 min-h-0 overflow-y-auto p-1">
+              {children}
+            </div>
           ) : null}
           {footer ? (
             <div className="mt-5 flex flex-wrap justify-end gap-2">
