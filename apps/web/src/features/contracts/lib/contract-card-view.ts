@@ -13,18 +13,17 @@ export interface CardTag {
   tone: CardTagTone;
 }
 
-export interface CardCell {
-  /** What to show: a count ("2/10") or an amount in cents. */
-  cents: number | null;
+/** The amount beside the arrow: what is left, or the total once the contract is settled. */
+export interface CardRemaining {
+  cents: number;
   label: string;
-  text: string | null;
 }
 
 export interface ContractCardView {
-  cells: [CardCell, CardCell, CardCell];
   footer: string;
   percent: number;
   percentLabel: string;
+  remaining: CardRemaining;
   role: { label: string; tone: "neutral" | "brand" | "sunken" };
   tags: CardTag[];
 }
@@ -48,43 +47,10 @@ function percentLabel(direction: ContractListItem["direction"]): string {
     : m.contracts_percent_view();
 }
 
-function secondCell(item: ContractListItem): CardCell {
-  if (item.installmentAmountCents === null) {
-    return {
-      label: m.contracts_cell_total(),
-      cents: item.totalCents,
-      text: null,
-    };
-  }
-  return {
-    label: item.monthly
-      ? m.contracts_cell_monthly()
-      : m.contracts_cell_installment(),
-    cents: item.installmentAmountCents,
-    text: null,
-  };
-}
-
-function cellsOf(item: ContractListItem): ContractCardView["cells"] {
-  const third: CardCell = item.settled
-    ? { label: m.contracts_cell_total(), cents: item.totalCents, text: null }
-    : {
-        label: m.contracts_cell_left(),
-        cents: item.remainingCents,
-        text: null,
-      };
-  return [
-    {
-      label: m.contracts_cell_installments(),
-      cents: null,
-      text: m.nav_contract_fraction({
-        paid: item.paidCount,
-        total: item.installmentsCount,
-      }),
-    },
-    secondCell(item),
-    third,
-  ];
+function remainingOf(item: ContractListItem): CardRemaining {
+  return item.settled
+    ? { label: m.contracts_cell_total(), cents: item.totalCents }
+    : { label: m.contracts_cell_left(), cents: item.remainingCents };
 }
 
 /** The overdue sequences, from the bar when there is one, else just the oldest. */
@@ -199,18 +165,18 @@ function footerOf(
     : m.contracts_footer_next({ date });
 }
 
-/** What a contract card draws, ready to render (mockup 17, frame A). */
+/** What a contract card draws, ready to render (mockup 20, B4: no cells, the installment of the moment in the footer). */
 export function contractCardView(
   item: ContractListItem,
   today: string,
   locale: Locale
 ): ContractCardView {
   return {
-    cells: cellsOf(item),
     footer: footerOf(item, today, locale),
     // 100 is only for a settled contract: 99,6% of a contract with an open installment is not done (D15).
     percent: item.settled ? 100 : Math.min(99, item.percent),
     percentLabel: percentLabel(item.direction),
+    remaining: remainingOf(item),
     role: roleOf(item.direction),
     tags: tagsOf(item, today),
   };

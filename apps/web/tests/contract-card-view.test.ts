@@ -95,16 +95,14 @@ describe("contractCardView", () => {
     expect(view({ percent: 50 }).percent).toBe(50);
   });
 
-  it("a segunda célula: Mensal, Parcela ou Total", () => {
-    expect(view({}).cells[1].label).toBe("Mensal");
-    expect(view({ monthly: false }).cells[1].label).toBe("Parcela");
-    expect(view({ installmentAmountCents: null }).cells[1].label).toBe("Total");
+  it("o cartão não tem mais as 3 células: o 'falta' leva o restante", () => {
+    expect("cells" in view({})).toBe(false);
+    expect(view({}).remaining.label).toBe("Falta");
   });
 
-  it("no quitado, a terceira célula é o Total", () => {
+  it("no quitado, o valor ao lado da seta é o Total", () => {
     const v = view({ settled: true, endDate: "2026-08-10" });
-    expect(v.cells[2]).toMatchObject({ label: "Total", cents: 600_000 });
-    expect(view({}).cells[2].label).toBe("Falta");
+    expect(v.remaining).toMatchObject({ label: "Total", cents: 600_000 });
   });
 
   it("o papel: paga, recebe e acompanha", () => {
