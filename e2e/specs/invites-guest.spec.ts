@@ -30,8 +30,9 @@ test("sem login: vê o convite, cria a conta e volta para aceitar", async ({
     await guest.goto(`/invites/${token}`);
     await waitForHydrated(guest);
     await expect(
-      guest.getByRole("heading", { level: 1, name: TITLE })
+      guest.getByRole("heading", { level: 1, name: "Entre para responder" })
     ).toBeVisible();
+    await expect(guest.getByTestId("login-invite")).toContainText(TITLE);
     await expect(guest.getByText("Você entra como quem paga.")).toBeVisible();
     await scan(guest);
     await guest.getByRole("link", { name: "Criar conta" }).click();
@@ -117,9 +118,7 @@ test("o convite, com e sem login, não tem violações de a11y no escuro", async
       await page.goto(`/invites/${token}`);
       await waitForHydrated(page);
       await expect(page.locator("html.dark")).toBeVisible();
-      await expect(
-        page.getByRole("heading", { level: 1, name: TITLE })
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await scan(page);
     }
   } finally {

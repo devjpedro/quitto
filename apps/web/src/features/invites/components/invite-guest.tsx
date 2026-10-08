@@ -1,7 +1,4 @@
 import {
-  Bell,
-  CalendarDots,
-  CheckCircle,
   ClockCountdown,
   HourglassMedium,
   Info,
@@ -9,49 +6,25 @@ import {
   SignIn,
   WhatsappLogo,
 } from "@phosphor-icons/react";
-import { todayISO } from "@quitto/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { StepFrame, StepHeader } from "@/components/layout/step-frame";
 import { Button } from "@/components/ui/button";
 import { Emphasis } from "@/components/ui/emphasis";
-import { PersonAvatar } from "@/components/ui/person-avatar";
+import { AuthFrame } from "@/features/auth/components/auth-frame";
+import { AuthStage } from "@/features/auth/components/auth-stage";
+import { heading } from "@/features/auth/lib/login-copy";
 import { whatsappUrl } from "@/features/installments/lib/whatsapp-message";
-import { inviteTerms } from "@/lib/invite-terms-text";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { invitePreviewQueryOptions, type PublicInvitePreview } from "../api";
-import { dayOf, firstName, roleLabel, weekdayDate } from "../lib/invite-format";
+import { dayOf, firstName, weekdayDate } from "../lib/invite-format";
 import { invitePath } from "../lib/invite-redirect";
-import { InviteBar } from "./invite-bar";
-import { type InfoRow, InviteInfoList } from "./invite-info-list";
 import { InviteMissing, InviteNotice } from "./invite-missing";
-import { InviteRail } from "./invite-rail";
 import { StateHeading } from "./state-heading";
-
-function howRows(): InfoRow[] {
-  return [
-    {
-      icon: CalendarDots,
-      line: m.invite_guest_how_schedule(),
-      hint: m.invite_guest_how_schedule_hint(),
-    },
-    {
-      icon: Bell,
-      line: m.invite_guest_how_reminder(),
-      hint: m.invite_guest_how_reminder_hint(),
-    },
-    {
-      icon: CheckCircle,
-      line: m.invite_guest_how_paid(),
-      hint: m.invite_guest_how_paid_hint(),
-    },
-  ];
-}
 
 function SignInLink({ token }: { token: string }) {
   return (
-    <Button asChild className="flex-1" size="lg">
+    <Button asChild block size="lg">
       <Link search={{ redirect: invitePath(token) }} to="/login">
         <SignIn aria-hidden="true" size={18} />
         {m.invite_guest_signin()}
@@ -60,44 +33,23 @@ function SignInLink({ token }: { token: string }) {
   );
 }
 
-/** The invite to answer, before signing in (mockup 15, H1): what it is, and the way in that comes back here. */
+/**
+ * The invite to answer, before signing in (mockup 19, A4): the showcase
+ * carries who, what and the terms; the column only says what for and gives
+ * the way in, which comes back here.
+ */
 function GuestPending({
   preview,
-  terms: raw,
   token,
 }: {
   preview: PublicInvitePreview;
-  /** The public preview carries terms only while pending (Task 3). */
-  terms: NonNullable<PublicInvitePreview["terms"]>;
   token: string;
 }) {
-  const role = roleLabel(preview.role);
-  const terms = inviteTerms(raw, todayISO(), getLocale());
   return (
     <>
-      <p className="flex items-center gap-2.5 text-ink-muted text-sm leading-[1.35]">
-        <PersonAvatar name={preview.inviterName} size="md" />
-        <Emphasis
-          strong={preview.inviterName}
-          text={m.invite_guest_from({ name: preview.inviterName })}
-        />
-      </p>
-      <h1 className="mt-3.5 font-display font-semibold text-2xl leading-[1.2] tracking-[-0.03em] md:text-[26px]">
-        {preview.contractTitle}
+      <h1 className="font-display font-semibold text-[26px] leading-[1.2] tracking-[-0.03em] md:text-[28px]">
+        {heading("signin", true).title}
       </h1>
-      <p className="mt-2 text-ink-muted text-sm tabular-nums">
-        <Emphasis
-          strong={terms.amount}
-          text={
-            terms.from
-              ? `${terms.amount} ${m.home_dot_after({ text: terms.from })}`
-              : terms.amount
-          }
-        />
-      </p>
-      <p className="mt-1 text-ink-muted text-sm">
-        <Emphasis strong={role} text={m.invite_role({ role })} />
-      </p>
       <p className="mt-[18px] flex items-start gap-3 rounded-card bg-surface-card px-4 py-3.5 text-[13px] text-ink-muted leading-[1.45]">
         <LockSimple
           aria-hidden="true"
@@ -109,18 +61,19 @@ function GuestPending({
           text={m.invite_guest_lock({ masked: preview.emailMasked })}
         />
       </p>
-      <InviteInfoList rows={howRows()} title={m.invite_guest_how_title()} />
-      <InviteBar>
-        <Button asChild size="lg" variant="secondary">
-          <Link
-            search={{ redirect: invitePath(token), mode: "signup" }}
-            to="/login"
-          >
-            {m.invite_guest_signup()}
-          </Link>
-        </Button>
+      <div className="mt-5">
         <SignInLink token={token} />
-      </InviteBar>
+      </div>
+      <p className="mt-5 text-center text-ink-muted text-sm">
+        {m.auth_to_signup_lead()}{" "}
+        <Link
+          className="rounded-[4px] font-semibold text-ink underline decoration-line-strong underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          search={{ redirect: invitePath(token), mode: "signup" }}
+          to="/login"
+        >
+          {m.auth_to_signup()}
+        </Link>
+      </p>
     </>
   );
 }
@@ -153,14 +106,12 @@ function GuestEnded({
             name: inviter,
           })}
         </StateHeading>
-        <InviteBar>
-          <Button asChild className="flex-1" size="lg">
-            <a href={ask} rel="noopener noreferrer" target="_blank">
-              <WhatsappLogo aria-hidden="true" size={18} />
-              {m.invite_ask_whatsapp()}
-            </a>
-          </Button>
-        </InviteBar>
+        <Button asChild block className="mt-6" size="lg">
+          <a href={ask} rel="noopener noreferrer" target="_blank">
+            <WhatsappLogo aria-hidden="true" size={18} />
+            {m.invite_ask_whatsapp()}
+          </a>
+        </Button>
       </>
     );
   }
@@ -176,17 +127,17 @@ function GuestEnded({
           text={m.invite_guest_answered_text({ masked: preview.emailMasked })}
         />
       </StateHeading>
-      <InviteBar>
+      <div className="mt-6">
         <SignInLink token={token} />
-      </InviteBar>
+      </div>
     </>
   );
 }
 
 /**
  * /invites/$token without a session (owner's decision 12): the public
- * preview, in the invite's frame without the stage (planner's decision 43)
- * and without the ✕ (H1: there is no app behind it yet).
+ * preview, in the sign-in's showcase (mockup 19, decision 5) and without
+ * the ✕ (there is no app behind it yet). An ended invite keeps the plain showcase.
  */
 export function InviteGuest({ token }: { token: string }) {
   const { data } = useSuspenseQuery(invitePreviewQueryOptions(token));
@@ -207,19 +158,18 @@ export function InviteGuest({ token }: { token: string }) {
     );
   }
   const { preview } = data;
+  const pending = preview.status === "pending" && preview.terms;
   return (
-    <StepFrame
-      align="center"
-      header={<StepHeader brand title={m.invite_rail_group()} />}
-      rail={
-        <InviteRail inviterName={preview.inviterName} status={preview.status} />
+    <AuthFrame
+      stage={
+        <AuthStage invite={preview} kind={pending ? "invite" : "showcase"} />
       }
     >
-      {preview.status === "pending" && preview.terms ? (
-        <GuestPending preview={preview} terms={preview.terms} token={token} />
+      {pending ? (
+        <GuestPending preview={preview} token={token} />
       ) : (
         <GuestEnded preview={preview} token={token} />
       )}
-    </StepFrame>
+    </AuthFrame>
   );
 }

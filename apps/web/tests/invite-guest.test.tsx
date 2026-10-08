@@ -48,27 +48,25 @@ afterEach(() => {
 });
 
 describe("o convite sem login (mockup 15, H1)", () => {
-  it("quem convidou, o nome, as condições e o papel; nada das outras partes", () => {
+  it("a vitrine com a trilha e o convite; sem a moldura antiga nem 'Como o Quitto funciona'", () => {
     const { container } = guest(FLORIPA_PUBLIC);
-    expect(container).toHaveTextContent(
-      "Bia Lopes te convidou para um contrato no Quitto"
-    );
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: "Viagem para Floripa (dividida)",
-      })
-    ).toBeVisible();
-    expect(container).toHaveTextContent(
-      "4 parcelas de R$ 300,00 · a partir de 10/11"
-    );
+    expect(screen.getByTestId("login-invite")).toBeInTheDocument();
+    expect(container).toHaveTextContent("Bia Lopes te convidou");
+    expect(container).toHaveTextContent("Viagem para Floripa (dividida)");
     expect(container).toHaveTextContent("Você entra como quem paga.");
-    expect(container).toHaveTextContent("crie sua conta com j•••@exemplo.com");
     expect(
-      screen.getByRole("heading", { level: 2, name: "Como o Quitto funciona" })
+      screen.getByRole("heading", { level: 1, name: "Entre para responder" })
     ).toBeVisible();
+    expect(container).toHaveTextContent("crie sua conta com j•••@exemplo.com");
+    expect(screen.queryByText("Como o Quitto funciona")).toBeNull();
     // No ✕ for someone who is not in the app yet (H1).
     expect(screen.queryByRole("button", { name: "Fechar" })).toBeNull();
+  });
+
+  it("o convite da vitrine não fica dentro de aria-hidden (o formulário não o repete)", () => {
+    guest(FLORIPA_PUBLIC);
+    const piece = screen.getAllByText("Viagem para Floripa (dividida)")[0];
+    expect(piece?.closest("[aria-hidden='true']")).toBeNull();
   });
 
   it("Criar conta e Entrar levam ao login com a volta para o convite", () => {
