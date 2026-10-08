@@ -4,6 +4,7 @@ import {
   redirect,
   useMatch,
 } from "@tanstack/react-router";
+import type { ComponentProps } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
@@ -54,22 +55,32 @@ function AppLayout() {
     from: "/_app/contracts/$id",
     shouldThrow: false,
   });
+  // A section of Ajustes on a phone is a screen: "‹ Ajustes" goes back to the list.
+  const settingsMatch = useMatch({
+    from: "/_app/settings/$section",
+    shouldThrow: false,
+  });
+
+  let detail: ComponentProps<typeof AppFrame>["detail"] = null;
+  if (contractMatch) {
+    detail = {
+      backLabel: m.contract_back(),
+      backTo: "/contracts",
+      actions: <ContractMobileMenu contractId={contractMatch.params.id} />,
+    };
+  } else if (settingsMatch) {
+    detail = {
+      backLabel: m.settings_title(),
+      backTo: "/settings",
+      actions: null,
+    };
+  }
 
   return (
     <NotificationsPanelContext value={notifications.show}>
       <AppFrame
         activeContracts={activeContracts}
-        detail={
-          contractMatch
-            ? {
-                backLabel: m.contract_back(),
-                backTo: "/contracts",
-                actions: (
-                  <ContractMobileMenu contractId={contractMatch.params.id} />
-                ),
-              }
-            : null
-        }
+        detail={detail}
         identity={identity}
         moment={moment}
         navCounts={navCounts}

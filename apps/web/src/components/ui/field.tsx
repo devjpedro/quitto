@@ -8,7 +8,8 @@ export interface FieldProps {
   error?: string;
   hint?: string;
   id: string;
-  label: string;
+  /** A string, or a sentence with a part in bold ("Digite EXCLUIR para confirmar"). */
+  label: ReactNode;
   /** On the label's row, at the end: a link that belongs to the field ("Esqueci a senha"). */
   labelAside?: ReactNode;
   /** The label only for the screen reader (the column header says what it is). */

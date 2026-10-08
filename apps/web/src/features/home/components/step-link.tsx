@@ -29,7 +29,11 @@ export function StepLink({
   }
   if (target.kind === "settings") {
     return (
-      <Link {...rest} to="/settings">
+      <Link
+        {...rest}
+        params={{ section: target.section }}
+        to="/settings/$section"
+      >
         {children}
       </Link>
     );

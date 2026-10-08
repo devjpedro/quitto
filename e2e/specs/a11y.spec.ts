@@ -27,8 +27,6 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await openNotifications(page);
   await scan(page);
   await page.keyboard.press("Escape");
-  await page.goto("/settings");
-  await scan(page);
   await page.goto("/"); // Agora com contrato
   await scan(page);
 });

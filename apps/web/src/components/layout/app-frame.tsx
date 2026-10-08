@@ -18,7 +18,7 @@ export interface ShellProps {
   detail: {
     actions: ReactNode;
     backLabel: string;
-    backTo: "/contracts";
+    backTo: "/contracts" | "/settings";
   } | null;
   identity: SessionIdentity | null;
   /** The milestone of the moment (lime card at the foot of the sidebar); null hides it. */

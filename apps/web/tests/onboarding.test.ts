@@ -134,8 +134,11 @@ describe("stepTarget", () => {
   it("cada passo leva ao lugar certo", () => {
     const o = homeFixture().onboarding;
     expect(stepTarget("contract", o)).toEqual({ kind: "new_contract" });
-    expect(stepTarget("pix", o)).toEqual({ kind: "settings" });
-    expect(stepTarget("reminders", o)).toEqual({ kind: "settings" });
+    expect(stepTarget("pix", o)).toEqual({ kind: "settings", section: "pix" });
+    expect(stepTarget("reminders", o)).toEqual({
+      kind: "settings",
+      section: "reminders",
+    });
     expect(stepTarget("counterparty", o)).toEqual({
       kind: "contract",
       contractId: "c1",

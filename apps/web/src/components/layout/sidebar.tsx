@@ -1,4 +1,4 @@
-import { Bell, MagnifyingGlass } from "@phosphor-icons/react";
+import { Bell, GearSix, MagnifyingGlass } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -116,6 +116,18 @@ export function Sidebar({
             <RowCount active={false} count={unreadCount} />
           ) : null}
         </button>
+        <Link activeOptions={{ exact: false }} className={LINK} to="/settings">
+          {({ isActive }) => (
+            <>
+              <GearSix
+                aria-hidden="true"
+                size={18}
+                weight={isActive ? "fill" : "regular"}
+              />
+              <span className="flex-1">{m.account_settings()}</span>
+            </>
+          )}
+        </Link>
         <SidebarContractsGroup contracts={activeContracts} />
       </nav>
       <div className="mt-auto flex flex-col gap-3">

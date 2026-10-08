@@ -14,7 +14,8 @@ export type DatePreset =
   | "long"
   | "longYear"
   | "dayMonth"
-  | "weekdayShort";
+  | "weekdayShort"
+  | "weekdayDay";
 
 const SPACE_RE = /[\u00A0\u202F]/g; // non-breaking space (U+00A0) and narrow no-break space (U+202F) → regular space
 const DAY_MS = 86_400_000;
@@ -80,6 +81,7 @@ const DATE_OPTIONS: Record<DatePreset, Intl.DateTimeFormatOptions> = {
   longYear: { weekday: "long", day: "numeric", month: "long", year: "numeric" },
   dayMonth: { day: "2-digit", month: "2-digit" },
   weekdayShort: { weekday: "short", day: "2-digit", month: "2-digit" },
+  weekdayDay: { weekday: "short", day: "numeric", month: "short" },
 };
 
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -237,4 +239,20 @@ export function formatRelativeTime(
     () => new Intl.RelativeTimeFormat(locale, { numeric, style })
   );
   return normalizeSpaces(formatter.format(-value, unit));
+}
+
+const monthYearFormatters = new Map<Locale, Intl.DateTimeFormat>();
+
+/** "setembro de 2025" / "September 2025": the month an instant fell in, in the app's time zone. */
+export function formatMonthYear(instant: string, locale: Locale): string {
+  return cached(
+    monthYearFormatters,
+    locale,
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+        timeZone: APP_TIME_ZONE,
+      })
+  ).format(new Date(instant));
 }

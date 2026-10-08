@@ -18,12 +18,13 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as InvitesTokenRouteImport } from './routes/invites.$token'
-import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppPeopleRouteImport } from './routes/_app/people'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppInstallmentsRouteImport } from './routes/_app/installments'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings.index'
 import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
 import { Route as FocusContractsNewRouteImport } from './routes/_focus/contracts.new'
+import { Route as AppSettingsSectionRouteImport } from './routes/_app/settings.$section'
 import { Route as AppContractsIdRouteImport } from './routes/_app/contracts.$id'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -69,11 +70,6 @@ const InvitesTokenRoute = InvitesTokenRouteImport.update({
   path: '/invites/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppPeopleRoute = AppPeopleRouteImport.update({
   id: '/people',
   path: '/people',
@@ -89,6 +85,11 @@ const AppInstallmentsRoute = AppInstallmentsRouteImport.update({
   path: '/installments',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContractsIndexRoute = AppContractsIndexRouteImport.update({
   id: '/contracts/',
   path: '/contracts/',
@@ -98,6 +99,11 @@ const FocusContractsNewRoute = FocusContractsNewRouteImport.update({
   id: '/contracts/new',
   path: '/contracts/new',
   getParentRoute: () => FocusRoute,
+} as any)
+const AppSettingsSectionRoute = AppSettingsSectionRouteImport.update({
+  id: '/settings/$section',
+  path: '/settings/$section',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppContractsIdRoute = AppContractsIdRouteImport.update({
   id: '/contracts/$id',
@@ -114,12 +120,13 @@ export interface FileRoutesByFullPath {
   '/installments': typeof AppInstallmentsRoute
   '/notifications': typeof AppNotificationsRoute
   '/people': typeof AppPeopleRoute
-  '/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/contracts/$id': typeof AppContractsIdRoute
+  '/settings/$section': typeof AppSettingsSectionRoute
   '/contracts/new': typeof FocusContractsNewRoute
   '/contracts/': typeof AppContractsIndexRoute
+  '/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
@@ -130,12 +137,13 @@ export interface FileRoutesByTo {
   '/installments': typeof AppInstallmentsRoute
   '/notifications': typeof AppNotificationsRoute
   '/people': typeof AppPeopleRoute
-  '/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/contracts/$id': typeof AppContractsIdRoute
+  '/settings/$section': typeof AppSettingsSectionRoute
   '/contracts/new': typeof FocusContractsNewRoute
   '/contracts': typeof AppContractsIndexRoute
+  '/settings': typeof AppSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -148,13 +156,14 @@ export interface FileRoutesById {
   '/_app/installments': typeof AppInstallmentsRoute
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/people': typeof AppPeopleRoute
-  '/_app/settings': typeof AppSettingsRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/contracts/$id': typeof AppContractsIdRoute
+  '/_app/settings/$section': typeof AppSettingsSectionRoute
   '/_focus/contracts/new': typeof FocusContractsNewRoute
   '/_app/contracts/': typeof AppContractsIndexRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,12 +176,13 @@ export interface FileRouteTypes {
     | '/installments'
     | '/notifications'
     | '/people'
-    | '/settings'
     | '/invites/$token'
     | '/r/$token'
     | '/contracts/$id'
+    | '/settings/$section'
     | '/contracts/new'
     | '/contracts/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,12 +193,13 @@ export interface FileRouteTypes {
     | '/installments'
     | '/notifications'
     | '/people'
-    | '/settings'
     | '/invites/$token'
     | '/r/$token'
     | '/contracts/$id'
+    | '/settings/$section'
     | '/contracts/new'
     | '/contracts'
+    | '/settings'
   id:
     | '__root__'
     | '/_app'
@@ -200,13 +211,14 @@ export interface FileRouteTypes {
     | '/_app/installments'
     | '/_app/notifications'
     | '/_app/people'
-    | '/_app/settings'
     | '/invites/$token'
     | '/r/$token'
     | '/_app/'
     | '/_app/contracts/$id'
+    | '/_app/settings/$section'
     | '/_focus/contracts/new'
     | '/_app/contracts/'
+    | '/_app/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -285,13 +297,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvitesTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/people': {
       id: '/_app/people'
       path: '/people'
@@ -313,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInstallmentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/contracts/': {
       id: '/_app/contracts/'
       path: '/contracts'
@@ -326,6 +338,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/contracts/new'
       preLoaderRoute: typeof FocusContractsNewRouteImport
       parentRoute: typeof FocusRoute
+    }
+    '/_app/settings/$section': {
+      id: '/_app/settings/$section'
+      path: '/settings/$section'
+      fullPath: '/settings/$section'
+      preLoaderRoute: typeof AppSettingsSectionRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/contracts/$id': {
       id: '/_app/contracts/$id'
@@ -341,20 +360,22 @@ interface AppRouteChildren {
   AppInstallmentsRoute: typeof AppInstallmentsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppPeopleRoute: typeof AppPeopleRoute
-  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContractsIdRoute: typeof AppContractsIdRoute
+  AppSettingsSectionRoute: typeof AppSettingsSectionRoute
   AppContractsIndexRoute: typeof AppContractsIndexRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppInstallmentsRoute: AppInstallmentsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
   AppPeopleRoute: AppPeopleRoute,
-  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppContractsIdRoute: AppContractsIdRoute,
+  AppSettingsSectionRoute: AppSettingsSectionRoute,
   AppContractsIndexRoute: AppContractsIndexRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

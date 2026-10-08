@@ -567,7 +567,7 @@ describe("seções do home", () => {
       />
     );
     const pix = screen.getByRole("link", { name: "Cadastrar chave PIX" });
-    expect(pix).toHaveAttribute("href", "/settings");
+    expect(pix).toHaveAttribute("href", "/settings/$section");
     expect(pix.querySelector("svg")).toBeNull();
     unmount();
     const fresh = { ...onboarding, hasContract: false };
@@ -610,7 +610,7 @@ describe("seções do home", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getByRole("link", { name: PIX_STEP })).toHaveAttribute(
       "href",
-      "/settings"
+      "/settings/$section"
     );
     const dismissButton = screen.getByRole("button", {
       name: "dispensar guia",

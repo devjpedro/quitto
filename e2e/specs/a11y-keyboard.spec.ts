@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { newUser, seedContract, signup, waitForHydrated } from "../fixtures";
 
-const DELETE_ACCOUNT = /^Excluir conta$/;
+// The button of "Seus dados" and the dialog it opens ("Excluir a conta?").
+const DELETE_ACCOUNT = /^Excluir$/;
+const DELETE_ACCOUNT_DIALOG = /^Excluir a conta\?$/;
 const CONTRACT_ACTIONS = /^Ações do contrato$/;
 const DELETE_CONTRACT = /^Excluir contrato$/;
 
@@ -14,11 +16,9 @@ test("fechar o diálogo de excluir conta devolve o foco ao gatilho", async ({
   page,
 }) => {
   await signup(page);
-  await page.goto("/settings");
+  await page.goto("/settings/data");
   await waitForHydrated(page);
 
-  // The trigger button shares its label with the dialog title, but only the
-  // trigger is a button, so the role query resolves to it.
   const trigger = page.getByRole("button", { name: DELETE_ACCOUNT });
   await expect(trigger).toBeVisible();
 
@@ -30,7 +30,7 @@ test("fechar o diálogo de excluir conta devolve o foco ao gatilho", async ({
   // The dialog is visible and focus moved into it (off the trigger). Radix
   // marks the background aria-hidden while the dialog is open, so the trigger
   // button leaves the a11y tree — assert focus landed inside the dialog instead.
-  const dialog = page.getByRole("dialog", { name: DELETE_ACCOUNT });
+  const dialog = page.getByRole("dialog", { name: DELETE_ACCOUNT_DIALOG });
   await expect(dialog).toBeVisible();
   const focusInDialog = await dialog.evaluate((el) =>
     el.contains(document.activeElement)
@@ -115,11 +115,11 @@ test("o diálogo de excluir conta abre com o cursor no campo da frase", async ({
   page,
 }) => {
   await signup(page);
-  await page.goto("/settings");
+  await page.goto("/settings/data");
   await waitForHydrated(page);
 
   await page.getByRole("button", { name: DELETE_ACCOUNT }).click();
-  const dialog = page.getByRole("dialog", { name: DELETE_ACCOUNT });
+  const dialog = page.getByRole("dialog", { name: DELETE_ACCOUNT_DIALOG });
   await expect(dialog).toBeVisible();
 
   // O campo da frase é o primeiro tabbable DENTRO do `{children}` — é nele que

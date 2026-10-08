@@ -86,7 +86,7 @@ export function onboardingView(
 
 export type StepTarget =
   | { kind: "new_contract" }
-  | { kind: "settings" }
+  | { kind: "settings"; section: "pix" | "reminders" }
   | { contractId: string; kind: "contract" };
 
 /** Where a step leads. "Outra parte" goes to the user's latest contract, where participants are managed. */
@@ -98,8 +98,9 @@ export function stepTarget(
     case "contract":
       return { kind: "new_contract" };
     case "pix":
+      return { kind: "settings", section: "pix" };
     case "reminders":
-      return { kind: "settings" };
+      return { kind: "settings", section: "reminders" };
     case "counterparty":
       return o.counterpartyContractId
         ? { kind: "contract", contractId: o.counterpartyContractId }

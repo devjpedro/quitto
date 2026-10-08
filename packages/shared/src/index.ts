@@ -90,9 +90,6 @@ export {
   sumMismatch,
 } from "./schedule";
 
-/** Frase que o usuário digita para confirmar a exclusão da conta. */
-export const DELETE_CONFIRM_PHRASE = "EXCLUIR";
-
 /** Builds and validates an env object from a Zod schema, failing fast. */
 export function makeEnv<T extends z.ZodTypeAny>(
   schema: T,
