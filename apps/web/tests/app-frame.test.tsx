@@ -547,6 +547,20 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     );
   });
 
+  it("numa janela baixa, do quarto contrato em diante saem, para a conta não ficar de fora", async () => {
+    await renderAt("/", { activeContracts: SIX });
+    const rows = within(
+      screen.getByRole("list", { name: "Contratos ativos" })
+    ).getAllByRole("listitem");
+    const hide = "[@media(max-height:900px)]:hidden";
+    expect(rows.slice(0, 3).every((row) => !row.className.includes(hide))).toBe(
+      true
+    );
+    expect(rows.slice(3).every((row) => row.className.includes(hide))).toBe(
+      true
+    );
+  });
+
   it("a marca de atraso é dita ao leitor de tela; a fração também", async () => {
     await renderAt("/", { activeContracts: SIX });
     expect(

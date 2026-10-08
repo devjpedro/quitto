@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 
 export interface SidebarContract {
@@ -92,6 +93,12 @@ function ContractsSkeleton() {
   );
 }
 
+// The sidebar does not squeeze its blocks (a column taller than the screen
+// scrolls), so on a short window the rows past the third step aside and the
+// account row stays in view; "Ver todos (N)" still says how many there are.
+const SHORT_SCREEN_ROWS = 3;
+const SHORT_SCREEN_HIDE = "[@media(max-height:900px)]:hidden";
+
 /**
  * "Contratos ativos" (owner's decision 10): up to 5, newest on top, in a
  * fixed order so the list never jumps; each with the logo's ring as its
@@ -117,8 +124,11 @@ export function SidebarContractsGroup({
         {m.nav_section_active_contracts()}
       </p>
       <ul aria-labelledby={headingId} className="flex flex-col gap-0.5">
-        {contracts.items.map((contract) => (
-          <li key={contract.contractId}>
+        {contracts.items.map((contract, index) => (
+          <li
+            className={cn(index >= SHORT_SCREEN_ROWS && SHORT_SCREEN_HIDE)}
+            key={contract.contractId}
+          >
             <ContractRow contract={contract} />
           </li>
         ))}
