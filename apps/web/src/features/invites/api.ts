@@ -50,6 +50,8 @@ export function useAcceptInvite(token: string) {
   return useMutation({
     mutationFn: () => unwrap(api.api.invites({ token }).accept.post()),
     meta: { successMessage: m.home_toast_invite_accepted() },
+    // Expired or used between the load and the click: read the invite again.
+    onError: () => qc.invalidateQueries({ queryKey: queryKeys.invite(token) }),
     onSuccess: ({ contractId }) => {
       // Back from the contract, the invite reads again (accepted), never a stale "Aceitar".
       qc.removeQueries({ queryKey: queryKeys.invite(token) });
