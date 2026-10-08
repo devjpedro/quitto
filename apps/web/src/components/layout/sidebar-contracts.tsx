@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 
 export interface SidebarContract {
@@ -93,14 +92,11 @@ function ContractsSkeleton() {
   );
 }
 
-// The sidebar does not squeeze its blocks (a column taller than the screen
-// scrolls), so on a short window the rows past the third step aside and the
-// account row stays in view; "Ver todos (N)" still says how many there are.
-const SHORT_SCREEN_ROWS = 3;
-const SHORT_SCREEN_HIDE = "[@media(max-height:900px)]:hidden";
+/** "Contratos ativos" shows this many rows (mockup 20, B2); "Ver todos (N)" has the rest. */
+export const SIDEBAR_CONTRACTS_MAX = 3;
 
 /**
- * "Contratos ativos" (owner's decision 10): up to 5, newest on top, in a
+ * "Contratos ativos" (owner's decision 10): up to 3, newest on top, in a
  * fixed order so the list never jumps; each with the logo's ring as its
  * progress and a danger mark when something is overdue. "Ver todos (N)"
  * when there are more. `null` (the home has not arrived, on the server and
@@ -115,7 +111,8 @@ export function SidebarContractsGroup({
   if (contracts === null) {
     return <ContractsSkeleton />;
   }
-  if (contracts.items.length === 0) {
+  const shown = contracts.items.slice(0, SIDEBAR_CONTRACTS_MAX);
+  if (shown.length === 0) {
     return null;
   }
   return (
@@ -124,16 +121,13 @@ export function SidebarContractsGroup({
         {m.nav_section_active_contracts()}
       </p>
       <ul aria-labelledby={headingId} className="flex flex-col gap-0.5">
-        {contracts.items.map((contract, index) => (
-          <li
-            className={cn(index >= SHORT_SCREEN_ROWS && SHORT_SCREEN_HIDE)}
-            key={contract.contractId}
-          >
+        {shown.map((contract) => (
+          <li key={contract.contractId}>
             <ContractRow contract={contract} />
           </li>
         ))}
       </ul>
-      {contracts.total > contracts.items.length ? (
+      {contracts.total > shown.length ? (
         <Link
           // Only the list itself is the current page, not a contract or the wizard under it.
           activeOptions={{ exact: true }}

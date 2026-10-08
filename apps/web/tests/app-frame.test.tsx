@@ -201,7 +201,7 @@ describe("AppFrame", () => {
     );
   });
 
-  it("o cartão limão do marco do momento: rótulo, anel com o %, título e detalhe", async () => {
+  it("o cartão limão do marco do momento: rótulo, anel com o %, e o título; o detalhe fica de fora (2 linhas)", async () => {
     await renderAt("/", {
       moment: {
         label: "Mais perto de quitar",
@@ -217,11 +217,7 @@ describe("AppFrame", () => {
     expect(within(card).getByText("90%")).toBeVisible();
     expect(card.querySelector("svg")).toHaveAttribute("width", "22");
     expect(within(card).getByText("Celular da Ana · 9/10")).toBeVisible();
-    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toBeVisible();
-    // A long detail wraps without leaving one word (the date) alone on the last line.
-    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toHaveClass(
-      "text-pretty"
-    );
+    expect(within(card).queryByText("Falta 1 parcela, em 13/10")).toBeNull();
   });
 
   it("um marco que não é progresso (pago no mês): sem anel e sem %", async () => {
@@ -448,10 +444,31 @@ describe("AppFrame", () => {
 
   it("offers 'Novo contrato' in the mobile tab bar", async () => {
     await renderAt("/");
-    expect(screen.getByRole("link", { name: "Novo contrato" })).toHaveAttribute(
-      "href",
-      "/contracts/new"
+    const links = screen.getAllByRole("link", { name: "Novo contrato" });
+    // The tab bar's ＋ and the sidebar's quiet button.
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/contracts/new");
+    }
+  });
+
+  it("a sidebar tem 'Novo contrato' discreto logo abaixo da Carteira: sem fundo, contorno line-strong, 44 px", async () => {
+    await renderAt("/");
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const button = within(sidebarNav as HTMLElement).getByRole("link", {
+      name: "Novo contrato",
+    });
+    expect(button).toHaveClass(
+      "h-11",
+      "border",
+      "border-line-strong",
+      "hover:bg-surface-card"
     );
+    expect(button.className).not.toMatch(BG_FILL);
+    // Right after the last item of the wallet group (Pessoas).
+    expect(button.previousElementSibling).toHaveTextContent("Pessoas");
   });
 
   it("no detalhe, a barra de cima tem ‹ Contratos, o sino e as ações, sem busca e sem avatar", async () => {
@@ -528,14 +545,16 @@ const SIX = {
   ],
 };
 
+const BG_FILL = /(^|\s)bg-/;
+
 describe("Sidebar · Contratos ativos (mockup 13)", () => {
-  it("até 5, na ordem que chegam, cada um com o anel e a fração; Ver todos (N) quando há mais", async () => {
+  it("até 3, na ordem que chegam, cada um com o anel e a fração; Ver todos (N) quando há mais", async () => {
     await renderAt("/", { activeContracts: SIX });
     const list = screen.getByRole("list", { name: "Contratos ativos" });
     const links = within(list).getAllByRole("link");
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(3);
     // The order they come in (the API's fixed order), never re-sorted here.
-    for (const [index, contract] of SIX.items.entries()) {
+    for (const [index, contract] of SIX.items.slice(0, 3).entries()) {
       expect(links[index]).toHaveTextContent(contract.title);
     }
     expect(links[0]).toHaveAttribute("href", "/contracts/c6");
@@ -544,20 +563,6 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     expect(screen.getByRole("link", { name: "Ver todos (6)" })).toHaveAttribute(
       "href",
       "/contracts"
-    );
-  });
-
-  it("numa janela baixa, do quarto contrato em diante saem, para a conta não ficar de fora", async () => {
-    await renderAt("/", { activeContracts: SIX });
-    const rows = within(
-      screen.getByRole("list", { name: "Contratos ativos" })
-    ).getAllByRole("listitem");
-    const hide = "[@media(max-height:900px)]:hidden";
-    expect(rows.slice(0, 3).every((row) => !row.className.includes(hide))).toBe(
-      true
-    );
-    expect(rows.slice(3).every((row) => row.className.includes(hide))).toBe(
-      true
     );
   });
 
@@ -636,9 +641,9 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     ).toBeNull();
   });
 
-  it("itens da sidebar: hover com nav-hover e foco por dentro, sem cortar no canto; com 5, sem Ver todos", async () => {
-    await renderAt("/", { activeContracts: { ...SIX, total: 5 } });
-    expect(screen.queryByRole("link", { name: "Ver todos (5)" })).toBeNull();
+  it("itens da sidebar: hover com nav-hover e foco por dentro, sem cortar no canto; com 3, sem Ver todos", async () => {
+    await renderAt("/", { activeContracts: { ...SIX, total: 3 } });
+    expect(screen.queryByRole("link", { name: "Ver todos (3)" })).toBeNull();
     // The sidebar's own nav: the tab bar has a "Contratos" link too, in the DOM with it.
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",

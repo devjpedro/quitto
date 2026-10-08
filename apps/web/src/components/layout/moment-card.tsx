@@ -13,7 +13,7 @@ export interface MomentCardView {
 /**
  * The milestone of the moment at the foot of the sidebar (mockup 13): lime
  * with dark text, the label with the logo's ring and the % on the same line,
- * then the milestone and its detail. Never lime text on a light surface.
+ * then the milestone (two lines, mockup 20: the detail stays out). Never lime text on a light surface.
  */
 export function MomentCard({ moment }: { moment: MomentCardView }) {
   return (
@@ -34,11 +34,6 @@ export function MomentCard({ moment }: { moment: MomentCardView }) {
       <p className="mt-1 truncate font-semibold text-sm leading-[1.35]">
         {moment.title}
       </p>
-      {moment.detail ? (
-        <p className="mt-px text-pretty text-xs leading-[1.4]">
-          {moment.detail}
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Bell, GearSix, MagnifyingGlass } from "@phosphor-icons/react";
+import { Bell, GearSix, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -102,6 +102,14 @@ export function Sidebar({
         {PRIMARY_NAV.map((item) => (
           <SidebarLink count={navCounts[item.id]} item={item} key={item.to} />
         ))}
+        {/* The exception to "outline only on fields" (owner, mockup 20): a quiet button, right under the group. */}
+        <Link
+          className="mt-2 flex h-11 items-center justify-center gap-2 rounded-control border border-line-strong text-ink text-sm transition-colors hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          to="/contracts/new"
+        >
+          <Plus aria-hidden="true" size={16} weight="bold" />
+          {m.nav_new_contract()}
+        </Link>
         <p className="mt-4 mb-1 px-3 text-ink-muted text-xs">
           {m.nav_section_account()}
         </p>
