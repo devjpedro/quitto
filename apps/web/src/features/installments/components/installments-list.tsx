@@ -126,7 +126,7 @@ export function InstallmentsList({
                 const rows = [
                   <li
                     className="first:rounded-t-card last:rounded-b-card"
-                    key={line.id}
+                    key={`run-${line.id}`}
                   >
                     <InstallmentRunRow
                       expanded={open}
@@ -147,6 +147,7 @@ export function InstallmentsList({
                         <InstallmentListRow
                           item={item}
                           locale={locale}
+                          nested
                           onIntent={onIntent}
                           onOpen={onOpen}
                           selected={selectedId === item.installmentId}

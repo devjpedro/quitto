@@ -207,4 +207,39 @@ describe("InstallmentsPage", () => {
     await user.click(screen.getByRole("button", { name: "Mês anterior" }));
     expect(nav.search).toMatchObject({ month: "2026-09" });
   });
+
+  it("abrir uma sequência de atrasadas mostra as parcelas, sem key repetida", async () => {
+    const user = userEvent.setup();
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const run = [3, 4].map((sequence) =>
+      listInstallment({
+        installmentId: `r${sequence}`,
+        contractId: "cn",
+        contractTitle: "Notebook da Marina",
+        counterpartyName: "Marina Pires",
+        direction: "receive",
+        dueDate: `2026-0${sequence + 3}-10`,
+        sequence,
+        installmentsCount: 12,
+      })
+    );
+    getList.mockResolvedValue({
+      data: { today: "2026-10-08", hasContracts: true, items: run },
+      error: null,
+    });
+    renderWithProviders(<InstallmentsPage />);
+    const toggle = await screen.findByTestId("installment-run-r3");
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("installment-row-r3")).toHaveTextContent(
+      "Parcela 3 de 12"
+    );
+    expect(screen.getByTestId("installment-row-r4")).toHaveTextContent(
+      "Parcela 4 de 12"
+    );
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
 });
