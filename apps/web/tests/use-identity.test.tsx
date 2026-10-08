@@ -45,7 +45,9 @@ describe("useIdentity", () => {
       name: "Maria Souza",
       pixKey: null,
       emailRemindersOptIn: false,
+      createdAt: "2025-09-12T12:00:00.000Z",
       emailRemindersAvailable: false,
+      hasPassword: true,
       locale: "pt-BR",
     });
     expect(

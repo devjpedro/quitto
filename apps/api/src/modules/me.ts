@@ -2,7 +2,8 @@ import { isLocale, type Locale, parsePixKey } from "@quitto/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { user as userTable } from "../db/schema";
+import { account, user as userTable } from "../db/schema";
+import { loadDeletionSummary } from "../lib/deletion-summary";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { NotFoundError, ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
@@ -22,9 +23,18 @@ export const meModule = new Elysia({ prefix: "/api" })
           pixKey: userTable.pixKey,
           emailRemindersOptIn: userTable.emailRemindersOptIn,
           locale: userTable.locale,
+          createdAt: userTable.createdAt,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
+        .limit(1);
+      // A Google-only account has no credential row: no password to change.
+      const [credential] = await db
+        .select({ id: account.id })
+        .from(account)
+        .where(
+          and(eq(account.userId, user.id), eq(account.providerId, "credential"))
+        )
         .limit(1);
       return {
         id: user.id,
@@ -35,6 +45,8 @@ export const meModule = new Elysia({ prefix: "/api" })
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
         locale: isLocale(row?.locale) ? row.locale : null,
         emailRemindersAvailable: emailRemindersEnabled(),
+        hasPassword: credential !== undefined,
+        createdAt: (row?.createdAt ?? new Date()).toISOString(),
       };
     },
     {
@@ -47,6 +59,22 @@ export const meModule = new Elysia({ prefix: "/api" })
         emailRemindersOptIn: t.Boolean(),
         locale: accountLocaleSchema,
         emailRemindersAvailable: t.Boolean(),
+        hasPassword: t.Boolean(),
+        createdAt: t.String(),
+      }),
+    }
+  )
+  .get(
+    "/me/deletion-summary",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      return await loadDeletionSummary(user.id);
+    },
+    {
+      response: t.Object({
+        contracts: t.Integer(),
+        installments: t.Integer(),
+        people: t.Array(t.Object({ name: t.String() })),
       }),
     }
   )
