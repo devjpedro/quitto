@@ -33,7 +33,9 @@ test("sem login: vê o convite, cria a conta e volta para aceitar", async ({
       guest.getByRole("heading", { level: 1, name: "Entre para responder" })
     ).toBeVisible();
     await expect(guest.getByTestId("login-invite")).toContainText(TITLE);
-    await expect(guest.getByText("Você entra como quem paga.")).toBeVisible();
+    await expect(guest.getByTestId("login-invite")).toContainText(
+      "Você entra como quem paga."
+    );
     await scan(guest);
     await guest.getByRole("link", { name: "Criar conta" }).click();
     await guest.waitForURL("**/login?**");
