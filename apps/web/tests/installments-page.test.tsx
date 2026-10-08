@@ -242,4 +242,20 @@ describe("InstallmentsPage", () => {
     expect(error).not.toHaveBeenCalled();
     error.mockRestore();
   });
+
+  it("um mês futuro vazio oferece voltar ao mês de hoje, não o próximo", async () => {
+    const user = userEvent.setup();
+    nav.search = { month: "2026-12" };
+    getList.mockResolvedValue({
+      data: { today: "2026-10-08", hasContracts: true, items: [] },
+      error: null,
+    });
+    const view = renderWithProviders(<InstallmentsPage />);
+    nav.rerender = () => view.rerender(<InstallmentsPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Voltar para outubro" })
+    );
+    expect(nav.search.month).toBeUndefined();
+    expect(screen.queryByRole("button", { name: "Ver janeiro" })).toBeNull();
+  });
 });

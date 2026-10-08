@@ -140,6 +140,7 @@ export function InstallmentsContent() {
   } else if (groups.length === 0) {
     body = (
       <InstallmentsEmpty
+        currentMonth={monthOf(today)}
         filtered={search.filter !== undefined}
         hasContracts={data.hasContracts}
         locale={locale}
@@ -168,7 +169,7 @@ export function InstallmentsContent() {
         contractId={search.contract}
         onOpenWithContract={openWithContract}
         panel={panel}
-        urgentContractId={urgentContract(groups)}
+        urgentContractId={wide ? urgentContract(groups) : null}
       />
     </div>
   );

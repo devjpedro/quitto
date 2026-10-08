@@ -10,18 +10,21 @@ import { shiftMonth } from "../lib/month-range";
 /** The list with nothing to show (mockup 09, frame 4): no contracts, an empty month, or a filter with nothing. */
 export function InstallmentsEmpty({
   filtered,
+  currentMonth,
   hasContracts,
   locale,
   month,
   onClearFilter,
   onMonth,
 }: {
+  /** Today's month: past the contracts' end, "next" would lead to an empty month after another. */
+  currentMonth: string;
   filtered: boolean;
   hasContracts: boolean;
   locale: Locale;
   month: string;
   onClearFilter: () => void;
-  onMonth: (month: string) => void;
+  onMonth: (month: string | undefined) => void;
 }) {
   const name = formatMonthName(month, locale);
   let body: React.ReactNode;
@@ -54,14 +57,16 @@ export function InstallmentsEmpty({
       />
     );
   } else {
-    const next = shiftMonth(month, 1);
+    const goBack = month > currentMonth;
+    const target = goBack ? undefined : shiftMonth(month, 1);
+    const targetName = formatMonthName(target ?? currentMonth, locale);
     body = (
       <EmptyState
         action={
-          <Button onClick={() => onMonth(next)} size="sm" variant="inset">
-            {m.installments_empty_next({
-              month: formatMonthName(next, locale),
-            })}
+          <Button onClick={() => onMonth(target)} size="sm" variant="inset">
+            {goBack
+              ? m.installments_empty_back({ month: targetName })
+              : m.installments_empty_next({ month: targetName })}
           </Button>
         }
         description=""

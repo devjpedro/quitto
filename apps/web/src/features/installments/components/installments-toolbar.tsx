@@ -70,7 +70,7 @@ export function InstallmentsToolbar({
           </span>
           {current ? null : (
             <button
-              className="rounded-control px-1.5 text-[13px] text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:min-h-6"
+              className="rounded-control px-1.5 text-[13px] text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand max-md:min-h-11 max-md:px-3"
               onClick={() => onMonth(undefined)}
               type="button"
             >
