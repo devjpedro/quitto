@@ -1,13 +1,17 @@
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
+
+import { cn } from "@/lib/utils";
 
 /** The step's question (Bricolage 26, 24 on a phone) and the line under it; focused when the step changes. */
 export function StepHeading({
   headingRef,
+  hideLeadOnPhone = false,
   lead,
   title,
 }: {
   headingRef: RefObject<HTMLHeadingElement | null>;
-  lead?: string;
+  hideLeadOnPhone?: boolean;
+  lead?: ReactNode;
   title: string;
 }) {
   return (
@@ -20,7 +24,12 @@ export function StepHeading({
         {title}
       </h1>
       {lead ? (
-        <p className="mt-1.5 text-ink-muted text-sm leading-[1.45] md:mt-2">
+        <p
+          className={cn(
+            "mt-1.5 text-ink-muted text-sm leading-[1.45] md:mt-2",
+            hideLeadOnPhone && "max-md:hidden"
+          )}
+        >
           {lead}
         </p>
       ) : null}

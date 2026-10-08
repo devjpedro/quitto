@@ -38,10 +38,60 @@ async function about(page: Page): Promise<void> {
     .fill("Dell Inspiron 15, usado, com carregador");
 }
 
+const SPLIT_OPTION = /valor total/i;
+const ADJUST_LINK = /Ajustar uma a uma/;
+const TAKE_FIX = /^Tirar/;
+
+async function next(page: Page): Promise<void> {
+  await page.getByTestId("wizard-footer").getByRole("button").last().click();
+}
+
+/** The 10th at least `daysAhead` days ahead: "todo dia 10", as in the mockup. */
+function tenth(daysAhead: number): string {
+  const date = new Date(Date.now() + daysAhead * 86_400_000);
+  if (date.getUTCDate() > 10) {
+    date.setUTCMonth(date.getUTCMonth() + 1);
+  }
+  date.setUTCDate(10);
+  return date.toISOString().slice(0, 10);
+}
+
+async function schedule(
+  page: Page,
+  total = "6000,00",
+  due = tenth(30)
+): Promise<void> {
+  await about(page);
+  await next(page);
+  await page.getByRole("radio", { name: SPLIT_OPTION }).click();
+  await page.getByLabel("Valor total", { exact: true }).fill(total);
+  await page.getByLabel("Parcelas", { exact: true }).fill("12");
+  await page.getByLabel("1º vencimento").fill(due);
+  await page.getByLabel("1º vencimento").blur();
+}
+
+async function adjustMismatch(page: Page): Promise<void> {
+  await schedule(page);
+  await page.getByRole("button", { name: ADJUST_LINK }).click();
+  await page.getByLabel("Valor da parcela 1", { exact: true }).fill("1600,00");
+  await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
+}
+
 /** Each frame from a fresh /contracts/new. Tasks 7 and 8 add theirs here. */
 const DRIVE: Record<string, (page: Page) => Promise<void>> = {
   "about-empty": async () => undefined,
   "about-filled": about,
+  schedule: async (page) => await schedule(page),
+  // D6: total zero and a first due date in the past, after "Continuar".
+  "schedule-errors": async (page) => {
+    await schedule(page, "0", tenth(-40));
+    await next(page);
+  },
+  "adjust-mismatch": adjustMismatch,
+  "adjust-ok": async (page) => {
+    await adjustMismatch(page);
+    await page.getByRole("button", { name: TAKE_FIX }).click();
+  },
 };
 
 async function sessionCookies() {

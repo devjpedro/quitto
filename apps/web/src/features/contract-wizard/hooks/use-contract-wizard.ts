@@ -19,6 +19,7 @@ import {
 import {
   emptyValues,
   rowsOf,
+  scheduleOf,
   type WizardStep,
   type WizardValues,
 } from "../lib/wizard-values";
@@ -219,6 +220,11 @@ export function useContractWizard({
     },
     openAdjust: () => {
       const current = form.getValues();
+      // Only a complete schedule has rows to adjust: say what is missing instead.
+      if (!scheduleOf(current)) {
+        show(validateStep(2, current, context));
+        return;
+      }
       if (!current.installments) {
         const rows = rowsOf(current).map((row) => ({
           amountCents: row.amountCents,

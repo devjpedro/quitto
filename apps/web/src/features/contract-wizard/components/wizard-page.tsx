@@ -12,10 +12,14 @@ import {
   useVisualViewportInset,
 } from "@/hooks/use-visual-viewport-inset";
 import { PAGE_TITLE } from "@/lib/page-title";
+import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useContractWizard } from "../hooks/use-contract-wizard";
+import { AdjustInstallments } from "./adjust-installments";
+import { AdjustLegend, AdjustSum } from "./adjust-sum";
 import { DiscardDialog } from "./discard-dialog";
 import { StepAbout } from "./step-about";
+import { StepSchedule } from "./step-schedule";
 import { STEP_LABEL, WizardRail } from "./wizard-rail";
 
 /**
@@ -34,9 +38,25 @@ export function ContractWizardPage() {
     <>
       <StepFrame
         footer={
-          <Button block onClick={wizard.next} size="lg">
-            {step === 4 ? m.wizard_create() : m.wizard_continue()}
-          </Button>
+          // In the one-by-one list the sum goes with "Continuar": pinned with
+          // it on a phone (E7), right under the list from md (D5/D7).
+          <div
+            className={cn(
+              "flex w-full flex-col gap-2.5",
+              wizard.adjusting && "md:-mt-4 md:gap-0"
+            )}
+          >
+            {wizard.adjusting ? <AdjustSum wizard={wizard} /> : null}
+            {wizard.adjusting ? <AdjustLegend wizard={wizard} /> : null}
+            <Button
+              block
+              className={wizard.adjusting ? "md:mt-7" : undefined}
+              onClick={wizard.next}
+              size="lg"
+            >
+              {step === 4 ? m.wizard_create() : m.wizard_continue()}
+            </Button>
+          </div>
         }
         header={
           <StepHeader
@@ -78,6 +98,12 @@ export function ContractWizardPage() {
             transition={{ duration: 0.16 }}
           >
             {step === 1 ? <StepAbout wizard={wizard} /> : null}
+            {step === 2 && !wizard.adjusting ? (
+              <StepSchedule wizard={wizard} />
+            ) : null}
+            {step === 2 && wizard.adjusting ? (
+              <AdjustInstallments wizard={wizard} />
+            ) : null}
           </motion.div>
         </AnimatePresence>
       </StepFrame>
