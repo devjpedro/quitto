@@ -48,6 +48,7 @@ export function TopBar({
           aria-expanded={notificationsOpen}
           aria-haspopup="dialog"
           badge={unreadCount}
+          data-tour="notifications"
           icon={Bell}
           label={notificationsLabel(unreadCount)}
           onClick={onOpenNotifications}

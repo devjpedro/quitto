@@ -1,6 +1,10 @@
+import { Compass } from "@phosphor-icons/react";
 import { LOCALES, type Locale, todayISO } from "@quitto/shared";
 import { useHydrated } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { PersonAvatar } from "@/components/ui/person-avatar";
+import { useSetTourCompleted } from "@/features/tour/api";
+import { tourStore } from "@/features/tour/lib/tour-store";
 import { useChangeLocale } from "@/hooks/use-change-locale";
 import { useTheme } from "@/hooks/use-theme";
 import { formatDate, formatMoney, formatMonthYear } from "@/lib/locale-format";
@@ -29,6 +33,7 @@ function groupTitle(text: string, hint?: string) {
 /** Perfil: who you are, the language (with the date and the money in it) and the theme (with the app in miniature). */
 export function ProfileSection({ me }: { me: SessionUser }) {
   const changeLocale = useChangeLocale();
+  const setTourCompleted = useSetTourCompleted();
   const { theme, setTheme } = useTheme();
   // The server does not know the <html> class's theme: marked only after hydrating.
   const hydrated = useHydrated();
@@ -86,6 +91,19 @@ export function ProfileSection({ me }: { me: SessionUser }) {
           value="dark"
         />
       </ChoiceGroup>
+
+      {groupTitle(m.settings_tour_title(), m.settings_tour_description())}
+      <Button
+        onClick={() => {
+          // Clears the "seen" mark (a new device sees it again too) and opens it here.
+          setTourCompleted.mutate(false);
+          tourStore.start();
+        }}
+        variant="inset"
+      >
+        <Compass aria-hidden="true" size={16} />
+        {m.settings_tour_redo()}
+      </Button>
     </SettingsSectionShell>
   );
 }

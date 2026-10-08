@@ -38,6 +38,7 @@ function SidebarLink({ count, item }: { count: number; item: NavItem }) {
       activeOptions={{ exact: item.exact }}
       aria-label={count > 0 ? item.countLabel(count) : undefined}
       className={LINK}
+      data-tour={`nav-${item.id}`}
       to={item.to}
     >
       {({ isActive }) => (
@@ -105,6 +106,7 @@ export function Sidebar({
         {/* The exception to "outline only on fields" (owner, mockup 20): a quiet button, right under the group. */}
         <Link
           className="mt-2 flex h-11 items-center justify-center gap-2 rounded-control border border-line-strong text-ink text-sm transition-colors hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          data-tour="new-contract"
           to="/contracts/new"
         >
           <Plus aria-hidden="true" size={16} weight="bold" />
@@ -120,6 +122,7 @@ export function Sidebar({
             unreadCount > 0 ? notificationsLabel(unreadCount) : undefined
           }
           className={cn(LINK, notificationsOpen && "bg-surface")}
+          data-tour="notifications"
           onClick={onOpenNotifications}
           type="button"
           {...notificationsTrigger("sidebar")}

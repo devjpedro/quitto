@@ -9,7 +9,12 @@ const TAB =
 function TabItem({ item }: { item: NavItem }) {
   return (
     <li>
-      <Link activeOptions={{ exact: item.exact }} className={TAB} to={item.to}>
+      <Link
+        activeOptions={{ exact: item.exact }}
+        className={TAB}
+        data-tour={`nav-${item.id}`}
+        to={item.to}
+      >
         {({ isActive }) => (
           <>
             <item.icon
@@ -42,6 +47,7 @@ export function TabBar() {
           <Link
             aria-label={m.nav_new_contract()}
             className="-mt-4 flex size-12 items-center justify-center rounded-[14px] bg-brand-surface text-on-brand shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 active:scale-[.97] motion-reduce:active:scale-100"
+            data-tour="new-contract"
             to="/contracts/new"
             viewTransition={{ types: ["sheet-up"] }}
           >

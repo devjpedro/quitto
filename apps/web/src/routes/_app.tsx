@@ -22,6 +22,8 @@ import {
   NotificationsPanelContext,
   useNotificationsPanel,
 } from "@/features/notifications/hooks/use-notifications-panel";
+import { TourOverlay } from "@/features/tour/components/tour-overlay";
+import { useTourAutostart } from "@/features/tour/hooks/use-tour-autostart";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useIdentity } from "@/hooks/use-identity";
 import { useSessionGate } from "@/hooks/use-session-gate";
@@ -41,6 +43,7 @@ export const Route = createFileRoute("/_app")({
 
 function AppLayout() {
   useSessionGate();
+  useTourAutostart();
   const identity = useIdentity();
   const unreadCount = useUnreadCount();
   const moment = useMomentMilestone();
@@ -101,6 +104,7 @@ function AppLayout() {
           open={notifications.open}
           unreadCount={unreadCount}
         />
+        <TourOverlay />
         <ErrorBoundary
           FallbackComponent={ErrorFallback}
           resetKeys={[identity?.id]}
