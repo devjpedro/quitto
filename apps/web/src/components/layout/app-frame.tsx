@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { SessionIdentity } from "@/lib/session-resolver";
-import { m } from "@/paraglide/messages.js";
 import type { MomentCardView } from "./moment-card";
 import type { NavCounts } from "./nav-items";
+import { ShellFrame } from "./shell-frame";
 import { Sidebar } from "./sidebar";
 import type { SidebarContracts } from "./sidebar-contracts";
 import { TabBar } from "./tab-bar";
@@ -50,29 +50,13 @@ export function AppFrame({
   ...shell
 }: ShellProps & { children: ReactNode }) {
   return (
-    <div
-      className="min-h-dvh bg-surface-sunken pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans text-ink md:bg-canvas md:pt-3 md:pr-[max(0.75rem,env(safe-area-inset-right))] md:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-      id="app-shell"
+    <ShellFrame
+      bottom={<TabBar />}
+      column={<Sidebar {...shell} />}
+      mainClassName="pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0"
+      top={<TopBar {...shell} />}
     >
-      <a
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-[max(0.75rem,env(safe-area-inset-left))] focus:z-50 focus:rounded-control focus:bg-ink focus:px-4 focus:py-2 focus:text-ink-inverse"
-        href="#conteudo"
-      >
-        {m.skip_to_content()}
-      </a>
-      <TopBar {...shell} />
-      {/* No gap: the sidebar's own p-3 is the 12 px of canvas before the panel. */}
-      <div className="flex">
-        <Sidebar {...shell} />
-        <main
-          className="max-md:page-surfaces min-w-0 flex-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] focus:outline-none md:min-h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] md:rounded-panel md:bg-surface md:pb-0"
-          id="conteudo"
-          tabIndex={-1}
-        >
-          {children}
-        </main>
-      </div>
-      <TabBar />
-    </div>
+      {children}
+    </ShellFrame>
   );
 }

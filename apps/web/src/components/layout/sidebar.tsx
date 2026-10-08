@@ -1,6 +1,5 @@
 import { Bell, MagnifyingGlass } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
@@ -9,6 +8,7 @@ import { MomentCard } from "./moment-card";
 import { type NavItem, PRIMARY_NAV } from "./nav-items";
 import { notificationsLabel } from "./notifications-label";
 import { notificationsTrigger } from "./notifications-trigger";
+import { SHELL_COLUMN, ShellLogoRow } from "./shell-frame";
 import { SidebarContractsGroup } from "./sidebar-contracts";
 
 // On the canvas (structure B): hover with nav-hover, focus inside the row; the active row stays black.
@@ -68,11 +68,8 @@ export function Sidebar({
   return (
     // The frame's height (12 px on top, the bottom safe area or 12 px below);
     // a short screen (a phone on its side) scrolls it, the account menu included.
-    <aside className="sticky top-3 hidden h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] w-[232px] shrink-0 flex-col overflow-y-auto p-3 md:flex">
-      {/* The wordmark alone (owner's decision 1): 24 px, 44 px tall like the mockup's lockup. */}
-      <div className="flex h-11 items-center px-2.5">
-        <Logo size={24} />
-      </div>
+    <aside className={SHELL_COLUMN}>
+      <ShellLogoRow />
       <button
         className="group mt-4 flex h-10 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onOpenSearch}
