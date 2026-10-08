@@ -133,7 +133,6 @@ function InviteStage({
 /**
  * The showcase's content (mockup 19, direction A): the product's own pieces,
  * the invite behind the sign-in, or the e-mail that was just sent.
- * `firstName` keeps the inviter's trail short.
  */
 export function AuthStage({
   invite,
