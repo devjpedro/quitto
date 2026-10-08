@@ -102,6 +102,7 @@ export function useInstallmentsRoute(
     openWithContract: openInstallment,
     panel,
     search,
+    seeOverdueList: () => patch({ view: undefined, filter: "overdue" }),
     setDay: (day: string | undefined) => patch({ day }, true),
     setFilter: (filter: InstallmentsSearch["filter"]) =>
       patch({ filter }, true),

@@ -1,12 +1,16 @@
+import { isPaidStatus } from "@quitto/shared";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { contractQueryOptions } from "@/features/contracts/api";
+import { LATERAL_UP, useMediaQuery } from "@/hooks/use-media-query";
 import { todayISO } from "@/lib/format";
 import { getLocale } from "@/paraglide/runtime.js";
 import { installmentQueryOptions, installmentsListQueryOptions } from "../api";
 import { useInstallmentsRoute } from "../hooks/use-installments-route";
+import { calendarMonth, defaultDay } from "../lib/calendar-month";
 import {
+  filterItems,
   groupInstallments,
   type InstallmentGroup,
   isCurrentMonth,
@@ -14,6 +18,7 @@ import {
 import { monthOf, monthQuery } from "../lib/month-range";
 import type { InstallmentListItem } from "../types";
 import { InstallmentsAside } from "./installments-aside";
+import { InstallmentsCalendar } from "./installments-calendar";
 import { InstallmentsEmpty } from "./installments-empty";
 import { InstallmentsHeader } from "./installments-header";
 import { InstallmentsList } from "./installments-list";
@@ -69,9 +74,33 @@ export function InstallmentsContent() {
       return next;
     });
   }, []);
-  const visible = visibleItems(groups, expanded);
-  const { openWithContract, panel, search, setFilter, setMonth } =
-    useInstallmentsRoute(visible, today);
+  const calendar = urlSearch.view === "calendar";
+  const wide = useMediaQuery(LATERAL_UP, false);
+  const gridItems = useMemo(
+    () => filterItems(data.items, urlSearch.filter, today),
+    [data.items, urlSearch.filter, today]
+  );
+  const day = urlSearch.day ?? defaultDay(month, today, gridItems);
+  const monthFrom = `${month}-01`;
+  const carried = gridItems.filter(
+    (item) => item.dueDate < monthFrom && !isPaidStatus(item.status)
+  ).length;
+  let visible = visibleItems(groups, expanded);
+  if (calendar) {
+    const cells = calendarMonth(month, gridItems, today).flat();
+    visible = wide
+      ? cells.flatMap((cell) => cell.items)
+      : (cells.find((cell) => cell.iso === day)?.items ?? []);
+  }
+  const {
+    openWithContract,
+    panel,
+    search,
+    seeOverdueList,
+    setDay,
+    setFilter,
+    setMonth,
+  } = useInstallmentsRoute(visible, today);
   const prefetch = useCallback(
     (item: InstallmentListItem) => {
       queryClient.prefetchQuery(contractQueryOptions(item.contractId));
@@ -79,6 +108,47 @@ export function InstallmentsContent() {
     },
     [queryClient]
   );
+  let body: ReactNode = (
+    <InstallmentsList
+      expanded={expanded}
+      groups={groups}
+      locale={locale}
+      month={month}
+      onIntent={prefetch}
+      onOpen={panel.openInstallment}
+      onToggle={toggle}
+      selectedId={panel.installmentId}
+      today={today}
+    />
+  );
+  if (calendar) {
+    body = (
+      <InstallmentsCalendar
+        carried={carried}
+        day={day}
+        items={gridItems}
+        locale={locale}
+        month={month}
+        onDay={setDay}
+        onIntent={prefetch}
+        onOpen={panel.openInstallment}
+        onSeeCarried={seeOverdueList}
+        selectedId={panel.installmentId}
+        today={today}
+      />
+    );
+  } else if (groups.length === 0) {
+    body = (
+      <InstallmentsEmpty
+        filtered={search.filter !== undefined}
+        hasContracts={data.hasContracts}
+        locale={locale}
+        month={month}
+        onClearFilter={() => setFilter(undefined)}
+        onMonth={setMonth}
+      />
+    );
+  }
   return (
     <div className="lateral:grid lateral:grid-cols-[minmax(0,1fr)_420px] lateral:gap-x-7">
       <div className="flex min-w-0 flex-col gap-4 md:gap-5">
@@ -92,28 +162,7 @@ export function InstallmentsContent() {
           onFilter={setFilter}
           onMonth={setMonth}
         />
-        {groups.length === 0 ? (
-          <InstallmentsEmpty
-            filtered={search.filter !== undefined}
-            hasContracts={data.hasContracts}
-            locale={locale}
-            month={month}
-            onClearFilter={() => setFilter(undefined)}
-            onMonth={setMonth}
-          />
-        ) : (
-          <InstallmentsList
-            expanded={expanded}
-            groups={groups}
-            locale={locale}
-            month={month}
-            onIntent={prefetch}
-            onOpen={panel.openInstallment}
-            onToggle={toggle}
-            selectedId={panel.installmentId}
-            today={today}
-          />
-        )}
+        {body}
       </div>
       <InstallmentsAside
         contractId={search.contract}

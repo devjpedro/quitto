@@ -134,3 +134,30 @@ export function groupInstallments(
 export function isCurrentMonth(month: string, today: string): boolean {
   return month === today.slice(0, 7);
 }
+
+/**
+ * The calendar's filter: the same chips as the list, on the installments
+ * themselves (a chip never hides a whole group here, only marks).
+ */
+export function filterItems(
+  items: InstallmentListItem[],
+  filter: InstallmentFilter | undefined,
+  today: string
+): InstallmentListItem[] {
+  if (!filter) {
+    return items;
+  }
+  return items.filter((item) => {
+    if (filter === "pay" || filter === "receive") {
+      return item.direction === filter;
+    }
+    if (filter === "awaiting") {
+      return item.status === INSTALLMENT_STATUS.awaitingConfirmation;
+    }
+    return (
+      !isPaidStatus(item.status) &&
+      item.status !== INSTALLMENT_STATUS.awaitingConfirmation &&
+      item.dueDate < today
+    );
+  });
+}
