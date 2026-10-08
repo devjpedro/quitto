@@ -38,10 +38,7 @@ export function GhostLine({
   width: string;
 }) {
   return (
-    <span
-      className="block rounded-full bg-surface-sunken"
-      style={{ width, height }}
-    />
+    <span className="block rounded-full bg-canvas" style={{ width, height }} />
   );
 }
 
@@ -80,7 +77,11 @@ export function EmptyState({
           <IconComponent aria-hidden="true" className="text-brand" size={22} />
         )}
         <h3 className="font-semibold text-ink text-sm">{title}</h3>
-        <p className="text-ink-muted text-sm leading-relaxed">{description}</p>
+        {description ? (
+          <p className="text-ink-muted text-sm leading-relaxed">
+            {description}
+          </p>
+        ) : null}
         {action ? <div className="mt-1">{action}</div> : null}
       </div>
     );
