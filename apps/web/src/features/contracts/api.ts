@@ -89,8 +89,8 @@ export const contractEventsQueryOptions = (id: string) =>
 
 function useContractInvalidate(contractId: string) {
   const qc = useQueryClient();
-  return () =>
-    qc.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
+  // Pessoas, the list's counterparty and the sidebar's counts follow the contract.
+  return () => invalidateContractViews(qc, contractId);
 }
 
 /**

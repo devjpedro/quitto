@@ -1,5 +1,5 @@
 import { Plus } from "@phosphor-icons/react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,9 @@ function ContractsContent() {
  */
 export function ContractsPage() {
   useDocumentTitle(m.page_title_contracts());
+  const { data } = useQuery(contractsQueryOptions);
+  // No contracts: the empty state has the one "Novo contrato" (decision 11).
+  const hasNone = data !== undefined && data.length === 0;
   return (
     <div className="lateral:p-8 p-4 md:p-6" data-testid="contracts-page">
       <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-4 md:gap-5">
@@ -70,12 +73,14 @@ export function ContractsPage() {
           <h1 className="font-bold font-display text-[28px] leading-[1.1] tracking-[-0.035em] md:text-[32px]">
             {m.contracts_title()}
           </h1>
-          <Button asChild className="hidden md:inline-flex">
-            <Link to="/contracts/new">
-              <Plus aria-hidden="true" size={16} weight="bold" />
-              {m.nav_new_contract()}
-            </Link>
-          </Button>
+          {hasNone ? null : (
+            <Button asChild className="hidden md:inline-flex">
+              <Link to="/contracts/new">
+                <Plus aria-hidden="true" size={16} weight="bold" />
+                {m.nav_new_contract()}
+              </Link>
+            </Button>
+          )}
         </div>
         <SectionBoundary fallback={<ContractsSkeleton />}>
           <ContractsContent />

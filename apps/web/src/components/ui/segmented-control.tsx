@@ -25,7 +25,7 @@ export function SegmentedControl<V extends string>({
     <ToggleGroup.Root
       aria-label={label}
       className={cn(
-        "gap-0.5 rounded-[12px] bg-surface-sunken p-[3px]",
+        "gap-0.5 rounded-[12px] bg-surface-sunken p-[3px] max-md:bg-canvas",
         block === true && "flex w-full",
         block === "mobile" && "inline-flex max-md:flex max-md:w-full",
         !block && "inline-flex"

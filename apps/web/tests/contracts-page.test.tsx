@@ -105,9 +105,15 @@ describe("ContractsPage", () => {
   it("sem contratos: os contornos e Novo contrato", async () => {
     await renderPage([]);
     expect(await screen.findByText("Seus acordos aparecem aqui")).toBeVisible();
-    expect(
-      screen.getAllByRole("link", { name: "Novo contrato" }).length
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Novo contrato" })).toHaveLength(
+      1
+    );
+  });
+
+  it("o valor da célula não corta: o R$ vai pequeno e o número inteiro", async () => {
+    await renderPage([listItem({ id: "big", remainingCents: 1_440_000 })]);
+    const card = await screen.findByTestId("contract-card-big");
+    expect(card).toHaveTextContent("R$14.400,00");
   });
 
   it("o cartão leva ao contrato", async () => {

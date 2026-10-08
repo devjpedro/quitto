@@ -1,9 +1,15 @@
-import { CheckCircle, Hourglass, WarningCircle } from "@phosphor-icons/react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle,
+  Hourglass,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { InstallmentBar } from "@/components/ui/installment-bar";
-import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
 import { Tag } from "@/components/ui/tag";
+import { formatMoney, moneyParts } from "@/lib/locale-format";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import {
@@ -12,6 +18,27 @@ import {
   contractCardView,
 } from "../lib/contract-card-view";
 import type { ContractListItem } from "../types";
+
+/** The amount of a cell: the "R$" set back (11.5 px, muted) so a long value fits whole. */
+function CellMoney({ cents }: { cents: number }) {
+  const locale = getLocale();
+  const { currency, decimal, fraction, integer, sign } = moneyParts(
+    cents,
+    locale
+  );
+  return (
+    <>
+      <span className="sr-only">{formatMoney(cents, locale)}</span>
+      <span aria-hidden="true">
+        <span className="mr-0.5 text-[11.5px] text-ink-muted">{currency}</span>
+        {sign}
+        {integer}
+        {decimal}
+        {fraction}
+      </span>
+    </>
+  );
+}
 
 const TAG_ICON = {
   check: CheckCircle,
@@ -24,7 +51,7 @@ function Cell({ cell }: { cell: CardCell }) {
     <div className="min-w-0 bg-surface-inset px-2.5 py-2 first:rounded-l-control last:rounded-r-control">
       <div className="text-[11.5px] text-ink-muted">{cell.label}</div>
       <div className="mt-0.5 truncate font-medium text-sm tabular-nums">
-        {cell.cents === null ? cell.text : <Money cents={cell.cents} />}
+        {cell.cents === null ? cell.text : <CellMoney cents={cell.cents} />}
       </div>
     </div>
   );
@@ -56,6 +83,7 @@ export function ContractCard({
 }) {
   const locale = getLocale();
   const view = contractCardView(item, today, locale);
+  const RoleArrow = item.direction === "receive" ? ArrowDownLeft : ArrowUpRight;
   return (
     <Link
       className="flex flex-col gap-3 rounded-card bg-surface-card p-4 transition-[background-color,transform] hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[.97] motion-reduce:active:scale-100"
@@ -64,7 +92,12 @@ export function ContractCard({
       to="/contracts/$id"
     >
       <div className="flex flex-col gap-1.5">
-        <Tag tone={view.role.tone}>{view.role.label}</Tag>
+        <Tag tone={view.role.tone}>
+          {item.direction === null ? null : (
+            <RoleArrow aria-hidden="true" size={12} weight="bold" />
+          )}
+          {view.role.label}
+        </Tag>
         <h2 className="truncate font-display font-semibold text-[17px] leading-tight tracking-[-0.02em]">
           {item.title}
         </h2>
