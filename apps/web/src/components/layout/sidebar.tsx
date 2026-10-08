@@ -69,7 +69,12 @@ export function Sidebar({
     // The frame's height (12 px on top, the bottom safe area or 12 px below);
     // a short screen (a phone on its side) scrolls it, the account menu included.
     <aside className={SHELL_COLUMN}>
-      <ShellLogoRow />
+      <ShellLogoRow
+        link={{
+          label: m.logo_home_link(),
+          to: "/",
+        }}
+      />
       <button
         className="group mt-4 flex h-10 items-center gap-2 rounded-control border border-transparent bg-surface px-3 text-ink-muted text-sm transition-colors hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={onOpenSearch}

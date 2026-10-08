@@ -26,6 +26,7 @@
   "nav_contract_progress_overdue": "overdue, {paid} of {total} settled",
   "nav_see_all_contracts": "See all ({count})",
   "search_open": "Search…",
+  "logo_home_link": "Quitto, home",
   "search_open_short": "Search",
   "palette_contracts_error": "Couldn't load your contracts.",
   "account_menu": "Account",

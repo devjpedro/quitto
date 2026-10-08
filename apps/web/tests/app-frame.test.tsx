@@ -382,6 +382,15 @@ describe("AppFrame", () => {
     ).toHaveStyle({ fontSize: "22px" });
   });
 
+  it("makes the sidebar logo a link home, named for it", async () => {
+    await renderAt("/");
+    const home = within(screen.getByRole("complementary")).getByRole("link", {
+      name: "Quitto, início",
+    });
+    expect(home).toHaveAttribute("href", "/");
+    expect(within(home).getByRole("img", { name: "Quitto" })).toBeVisible();
+  });
+
   it("has a skip link to the main content", async () => {
     await renderAt("/");
     expect(

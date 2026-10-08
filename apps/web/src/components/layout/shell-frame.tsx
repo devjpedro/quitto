@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
@@ -13,12 +14,24 @@ import { m } from "@/paraglide/messages.js";
 export const SHELL_COLUMN =
   "sticky top-3 hidden h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] w-[232px] shrink-0 flex-col overflow-y-auto p-3 md:flex";
 
-/** The wordmark alone (phase 1.5, owner's decision 1): 24 px, 44 px tall. */
-export function ShellLogoRow() {
+/**
+ * The wordmark alone (phase 1.5, owner's decision 1): 24 px, 44 px tall.
+ * With `link` it is a link (the sidebar's goes home); the focus ring is
+ * inset so the column's overflow never clips it.
+ */
+export function ShellLogoRow({ link }: { link?: { label: string; to: "/" } }) {
+  const logo = <Logo size={24} />;
+  if (!link) {
+    return <div className="flex h-11 items-center px-2.5">{logo}</div>;
+  }
   return (
-    <div className="flex h-11 items-center px-2.5">
-      <Logo size={24} />
-    </div>
+    <Link
+      aria-label={link.label}
+      className="flex h-11 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+      to={link.to}
+    >
+      {logo}
+    </Link>
   );
 }
 
