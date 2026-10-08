@@ -27,7 +27,7 @@ describe("HomeSkeleton", () => {
     // "Próximos 30 dias" at any width: its section title and one filled block.
     expect(list?.firstElementChild?.children).toHaveLength(2);
     expect(list?.firstElementChild?.lastElementChild).toHaveClass(
-      "h-48",
+      "h-[325px]",
       "bg-surface-card"
     );
     // The side blocks only from lateral, like the content's.
@@ -37,9 +37,12 @@ describe("HomeSkeleton", () => {
     expect(milestones).toHaveClass("hidden", "lateral:flex");
     // Every title bone in the SectionTitle's shape: its 23.75 px line box
     // (19 px, leading-tight) and 12 px below, as the loaded sections have.
-    for (const block of [list?.firstElementChild, milestones]) {
-      expect(block?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
-    }
+    expect(milestones?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
+    // "Próximos 30 dias" also has its totals line: 45 px.
+    expect(list?.firstElementChild?.firstElementChild).toHaveClass(
+      "mb-3",
+      "h-[45px]"
+    );
   });
 
   it("os ossos de cartão e de lista são preenchidos como o que vai chegar (brancos no celular)", () => {
@@ -57,10 +60,19 @@ describe("HomeSkeleton", () => {
     expect(
       bones.some(
         (bone) =>
-          bone.classList.contains("h-48") &&
+          bone.classList.contains("h-[325px]") &&
           bone.classList.contains("bg-surface-card")
       )
     ).toBe(true);
+  });
+
+  it("no celular o carrossel tem a linha de baixo ('1 de N' e 'Ver todas'), que some a partir de lg", () => {
+    const { container } = render(<HomeSkeleton />);
+    const pager = container.querySelector<HTMLElement>(".h-11.lg\\:hidden");
+    expect(pager).not.toBeNull();
+    expect(pager?.children).toHaveLength(2);
+    // The subtitle's row: 20 px, pulled up as the content's is.
+    expect(container.querySelector(".-mt-2.h-5")).not.toBeNull();
   });
 
   it("o osso do cartão tem a altura do cartão em repouso: 267 px no celular (botões de 44 px), 259 a partir de md", () => {
