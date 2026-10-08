@@ -59,7 +59,14 @@ export async function signup(
   await waitForHydrated(page); // Agora hidratado antes de qualquer clique
   // A conta nova abre o tour guiado: pular grava como visto e libera a tela.
   if (skipTour) {
-    await page.getByRole("button", { name: "Pular o tour" }).click();
+    // Espera o PATCH que grava o "visto": uma navegação logo depois o cancelaria.
+    await Promise.all([
+      page.waitForResponse(
+        (res) =>
+          res.request().method() === "PATCH" && res.url().endsWith("/api/me")
+      ),
+      page.getByRole("button", { name: "Pular o tour" }).click(),
+    ]);
     await page.getByRole("dialog").waitFor({ state: "detached" });
   }
   return email;
