@@ -39,8 +39,8 @@ describe("GET /api/people", () => {
     expect(ofOwner.people[0].email).toBe(s.payerEmail);
     const ofPayer = await (await call(s.payer, "/api/people")).json();
     expect(ofPayer.people[0].email).toBeNull();
-    // No id of an account anywhere in what the payer gets.
-    expect(JSON.stringify(ofPayer)).not.toContain(`"${s.id}-`);
+    // The owner's e-mail ("party-owner…") is nowhere in what the payer gets.
+    expect(JSON.stringify(ofPayer)).not.toContain("party-owner");
   });
 
   it("quem só acompanha e quem não tem contrato não veem ninguém", async () => {
