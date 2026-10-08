@@ -26,6 +26,10 @@ vi.mock("@/hooks/use-identity", () => ({
     image: null,
   }),
 }));
+const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }));
+vi.mock("sonner", () => ({
+  toast: { error: toastError, success: vi.fn(), warning: vi.fn() },
+}));
 vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn() }));
 
 import { InviteFrame } from "@/features/invites/components/invite-frame";
@@ -33,6 +37,7 @@ import { viewScreen } from "@/features/invites/lib/invite-screen";
 import { FLORIPA, INVITE_NOW } from "./invite-fixtures";
 import { renderWithProviders } from "./test-utils";
 
+const VALID_UNTIL = /vale até domingo/;
 const WA_ME = /^https:[/][/]wa[.]me[/][?]text=/;
 
 const frame = (view: typeof FLORIPA) =>
@@ -115,6 +120,9 @@ describe("o convite com sessão", () => {
     expect(container).toHaveTextContent(
       "Ele valia até domingo, 11/10. Peça para Bia mandar de novo"
     );
+    // The trail follows the state: the answer is closed, nothing "together" to follow.
+    expect(container).toHaveTextContent("Você confere e responde");
+    expect(container).toHaveTextContent("expirou");
     expect(
       screen
         .getByRole("link", { name: "Pedir no WhatsApp" })
@@ -134,6 +142,7 @@ describe("o convite com sessão", () => {
     expect(container).toHaveTextContent(
       "Mudou de ideia? Peça para Bia mandar um novo convite."
     );
+    expect(container).toHaveTextContent("recusado");
   });
 
   it("outra conta: o e-mail mascarado e Trocar de conta", () => {
@@ -163,6 +172,39 @@ describe("o convite com sessão", () => {
     expect(container).not.toHaveTextContent("passo 2");
     expect(container).not.toHaveTextContent("As parcelas aparecem aqui");
     expect(screen.getByTestId("invite-mini")).not.toHaveClass("stage:hidden");
+  });
+
+  it("1 parcela: 'A parcela entra no seu Agora', nunca 'As 1 parcelas'", () => {
+    const { container } = frame({
+      ...FLORIPA,
+      terms: {
+        ...(FLORIPA.terms as NonNullable<typeof FLORIPA.terms>),
+        installmentsCount: 1,
+      },
+    });
+    expect(container).toHaveTextContent("A parcela entra no seu Agora");
+    expect(container).not.toHaveTextContent("As 1 parcelas");
+  });
+
+  it("a validade vem acima da barra presa no celular", () => {
+    frame(FLORIPA);
+    expect(screen.getByText(VALID_UNTIL).closest("p")).toHaveClass(
+      "max-md:order-1"
+    );
+    expect(screen.getByTestId("invite-bar")).toHaveClass("max-md:order-2");
+  });
+
+  it("Copiar link sem permissão: um toast, nenhuma promessa solta", async () => {
+    const user = userEvent.setup();
+    frame({ ...FLORIPA, viewer: "owner", inviteeName: "João Souza" });
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    await user.click(screen.getByRole("button", { name: "Copiar link" }));
+    expect(toastError).toHaveBeenCalledWith(
+      "Não deu para copiar o link. Copie pelo endereço do convite."
+    );
   });
 
   it("o dono: o status, Copiar link e Reenviar e-mail", async () => {

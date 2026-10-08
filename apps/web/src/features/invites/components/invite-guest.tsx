@@ -212,10 +212,7 @@ export function InviteGuest({ token }: { token: string }) {
       align="center"
       header={<StepHeader brand title={m.invite_rail_group()} />}
       rail={
-        <InviteRail
-          accepted={preview.status === "accepted"}
-          inviterName={preview.inviterName}
-        />
+        <InviteRail inviterName={preview.inviterName} status={preview.status} />
       }
     >
       {preview.status === "pending" && preview.terms ? (

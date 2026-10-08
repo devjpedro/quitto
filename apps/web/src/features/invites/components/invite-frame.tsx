@@ -34,7 +34,6 @@ export function InviteFrame({
       onClose={close}
       rail={
         <InviteRail
-          accepted={screen.view.status === "accepted"}
           createdAt={screen.view.contract.createdAt}
           invitee={
             screen.kind === "owner"
@@ -42,6 +41,7 @@ export function InviteFrame({
               : undefined
           }
           inviterName={screen.view.inviterName}
+          status={screen.view.status}
         />
       }
       stage={

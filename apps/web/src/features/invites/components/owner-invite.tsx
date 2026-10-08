@@ -86,10 +86,15 @@ export function OwnerInvite({
   const status = STATUS[view.status];
   const canResend = view.status === "pending" || view.status === "expired";
   const copy = async () => {
-    await navigator.clipboard.writeText(
-      `${window.location.origin}/invites/${token}`
-    );
-    toast.success(m.invite_link_copied());
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/invites/${token}`
+      );
+      toast.success(m.invite_link_copied());
+    } catch {
+      // Permission denied or an insecure context: say it, never a loose rejection.
+      toast.error(m.invite_link_copy_failed());
+    }
   };
   const forText = m.invite_for({ name: invitee });
   return (

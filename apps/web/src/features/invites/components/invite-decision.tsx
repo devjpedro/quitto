@@ -35,7 +35,12 @@ function afterRows(view: InviteView): InfoRow[] {
   }
   const agenda: InfoRow = {
     icon: Lightning,
-    line: m.invite_after_agenda({ count: view.terms?.installmentsCount ?? 0 }),
+    line:
+      view.terms?.installmentsCount === 1
+        ? m.invite_after_agenda_one()
+        : m.invite_after_agenda_other({
+            count: view.terms?.installmentsCount ?? 0,
+          }),
     hint: m.invite_after_agenda_hint(),
   };
   if (view.role === "buyer") {
@@ -126,7 +131,7 @@ export function InviteDecision({
       </div>
       <InviteInfoList rows={afterRows(view)} title={m.invite_after_title()} />
       {/* Phone: Recusar on the left (G2). From md, Aceitar first (G1). */}
-      <InviteBar className="max-md:flex-row-reverse">
+      <InviteBar className="max-md:order-2 max-md:mt-0 max-md:flex-row-reverse">
         <Button
           aria-busy={accept.isPending || undefined}
           className="flex-1"
@@ -143,7 +148,8 @@ export function InviteDecision({
           {m.invite_decline()}
         </Button>
       </InviteBar>
-      <p className="mt-3.5 text-[12.5px] text-ink-muted tabular-nums leading-[1.45]">
+      {/* Phone: the validity goes above the sticky bar, never hidden behind it. */}
+      <p className="mt-3.5 text-[12.5px] text-ink-muted tabular-nums leading-[1.45] max-md:order-1 max-md:mt-auto max-md:pt-4">
         <Emphasis
           strong={email}
           text={m.invite_meta({

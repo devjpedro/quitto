@@ -2,6 +2,7 @@ import { LockSimple } from "@phosphor-icons/react";
 import { StepRail } from "@/components/layout/step-rail";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
+import type { InviteView } from "../api";
 import { dayOf, firstName, weekdayDate } from "../lib/invite-format";
 
 /**
@@ -10,19 +11,24 @@ import { dayOf, firstName, weekdayDate } from "../lib/invite-format";
  * without `createdAt` (the public preview) the first step has no date.
  */
 export function InviteRail({
-  accepted = false,
   createdAt,
   inviterName,
   invitee,
+  status,
 }: {
-  accepted?: boolean;
   createdAt?: string;
   inviterName: string;
   invitee?: string;
+  status: InviteView["status"];
 }) {
   const locale = getLocale();
   const inviter = firstName(inviterName);
   const answerer = invitee ? firstName(invitee) : null;
+  const accepted = status === "accepted";
+  // Declined or expired: the answer is in, and there is no "together" to follow.
+  const closed = status === "declined" || status === "expired";
+  const closedMeta =
+    status === "declined" ? m.invite_rail_declined() : m.invite_rail_expired();
   return (
     <StepRail
       footer={
@@ -45,7 +51,8 @@ export function InviteRail({
           label: answerer
             ? m.invite_rail_respond_other({ name: answerer })
             : m.invite_rail_respond(),
-          state: accepted ? "done" : "next",
+          meta: closed ? closedMeta : undefined,
+          state: accepted || closed ? "done" : "next",
         },
         {
           label: m.invite_rail_together(),

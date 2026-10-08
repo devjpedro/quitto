@@ -169,6 +169,14 @@ describe("Ajustar uma a uma", () => {
     expect(screen.getByText("R$ 1.100,00 a mais")).toBeVisible();
   });
 
+  it("com 1 parcela: 'Soma da parcela', nunca 'Soma das 1 parcelas'", async () => {
+    const user = userEvent.setup();
+    const { wizard } = schedule();
+    toStep(wizard, 2, { ...NOTEBOOK, count: 1 });
+    await user.click(screen.getByRole("button", { name: ADJUST }));
+    expect(screen.getByText("Soma da parcela")).toBeVisible();
+  });
+
   it("voltar ao passo 2 e mudar a quantidade descarta a lista (decisão 24)", async () => {
     const user = userEvent.setup();
     const { wizard } = schedule();

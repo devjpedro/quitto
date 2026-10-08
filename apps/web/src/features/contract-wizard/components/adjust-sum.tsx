@@ -53,7 +53,9 @@ export function AdjustSum({ wizard }: { wizard: ContractWizard }) {
             mismatch ? "text-danger" : "text-ink-muted"
           )}
         >
-          {m.wizard_adjust_sum({ count: state.count })}
+          {state.count === 1
+            ? m.wizard_adjust_sum_one()
+            : m.wizard_adjust_sum_other({ count: state.count })}
         </small>
         <Money
           cents={state.sum}
