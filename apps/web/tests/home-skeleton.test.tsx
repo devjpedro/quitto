@@ -1,102 +1,38 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  LOWER_COLUMN,
-  LOWER_STACK,
-  LOWER_WITH_SIDE,
-} from "@/features/home/components/home-grid";
 import { HomeSkeleton } from "@/features/home/components/home-skeleton";
 
-const classes = (value: string) => value.split(" ");
-
 describe("HomeSkeleton", () => {
-  it("a parte de baixo tem a grade do conteúdo: a lista à esquerda; os marcos à direita a partir de lateral", () => {
+  it("tem a grade do conteúdo: ação e 'Na sequência', depois 'Próximos 30 dias' e 'Marcos', em duas colunas a partir de lateral", () => {
     const { container } = render(<HomeSkeleton />);
-    const lower = container.querySelector<HTMLElement>(
+    const grid = container.querySelector<HTMLElement>(
       "[class~='lateral:grid']"
     );
-    // The content's grid and rhythm, so nothing shifts when the home streams in.
-    expect(lower).toHaveClass(
-      ...classes(LOWER_STACK),
-      ...classes(LOWER_WITH_SIDE)
+    expect(grid).toHaveClass("lateral:grid-cols-2", "gap-7");
+    expect(grid?.children).toHaveLength(4);
+    const [action, sequence, upcoming, milestones] = Array.from(
+      grid?.children ?? []
     );
-    const [list, side] = Array.from(lower?.children ?? []);
-    expect(list).toHaveClass(...classes(LOWER_COLUMN));
-    // From wide each side block takes a column of its own, as in the content.
-    expect(side).toHaveClass(...classes(LOWER_COLUMN));
-    // "Próximos 30 dias" at any width: its section title and one filled block.
-    expect(list?.firstElementChild?.children).toHaveLength(2);
-    expect(list?.firstElementChild?.lastElementChild).toHaveClass(
-      "h-[325px]",
-      "bg-surface-card"
-    );
-    // The side blocks only from lateral, like the content's.
-    // "Notificações recentes" has no bone: it only enters with a row.
-    expect(side?.children).toHaveLength(1);
-    const [milestones] = Array.from(side?.children ?? []);
-    expect(milestones).toHaveClass("hidden", "lateral:flex");
-    // Every title bone in the SectionTitle's shape: its 23.75 px line box
-    // (19 px, leading-tight) and 12 px below, as the loaded sections have.
-    expect(milestones?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
-    // "Próximos 30 dias" also has its totals line: 45 px.
-    expect(list?.firstElementChild?.firstElementChild).toHaveClass(
-      "mb-3",
-      "h-[45px]"
-    );
-  });
-
-  it("os ossos de cartão e de lista são preenchidos como o que vai chegar (brancos no celular)", () => {
-    const { container } = render(<HomeSkeleton />);
-    const bones = [
-      ...container.querySelectorAll<HTMLElement>("[aria-hidden='true']"),
-    ];
-    expect(
-      bones.some(
-        (bone) =>
-          bone.classList.contains("h-[267px]") &&
-          bone.classList.contains("bg-surface-card")
-      )
-    ).toBe(true);
-    expect(
-      bones.some(
-        (bone) =>
-          bone.classList.contains("h-[325px]") &&
-          bone.classList.contains("bg-surface-card")
-      )
-    ).toBe(true);
-  });
-
-  it("no celular o carrossel tem a linha de baixo ('1 de N' e 'Ver todas'), que some a partir de lg", () => {
-    const { container } = render(<HomeSkeleton />);
-    const pager = container.querySelector<HTMLElement>(".h-11.lg\\:hidden");
-    expect(pager).not.toBeNull();
-    expect(pager?.children).toHaveLength(2);
-    // The subtitle's row: 20 px, pulled up as the content's is.
-    expect(container.querySelector(".-mt-2.h-5")).not.toBeNull();
-  });
-
-  it("o osso do cartão tem a altura do cartão em repouso: 267 px no celular (botões de 44 px), 259 a partir de md", () => {
-    const { container } = render(<HomeSkeleton />);
-    const cards = [
-      ...container.querySelectorAll<HTMLElement>("[class~='h-[267px]']"),
-    ];
-    expect(cards).toHaveLength(5);
-    for (const bone of cards) {
-      expect(bone).toHaveClass(
-        "md:h-[259px]",
-        "rounded-card",
-        "bg-surface-card"
-      );
+    expect(action).toHaveClass("h-[320px]", "rounded-card", "bg-surface-card");
+    expect(sequence).toHaveClass("rounded-card", "bg-surface-card");
+    // Both lower blocks: the SectionTitle's 23.75 px line box and 12 px below it, then one block.
+    for (const block of [upcoming, milestones]) {
+      expect(block?.firstElementChild).toHaveClass("mb-3", "h-[23.75px]");
+      expect(block?.lastElementChild).toHaveClass("bg-surface-card");
     }
+  });
+
+  it("a linha do subtítulo tem 20 px e sobe como a do conteúdo", () => {
+    const { container } = render(<HomeSkeleton />);
+    expect(container.querySelector(".-mt-2.h-5")).not.toBeNull();
   });
 
   it("no celular todo osso aparece: nenhum usa o surface-sunken, que é a cor da página ali", () => {
     const { container } = render(<HomeSkeleton />);
-    // The notifications skeleton changes its own fill in Task 17.
     const bones = [
       ...container.querySelectorAll<HTMLElement>("div[aria-hidden='true']"),
-    ].filter((bone) => !bone.closest("ul"));
-    expect(bones.length).toBeGreaterThan(8);
+    ];
+    expect(bones.length).toBeGreaterThan(5);
     for (const bone of bones) {
       expect(bone).toHaveClass("bg-surface-card");
       expect(bone).not.toHaveClass("bg-surface-sunken");

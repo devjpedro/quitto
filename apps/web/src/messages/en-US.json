@@ -1094,5 +1094,8 @@
   "not_found_text": "The address may be wrong, or the page moved.",
   "not_found_home": "Go to the start",
   "app_error_title": "Something went wrong",
-  "app_error_generic": "Something went wrong. Try again."
+  "app_error_generic": "Something went wrong. Try again.",
+  "home_sequence_title": "Up next",
+  "home_sequence_more": "+ {count} in Installments",
+  "home_upcoming_see_more": "{count} more in Installments"
 }

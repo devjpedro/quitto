@@ -7,13 +7,23 @@ import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import {
   type MilestoneCell,
+  type MomentMilestoneCell,
   milestoneCells,
   onlyMomentStrip,
   stripCells,
 } from "../lib/milestones";
 import { momentView } from "../lib/moment";
 import type { HomeMilestones } from "../types";
-import { Bar, LabelRow, MomentCell, ValueCell } from "./milestone-cells";
+import {
+  Bar,
+  LabelRow,
+  MILESTONE_ROW,
+  MomentCell,
+  ValueCell,
+} from "./milestone-cells";
+
+/** "Marcos" shows this many one-line rows (mockup 20, B1). */
+const MILESTONE_ROWS = 3;
 
 /** Label and title come from momentView, the lime card's text: the strip and the sidebar always say the same. */
 function CellView({
@@ -29,22 +39,26 @@ function CellView({
     case "all_clear": {
       const view = momentView(cell, locale, today);
       return (
-        <>
-          <Tag tone="highlight">{view.label}</Tag>
-          <span className="mt-2 block text-sm">{view.title}</span>
-        </>
+        <div className={MILESTONE_ROW}>
+          <span className="order-1">
+            <Tag tone="highlight">{view.label}</Tag>
+          </span>
+          <span className="order-2 col-span-2 text-sm md:col-span-3">
+            {view.title}
+          </span>
+        </div>
       );
     }
     case "closest": {
       const view = momentView(cell, locale, today);
       return (
-        <>
+        <div className={MILESTONE_ROW}>
           <LabelRow label={view.label} />
-          <span className="mt-1.5 block truncate font-medium text-sm">
+          <span className="order-2 truncate font-medium text-sm">
             {view.title}
           </span>
           <Bar percent={cell.percent} />
-        </>
+        </div>
       );
     }
     case "received":
@@ -104,32 +118,33 @@ export function Milestones({
     return null;
   }
   const onlyMoment = onlyMomentStrip(milestones, momentId);
+  const rows = strip.filter((item) => !item.moment).slice(0, MILESTONE_ROWS);
+  const moment = strip.find((item) => item.moment);
   return (
     <section
       aria-labelledby={headingId}
       className={cn("@container", onlyMoment && "md:hidden")}
     >
       <SectionTitle id={headingId}>{m.home_milestones_title()}</SectionTitle>
-      <ul className="grid lateral:grid-flow-row grid-cols-2 lateral:grid-cols-1 gap-0.5 overflow-hidden rounded-card bg-surface-sunken md:bg-surface lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none">
-        {strip.map(({ cell, moment, wide }) => (
-          <li
-            className={cn(
-              "min-w-0 px-4 pt-3.5 pb-4",
-              moment
-                ? "flex items-center gap-3.5 bg-highlight text-on-highlight md:hidden"
-                : "bg-surface-card",
-              wide && "col-span-2 lg:col-span-1"
-            )}
-            key={cell.id}
-          >
-            {moment ? (
-              <MomentCell cell={cell} locale={locale} today={today} />
-            ) : (
+      {/* The milestone of the moment is the sidebar's lime card from md; the phone gets it here. */}
+      {moment ? (
+        <div className="mb-2 flex items-center gap-3.5 rounded-card bg-highlight px-4 py-3.5 text-on-highlight md:hidden">
+          <MomentCell
+            cell={moment.cell as MomentMilestoneCell}
+            locale={locale}
+            today={today}
+          />
+        </div>
+      ) : null}
+      {rows.length > 0 ? (
+        <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
+          {rows.map(({ cell }) => (
+            <li className="min-w-0 px-4 py-3.5" key={cell.id}>
               <CellView cell={cell} locale={locale} today={today} />
-            )}
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  fewLowerColumns,
-  homeLayout,
-  homeSubtitle,
-} from "@/features/home/lib/home-layout";
+import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
@@ -140,51 +136,4 @@ describe("homeLayout", () => {
       "1 thing needs your attention"
     );
   });
-});
-
-describe("homeLayout: poucas ações", () => {
-  it("fewActions só com contrato e 1 ou 2 ações", () => {
-    const one = homeFixture({ actions: [installmentAction()] });
-    const two = homeFixture({
-      actions: [
-        installmentAction(),
-        installmentAction({ installmentId: "i2" }),
-      ],
-    });
-    const three = homeFixture({
-      actions: [
-        installmentAction(),
-        installmentAction({ installmentId: "i2" }),
-        installmentAction({ installmentId: "i3" }),
-      ],
-    });
-    expect(homeLayout(one).fewActions).toBe(true);
-    expect(homeLayout(two).fewActions).toBe(true);
-    expect(homeLayout(three).fewActions).toBe(false);
-    expect(homeLayout(homeFixture()).fewActions).toBe(false);
-    const inviteOnly = homeFixture({
-      actions: [inviteAction()],
-      onboarding: { ...homeFixture().onboarding, hasContract: false },
-    });
-    expect(homeLayout(inviteOnly).fewActions).toBe(false);
-  });
-});
-
-describe("fewLowerColumns: a parte de baixo com poucas ações (os marcos subiram)", () => {
-  it.each([
-    // [notifications, guide] → [guideRight, left, right]
-    [true, true, true, true, true],
-    [true, false, false, true, false],
-    [false, true, false, true, false],
-    [false, false, false, false, false],
-  ])(
-    "notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
-    (notifications, guide, guideRight, left, right) => {
-      expect(fewLowerColumns({ guide, notifications })).toEqual({
-        guideRight,
-        left,
-        right,
-      });
-    }
-  );
 });

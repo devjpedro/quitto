@@ -1,25 +1,21 @@
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  CalendarBlank,
-} from "@phosphor-icons/react";
+import { CalendarBlank, CaretRight } from "@phosphor-icons/react";
 import { INSTALLMENT_STATUS, type Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useId } from "react";
+import { useId } from "react";
 import { DateTile } from "@/components/ui/date-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Tag } from "@/components/ui/tag";
 import { weekdayName } from "@/lib/date-parts";
-import { formatMoney } from "@/lib/locale-format";
-import { pluralForm } from "@/lib/plural";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
-import { upcomingTotals } from "../lib/home-totals";
 import type { Home, UpcomingItem } from "../types";
+
+/** "Próximos 30 dias" shows this many lines; the rest is "Mais N em Parcelas". */
+export const UPCOMING_MAX = 3;
 
 /** "última" for a contract's last installment, "primeira" for its first. */
 function edgeTag(item: UpcomingItem): string | null {
@@ -92,57 +88,6 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
 /** The section "Ver próximos 30 dias" jumps to (AllClear). */
 export const UPCOMING_SECTION_ID = "upcoming";
 
-/** What the rows below add up to, by direction: a direction with nothing in the list is left out. */
-function UpcomingTotals({
-  locale,
-  totals,
-}: {
-  locale: Locale;
-  totals: { toPayCents: number; toReceiveCents: number };
-}) {
-  const parts: ReactNode[] = [];
-  if (totals.toReceiveCents > 0) {
-    parts.push(
-      <span
-        className="inline-flex items-center gap-1 whitespace-nowrap"
-        key="receive"
-      >
-        <ArrowDownLeft aria-hidden="true" size={14} />
-        <b className="font-semibold text-ink">
-          {formatMoney(totals.toReceiveCents, locale)}
-        </b>
-        {m.home_upcoming_totals_receive_label()}
-      </span>
-    );
-  }
-  if (totals.toPayCents > 0) {
-    parts.push(
-      <span
-        className="inline-flex items-center gap-1 whitespace-nowrap"
-        key="pay"
-      >
-        <ArrowUpRight aria-hidden="true" size={14} />
-        <b className="font-semibold text-ink">
-          {formatMoney(totals.toPayCents, locale)}
-        </b>
-        {m.home_upcoming_totals_pay_label()}
-      </span>
-    );
-  }
-  if (parts.length === 0) {
-    return null;
-  }
-  return parts.length === 2 ? (
-    <>
-      {parts[0]}
-      <span aria-hidden="true">{m.home_dot_after({ text: "" }).trim()}</span>
-      {parts[1]}
-    </>
-  ) : (
-    parts[0]
-  );
-}
-
 /** "Próximos 30 dias": what is coming that is not a card yet, as one filled block with straight dividers. */
 export function UpcomingList({
   hasInstallmentActions,
@@ -154,7 +99,8 @@ export function UpcomingList({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const one = (count: number) => pluralForm(count, locale) === "one";
+  const shown = upcoming.items.slice(0, UPCOMING_MAX);
+  const more = upcoming.items.length - shown.length + upcoming.moreCount;
   // Nothing listed, yet there are installment cards above or money due in
   // the window: it is in the cards.
   const allInCards =
@@ -173,10 +119,16 @@ export function UpcomingList({
     >
       <SectionTitle
         aux={
-          <UpcomingTotals
-            locale={locale}
-            totals={upcomingTotals(upcoming.items)}
-          />
+          more > 0 ? (
+            <Link
+              className="inline-flex items-center gap-1 rounded-control font-medium text-ink text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              search={{}}
+              to="/installments"
+            >
+              {m.home_upcoming_see_more({ count: more })}
+              <CaretRight aria-hidden="true" size={14} />
+            </Link>
+          ) : null
         }
         id={titleId}
       >
@@ -199,7 +151,7 @@ export function UpcomingList({
         />
       ) : (
         <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
-          {upcoming.items.map((item) => (
+          {shown.map((item) => (
             // The first and last rows take the block's corners (the row
             // inherits them), so the inset focus ring follows the curve
             // instead of being clipped by it.
@@ -212,13 +164,6 @@ export function UpcomingList({
           ))}
         </ul>
       )}
-      {upcoming.moreCount > 0 ? (
-        <p className="mt-2 text-ink-muted text-sm">
-          {one(upcoming.moreCount)
-            ? m.home_upcoming_more_one()
-            : m.home_upcoming_more_other({ count: upcoming.moreCount })}
-        </p>
-      ) : null}
     </section>
   );
 }

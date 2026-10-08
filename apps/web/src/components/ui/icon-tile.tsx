@@ -5,13 +5,14 @@ import { m } from "@/paraglide/messages.js";
 /** Above this, the corner shows "99+": three characters still fit the tile. */
 const MAX_COUNT = 99;
 
-export type IconTileTone = "brand" | "warning" | "danger" | "neutral";
+export type IconTileTone = "brand" | "warning" | "danger" | "neutral" | "ink";
 
 const TONE: Record<IconTileTone, string> = {
   brand: "bg-brand-subtle text-brand",
   warning: "bg-warning-subtle text-warning",
   danger: "bg-danger-subtle text-danger",
   neutral: "bg-surface-inset text-ink-muted",
+  ink: "bg-ink text-ink-inverse",
 };
 
 /**
