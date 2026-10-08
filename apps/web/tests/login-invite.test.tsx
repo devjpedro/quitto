@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 const { signUpEmail } = vi.hoisted(() => ({
   signUpEmail: vi.fn(async () => ({ error: null })),
 }));
-vi.mock("@tanstack/react-router", () => ({
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
   // After hydration: the invite on top shows (useInvitePreview, planner's decision 37).
   useHydrated: () => true,
   useSearch: () => ({ redirect: "/invites/tok", mode: "signup" }),
@@ -16,7 +17,7 @@ vi.mock("@/lib/auth-client", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
-import { LoginPage } from "@/features/auth/login-page";
+import { LoginPage } from "@/features/auth/components/login-page";
 import {
   invitePreviewQueryOptions,
   type PreviewLookup,
@@ -35,7 +36,7 @@ function login() {
 describe("o login com o contexto do convite (mockup 15, H2)", () => {
   it("o convite no topo, o título que diz para quê e a dica do e-mail mascarado", () => {
     const { container } = login();
-    expect(container).toHaveTextContent("Convite de Bia Lopes");
+    expect(container).toHaveTextContent("Bia Lopes te convidou");
     expect(container).toHaveTextContent("Viagem para Floripa (dividida)");
     expect(
       screen.getByRole("heading", {
@@ -61,7 +62,7 @@ describe("o login com o contexto do convite (mockup 15, H2)", () => {
     );
     expect(signUpEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        callbackURL: "/invites/tok",
+        callbackURL: "/verify-email?redirect=%2Finvites%2Ftok",
         email: "joao.souza@exemplo.com",
       })
     );

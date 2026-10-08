@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LoginPage } from "@/features/auth/login-page";
+import { LoginPage } from "@/features/auth/components/login-page";
 import { invitePreviewQueryOptions } from "@/features/invites/api";
 import { inviteTokenOf } from "@/features/invites/lib/invite-redirect";
 

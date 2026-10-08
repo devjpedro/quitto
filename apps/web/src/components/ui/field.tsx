@@ -9,6 +9,8 @@ export interface FieldProps {
   hint?: string;
   id: string;
   label: string;
+  /** On the label's row, at the end: a link that belongs to the field ("Esqueci a senha"). */
+  labelAside?: ReactNode;
   /** The label only for the screen reader (the column header says what it is). */
   labelHidden?: boolean;
   /** After the label, in ink-muted, inside the <label>. */
@@ -79,6 +81,7 @@ function Frame({
   hint,
   id,
   label,
+  labelAside,
   labelHidden,
   optionalLabel,
   warning,
@@ -105,6 +108,7 @@ function Frame({
         {counter ? (
           <span className="text-ink-muted text-xs tabular-nums">{counter}</span>
         ) : null}
+        {labelAside}
       </div>
       {children}
       <FieldNote error={error} hint={hint} id={id} warning={warning} />
@@ -113,6 +117,7 @@ function Frame({
 }
 
 export function TextField({
+  action,
   className,
   counter,
   error,
@@ -120,6 +125,7 @@ export function TextField({
   id,
   inputClassName,
   label,
+  labelAside,
   labelHidden,
   leading,
   optionalLabel,
@@ -129,6 +135,8 @@ export function TextField({
   ...input
 }: FieldProps &
   Omit<ComponentProps<"input">, "id"> & {
+    /** Inside the box, on the right, and interactive (the password's eye): a 44 px target. */
+    action?: ReactNode;
     /** The class of the <input> itself (the wrapper takes className). */
     inputClassName?: string;
     /** Inside the box, on the left: "R$", an avatar. Decorative: the label names the field. */
@@ -148,6 +156,7 @@ export function TextField({
         hint,
         id,
         label,
+        labelAside,
         labelHidden,
         optionalLabel,
         warning,
@@ -172,6 +181,7 @@ export function TextField({
               : "h-11 px-3 md:h-10",
             leading && "pl-11",
             trailing && "pr-24",
+            action && "pr-12",
             // The wizard's figures line up; the Phase 2 fields keep their text as it was.
             tall && "tabular-nums",
             controlState(error, warning),
@@ -180,6 +190,11 @@ export function TextField({
           id={id}
           {...input}
         />
+        {action ? (
+          <span className="absolute inset-y-0 right-0 flex items-center">
+            {action}
+          </span>
+        ) : null}
         {trailing ? (
           <span
             aria-hidden="true"

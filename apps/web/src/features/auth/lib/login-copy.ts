@@ -9,28 +9,22 @@ export function submitLabel(mode: AuthMode, invite: boolean) {
       ? m.login_invite_signin_submit()
       : m.login_invite_signup_submit();
   }
-  return mode === "signin" ? "Entrar" : "Criar conta";
+  return mode === "signin" ? m.auth_signin_submit() : m.auth_signup_submit();
 }
 
-/** The top of the form: with an invite behind it, the title says what for (H2). */
+/** The top of the form: with an invite behind it, the title says what for (H2). The sub only exists when there is something to add. */
 export function heading(
   mode: AuthMode,
   invite: boolean
-): { sub: string; title: string } {
+): { sub: string | null; title: string } {
   if (invite) {
     return mode === "signin"
-      ? {
-          title: m.login_invite_signin_title(),
-          sub: m.login_invite_signin_sub(),
-        }
-      : {
-          title: m.login_invite_signup_title(),
-          sub: m.login_invite_signup_sub(),
-        };
+      ? { title: m.login_invite_signin_title(), sub: null }
+      : { title: m.login_invite_signup_title(), sub: null };
   }
   return mode === "signin"
-    ? { title: "Entre na sua conta", sub: "Bem-vindo de volta ao Quitto." }
-    : { title: "Crie sua conta", sub: "É rápido e grátis." };
+    ? { title: m.auth_signin_title(), sub: null }
+    : { title: m.auth_signup_title(), sub: m.auth_signup_sub() };
 }
 
 /** The e-mail field's description: the error, the invite's masked e-mail, both or none. */

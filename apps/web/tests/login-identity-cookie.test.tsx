@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@tanstack/react-router", () => ({
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
   useHydrated: () => true,
   useSearch: () => ({}),
 }));
@@ -10,7 +11,7 @@ vi.mock("@/lib/auth-client", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
-import { LoginPage } from "../src/features/auth/login-page";
+import { LoginPage } from "../src/features/auth/components/login-page";
 import {
   IDENTITY_COOKIE,
   serializeIdentityCookie,

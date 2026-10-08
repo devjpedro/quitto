@@ -2,7 +2,8 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@tanstack/react-router", () => ({
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
   useHydrated: () => true,
   useSearch: () => ({}),
 }));
@@ -15,7 +16,7 @@ vi.mock("@/lib/auth-client", () => ({
   sendVerificationEmail: vi.fn(),
 }));
 
-import { LoginPage } from "../src/features/auth/login-page";
+import { LoginPage } from "../src/features/auth/components/login-page";
 import { renderWithProviders } from "./test-utils";
 
 const SUBMIT = /^Entrar$/;

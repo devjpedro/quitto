@@ -14,7 +14,6 @@ import { expect } from "@playwright/test";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const PROOF_PDF = path.join(here, "fixtures", "comprovante.pdf");
 
-const SIGNUP_TOGGLE = /Alternar para criar conta/i;
 const CREATE_ACCOUNT = /^Criar conta$/;
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
@@ -47,13 +46,10 @@ export async function signup(
   page: Page,
   email = randomEmail()
 ): Promise<string> {
-  await page.goto("/login");
-  // SSR: o botão renderiza antes da hidratação, então um clique cedo demais é
-  // no-op (handler ainda não anexado). Re-tenta o toggle até o campo surgir.
-  await expect(async () => {
-    await page.getByRole("button", { name: SIGNUP_TOGGLE }).click();
-    await expect(page.locator("#name")).toBeVisible({ timeout: 500 });
-  }).toPass({ timeout: 15_000 });
+  // The mode is in the URL (?mode=signup), so the form is right before hydration;
+  // typing waits for it, since a controlled field filled early is lost to hydration.
+  await page.goto("/login?mode=signup");
+  await waitForHydrated(page);
   await page.locator("#name").fill("Usuário E2E");
   await page.locator("#email").fill(email);
   await page.locator("#password").fill("password123");

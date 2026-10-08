@@ -120,6 +120,10 @@
   --surface-selected-hover: #dde9e0;
   /* The preview stage's dot texture (decorative). */
   --dots: rgb(17 17 17 / 0.16);
+  /* The showcase (sign-in, sign-up, receipt; mockup 19): its dot texture and the shadow of the pieces that float on it. */
+  --stage-dots: rgb(255 255 255 / 0.16);
+  --piece-shadow:
+    0 30px 60px -22px rgb(4 22 10 / 0.62), 0 10px 22px -10px rgb(4 22 10 / 0.4);
   --on-brand-alert: #ffb3a6;
   /* The phone (page-surfaces): a white card on the sunken page (mockup 13). */
   --page-card-hover: #f7f6f2;
@@ -177,6 +181,9 @@
   --surface-selected: #1f3227;
   --surface-selected-hover: #1b2d22;
   --dots: rgb(236 235 230 / 0.12);
+  --stage-dots: rgb(236 235 230 / 0.12);
+  --piece-shadow:
+    0 30px 60px -22px rgb(0 0 0 / 0.7), 0 10px 22px -10px rgb(0 0 0 / 0.5);
   --on-brand-alert: #ffb3a6;
   /* The phone: card #242521 on the page #1a1b18, what sits inside one step
      up, the hover one step down (between the card and the page). */
@@ -300,5 +307,81 @@
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
+  }
+}
+
+/*
+ * The showcase (DIRECAO › Autenticação: vitrine): the Floresta panel of the
+ * screens without an account. Its dots fade out around the pieces; on a phone
+ * the panel is a header, and they gather in its lower right corner.
+ */
+.stage-dots::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle,
+    var(--stage-dots) 1.1px,
+    transparent 1.6px
+  );
+  background-position: 8px 8px;
+  background-size: 16px 16px;
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 70% 90%,
+    #000 20%,
+    transparent 75%
+  );
+}
+
+@media (width >= 64rem) {
+  .stage-dots::before {
+    mask-image: radial-gradient(
+      ellipse 58% 44% at 50% 40%,
+      #000 25%,
+      transparent 78%
+    );
+  }
+}
+
+@utility piece-shadow {
+  box-shadow: var(--piece-shadow);
+}
+
+/* The receipt's paper floats as a cut-out (a mask), so its shadow is a filter. */
+@utility piece-drop {
+  filter: drop-shadow(0 24px 30px rgb(4 22 10 / 0.45))
+    drop-shadow(0 6px 10px rgb(4 22 10 / 0.25));
+}
+
+.dark .piece-drop {
+  filter: drop-shadow(0 24px 30px rgb(0 0 0 / 0.6))
+    drop-shadow(0 6px 10px rgb(0 0 0 / 0.4));
+}
+
+/* The perforated edge of the receipt: a row of bites out of its bottom. */
+@utility perforated {
+  --bite: 6px;
+  mask:
+    radial-gradient(circle var(--bite) at 50% 100%, #0000 97%, #000 100%) 50% 0
+    / calc(2 * var(--bite) + 6px) 100% repeat-x;
+}
+
+/* One entrance (mockup 19, decision 9): the pieces rise into place, in sequence. */
+@media (prefers-reduced-motion: no-preference) {
+  .piece-rise {
+    animation: piece-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--rise-delay, 0s);
+  }
+}
+
+@keyframes piece-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }

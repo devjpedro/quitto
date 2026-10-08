@@ -2,6 +2,8 @@ import { ToggleGroup } from "radix-ui";
 import { cn } from "@/lib/utils";
 
 export interface SegmentedOption<V extends string> {
+  /** When the visible label is shorter than the name ("English" for "English (US)"). */
+  ariaLabel?: string;
   count?: number;
   label: string;
   value: V;
@@ -13,19 +15,23 @@ export function SegmentedControl<V extends string>({
   value,
   onValueChange,
   block = false,
+  tone = "default",
 }: {
   /** `true`: full width always; `"mobile"`: full width below md only (the items share it). */
   block?: boolean | "mobile";
   label: string;
   onValueChange: (value: V) => void;
   options: SegmentedOption<V>[];
+  /** `onBrand`: on the showcase's Floresta panel (mockup 19). */
+  tone?: "default" | "onBrand";
   value: V;
 }) {
   return (
     <ToggleGroup.Root
       aria-label={label}
       className={cn(
-        "gap-0.5 rounded-[12px] bg-surface-sunken p-[3px] max-md:bg-canvas",
+        "gap-0.5 rounded-[12px] p-[3px]",
+        tone === "onBrand" ? "bg-on-brand/12" : "bg-surface-sunken max-md:bg-canvas",
         block === true && "flex w-full",
         block === "mobile" && "inline-flex max-md:flex max-md:w-full",
         !block && "inline-flex"
@@ -42,8 +48,12 @@ export function SegmentedControl<V extends string>({
       {/* The plain space before each count keeps the accessible name "Ativos 5", not "Ativos5". */}
       {options.map((option) => (
         <ToggleGroup.Item
+          aria-label={option.ariaLabel}
           className={cn(
-            "inline-flex min-h-11 items-center justify-center gap-1 rounded-[9px] px-3 text-ink-muted text-sm transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[state=on]:bg-surface data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.1)] md:min-h-8",
+            "inline-flex min-h-11 items-center justify-center gap-1 rounded-[9px] px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 md:min-h-8",
+            tone === "onBrand"
+              ? "text-on-brand-muted hover:text-on-brand focus-visible:ring-highlight data-[state=on]:bg-on-brand data-[state=on]:font-medium data-[state=on]:text-brand-surface"
+              : "text-ink-muted hover:text-ink focus-visible:ring-brand data-[state=on]:bg-surface data-[state=on]:font-medium data-[state=on]:text-ink data-[state=on]:shadow-[0_1px_2px_rgb(0_0_0/0.1)]",
             block === true && "flex-1",
             block === "mobile" && "max-md:flex-1"
           )}
