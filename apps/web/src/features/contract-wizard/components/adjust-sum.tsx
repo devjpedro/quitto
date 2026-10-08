@@ -51,7 +51,7 @@ export function AdjustSum({ wizard }: { wizard: ContractWizard }) {
         </small>
         <Money cents={state.sum} size="list" />{" "}
         {state.moved ? (
-          <span className="text-[12.5px] text-ink-muted tabular-nums">
+          <span className="whitespace-nowrap text-[12.5px] text-ink-muted tabular-nums">
             {m.wizard_adjust_was()} <s>{previous}</s>
           </span>
         ) : null}

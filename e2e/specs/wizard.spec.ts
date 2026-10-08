@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import {
+  brDaysFromToday,
   getContract,
   isoDaysFromToday,
   randomEmail,
@@ -47,7 +48,7 @@ async function split(page: Page, total = "6000,00", count = "12") {
   await page.getByRole("radio", { name: SPLIT }).click();
   await page.getByLabel("Valor total", { exact: true }).fill(total);
   await page.getByLabel("Parcelas", { exact: true }).fill(count);
-  await page.getByLabel("1º vencimento").fill(isoDaysFromToday(36));
+  await page.getByLabel("1º vencimento").fill(brDaysFromToday(36));
 }
 
 test("valor total com a outra parte e convite: cria e abre o contrato com o toast", async ({
@@ -94,7 +95,7 @@ test("valor fixo por mês, só eu: cria sem convite", async ({ page }) => {
   await page.getByRole("radio", { name: MONTHLY }).click();
   await page.getByLabel("Valor por mês").fill("1250,00");
   await page.getByLabel("Meses", { exact: true }).fill("12");
-  await page.getByLabel("1º vencimento").fill(isoDaysFromToday(20));
+  await page.getByLabel("1º vencimento").fill(brDaysFromToday(20));
   await next(page);
   await page.getByRole("radio", { name: SOLO }).click();
   await next(page);
@@ -104,7 +105,7 @@ test("valor fixo por mês, só eu: cria sem convite", async ({ page }) => {
   await expect(page.getByText("Convite enviado")).toHaveCount(0);
 });
 
-test("uma a uma: a soma que passa bloqueia; 'Tirar das outras' fecha e cria", async ({
+test("uma a uma: a soma que passa vira o total, sem bloquear, e cria", async ({
   page,
 }) => {
   await signup(page);
@@ -114,15 +115,37 @@ test("uma a uma: a soma que passa bloqueia; 'Tirar das outras' fecha e cria", as
   await page.getByRole("button", { name: ADJUST }).click();
   await page.getByLabel("Valor da parcela 1", { exact: true }).fill("1600,00");
   await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
-  await expect(page.getByText("R$ 1.100,00 a mais")).toBeVisible();
+  await expect(page.getByText("Total agora · soma das 12")).toBeVisible();
+  await expect(page.locator("s")).toHaveText("R$ 6.000,00");
   await next(page);
-  await expect(
-    page.getByLabel("Valor da parcela 1", { exact: true })
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Tirar R$ 1.100,00 das outras 11" })
-    .click();
-  await expect(page.getByText("Confere")).toBeVisible();
+  await next(page);
+  await next(page);
+  await expect(page).toHaveURL(CONTRACT_URL);
+  const id = page.url().split("/").at(-1) as string;
+  const detail = await getContract(page.request, id);
+  expect(detail.installments[0].amountCents).toBe(160_000);
+  expect(detail.installments[1].amountCents).toBe(50_000);
+  expect(
+    detail.installments.reduce(
+      (sum: number, row: { amountCents: number }) => sum + row.amountCents,
+      0
+    )
+  ).toBe(710_000);
+});
+
+test("uma a uma: 'Manter R$ 6.000,00' tira das outras e cria com o total combinado", async ({
+  page,
+}) => {
+  await signup(page);
+  await openWizard(page);
+  await about(page);
+  await split(page);
+  await page.getByRole("button", { name: ADJUST }).click();
+  await page.getByLabel("Valor da parcela 1", { exact: true }).fill("1600,00");
+  await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
+  await page.getByRole("button", { name: "Manter R$ 6.000,00" }).click();
+  await expect(page.getByText("Soma das 12 parcelas")).toBeVisible();
+  await next(page);
   await next(page);
   await next(page);
   await next(page);
@@ -131,6 +154,20 @@ test("uma a uma: a soma que passa bloqueia; 'Tirar das outras' fecha e cria", as
   const detail = await getContract(page.request, id);
   expect(detail.installments[0].amountCents).toBe(160_000);
   expect(detail.installments[1].amountCents).toBe(40_000);
+});
+
+test("a data do 1º vencimento se escolhe no calendário", async ({ page }) => {
+  await signup(page);
+  await openWizard(page);
+  await about(page);
+  await page.getByRole("radio", { name: SPLIT }).click();
+  await page.getByRole("button", { name: "Abrir o calendário" }).click();
+  await expect(page.getByRole("grid")).toBeVisible();
+  await page.getByRole("button", { name: "Hoje", exact: true }).click();
+  await expect(page.getByRole("grid")).toHaveCount(0);
+  await expect(page.getByLabel("1º vencimento")).toHaveValue(
+    brDaysFromToday(0)
+  );
 });
 
 test("passo 1 vazio: as frases do produto e nada avança", async ({ page }) => {
@@ -214,8 +251,8 @@ test("celular: no uma a uma, a última parcela rola para cima da barra", async (
   await page.getByRole("button", { name: ADJUST }).click();
   await page.getByLabel("Valor da parcela 1", { exact: true }).fill("1600,00");
   await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
-  // The sum is off: the bar is at its tallest (the sum, the sentence and the two fixes).
-  await expect(page.getByText("R$ 1.100,00 a mais")).toBeVisible();
+  // The total moved: the bar is at its tallest (the new total, "era" and "Manter").
+  await expect(page.getByText("Total agora · soma das 12")).toBeVisible();
   await page.evaluate(() =>
     window.scrollTo(0, document.documentElement.scrollHeight)
   );
