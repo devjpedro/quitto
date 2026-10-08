@@ -7,9 +7,11 @@ import { ResponsiveText } from "@/components/ui/responsive-text";
 import { errorCodeText } from "@/lib/error-codes";
 import { m } from "@/paraglide/messages.js";
 import type { ContractWizard } from "../hooks/use-contract-wizard";
+import { usePartySuggestions } from "../hooks/use-party-suggestions";
 import { confirmTitle } from "../lib/confirm-title";
 import { fieldId } from "../lib/field-id";
 import type { WizardField } from "../lib/wizard-fields";
+import { PartySuggestions } from "./party-suggestions";
 import { StepHeading } from "./step-heading";
 
 /**
@@ -29,6 +31,7 @@ export function StepParty({ wizard }: { wizard: ContractWizard }) {
   const name = values.counterpartyName.trim();
   const firstName = name.split(" ")[0] || null;
   const receives = values.ownerRole === "seller";
+  const suggestions = usePartySuggestions(values.counterpartyName);
   return (
     <>
       <StepHeading
@@ -71,6 +74,16 @@ export function StepParty({ wizard }: { wizard: ContractWizard }) {
       {values.party === "other" ? (
         <>
           <div className="mt-[18px] flex flex-col gap-3.5 md:mt-5 md:gap-4">
+            <PartySuggestions
+              onPick={(person) => {
+                wizard.setValue("counterpartyName", person.name);
+                if (person.email && values.counterpartyEmail.trim() === "") {
+                  wizard.setValue("counterpartyEmail", person.email);
+                }
+                document.getElementById(fieldId("counterpartyEmail"))?.focus();
+              }}
+              people={suggestions}
+            />
             <TextField
               autoComplete="off"
               error={errorOf("counterpartyName")}

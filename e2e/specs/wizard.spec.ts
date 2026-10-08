@@ -227,3 +227,40 @@ test("celular: no uma a uma, a última parcela rola para cima da barra", async (
   expect(bar).not.toBeNull();
   expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
 });
+
+test("passo 3: a sugestão preenche o nome da pessoa de outro contrato", async ({
+  page,
+}) => {
+  await signup(page);
+  const guest = randomEmail();
+  const created = await page.request.post("/api/contracts", {
+    data: {
+      title: "Moto do Rafa",
+      ownerRole: "seller",
+      requiresConfirmation: false,
+      counterparty: { name: "Rafael Prado", email: guest },
+      schedule: {
+        mode: "auto",
+        totalAmountCents: 120_000,
+        installmentsCount: 3,
+        firstDueDate: isoDaysFromToday(10),
+      },
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+
+  await openWizard(page);
+  await about(page);
+  await split(page);
+  await next(page);
+  await page.getByRole("radio", { name: OTHER }).click();
+  const suggestions = page.getByTestId("party-suggestions");
+  await expect(suggestions).toBeVisible();
+  await suggestions.getByRole("button", { name: "Usar Rafael Prado" }).click();
+  await expect(page.getByLabel("Nome", { exact: true })).toHaveValue(
+    "Rafael Prado"
+  );
+  await expect(page.getByLabel("E-mail para o convite")).toHaveValue(guest);
+  // The name now is the suggestion's: the line has nothing left to offer.
+  await expect(suggestions).toHaveCount(0);
+});

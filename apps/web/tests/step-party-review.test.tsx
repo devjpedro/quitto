@@ -18,12 +18,18 @@ vi.mock("@/hooks/use-identity", () => ({
 
 import { StepParty } from "@/features/contract-wizard/components/step-party";
 import { StepReview } from "@/features/contract-wizard/components/step-review";
+import type { Person } from "@/features/people/types";
+import { queryKeys } from "@/lib/query-keys";
+import { person } from "./people-fixtures";
+import { makeTestQueryClient } from "./test-utils";
 import { NOTEBOOK, renderWizard, toStep } from "./wizard-harness";
 
 const OTHER = /Adicionar a outra parte/;
 const SOLO = /Só eu acompanho/;
 
-function steps(onSubmit = vi.fn()) {
+function steps(onSubmit = vi.fn(), people: Person[] = []) {
+  const client = makeTestQueryClient();
+  client.setQueryData(queryKeys.people, { people });
   return renderWizard(
     (wizard) => (
       <>
@@ -31,9 +37,61 @@ function steps(onSubmit = vi.fn()) {
         {wizard.step === 4 ? <StepReview wizard={wizard} /> : null}
       </>
     ),
-    { onSubmit }
+    { client, onSubmit }
   );
 }
+
+const CARLOS = person({
+  key: "aaaaaaaaaaaaaaaa",
+  name: "Carlos Lima",
+  email: "carlos@exemplo.com",
+});
+const ANA = person({
+  key: "bbbbbbbbbbbbbbbb",
+  name: "Ana Rocha",
+  email: null,
+  lastContractAt: "2026-03-01T12:00:00.000Z",
+});
+
+describe("StepParty: sugestões", () => {
+  it("tocar numa sugestão preenche o nome e o e-mail vazio e leva o foco ao e-mail", async () => {
+    const user = userEvent.setup();
+    const { wizard } = steps(vi.fn(), [CARLOS, ANA]);
+    toStep(wizard, 3, NOTEBOOK);
+    await user.click(screen.getByRole("radio", { name: OTHER }));
+    const group = screen.getByTestId("party-suggestions");
+    expect(within(group).getAllByTestId("party-suggestion")).toHaveLength(2);
+    await user.click(
+      within(group).getByRole("button", { name: "Usar Carlos Lima" })
+    );
+    expect(wizard().values.counterpartyName).toBe("Carlos Lima");
+    expect(wizard().values.counterpartyEmail).toBe("carlos@exemplo.com");
+    expect(
+      screen.getByRole("textbox", { name: "E-mail para o convite opcional" })
+    ).toHaveFocus();
+  });
+
+  it("não troca um e-mail já digitado", async () => {
+    const user = userEvent.setup();
+    const { wizard } = steps(vi.fn(), [CARLOS]);
+    toStep(wizard, 3, NOTEBOOK);
+    await user.click(screen.getByRole("radio", { name: OTHER }));
+    await user.type(
+      screen.getByRole("textbox", { name: "E-mail para o convite opcional" }),
+      "outro@exemplo.com"
+    );
+    await user.click(screen.getByRole("button", { name: "Usar Carlos Lima" }));
+    expect(wizard().values.counterpartyEmail).toBe("outro@exemplo.com");
+  });
+
+  it("sem pessoas, nenhuma linha de sugestões", async () => {
+    const user = userEvent.setup();
+    const { wizard } = steps();
+    toStep(wizard, 3, NOTEBOOK);
+    await user.click(screen.getByRole("radio", { name: OTHER }));
+    expect(screen.queryByTestId("party-suggestions")).toBeNull();
+  });
+});
 
 describe("StepParty", () => {
   it("sem escolha, Continuar segue como 'Só eu acompanho' (o passo é opcional)", async () => {

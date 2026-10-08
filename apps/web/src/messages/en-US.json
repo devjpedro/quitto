@@ -888,5 +888,7 @@
   "nav_installments_count_one": "Installments, 1 this month",
   "nav_installments_count_other": "Installments, {count} this month",
   "nav_people_count_one": "People, 1 person",
-  "nav_people_count_other": "People, {count} people"
+  "nav_people_count_other": "People, {count} people",
+  "wizard_suggestions_label": "People from your contracts",
+  "wizard_suggestion_use": "Use {name}"
 }

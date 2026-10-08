@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -9,12 +10,17 @@ import {
   type WizardStep,
   type WizardValues,
 } from "@/features/contract-wizard/lib/wizard-values";
+import { makeTestQueryClient } from "./test-utils";
 
 /** Renders steps around the real hook, with a "Continuar" and the current step in a test id. */
 export function renderWizard(
   body: (wizard: ContractWizard) => ReactNode,
-  options: { onSubmit?: (values: WizardValues) => void } = {}
+  options: {
+    client?: ReturnType<typeof makeTestQueryClient>;
+    onSubmit?: (values: WizardValues) => void;
+  } = {}
 ) {
+  const client = options.client ?? makeTestQueryClient();
   const holder: { current: ContractWizard | null } = { current: null };
   function Harness() {
     const wizard = useContractWizard({ onSubmit: options.onSubmit });
@@ -31,7 +37,11 @@ export function renderWizard(
       </>
     );
   }
-  const view = render(<Harness />);
+  const view = render(
+    <QueryClientProvider client={client}>
+      <Harness />
+    </QueryClientProvider>
+  );
   return { ...view, wizard: () => holder.current as ContractWizard };
 }
 
