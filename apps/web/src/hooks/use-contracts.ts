@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
 import { queryKeys } from "@/lib/query-keys";
@@ -8,7 +8,3 @@ export const contractsQueryOptions = queryOptions({
   queryKey: queryKeys.contracts,
   queryFn: () => unwrap(api.api.contracts.get()),
 });
-
-export function useContractsQuery() {
-  return useQuery(contractsQueryOptions);
-}

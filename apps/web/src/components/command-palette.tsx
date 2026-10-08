@@ -206,7 +206,7 @@ function PaletteCommands({
   // only mounts while it is open, so a closed palette neither fetches the list
   // nor observes it, and a failure of it (a 500 or a timeout, from the
   // contracts page or from a fetch started here before closing) never reaches
-  // it. Same queryKey and cache as `useContractsQuery`, so it reuses what the
+  // it. Same queryKey and cache as the Contratos list, so it reuses what the
   // contracts page already fetched. Open, the list fails here and not at the
   // route's boundary: the app's `throwOnError` would take the whole shell down.
   const contractsQuery = useQuery({

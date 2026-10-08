@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +27,7 @@ vi.mock("@/lib/api", () => {
   return { api: { api: { contracts } } };
 });
 
-import { useContractsQuery } from "../src/hooks/use-contracts";
+import { contractsQueryOptions } from "../src/hooks/use-contracts";
 
 function wrapper(client = makeTestQueryClient()) {
   return ({ children }: { children: ReactNode }) => (
@@ -35,7 +35,7 @@ function wrapper(client = makeTestQueryClient()) {
   );
 }
 
-describe("useContractsQuery", () => {
+describe("contractsQueryOptions", () => {
   beforeEach(() => {
     getContracts.mockReset();
     postContract.mockReset();
@@ -58,7 +58,7 @@ describe("useContractsQuery", () => {
       ],
       error: null,
     });
-    const { result } = renderHook(() => useContractsQuery(), {
+    const { result } = renderHook(() => useQuery(contractsQueryOptions), {
       wrapper: wrapper(),
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
