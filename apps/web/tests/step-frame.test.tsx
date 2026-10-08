@@ -80,4 +80,25 @@ describe("StepFrame", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("sem palco, o formulário não vira a coluna da direita; sem onClose, sem ✕", () => {
+    render(
+      <StepFrame
+        header={<StepHeader title="Convite" />}
+        rail={<aside>trilha</aside>}
+      >
+        <p>conteúdo</p>
+      </StepFrame>
+    );
+    expect(screen.getByTestId("wizard-form").className).not.toContain(
+      "stage:pl-9"
+    );
+    expect(screen.queryByRole("button", { name: "Fechar" })).toBeNull();
+  });
+
+  it("brand: a logo no lugar do Voltar e sem o título (a barra do convite no celular)", () => {
+    render(<StepHeader brand onClose={vi.fn()} title="Convite" />);
+    expect(screen.getByRole("img", { name: "Quitto" })).toBeInTheDocument();
+    expect(screen.queryByText("Convite")).toBeNull();
+  });
 });

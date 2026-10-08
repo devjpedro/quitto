@@ -5,8 +5,8 @@ import { SHELL_COLUMN, ShellLogoRow } from "./shell-frame";
 
 export interface RailStep {
   label: string;
-  /** "Passo 2 de 4", or the trail's date ("domingo, 04/10"). */
-  meta: string;
+  /** "Passo 2 de 4", or the trail's date ("domingo, 04/10"); the invite's middle step has none. */
+  meta?: string;
   /** A done step is a button back to it; the others are not. */
   onSelect?: () => void;
   state: StepState;
@@ -27,7 +27,7 @@ function RailText({
   step: RailStep;
 }) {
   const current = step.state === "next";
-  const meta = (
+  const meta = step.meta ? (
     <small
       className={cn(
         "block text-xs tabular-nums leading-[1.3]",
@@ -39,7 +39,7 @@ function RailText({
     >
       {step.meta}
     </small>
-  );
+  ) : null;
   const label = (
     <b
       className={cn(

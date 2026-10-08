@@ -1,5 +1,6 @@
 import { CaretLeft, X } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { Logo } from "@/components/logo";
 import {
   KEYBOARD_MIN_PX,
   useVisualViewportInset,
@@ -21,18 +22,33 @@ const CLOSE =
 export const ACTION_BAR =
   "sticky bottom-0 z-30 -mx-4 flex gap-2.5 bg-surface-sunken px-4 pt-3 pb-[max(1.75rem,env(safe-area-inset-bottom))] shadow-[0_-1px_0_var(--line)] max-md:mt-auto md:static md:mx-0 md:mt-7 md:bg-transparent md:p-0 md:shadow-none";
 
+/** Where "‹" would be: the logo on the invite's phone top bar (mockup 15, G2), else room. */
+function HeaderStart({ brand }: { brand: boolean }) {
+  return brand ? (
+    <span className="flex h-11 items-center px-3 md:hidden">
+      <Logo size={22} />
+    </span>
+  ) : (
+    <span aria-hidden="true" className="size-11 md:hidden" />
+  );
+}
+
 /**
  * "‹ Voltar" and, on a phone, the ✕: the 56 px header with the title in the
  * middle. From md the back button sits in the form's top row, and the ✕ is
- * the StepFrame's, in the panel's corner.
+ * the StepFrame's, in the panel's corner. `brand`: the invite's phone top
+ * bar (the logo, no title). Without `onClose` there is no ✕ (the invite
+ * before signing in: no app behind it yet).
  */
 export function StepHeader({
+  brand = false,
   onBack,
   onClose,
   title,
 }: {
+  brand?: boolean;
   onBack?: () => void;
-  onClose: () => void;
+  onClose?: () => void;
   title: string;
 }) {
   return (
@@ -47,17 +63,23 @@ export function StepHeader({
           <span className="max-md:sr-only">{m.wizard_back()}</span>
         </button>
       ) : (
+        <HeaderStart brand={brand} />
+      )}
+      {brand ? null : (
+        <b className="font-semibold text-[15px] md:hidden">{title}</b>
+      )}
+      {onClose ? (
+        <button
+          aria-label={m.sheet_close()}
+          className={cn(CLOSE, "flex size-11 md:hidden")}
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" size={18} />
+        </button>
+      ) : (
         <span aria-hidden="true" className="size-11 md:hidden" />
       )}
-      <b className="font-semibold text-[15px] md:hidden">{title}</b>
-      <button
-        aria-label={m.sheet_close()}
-        className={cn(CLOSE, "flex size-11 md:hidden")}
-        onClick={onClose}
-        type="button"
-      >
-        <X aria-hidden="true" size={18} />
-      </button>
     </div>
   );
 }
@@ -74,6 +96,8 @@ export function StepHeader({
  *   panel's content stops at 1840, centered (owner's decision 3).
  * In a tall screen the form starts in the middle band of 860 px. The ✕ from
  * md is absolute in the panel's corner, outside the column that scrolls.
+ * Without `stage` (the invite opened by its owner, or before signing in)
+ * there is no grid: the 476 px column stays centered at every width.
  */
 export function StepFrame({
   align = "top",
@@ -91,7 +115,7 @@ export function StepFrame({
   footer?: ReactNode;
   header: ReactNode;
   /** The ✕ from md, in the panel's corner (a phone's is in the header). */
-  onClose: () => void;
+  onClose?: () => void;
   progress?: ReactNode;
   rail: ReactNode;
   stage?: ReactNode;
@@ -101,25 +125,33 @@ export function StepFrame({
   const lifted = keyboard >= KEYBOARD_MIN_PX ? keyboard : 0;
   return (
     <ShellFrame column={rail} fit="screen" mainClassName="relative">
-      <button
-        aria-label={m.sheet_close()}
+      {onClose ? (
+        <button
+          aria-label={m.sheet_close()}
+          className={cn(
+            CLOSE,
+            "absolute top-4 right-[18px] z-10 hidden size-9 md:flex"
+          )}
+          onClick={onClose}
+          type="button"
+        >
+          <X aria-hidden="true" size={18} />
+        </button>
+      ) : null}
+      <div
         className={cn(
-          CLOSE,
-          "absolute top-4 right-[18px] z-10 hidden size-9 md:flex"
+          "mx-auto flex h-full w-full max-w-[1840px] flex-col md:p-2",
+          stage && "stage:grid stage:grid-cols-[minmax(0,1fr)_452px]"
         )}
-        onClick={onClose}
-        type="button"
       >
-        <X aria-hidden="true" size={18} />
-      </button>
-      <div className="mx-auto flex stage:grid h-full w-full max-w-[1840px] stage:grid-cols-[minmax(0,1fr)_452px] flex-col md:p-2">
         {stage}
         <section
           className={cn(
             "relative flex min-h-dvh flex-col md:min-h-0 md:overflow-y-auto",
             "md:mx-auto md:w-full md:max-w-[476px] md:px-2 md:pt-3.5 md:pb-5",
             // stage: is in rem (Task 4), so it comes after md: in the CSS and wins from 1140.
-            "stage:mx-0 stage:max-w-none stage:pt-[max(0.875rem,calc((100dvh_-_860px)/2))] stage:pr-7 stage:pl-9"
+            stage &&
+              "stage:mx-0 stage:max-w-none stage:pt-[max(0.875rem,calc((100dvh_-_860px)/2))] stage:pr-7 stage:pl-9"
           )}
           data-testid="wizard-form"
         >

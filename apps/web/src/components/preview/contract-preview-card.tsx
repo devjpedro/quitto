@@ -24,17 +24,24 @@ import type { PreviewModel } from "./types";
  * built from the app's own pieces; what is not filled in yet is a dashed
  * outline labeled with the step that fills it. The only thing in the
  * wizard with a shadow. `flat` drops it (inside the phone's open summary).
+ * The invite turns off what it cannot say: the title right above the card
+ * on a phone (`showTitle`), and the progress of a contract it does not know
+ * the payments of (`showProgress`).
  */
 export function ContractPreviewCard({
   className,
   flat = false,
   locale,
   model,
+  showProgress = true,
+  showTitle = true,
 }: {
   className?: string;
   flat?: boolean;
   locale: Locale;
   model: PreviewModel;
+  showProgress?: boolean;
+  showTitle?: boolean;
 }) {
   const summary = model.summary
     ? summaryText(model.summary, locale, "every")
@@ -63,19 +70,23 @@ export function ContractPreviewCard({
           </Tag>
         ) : null}
       </div>
-      {model.title ? (
-        <h3 className="mt-3 truncate font-display font-semibold text-[22px] leading-[1.25] tracking-[-0.025em]">
-          {model.title}
-        </h3>
-      ) : (
-        <PlaceholderBlock shape="title">
-          {m.preview_placeholder_title()}
-        </PlaceholderBlock>
-      )}
-      {model.title && model.description ? (
-        <p className="mt-0.5 truncate text-[13px] text-ink-muted">
-          {model.description}
-        </p>
+      {showTitle ? (
+        <>
+          {model.title ? (
+            <h3 className="mt-3 truncate font-display font-semibold text-[22px] leading-[1.25] tracking-[-0.025em]">
+              {model.title}
+            </h3>
+          ) : (
+            <PlaceholderBlock shape="title">
+              {m.preview_placeholder_title()}
+            </PlaceholderBlock>
+          )}
+          {model.title && model.description ? (
+            <p className="mt-0.5 truncate text-[13px] text-ink-muted">
+              {model.description}
+            </p>
+          ) : null}
+        </>
       ) : null}
       {model.totalCents !== null && summary ? (
         <>
@@ -96,7 +107,9 @@ export function ContractPreviewCard({
       <PersonLine model={model} />
       {model.rows.length > 0 ? (
         <>
-          <PreviewProgress locale={locale} model={model} />
+          {showProgress ? (
+            <PreviewProgress locale={locale} model={model} />
+          ) : null}
           <PreviewRows locale={locale} model={model} />
         </>
       ) : (

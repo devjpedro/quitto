@@ -117,4 +117,20 @@ describe("ContractPreviewCard", () => {
     expect(container).toHaveTextContent("Só você acompanha");
     expect(screen.getAllByText("− R$ 500,00")[0]).toHaveClass("sr-only");
   });
+
+  it("o convite desliga o que não sabe dizer: o título (no celular) e o progresso", () => {
+    const { container } = render(
+      <ContractPreviewCard
+        locale="pt-BR"
+        model={FILLED}
+        showProgress={false}
+        showTitle={false}
+      />
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Notebook da Renata" })
+    ).toBeNull();
+    expect(container).not.toHaveTextContent("0 de 12 recebidas");
+    expect(container).toHaveTextContent("Mais 9 parcelas, até 10/10/2027");
+  });
 });
