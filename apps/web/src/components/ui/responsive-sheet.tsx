@@ -110,16 +110,20 @@ function SheetHeading({
   actions,
   description,
   filled,
+  leading,
   title,
 }: {
   actions?: ReactNode;
   description?: string;
+  /** Before the title: a person's face. */
+  leading?: ReactNode;
   /** The close is the 32 px square: the actions sit 4 px from it, not 8. */
   filled: boolean;
   title: string;
 }) {
   return (
     <div className="flex items-start gap-1 pt-2">
+      {leading ? <div className="mr-3 shrink-0">{leading}</div> : null}
       <div className={cn("min-w-0 flex-1", !actions && "pr-10")}>
         <Dialog.Title className="font-semibold text-base">{title}</Dialog.Title>
         {description ? (
@@ -171,6 +175,7 @@ export function ResponsiveSheet({
   filledControls = false,
   footer,
   headerActions,
+  leading,
   onKeyDown,
   children,
 }: {
@@ -188,6 +193,8 @@ export function ResponsiveSheet({
   footer?: ReactNode;
   /** Side panel only: to the left of the close button. */
   headerActions?: ReactNode;
+  /** Before the title in the header (a person's avatar). */
+  leading?: ReactNode;
   /** On the element that stays mounted while open, so a panel can listen to the keys without remounting. */
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
   onOpenChange: (open: boolean) => void;
@@ -269,6 +276,7 @@ export function ResponsiveSheet({
                     actions={variant === "side" ? headerActions : undefined}
                     description={description}
                     filled={filledControls}
+                    leading={leading}
                     title={title}
                   />
                 </div>

@@ -4,6 +4,7 @@ export const queryKeys = {
   session: ["session"] as const,
   home: ["home"] as const,
   contracts: ["contracts"] as const,
+  people: ["people"] as const,
   contract: (id: string) => ["contract", id] as const,
   installment: (id: string) => ["installment", id] as const,
   installmentsList: (q: { from: string; pastDue: boolean; to: string }) =>
