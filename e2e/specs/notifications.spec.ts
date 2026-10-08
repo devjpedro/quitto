@@ -6,7 +6,6 @@ import {
   openNotifications,
   seedContract,
   seedInvite,
-  signup,
   uploadProofApi,
   waitForHydrated,
 } from "../fixtures";
@@ -69,11 +68,4 @@ test("marcar todas como lidas zera o contador", async ({ browser }) => {
     await a.close();
     await b.close();
   }
-});
-
-test("o endereço antigo /notifications leva ao Agora", async ({ page }) => {
-  await signup(page);
-  await page.goto("/notifications");
-  await page.waitForURL((url) => url.pathname === "/");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });

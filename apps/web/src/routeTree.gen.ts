@@ -19,7 +19,6 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as RTokenRouteImport } from './routes/r.$token'
 import { Route as InvitesTokenRouteImport } from './routes/invites.$token'
 import { Route as AppPeopleRouteImport } from './routes/_app/people'
-import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppInstallmentsRouteImport } from './routes/_app/installments'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings.index'
 import { Route as AppContractsIndexRouteImport } from './routes/_app/contracts.index'
@@ -75,11 +74,6 @@ const AppPeopleRoute = AppPeopleRouteImport.update({
   path: '/people',
   getParentRoute: () => AppRoute,
 } as any)
-const AppNotificationsRoute = AppNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppInstallmentsRoute = AppInstallmentsRouteImport.update({
   id: '/installments',
   path: '/installments',
@@ -118,7 +112,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/installments': typeof AppInstallmentsRoute
-  '/notifications': typeof AppNotificationsRoute
   '/people': typeof AppPeopleRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -135,7 +128,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/installments': typeof AppInstallmentsRoute
-  '/notifications': typeof AppNotificationsRoute
   '/people': typeof AppPeopleRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -154,7 +146,6 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_app/installments': typeof AppInstallmentsRoute
-  '/_app/notifications': typeof AppNotificationsRoute
   '/_app/people': typeof AppPeopleRoute
   '/invites/$token': typeof InvitesTokenRoute
   '/r/$token': typeof RTokenRoute
@@ -174,7 +165,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/installments'
-    | '/notifications'
     | '/people'
     | '/invites/$token'
     | '/r/$token'
@@ -191,7 +181,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/installments'
-    | '/notifications'
     | '/people'
     | '/invites/$token'
     | '/r/$token'
@@ -209,7 +198,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/verify-email'
     | '/_app/installments'
-    | '/_app/notifications'
     | '/_app/people'
     | '/invites/$token'
     | '/r/$token'
@@ -304,13 +292,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPeopleRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/notifications': {
-      id: '/_app/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AppNotificationsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/installments': {
       id: '/_app/installments'
       path: '/installments'
@@ -358,7 +339,6 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppInstallmentsRoute: typeof AppInstallmentsRoute
-  AppNotificationsRoute: typeof AppNotificationsRoute
   AppPeopleRoute: typeof AppPeopleRoute
   AppIndexRoute: typeof AppIndexRoute
   AppContractsIdRoute: typeof AppContractsIdRoute
@@ -369,7 +349,6 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppInstallmentsRoute: AppInstallmentsRoute,
-  AppNotificationsRoute: AppNotificationsRoute,
   AppPeopleRoute: AppPeopleRoute,
   AppIndexRoute: AppIndexRoute,
   AppContractsIdRoute: AppContractsIdRoute,
