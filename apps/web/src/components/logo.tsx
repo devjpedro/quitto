@@ -6,7 +6,7 @@ type LogoVariant = "brand" | "inverted";
 
 // brand: Floresta from the tokens, so it follows the dark theme (#7CC495),
 // with the track at 22% of it (DIRECAO › Logo). inverted: the white ring on
-// the legacy brand panel (sign-in), which is always dark.
+// the brand panel (sign-in), which is always dark.
 const RING_COLORS: Record<LogoVariant, { arc: string; track: string }> = {
   brand: {
     track: `color-mix(in oklab, var(--brand) ${TRACK_MIX}%, transparent)`,

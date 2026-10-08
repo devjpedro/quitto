@@ -22,7 +22,7 @@ export type ActionButtonKind =
   | "pay_oldest"
   | "see_installments";
 
-/** Buttons that open the installment in its contract (the legacy drawer until Fase 2): on a group, the oldest one. */
+/** Buttons that open the installment in its contract: on a group, the oldest one. */
 export const LINK_BUTTONS: ReadonlySet<ActionButtonKind> =
   new Set<ActionButtonKind>([
     "pix",
