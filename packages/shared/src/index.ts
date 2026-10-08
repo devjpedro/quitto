@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { isRealISODate } from "./date";
-import { PARTICIPANT_ROLE } from "./domain";
-import { isValidPixKey } from "./pix";
 
 export type {
   ContractErrorCode,
@@ -129,23 +127,6 @@ export const updateInstallmentSchema = z
 
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
 
-/** Chave PIX válida (formato). Normalização final acontece no servidor. */
-export const pixKeySchema = z
-  .string()
-  .trim()
-  .min(1, "Informe uma chave PIX")
-  .refine(isValidPixKey, "Chave PIX inválida");
-
-/** Body de atualização de chave: string válida OU vazio/null (limpa). */
-export const pixKeyUpdateSchema = z.object({
-  pixKey: z
-    .string()
-    .trim()
-    .refine((v) => v === "" || isValidPixKey(v), "Chave PIX inválida")
-    .nullable(),
-});
-export type PixKeyUpdateInput = z.infer<typeof pixKeyUpdateSchema>;
-
 // ── Receipts ─────────────────────────────────────────────────────────────────
 
 /** Recibo exposto na página pública (ADR-0006): lista FECHADA de campos. */
@@ -158,42 +139,3 @@ export interface PublicReceipt {
   receiverName: string | null;
   sequence: number;
 }
-
-// ── Participants & invites ───────────────────────────────────────────────────
-
-/** Papéis que o dono pode atribuir a um participante (owner não é convidável). */
-export const INVITABLE_PARTICIPANT_ROLES = [
-  PARTICIPANT_ROLE.buyer,
-  PARTICIPANT_ROLE.seller,
-  PARTICIPANT_ROLE.viewer,
-] as const;
-
-export const addParticipantSchema = z.object({
-  displayName: z
-    .string()
-    .trim()
-    .min(1, "Informe um nome")
-    .max(120, "Máximo 120 caracteres"),
-  role: z.enum(INVITABLE_PARTICIPANT_ROLES),
-});
-export type AddParticipantInput = z.infer<typeof addParticipantSchema>;
-
-export const createInviteSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(3, "E-mail inválido")
-    .max(200, "Máximo 200 caracteres")
-    .email("E-mail inválido"),
-});
-export type CreateInviteInput = z.infer<typeof createInviteSchema>;
-
-/** Optional e-mail: blank passes; a non-blank value must be a valid e-mail. */
-export const optionalEmail = z
-  .string()
-  .trim()
-  .max(200, "Máximo 200 caracteres")
-  .refine((v) => v === "" || z.string().email().safeParse(v).success, {
-    message: "E-mail inválido",
-  })
-  .optional();
