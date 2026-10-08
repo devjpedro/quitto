@@ -59,7 +59,7 @@ async function renderAt(
         detail={null}
         identity={maria}
         moment={null}
-        navCounts={{ contracts: 0, now: 0 }}
+        navCounts={{ contracts: 0, installments: 0, now: 0, people: 0 }}
         notificationsOpen={false}
         onOpenNotifications={openNotifications}
         onOpenSearch={vi.fn()}
@@ -299,7 +299,9 @@ describe("AppFrame", () => {
   });
 
   it("Agora and Contratos show their counts, hidden from AT and read in the link name", async () => {
-    await renderAt("/contracts", { navCounts: { contracts: 2, now: 3 } });
+    await renderAt("/contracts", {
+      navCounts: { contracts: 2, installments: 4, now: 3, people: 2 },
+    });
     const [sidebarNav, tabBar] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
@@ -323,8 +325,24 @@ describe("AppFrame", () => {
     );
   });
 
+  it("a sidebar diz Parcelas, 4 neste mês, e Pessoas, 2 pessoas", async () => {
+    await renderAt("/contracts", {
+      navCounts: { contracts: 2, installments: 4, now: 3, people: 2 },
+    });
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    expect(
+      nav.getByRole("link", { name: "Parcelas, 4 neste mês" })
+    ).toBeVisible();
+    expect(nav.getByRole("link", { name: "Pessoas, 2 pessoas" })).toBeVisible();
+  });
+
   it("one pending action and one active contract read in the singular", async () => {
-    await renderAt("/", { navCounts: { contracts: 1, now: 1 } });
+    await renderAt("/", {
+      navCounts: { contracts: 1, installments: 1, now: 1, people: 1 },
+    });
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });

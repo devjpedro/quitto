@@ -23,6 +23,10 @@ test("rotas autenticadas não têm violações de a11y", async ({ page }) => {
   await scan(page);
   await page.goto(`/contracts/${id}`);
   await scan(page);
+  await page.goto("/installments");
+  await scan(page);
+  await page.goto("/people");
+  await scan(page);
 
   await page.goto("/");
   await openNotifications(page);

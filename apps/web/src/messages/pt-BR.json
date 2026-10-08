@@ -882,5 +882,11 @@
   "people_page_contract_open": "Abrir {title}",
   "people_page_empty_title": "Só você por enquanto",
   "people_page_empty_description": "Aqui ficam as pessoas com quem você tem contratos e o saldo com cada uma. Adicione a outra parte em qualquer contrato.",
-  "people_page_empty_action": "Ir para contratos"
+  "people_page_empty_action": "Ir para contratos",
+  "nav_installments": "Parcelas",
+  "nav_people": "Pessoas",
+  "nav_installments_count_one": "Parcelas, 1 neste mês",
+  "nav_installments_count_other": "Parcelas, {count} neste mês",
+  "nav_people_count_one": "Pessoas, 1 pessoa",
+  "nav_people_count_other": "Pessoas, {count} pessoas"
 }

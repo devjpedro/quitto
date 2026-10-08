@@ -882,5 +882,11 @@
   "people_page_contract_open": "Open {title}",
   "people_page_empty_title": "Just you for now",
   "people_page_empty_description": "Here are the people you have contracts with and the balance with each. Add the other party to any contract.",
-  "people_page_empty_action": "Go to contracts"
+  "people_page_empty_action": "Go to contracts",
+  "nav_installments": "Installments",
+  "nav_people": "People",
+  "nav_installments_count_one": "Installments, 1 this month",
+  "nav_installments_count_other": "Installments, {count} this month",
+  "nav_people_count_one": "People, 1 person",
+  "nav_people_count_other": "People, {count} people"
 }

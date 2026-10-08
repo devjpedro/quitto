@@ -29,6 +29,20 @@ vi.mock("@tanstack/react-router", () => ({
 import { TabBar } from "@/components/layout/tab-bar";
 
 describe("TabBar", () => {
+  it("cinco posições na ordem Agora, Contratos, ＋, Parcelas, Pessoas", () => {
+    render(<TabBar />);
+    const links = screen
+      .getAllByRole("link")
+      .map((link) => link.textContent || link.getAttribute("aria-label"));
+    expect(links).toEqual([
+      "Agora",
+      "Contratos",
+      "Novo contrato",
+      "Parcelas",
+      "Pessoas",
+    ]);
+  });
+
   it("o ＋ abre o wizard com a transição da folha (sheet-up)", () => {
     render(<TabBar />);
     const plus = screen.getByRole("link", { name: "Novo contrato" });

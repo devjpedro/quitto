@@ -24,7 +24,9 @@ const unreadCount = (home: Home) => home.unreadCount;
 /** The sidebar's numbers: what needs you now and the active contracts. */
 const navCounts = (home: Home): NavCounts => ({
   contracts: home.activeContractsCount,
+  installments: home.monthInstallmentsCount,
   now: home.actions.length,
+  people: home.peopleCount,
 });
 
 /** The milestone of the moment with the home's today, which tells a late installment from one ahead. */
@@ -35,7 +37,12 @@ const momentAndToday = (
   return milestone ? { milestone, today: home.today } : null;
 };
 
-const NO_COUNTS: NavCounts = { contracts: 0, now: 0 };
+const NO_COUNTS: NavCounts = {
+  contracts: 0,
+  installments: 0,
+  now: 0,
+  people: 0,
+};
 
 /** The sidebar's active contracts: the 5 newest from the home, and how many there are. */
 const activeContracts = (home: Home): SidebarContracts => ({
@@ -69,7 +76,7 @@ export function useMomentMilestone(): MomentView | null {
     : null;
 }
 
-/** The counts next to "Agora" and "Contratos" in the sidebar; zero until hydrated. */
+/** The counts next to the sidebar's items; zero until hydrated. */
 export function useNavCounts(): NavCounts {
   const hydrated = useHydrated();
   const { data } = useQuery({

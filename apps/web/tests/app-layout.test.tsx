@@ -79,7 +79,12 @@ vi.mock("@/components/layout/app-frame", () => ({
     detail: { actions: ReactNode; backLabel: string; backTo: string } | null;
     identity: { name: string } | null;
     moment: MomentCardView | null;
-    navCounts: { contracts: number; now: number };
+    navCounts: {
+      contracts: number;
+      installments: number;
+      now: number;
+      people: number;
+    };
     onOpenNotifications: () => void;
     unreadCount: number;
   }) => (
