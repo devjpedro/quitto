@@ -20,8 +20,9 @@ adotou "uma chave por conta" e a tela **Pessoas** precisava de um lugar para a c
 - Quem recebe **sem conta** (contato vendedor num contrato que o dono paga): vale
   `participant.pix_key`, editável pelo dono (`PATCH /contracts/:id/participants/:id/pix-key`).
 - A migration **0019** acrescentou `participant.pix_key` e copiou `contract.pix_key` para o
-  participante vendedor. A **0020** apagou `contract.pix_key`; o `PATCH /contracts/:id` só edita
-  título e descrição e o detalhe não traz mais `pixKey` nem `recebedor` (o web lê `receiver`).
+  participante vendedor. A **0020** apaga `contract.pix_key` na **contração** (PR à parte, depois do deploy do redesign);
+  nela o `PATCH /contracts/:id` passa a editar só título e descrição e o detalhe deixa de trazer `pixKey` e
+  `recebedor` (o web lê `receiver`). Desde a Fase 2 o código já ignora a chave do contrato.
 - O espectador nunca recebe a chave.
 
 ## Consequences

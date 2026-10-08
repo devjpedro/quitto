@@ -24,8 +24,9 @@ cronograma já gerado. Três modos viraram dois mais um ajuste, e `auto` e `cust
 - `auto` passou a se chamar `split`. `custom` (as linhas dentro do `schedule`) saiu: o ajuste manual
   é `installments[]` sobre um `split` ou `monthly`.
 - Um contrato ajustado à mão **não é mais "mensal fixo"**: `monthly_amount_cents` fica nulo.
-- Os modos `auto` e `custom` foram **removidos** do schema (`shared`) e da API na Fase 6 do
-  redesign; pedir um deles devolve 422. Os contratos já criados não mudam (as parcelas estão no banco).
+- Os modos `auto` e `custom` saem do schema (`shared`) e da API na **contração**, um PR à parte que só
+  entra depois do deploy do redesign (o web antigo ainda os envia); depois dela, pedir um deles devolve
+  422. Os contratos já criados não mudam (as parcelas estão no banco).
 
 ## Consequences
 

@@ -22,7 +22,7 @@ sentido dentro do app. O `wa.me` não anexa arquivo, então o WhatsApp exige um 
   (download / e-mail).
 - **Expiração desligada por padrão** (escolha do usuário), mas fácil de ligar.
 - ~~Token com revogação disponível por padrão.~~ **Removida no redesign (2026-10-08):** o dono só
-  "Compartilha recibo", que cria ou reaproveita o link. O `DELETE` e a UI de revogar saíram; a coluna
+  "Compartilha recibo", que cria ou reaproveita o link. A UI de revogar saiu e o `DELETE` sai na contração (PR à parte, depois do deploy); a coluna
   `revoked_at` e o evento `receipt_share_revoked` ficam, para que os links já revogados sigam 404
   e o histórico antigo continue legível.
 
