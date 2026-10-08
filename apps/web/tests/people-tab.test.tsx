@@ -80,17 +80,20 @@ beforeEach(() => {
 });
 
 describe("PeopleTab (mockup 14, Pessoas)", () => {
-  it("a lista: um bloco, uma linha por pessoa com a tag do papel, sem notas explicativas", () => {
+  it("a lista: um bloco, uma linha por pessoa com o papel em texto (sem tag), sem notas explicativas", () => {
     renderPeople(motoDetail());
     const list = screen.getByTestId("people-list");
     const rows = within(list).getAllByRole("listitem");
     expect(rows).toHaveLength(3);
     expect(within(rows[0] as HTMLElement).getByText("Você")).toBeVisible();
-    // One role tag per layout: on the name's line below md, at the right from md.
+    // The role is plain text at the start of the meta, once per row (mockup 20, B5).
     expect(within(rows[0] as HTMLElement).getAllByText("Recebe")).toHaveLength(
-      2
+      1
     );
-    expect(within(rows[1] as HTMLElement).getAllByText("Paga")).toHaveLength(2);
+    expect(within(rows[1] as HTMLElement).getAllByText("Paga")).toHaveLength(1);
+    expect(within(rows[1] as HTMLElement).getByText("Paga")).not.toHaveClass(
+      "rounded-full"
+    );
     expect(
       within(rows[2] as HTMLElement).getByText("Convite pendente")
     ).toBeVisible();
@@ -101,7 +104,14 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     renderPeople(motoDetail());
     await userEvent.click(screen.getByRole("button", RESEND));
     await waitFor(() => expect(resend).toHaveBeenCalledWith("p-silvia"));
-    await userEvent.click(screen.getByRole("button", COPY_LINK));
+    // "Copiar link" is no longer on the row: it lives in the ⋮.
+    expect(screen.queryByRole("button", COPY_LINK)).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ações de Sílvia Souza" })
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Copiar link do convite" })
+    );
     await waitFor(() =>
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
         "http://localhost:3001/invites/t-silvia"
@@ -360,16 +370,14 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
       "md:inline"
     );
     // The separator joins the two on one line from md; below, only a screen reader hears it.
-    expect(within(silvia).getByText("·")).toHaveClass("max-md:sr-only");
+    for (const separator of within(silvia).getAllByText("·")) {
+      expect(separator).toHaveClass("max-md:sr-only");
+    }
     expect(silvia).toHaveTextContent(
-      "silvia@demo.quitto.dev · enviado em 01/10"
+      "Acompanha · silvia@demo.quitto.dev · enviado em 01/10"
     );
-    const [onName, onRight] = within(silvia).getAllByText("Acompanha");
-    expect(onName?.parentElement).toHaveClass("md:hidden");
-    expect(onName?.closest("li > div")).toContainElement(
-      within(silvia).getByText("Sílvia Souza")
-    );
-    expect(onRight?.parentElement).toHaveClass("max-md:hidden");
+    // The role is the meta's first word, under the name, not a tag beside it.
+    expect(within(silvia).getAllByText("Acompanha")).toHaveLength(1);
   });
 
   it("com um papel só livre, o papel é dito (Tag), não oferecido", async () => {
@@ -464,7 +472,12 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
       clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
     });
     renderPeople(motoDetail());
-    await userEvent.click(screen.getByRole("button", COPY_LINK));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ações de Sílvia Souza" })
+    );
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Copiar link do convite" })
+    );
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Não deu para copiar")
     );

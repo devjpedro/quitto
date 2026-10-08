@@ -29,13 +29,14 @@ const ROLE_ICON: Record<NonNullable<PersonRowView["role"]>["icon"], Icon> = {
   watch: Eye,
 };
 
-function RoleTag({ role }: { role: NonNullable<PersonRowView["role"]> }) {
+/** The role as plain text (mockup 20, B5): the arrow and the word, at the start of the meta, never a bordered tag. */
+function RoleText({ role }: { role: NonNullable<PersonRowView["role"]> }) {
   const RoleIcon = ROLE_ICON[role.icon];
   return (
-    <Tag>
-      <RoleIcon aria-hidden="true" size={12.5} />
+    <span className="inline-flex items-center gap-1 font-medium text-ink">
+      <RoleIcon aria-hidden="true" size={13} />
       {role.text}
-    </Tag>
+    </span>
   );
 }
 
@@ -45,26 +46,36 @@ function RoleTag({ role }: { role: NonNullable<PersonRowView["role"]> }) {
  * an ellipsis (whole in its title) instead of broken mid-word. The separator
  * stays for a screen reader there.
  */
-function PersonMeta({ meta }: { meta: NonNullable<PersonRowView["meta"]> }) {
+function PersonMeta({
+  meta,
+  role,
+}: {
+  meta: PersonRowView["meta"];
+  role: PersonRowView["role"];
+}) {
   return (
     <p className="text-[12.5px] text-ink-muted md:truncate">
-      {meta.email ? (
+      {role ? <RoleText role={role} /> : null}
+      {role && meta ? (
+        <span className="max-md:sr-only"> {m.contract_sep()} </span>
+      ) : null}
+      {meta?.email ? (
         <span className="block truncate md:inline" title={meta.email}>
           {meta.email}
         </span>
       ) : null}
-      {meta.email && meta.note ? (
+      {meta?.email && meta.note ? (
         <span className="max-md:sr-only"> {m.contract_sep()} </span>
       ) : null}
-      {meta.note ? <span className="block md:inline">{meta.note}</span> : null}
+      {meta?.note ? <span className="block md:inline">{meta.note}</span> : null}
     </p>
   );
 }
 
 /**
- * One person in Pessoas (mockup 14): the face, the name with its tag, the
- * e-mail and since-when under it, the invite's actions (the owner's), the
- * role as a tag and the owner's "⋯" to remove. On a phone the role's tag
+ * One person in Pessoas (mockup 20, B5): the face, the name with its state tag, the
+ * role as text and the e-mail and since-when under it, "Reenviar" as the
+ * only visible action (a pending invite's) and the owner's "⋮" with the rest. On a phone the role's tag
  * joins the name's line, so the e-mail has the whole width (cut with an
  * ellipsis, never broken mid-word) and since-when goes under it; the actions
  * drop to a line of their own.
@@ -85,8 +96,10 @@ export function PersonRow({
   const [confirming, setConfirming] = useState(false);
   const menuRef = useRef<HTMLButtonElement>(null);
   const inviteUrl = person.invite?.url ?? null;
+  const copyLink = view.actions.includes("copy_link");
 
-  const removeControls = view.removable ? (
+  const hasMenu = view.removable || (copyLink && inviteUrl !== null);
+  const removeControls = hasMenu ? (
     <>
       <Menu
         label={m.people_row_actions({ name: person.displayName })}
@@ -98,13 +111,23 @@ export function PersonRow({
           />
         }
       >
-        <MenuItem
-          icon={UserMinus}
-          onSelect={() => setConfirming(true)}
-          tone="danger"
-        >
-          {m.people_remove()}
-        </MenuItem>
+        {copyLink && inviteUrl ? (
+          <MenuItem
+            icon={Link}
+            onSelect={() => copy(inviteUrl, m.people_link_copied())}
+          >
+            {m.people_copy_link()}
+          </MenuItem>
+        ) : null}
+        {view.removable ? (
+          <MenuItem
+            icon={UserMinus}
+            onSelect={() => setConfirming(true)}
+            tone="danger"
+          >
+            {m.people_remove()}
+          </MenuItem>
+        ) : null}
       </Menu>
       <ConfirmDialog
         cancelLabel={m.contract_cancel()}
@@ -131,7 +154,7 @@ export function PersonRow({
   ) : null;
   // Keeps the role tags on one edge between the removable rows and the owner's.
   const ownerSpacer =
-    viewerIsOwner && !view.removable ? (
+    viewerIsOwner && !hasMenu ? (
       <span aria-hidden="true" className="size-9 shrink-0 max-md:hidden" />
     ) : null;
 
@@ -151,42 +174,24 @@ export function PersonRow({
               {view.tag.text}
             </Tag>
           ) : null}
-          {view.role ? (
-            <span className="md:hidden">
-              <RoleTag role={view.role} />
-            </span>
-          ) : null}
         </div>
-        {view.meta ? <PersonMeta meta={view.meta} /> : null}
+        {view.meta || view.role ? (
+          <PersonMeta meta={view.meta} role={view.role} />
+        ) : null}
       </div>
-      {view.actions.length > 0 ? (
+      {view.actions.includes("resend") ? (
         <div className="flex items-center gap-1 max-md:order-last max-md:basis-full max-md:pl-[54px]">
-          {view.actions.includes("resend") ? (
-            <Button
-              aria-label={m.people_resend_label()}
-              disabled={resend.isPending}
-              onClick={() => resend.mutate(person.id)}
-              size="sm"
-              variant="inset"
-            >
-              <PaperPlaneTilt aria-hidden="true" size={16} />
-              {m.people_resend()}
-            </Button>
-          ) : null}
-          {view.actions.includes("copy_link") && inviteUrl ? (
-            <IconButton
-              className="bg-surface-inset hover:bg-surface-inset-hover"
-              icon={Link}
-              label={m.people_copy_link()}
-              onClick={() => copy(inviteUrl, m.people_link_copied())}
-            />
-          ) : null}
+          <Button
+            aria-label={m.people_resend_label()}
+            disabled={resend.isPending}
+            onClick={() => resend.mutate(person.id)}
+            size="sm"
+            variant="inset"
+          >
+            <PaperPlaneTilt aria-hidden="true" size={16} />
+            {m.people_resend()}
+          </Button>
         </div>
-      ) : null}
-      {view.role ? (
-        <span className="flex max-md:hidden md:w-[116px] md:justify-end">
-          <RoleTag role={view.role} />
-        </span>
       ) : null}
       {removeControls}
       {ownerSpacer}
