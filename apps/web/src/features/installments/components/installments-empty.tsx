@@ -1,8 +1,10 @@
-import { CalendarBlank, FunnelSimple } from "@phosphor-icons/react";
+import { CalendarBlank, FunnelSimple, Plus } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { EmptyStage } from "@/components/ui/empty-stage";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TourButton } from "@/features/tour/components/tour-button";
 import { formatMonthName } from "@/lib/locale-format";
 import { m } from "@/paraglide/messages.js";
 import { shiftMonth } from "../lib/month-range";
@@ -30,16 +32,22 @@ export function InstallmentsEmpty({
   let body: React.ReactNode;
   if (!hasContracts) {
     body = (
-      <EmptyState
-        action={
-          <Button asChild size="sm" variant="inset">
-            <Link to="/contracts/new">{m.nav_new_contract()}</Link>
-          </Button>
+      <EmptyStage
+        actions={
+          <>
+            <Button asChild>
+              <Link to="/contracts/new">
+                <Plus aria-hidden="true" size={16} weight="bold" />
+                {m.nav_new_contract()}
+              </Link>
+            </Button>
+            <TourButton />
+          </>
         }
         description={m.installments_empty_none_description()}
         icon={CalendarBlank}
+        state="new"
         title={m.installments_empty_none_title()}
-        variant="compact"
       />
     );
   } else if (filtered) {
@@ -61,18 +69,18 @@ export function InstallmentsEmpty({
     const target = goBack ? undefined : shiftMonth(month, 1);
     const targetName = formatMonthName(target ?? currentMonth, locale);
     body = (
-      <EmptyState
-        action={
-          <Button onClick={() => onMonth(target)} size="sm" variant="inset">
+      <EmptyStage
+        actions={
+          <Button onClick={() => onMonth(target)} variant="inset">
             {goBack
               ? m.installments_empty_back({ month: targetName })
               : m.installments_empty_next({ month: targetName })}
           </Button>
         }
-        description=""
+        description={m.installments_empty_clear_description()}
         icon={CalendarBlank}
-        title={m.installments_empty_month_title({ month: name })}
-        variant="compact"
+        state="done"
+        title={m.installments_empty_clear_title({ month: name })}
       />
     );
   }

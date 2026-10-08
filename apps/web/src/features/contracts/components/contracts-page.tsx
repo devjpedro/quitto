@@ -43,8 +43,10 @@ function ContractsContent({ onEmpty }: { onEmpty: (empty: boolean) => void }) {
       ) : null}
       {cards.length === 0 ? (
         <ContractsEmpty
+          doneCount={counts.done}
           hasContracts={data.length > 0}
           onShowAll={() => change({ ...search, side: undefined })}
+          onShowDone={() => change({ ...search, show: "done" })}
           search={search}
         />
       ) : (

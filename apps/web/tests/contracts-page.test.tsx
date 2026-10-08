@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ContractsPage } from "@/features/contracts/components/contracts-page";
+import { tourStore } from "@/features/tour/lib/tour-store";
 import { listItem } from "./contracts-fixtures";
 import { renderWithProviders } from "./test-utils";
 
@@ -102,12 +103,29 @@ describe("ContractsPage", () => {
     expect(screen.queryByText(TO_PAY)).toBeNull();
   });
 
-  it("sem contratos: os contornos e Novo contrato", async () => {
+  it("sem contratos: o palco sem cartão fantasma, Novo contrato e o tour", async () => {
     await renderPage([]);
-    expect(await screen.findByText("Seus acordos aparecem aqui")).toBeVisible();
+    expect(await screen.findByText("Nenhum contrato ainda")).toBeVisible();
     expect(screen.getAllByRole("link", { name: "Novo contrato" })).toHaveLength(
       1
     );
+    // The tour starts from the empty state of a new account.
+    await userEvent.click(screen.getByRole("button", { name: "Fazer o tour" }));
+    expect(tourStore.isOpen()).toBe(true);
+    tourStore.close();
+  });
+
+  it("tudo quitado: o anel cheio com ✓ diz que é o fim, e Ver concluídos abre a aba", async () => {
+    const { container } = await renderPage([DONE]);
+    expect(await screen.findByText("Nenhum contrato ativo")).toBeVisible();
+    expect(
+      screen.getByText("Todos os seus contratos foram quitados.")
+    ).toBeVisible();
+    expect(container.querySelector(".border-dashed")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ver concluídos" })
+    );
+    expect(nav.search).toMatchObject({ show: "done" });
   });
 
   it("o valor da célula não corta: o R$ vai pequeno e o número inteiro", async () => {

@@ -150,11 +150,13 @@ describe("PeoplePage", () => {
     expect(totals.getByText("R$ 2.000,00")).toBeVisible();
   });
 
-  it("sem pessoas: o vazio com Ir para contratos", async () => {
+  it("sem pessoas: o vazio com Novo contrato e o tour", async () => {
     renderPage([]);
-    expect(await screen.findByText("Só você por enquanto")).toBeVisible();
-    expect(
-      screen.getByRole("link", { name: "Ir para contratos" })
-    ).toBeVisible();
+    expect(await screen.findByText("Ninguém por aqui ainda")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Novo contrato" })).toHaveAttribute(
+      "href",
+      "/contracts/new"
+    );
+    expect(screen.getByRole("button", { name: "Fazer o tour" })).toBeVisible();
   });
 });

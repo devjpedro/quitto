@@ -280,6 +280,35 @@
 }
 
 /*
+ * The empty states' stage (mockup 20, B8): the wizard's dots, fading out
+ * around the centre. Decorative texture, behind the content.
+ */
+.empty-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle,
+    var(--dots) 1.05px,
+    transparent 1.5px
+  );
+  background-position: 7px 7px;
+  background-size: 14px 14px;
+  border-radius: inherit;
+  mask-image: radial-gradient(
+    ellipse 70% 80% at 50% 45%,
+    #000 30%,
+    transparent 85%
+  );
+}
+
+.empty-stage > * {
+  position: relative;
+}
+
+/*
  * The preview card is the raised layer in dark (#2E2F2A), so its list goes
  * one step down (#242521) and the tiles inside it back up (mockup 15 §4).
  * In light the card is white and the usual card/inset steps already fit.

@@ -406,7 +406,7 @@ describe("seções do home", () => {
     );
     const region = screen.getByRole("region", { name: "Próximos 30 dias" });
     expect(region).toHaveAttribute("id", UPCOMING_SECTION_ID);
-    expect(screen.getByText("Nada pendente agora")).toBeVisible();
+    expect(screen.getByText("Tudo em dia")).toBeVisible();
     expect(
       screen.getByText(
         "A próxima parcela é Aluguel do apê, em 12 dias (R$ 1.250,00)."
@@ -431,7 +431,7 @@ describe("seções do home", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("vazio: contorno do cartão de ação, uma frase e Novo contrato", () => {
+  it("vazio: sem cartão fantasma tracejado, o anel só com o trilho, uma frase, Novo contrato e o tour", () => {
     const { container } = renderWithProviders(<HomeEmpty />);
     expect(
       screen.getByRole("heading", { name: "Suas pendências aparecem aqui" })
@@ -440,10 +440,10 @@ describe("seções do home", () => {
       "href",
       "/contracts/new"
     );
-    // The first outline ends with the two button outlines of an action card.
-    expect(
-      container.querySelectorAll(".rounded-control.border-dashed")
-    ).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Fazer o tour" })).toBeVisible();
+    // No ghost card: nothing dashed. The anchor is the ring's track, with no arc.
+    expect(container.querySelector(".border-dashed")).toBeNull();
+    expect(container.querySelectorAll("svg circle")).toHaveLength(1);
   });
 
   it("guia: próximo passo no cartão verde, checklist com o feito riscado e dispensar", async () => {
@@ -487,7 +487,8 @@ describe("seções do home", () => {
     });
     expect(heroCta).toHaveAttribute("href", "/contracts/new");
     // From lg the green card stretches to the checklist: the action sits at its foot (mockup 09).
-    expect(heroCta).toHaveClass("lg:mt-auto");
+    expect(heroCta.closest("div")).toHaveClass("lg:mt-auto");
+    expect(screen.getByRole("button", { name: "Fazer o tour" })).toBeVisible();
     // Side by side only from lg: with the sidebar, md leaves the checklist too narrow.
     const guide = screen.getByRole("region", {
       name: "Cadastre o primeiro acordo que você quer acompanhar.",

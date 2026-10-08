@@ -142,10 +142,10 @@ describe("HomePage", () => {
     ).toBeNull();
   });
 
-  it("sem ação e com contrato: Nada pendente agora, e os 30 dias continuam", async () => {
+  it("sem ação e com contrato: Tudo em dia, e os 30 dias continuam", async () => {
     getHome.mockResolvedValue({ data: homeFixture(), error: null });
     renderHome();
-    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    expect(await screen.findByText("Tudo em dia")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "Próximos 30 dias" })
     ).toBeVisible();
@@ -171,7 +171,7 @@ describe("HomePage", () => {
         name: "Cadastre o primeiro acordo que você quer acompanhar.",
       })
     ).toBeVisible();
-    expect(screen.queryByText("Nada pendente agora")).toBeNull();
+    expect(screen.queryByText("Tudo em dia")).toBeNull();
   });
 
   it("pelo teclado: quando sai a última ação, o foco vai para o resumo e não cai no body", async () => {
@@ -188,8 +188,8 @@ describe("HomePage", () => {
     await userEvent.tab(); // "Já paguei"
     expect(document.activeElement).toBe(markPaidButton);
     await userEvent.keyboard("{Enter}");
-    // The list leaves with its last card (optimistic), and "Nada pendente agora" takes its place.
-    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    // The list leaves with its last card (optimistic), and "Tudo em dia" takes its place.
+    expect(await screen.findByText("Tudo em dia")).toBeVisible();
     expect(
       screen.queryByRole("region", { name: "O que fazer agora" })
     ).toBeNull();
@@ -257,7 +257,7 @@ describe("HomePage", () => {
         })
       ).toBeVisible();
       release();
-      expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+      expect(await screen.findByText("Tudo em dia")).toBeVisible();
       expect(document.activeElement).toBe(
         screen.getByText(NOTHING_PENDING).closest("p") as HTMLElement
       );
@@ -281,7 +281,7 @@ describe("HomePage", () => {
     shortcut.focus();
     expect(document.activeElement).toBe(shortcut);
     client.setQueryData(queryKeys.home, homeFixture());
-    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    expect(await screen.findByText("Tudo em dia")).toBeVisible();
     expect(document.activeElement).toBe(shortcut);
     shortcut.remove();
   });
@@ -298,7 +298,7 @@ describe("HomePage", () => {
     expect(document.activeElement).toBe(document.body);
     // A refetch on returning to the tab: the other party already paid.
     client.setQueryData(queryKeys.home, homeFixture());
-    expect(await screen.findByText("Nada pendente agora")).toBeVisible();
+    expect(await screen.findByText("Tudo em dia")).toBeVisible();
     expect(document.activeElement).toBe(document.body);
   });
 

@@ -1,6 +1,7 @@
 import { Plus } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
+import { TourButton } from "@/features/tour/components/tour-button";
 import { m } from "@/paraglide/messages.js";
 import {
   type HeroStepId,
@@ -75,19 +76,18 @@ export function GuideHero({
         </span>
       </div>
       {target ? (
-        <Button
-          asChild
-          className="mt-2 self-start lg:mt-auto"
-          variant="onBrand"
-        >
-          <StepLink target={target}>
-            {/* The bold ＋ belongs to "new contract" only: a Pix key or reminders are not "add". */}
-            {next === "contract" ? (
-              <Plus aria-hidden="true" size={16} weight="bold" />
-            ) : null}
-            {copy.cta()}
-          </StepLink>
-        </Button>
+        <div className="mt-2 flex flex-wrap items-center gap-2 lg:mt-auto">
+          <Button asChild variant="onBrand">
+            <StepLink target={target}>
+              {/* The bold ＋ belongs to "new contract" only: a Pix key or reminders are not "add". */}
+              {next === "contract" ? (
+                <Plus aria-hidden="true" size={16} weight="bold" />
+              ) : null}
+              {copy.cta()}
+            </StepLink>
+          </Button>
+          {next === "contract" ? <TourButton variant="onBrandOutline" /> : null}
+        </div>
       ) : null}
     </div>
   );
