@@ -219,8 +219,10 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       await trySendInviteEmail({
         email: normalizeEmail(body.email),
         token,
-        inviterName: user.name ?? "Alguém",
-        contractTitle: c?.title ?? "um contrato",
+        inviterId: user.id,
+        inviterName: user.name ?? "",
+        contractId: params.id,
+        contractTitle: c?.title ?? "",
         role: target.role,
       });
 
@@ -291,8 +293,10 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       await sendInviteEmail({
         email: pending.email,
         token: pending.token,
-        inviterName: user.name ?? "Alguém",
-        contractTitle: c?.title ?? "um contrato",
+        inviterId: user.id,
+        inviterName: user.name ?? "",
+        contractId: params.id,
+        contractTitle: c?.title ?? "",
         role: target?.role ?? "viewer",
       });
 

@@ -1,7 +1,14 @@
-import { formatISODateBR } from "./dates";
-import { formatCentsBRL } from "./money";
+import { type Locale, todayISO } from "@quitto/shared";
+import { env } from "../env";
+import { avatarHex, initialsOf } from "./avatar-color";
+import { formatISODate } from "./dates";
+import { EMAIL_TEXT } from "./email-text";
+import { formatCents } from "./money";
 
-const DEFAULT_FOOTER = "Se você não solicitou, ignore este e-mail.";
+export interface RenderedEmail {
+  html: string;
+  subject: string;
+}
 
 export function escapeHtml(value: string): string {
   return value
@@ -12,31 +19,37 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const BRAND = "Quitto";
-const ACCENT = "#0f766e";
+const FONT = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+const INK = "#111111";
+const MUTED = "#6F6F6A";
+const LINE = "#E9E7E1";
+const BRAND = "#1F5A32";
+const DANGER = "#B42318";
+const TILE = "#F3F2EE";
 
-function layout(
-  heading: string,
-  bodyHtml: string,
-  ctaLabel: string,
-  ctaUrl: string,
-  footerHtml = DEFAULT_FOOTER
-): string {
+function layout(args: {
+  bodyHtml: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  footerHtml: string;
+  heading: string;
+  locale: Locale;
+}): string {
   return `<!doctype html>
-<html lang="pt-BR">
-  <body style="margin:0;background:#f6f5f1;font-family:Arial,Helvetica,sans-serif;color:#3a352e">
+<html lang="${args.locale}">
+  <body style="margin:0;background:#E6E4DD;font-family:${FONT};color:${INK}">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px">
       <tr><td align="center">
-        <table role="presentation" width="100%" style="max-width:480px;background:#fff;border-radius:12px;padding:32px">
-          <tr><td>
-            <p style="font-size:18px;font-weight:700;color:${ACCENT};margin:0 0 24px">${BRAND}</p>
-            <h1 style="font-size:20px;margin:0 0 12px">${heading}</h1>
-            ${bodyHtml}
-            <p style="margin:24px 0">
-              <a href="${escapeHtml(ctaUrl)}" style="background:${ACCENT};color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">${ctaLabel}</a>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border-radius:20px">
+          <tr><td style="padding:32px">
+            <img src="${escapeHtml(env.WEB_ORIGIN)}/icon-192.png" width="40" height="40" alt="Quitto" style="display:block;border-radius:10px;margin:0 0 24px">
+            <h1 style="font-size:22px;line-height:1.25;font-weight:700;color:${INK};margin:0 0 12px">${args.heading}</h1>
+            ${args.bodyHtml}
+            <p style="margin:24px 0 0">
+              <a href="${escapeHtml(args.ctaUrl)}" style="background:${INK};color:#FFFFFF;font-weight:600;text-decoration:none;padding:14px 22px;border-radius:10px;display:inline-block">${args.ctaLabel}</a>
             </p>
-            <p style="font-size:12px;color:#8a8378;margin:24px 0 0">${footerHtml}</p>
           </td></tr>
+          <tr><td style="padding:16px 32px 24px;border-top:1px solid ${LINE};font-size:12px;line-height:1.5;color:${MUTED}">${args.footerHtml}</td></tr>
         </table>
       </td></tr>
     </table>
@@ -44,46 +57,111 @@ function layout(
 </html>`;
 }
 
-export function resetPasswordEmail(resetUrl: string): {
-  subject: string;
-  html: string;
-} {
+const P = `font-size:15px;line-height:1.5;color:${INK};margin:0`;
+const PS = `font-size:14px;line-height:1.5;color:${MUTED};margin:12px 0 0`;
+
+export function resetPasswordEmail(
+  resetUrl: string,
+  locale: Locale
+): RenderedEmail {
+  const t = EMAIL_TEXT[locale];
   return {
-    subject: "Redefinir sua senha no Quitto",
-    html: layout(
-      "Redefinir senha",
-      '<p style="margin:0">Recebemos um pedido para redefinir a senha da sua conta. Clique no botão abaixo para criar uma nova senha.</p>',
-      "Redefinir senha",
-      resetUrl
-    ),
+    subject: t.reset.subject,
+    html: layout({
+      locale,
+      heading: t.reset.heading,
+      bodyHtml: `<p style="${P}">${t.reset.body}</p>`,
+      ctaLabel: t.reset.cta,
+      ctaUrl: resetUrl,
+      footerHtml: t.footerDefault,
+    }),
   };
 }
 
-export function verificationEmail(verifyUrl: string): {
-  subject: string;
-  html: string;
-} {
+export function verificationEmail(
+  verifyUrl: string,
+  locale: Locale
+): RenderedEmail {
+  const t = EMAIL_TEXT[locale];
   return {
-    subject: "Verifique seu e-mail no Quitto",
-    html: layout(
-      "Confirme seu e-mail",
-      '<p style="margin:0">Falta pouco! Confirme seu e-mail para começar a usar o Quitto.</p>',
-      "Verificar e-mail",
-      verifyUrl
-    ),
+    subject: t.verify.subject,
+    html: layout({
+      locale,
+      heading: t.verify.heading,
+      bodyHtml: `<p style="${P}">${t.verify.body}</p>`,
+      ctaLabel: t.verify.cta,
+      ctaUrl: verifyUrl,
+      footerHtml: t.footerDefault,
+    }),
   };
+}
+
+/** The conditions the invite carries (from loadInviteTerms): the count, the one amount (null when they differ), the total and the first due date. */
+export interface InviteEmailTerms {
+  amountCents: number | null;
+  firstDueDate: string | null;
+  installmentsCount: number;
+  totalCents: number;
+}
+
+function inviterAvatar(name: string): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px"><tr><td width="36" height="36" align="center" valign="middle" style="width:36px;height:36px;border-radius:18px;background:${avatarHex(name)};color:#FFFFFF;font-size:13px;font-weight:600;line-height:36px">${escapeHtml(initialsOf(name))}</td></tr></table>`;
+}
+
+function termsLine(
+  terms: InviteEmailTerms | undefined,
+  locale: Locale
+): string {
+  if (!terms?.firstDueDate || terms.installmentsCount < 1) {
+    return "";
+  }
+  const t = EMAIL_TEXT[locale].invite;
+  const date = formatISODate(terms.firstDueDate, locale);
+  const text =
+    terms.amountCents === null
+      ? t.termsUneven({
+          count: terms.installmentsCount,
+          total: formatCents(terms.totalCents, locale),
+          date,
+        })
+      : t.termsEven({
+          count: terms.installmentsCount,
+          amount: formatCents(terms.amountCents, locale),
+          date,
+        });
+  return `<p style="font-size:14px;font-weight:600;color:${INK};line-height:1.5;margin:16px 0 0;padding:12px 14px;background:${TILE};border-radius:10px">${escapeHtml(text)}</p>`;
 }
 
 export function inviteEmail(args: {
   acceptUrl: string;
-  inviterName: string;
   contractTitle: string;
-  roleLabel: string;
-}): { subject: string; html: string } {
-  const body = `<p style="margin:0"><strong>${args.inviterName}</strong> convidou você para o contrato <strong>${args.contractTitle}</strong> como <strong>${args.roleLabel}</strong> no Quitto.</p><p style="margin:12px 0 0;color:#8a8378;font-size:14px">Acesse para aceitar. Se ainda não tem conta, é rápido criar uma com este e-mail.</p>`;
+  inviterName: string;
+  locale: Locale;
+  role: string; // "buyer" | "seller" | "viewer"
+  terms?: InviteEmailTerms;
+}): RenderedEmail {
+  const t = EMAIL_TEXT[args.locale];
+  const roleWord =
+    (t.roles as Record<string, string>)[args.role] ?? t.roles.viewer;
+  const body = `${inviterAvatar(args.inviterName)}<p style="${P}">${t.invite.body(
+    {
+      inviter: escapeHtml(args.inviterName),
+      title: escapeHtml(args.contractTitle),
+      role: roleWord,
+    }
+  )}</p>${termsLine(args.terms, args.locale)}<p style="${PS}">${t.invite.hint}</p>`;
   return {
-    subject: "Convite para um contrato no Quitto",
-    html: layout("Você foi convidado", body, "Ver convite", args.acceptUrl),
+    subject: t.invite.subject({
+      inviter: args.inviterName.replace(/\s+/g, " ").trim(),
+    }),
+    html: layout({
+      locale: args.locale,
+      heading: t.invite.heading,
+      bodyHtml: body,
+      ctaLabel: t.invite.cta,
+      ctaUrl: args.acceptUrl,
+      footerHtml: t.footerDefault,
+    }),
   };
 }
 
@@ -97,44 +175,77 @@ export interface ReminderEmailItem {
   sequence: number;
 }
 
-function itemWhen(i: ReminderEmailItem): string {
-  return i.overdue
-    ? `venceu em ${formatISODateBR(i.dueDate)}`
-    : `vence em ${formatISODateBR(i.dueDate)}`;
+function monthShort(iso: string, locale: Locale): string {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  return new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" })
+    .format(new Date(Date.UTC(y, m - 1, d)))
+    .replace(".", "")
+    .toUpperCase();
+}
+
+function reminderRow(
+  i: ReminderEmailItem,
+  locale: Locale,
+  today: string,
+  last: boolean
+): string {
+  const t = EMAIL_TEXT[locale].reminder;
+  const day = Number(i.dueDate.slice(8, 10));
+  const when = i.overdue
+    ? t.overdueSince({ date: formatISODate(i.dueDate, locale) })
+    : t.dueOn({ date: formatISODate(i.dueDate, locale) });
+  let tag = "";
+  if (i.overdue) {
+    tag = `<span style="color:${DANGER};font-weight:600">${t.overdueTag}</span> · `;
+  } else if (i.dueDate === today) {
+    tag = `<span style="color:${BRAND};font-weight:600">${t.dueToday}</span> · `;
+  }
+  const direction = i.direction === "pay" ? t.pay : t.receive;
+  const border = last ? "" : `border-bottom:1px solid ${LINE};`;
+  return `<tr>
+    <td width="44" valign="top" style="padding:12px 12px 12px 0;${border}"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="44" height="44" align="center" valign="middle" style="width:44px;height:44px;border-radius:10px;background:${TILE};text-align:center"><span style="display:block;font-size:17px;font-weight:700;line-height:20px;color:${INK}">${day}</span><span style="display:block;font-size:10px;font-weight:600;line-height:12px;color:${MUTED}">${escapeHtml(monthShort(i.dueDate, locale))}</span></td></tr></table></td>
+    <td valign="top" style="padding:12px 0;${border}"><a href="${escapeHtml(i.contractUrl)}" style="color:${BRAND};font-size:15px;font-weight:600;text-decoration:none">${escapeHtml(i.contractTitle)}</a><br><span style="font-size:13px;line-height:1.6;color:${MUTED}">${tag}${t.installment({ n: i.sequence })} · ${formatCents(i.amountCents, locale)} · ${when} · ${direction}</span></td>
+  </tr>`;
 }
 
 export function reminderDigestEmail(args: {
   homeUrl: string;
   items: ReminderEmailItem[];
+  locale: Locale;
   name: string;
   settingsUrl: string;
-}): { subject: string; html: string } {
+  today?: string;
+}): RenderedEmail {
+  const t = EMAIL_TEXT[args.locale].reminder;
+  const today = args.today ?? todayISO();
   const [first] = args.items;
-  const subjectTitle = first?.contractTitle.replace(/\s+/g, " ").trim();
-  const subject =
-    args.items.length === 1 && first
-      ? `Lembrete: parcela ${first.sequence} de ${subjectTitle} ${
-          first.overdue
-            ? "está vencida"
-            : `vence em ${formatISODateBR(first.dueDate)}`
-        }`
-      : `Você tem ${args.items.length} lembretes de parcelas no Quitto`;
+  const subjectTitle = first?.contractTitle.replace(/\s+/g, " ").trim() ?? "";
+  let subject = t.subjectMany({ count: args.items.length });
+  if (args.items.length === 1 && first) {
+    subject = first.overdue
+      ? t.subjectOverdue({ n: first.sequence, title: subjectTitle })
+      : t.subjectDue({
+          n: first.sequence,
+          title: subjectTitle,
+          date: formatISODate(first.dueDate, args.locale),
+        });
+  }
   const rows = args.items
-    .map(
-      (i) =>
-        `<li style="margin:0 0 8px"><a href="${escapeHtml(i.contractUrl)}" style="color:${ACCENT}">${escapeHtml(i.contractTitle)}</a> · parcela ${i.sequence} · ${formatCentsBRL(i.amountCents)} · ${itemWhen(i)} <span style="color:#8a8378">(${i.direction === "pay" ? "a pagar" : "a receber"})</span></li>`
+    .map((i, idx) =>
+      reminderRow(i, args.locale, today, idx === args.items.length - 1)
     )
     .join("");
-  const body = `<p style="margin:0 0 12px">Olá, ${escapeHtml(args.name)}. Estas parcelas pedem sua atenção:</p><ul style="margin:0;padding-left:18px">${rows}</ul>`;
-  const footer = `Você recebe estes e-mails porque ativou lembretes por e-mail. <a href="${escapeHtml(args.settingsUrl)}" style="color:#8a8378">Desativar</a>`;
+  const body = `<p style="${P};margin-bottom:8px">${t.intro({ name: escapeHtml(args.name) })}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`;
+  const footer = `${t.footer} <a href="${escapeHtml(args.settingsUrl)}" style="color:${MUTED}">${t.optOut}</a>`;
   return {
     subject,
-    html: layout(
-      "Lembretes de parcelas",
-      body,
-      "Abrir o Quitto",
-      args.homeUrl,
-      footer
-    ),
+    html: layout({
+      locale: args.locale,
+      heading: t.heading,
+      bodyHtml: body,
+      ctaLabel: t.cta,
+      ctaUrl: args.homeUrl,
+      footerHtml: footer,
+    }),
   };
 }

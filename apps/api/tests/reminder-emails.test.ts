@@ -81,6 +81,24 @@ describe("e-mail de lembrete na varredura", () => {
   );
 
   it(
+    "cada pessoa recebe no idioma da conta; sem idioma, pt-BR",
+    async () => {
+      const en = await userWithOverdueContract("rem-en", true);
+      const none = await userWithOverdueContract("rem-none", true);
+      await db.update(user).set({ locale: "en-US" }).where(eq(user.email, en));
+      const r = recorder();
+      await runReminderSweep({ emailEnabled: true, send: r.send, webOrigin });
+      expect(r.sent.find((s) => s.to === en)?.html).toContain(
+        '<html lang="en-US">'
+      );
+      expect(r.sent.find((s) => s.to === none)?.html).toContain(
+        '<html lang="pt-BR">'
+      );
+    },
+    SWEEP_TIMEOUT_MS
+  );
+
+  it(
     "ligada + opt-out → nenhum envio",
     async () => {
       const email = await userWithOverdueContract("rem-out", false);

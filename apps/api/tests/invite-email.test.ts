@@ -14,7 +14,7 @@ mock.module("../src/lib/mailer", () => ({
 const { app } = await import("../src/app");
 const { signUpCookie, uniqueEmail } = await import("./helpers/auth");
 const { db } = await import("../src/db/client");
-const { invite } = await import("../src/db/schema");
+const { invite, user } = await import("../src/db/schema");
 const { eq } = await import("drizzle-orm");
 
 async function createContract(cookie: string): Promise<string> {
@@ -220,5 +220,60 @@ describe("invite email", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]?.to).toBe(guestEmail);
     expect(sent[0]?.html).toContain("/invites/");
+  });
+
+  async function inviteTo(
+    cookie: string,
+    contractId: string,
+    guestEmail: string
+  ): Promise<void> {
+    const add = await app.handle(
+      new Request(`http://localhost/api/contracts/${contractId}/participants`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({ displayName: "Convidado", role: "seller" }),
+      })
+    );
+    const { id: participantId } = await add.json();
+    sent.length = 0;
+    await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/participants/${participantId}/invite`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({ email: guestEmail }),
+        }
+      )
+    );
+  }
+
+  it("o convite para um e-mail com conta sai no idioma dessa conta", async () => {
+    const owner = await signUpCookie(uniqueEmail("owner-pt"));
+    const contractId = await createContract(owner);
+    const guestEmail = uniqueEmail("guest-en");
+    await signUpCookie(guestEmail);
+    await db
+      .update(user)
+      .set({ locale: "en-US" })
+      .where(eq(user.email, guestEmail));
+    await inviteTo(owner, contractId, guestEmail);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.html).toContain('<html lang="en-US">');
+    expect(sent[0]?.html).toContain("the payee");
+    expect(sent[0]?.html).toContain("3 installments of R$10.00");
+  });
+
+  it("sem conta, no idioma de quem convidou", async () => {
+    const ownerEmail = uniqueEmail("owner-en");
+    const owner = await signUpCookie(ownerEmail);
+    await db
+      .update(user)
+      .set({ locale: "en-US" })
+      .where(eq(user.email, ownerEmail));
+    const contractId = await createContract(owner);
+    await inviteTo(owner, contractId, uniqueEmail("guest-none"));
+    expect(sent[0]?.html).toContain('<html lang="en-US">');
+    expect(sent[0]?.subject).toContain("invited you to a contract");
   });
 });

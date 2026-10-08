@@ -135,6 +135,8 @@ for (const locale of ["pt-BR", "en-US"]) {
   }, testInfo) => {
     await signup(page);
     await seedEveryPair(page);
+    // Signing up saves the language of the request on the account, and the account wins over the cookie.
+    await page.request.patch("/api/me", { data: { locale } });
     await page
       .context()
       .addCookies([{ name: "locale", value: locale, url: WEB }]);

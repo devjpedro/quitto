@@ -107,7 +107,9 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       const sent = await trySendInviteEmail({
         email: created.invite.email,
         token: created.invite.token,
-        inviterName: user.name ?? "Alguém",
+        inviterId: user.id,
+        inviterName: user.name ?? "",
+        contractId: created.id,
         contractTitle: input.title,
         role: created.invite.role,
       });
