@@ -5,8 +5,10 @@ import { db } from "../db/client";
 import { installment, receiptShare } from "../db/schema";
 import { recordEvent } from "../lib/audit";
 import { getContractRole } from "../lib/contract-access";
+import { documentFilename } from "../lib/documents/labels";
 import { renderReceiptPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
+import { pickLocale, userLocale } from "../lib/locale";
 import { PUBLIC_HEADERS } from "../lib/public-headers";
 import {
   findActiveShare,
@@ -16,7 +18,7 @@ import {
 } from "../lib/receipt-share";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
-import { pdfResponse, slug } from "./documents";
+import { pdfResponse } from "./documents";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -158,7 +160,7 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
   .get(
     "/public/receipts/:token",
     async ({ params, set }) => {
-      const model = await resolveOrNoStore(params.token, set);
+      const { model } = await resolveOrNoStore(params.token, set);
       return toPublicReceipt(model);
     },
     { params: t.Object({ token: t.String() }) }
@@ -166,10 +168,18 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
   .get(
     "/public/receipts/:token/receipt.pdf",
     async ({ params, set }) => {
-      const model = await resolveOrNoStore(params.token, set);
+      const { model, ownerId } = await resolveOrNoStore(params.token, set);
+      // The page speaks the visitor's language; the PDF the owner's.
+      const locale = pickLocale(await userLocale(ownerId));
       const res = pdfResponse(
-        await renderReceiptPdf(model),
-        `recibo-${slug(model.contractTitle)}-parcela-${model.sequence}.pdf`
+        await renderReceiptPdf(model, locale),
+        documentFilename({
+          ext: "pdf",
+          kind: "receipt",
+          locale,
+          sequence: model.sequence,
+          title: model.contractTitle,
+        })
       );
       for (const [k, v] of Object.entries(PUBLIC_HEADERS)) {
         res.headers.set(k, v);

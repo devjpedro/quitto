@@ -4,7 +4,6 @@ import {
   addDays,
   endOfMonth,
   formatISODate,
-  formatISODateBR,
   toISODate,
 } from "../src/lib/dates";
 
@@ -35,12 +34,6 @@ describe("addMonths", () => {
 
   it("rolls over the year", () => {
     expect(toISODate(addMonths("2026-12-10", 2))).toBe("2027-02-10");
-  });
-});
-
-describe("formatISODateBR", () => {
-  it("formats ISO as DD/MM/YYYY", () => {
-    expect(formatISODateBR("2026-07-10")).toBe("10/07/2026");
   });
 });
 

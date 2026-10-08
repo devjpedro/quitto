@@ -21,12 +21,6 @@ export function toISODate(iso: string): string {
   return iso;
 }
 
-/** Formats an ISO date (YYYY-MM-DD) as DD/MM/YYYY (string split, no timezone drift). */
-export function formatISODateBR(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-}
-
 const DATE_FORMATTERS = new Map<Locale, Intl.DateTimeFormat>();
 
 /** Formats an ISO date (YYYY-MM-DD) for the locale ("10/07/2026" / "07/10/2026"), no timezone drift. */

@@ -18,8 +18,3 @@ export function formatCents(cents: number, locale: Locale): string {
     .format(cents / 100)
     .replace(/[  ]/g, " ");
 }
-
-/** Brazilian shorthand, kept until the last caller moves to formatCents. */
-export function formatCentsBRL(cents: number): string {
-  return formatCents(cents, "pt-BR");
-}
