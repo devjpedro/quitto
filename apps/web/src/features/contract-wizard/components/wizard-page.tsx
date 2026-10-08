@@ -111,8 +111,12 @@ export function ContractWizardPage() {
         <AnimatePresence initial={false} mode="wait">
           <motion.div
             animate={{ opacity: 1, x: 0 }}
-            // A flex column that can shrink: the one-by-one list (Task 7) scrolls inside it from md.
-            className="flex min-h-0 flex-1 flex-col"
+            // Only the one-by-one list shrinks (it scrolls inside, from md); every other step
+            // keeps its content height, or a short screen puts the footer over the fields.
+            className={cn(
+              "flex flex-1 flex-col",
+              wizard.adjusting && "min-h-0"
+            )}
             data-testid="wizard-step"
             exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12 }}
             initial={reduced ? { opacity: 0 } : { opacity: 0, x: 12 }}

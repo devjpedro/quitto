@@ -123,6 +123,17 @@ export function nowLink(page: Page): Locator {
 
 /** axe with the WCAG 2.2 AA tags: no violation on the page as it is now. */
 export async function scan(page: Page): Promise<void> {
+  // A fade still running reads as low contrast (the wizard rail fades in): wait out the finite ones.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getComputedTiming().iterations ===
+            Number.POSITIVE_INFINITY
+      )
+  );
   const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   expect(results.violations).toEqual([]);
 }
