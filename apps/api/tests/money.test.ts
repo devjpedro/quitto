@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { splitAmount } from "@quitto/shared";
-import { formatCentsBRL } from "../src/lib/money";
+import { formatCents, formatCentsBRL } from "../src/lib/money";
+
+const NBSP = /[\u00a0\u202f]/;
 
 describe("splitAmount", () => {
   it("splits evenly when divisible", () => {
@@ -29,5 +31,13 @@ describe("formatCentsBRL", () => {
   });
   it("formats zero", () => {
     expect(formatCentsBRL(0)).toBe("R$ 0,00");
+  });
+});
+
+describe("formatCents", () => {
+  it("formatCents: R$ 1.234,56 em pt-BR e R$1,234.56 em en-US, sem espaço não separável", () => {
+    expect(formatCents(123_456, "pt-BR")).toBe("R$ 1.234,56");
+    expect(formatCents(123_456, "en-US")).toBe("R$1,234.56");
+    expect(formatCents(123_456, "pt-BR")).not.toMatch(NBSP);
   });
 });

@@ -3,6 +3,7 @@ import { addMonths } from "@quitto/shared";
 import {
   addDays,
   endOfMonth,
+  formatISODate,
   formatISODateBR,
   toISODate,
 } from "../src/lib/dates";
@@ -52,5 +53,14 @@ describe("endOfMonth", () => {
     expect(endOfMonth("2026-12-05")).toBe("2026-12-31");
     expect(endOfMonth("2026-10-31")).toBe("2026-10-31");
     expect(endOfMonth("2026-04-30")).toBe("2026-04-30");
+  });
+});
+
+describe("formatISODate", () => {
+  it("formatISODate: 10/07/2026 em pt-BR e 07/10/2026 em en-US, sem cair um dia", () => {
+    expect(formatISODate("2026-07-10", "pt-BR")).toBe("10/07/2026");
+    expect(formatISODate("2026-07-10", "en-US")).toBe("07/10/2026");
+    expect(formatISODate("2026-01-01", "pt-BR")).toBe("01/01/2026");
+    expect(formatISODate("2026-01-01", "en-US")).toBe("01/01/2026");
   });
 });
