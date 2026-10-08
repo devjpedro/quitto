@@ -130,8 +130,8 @@ export function PreviewRows({
         >
           <DateTile iso={row.dueDate} locale={locale} />
           <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-center gap-2 font-medium text-[13.5px] leading-[1.3]">
-              <span className="truncate">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-medium text-[13.5px] leading-[1.3]">
+              <span className="whitespace-nowrap">
                 {m.preview_installment({
                   sequence: row.sequence,
                   count: model.count,

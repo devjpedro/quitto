@@ -14,7 +14,7 @@ import { scheduleOf } from "../lib/wizard-values";
 import { StepHeading } from "./step-heading";
 
 const GRID =
-  "grid grid-cols-[30px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2.5";
+  "grid grid-cols-[28px_minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-2.5 md:grid-cols-[30px_minmax(0,1fr)_minmax(0,1fr)]";
 
 /**
  * "Ajustar uma a uma" (mockup 15, D5/D7): a sub-screen of step 2, the
