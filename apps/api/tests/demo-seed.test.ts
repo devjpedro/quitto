@@ -7,6 +7,7 @@ import {
   type DemoContract,
   type DemoScenario,
   demoInviteToken,
+  demoReceiptToken,
   reminderDedupeKey,
   shiftMonths,
 } from "../src/lib/demo-seed-kit";
@@ -16,6 +17,7 @@ import { type HomeContractRows, partyContracts } from "../src/lib/home-parties";
 import type { InstallmentAction } from "../src/lib/home-types";
 import { computeReminders } from "../src/lib/reminders";
 
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 const T = "2026-10-03";
 const DAY_MS = 86_400_000;
 // Top-level regex literal (lint/performance/useTopLevelRegex).
@@ -421,6 +423,15 @@ describe("demoScenario: os números do mockup 13", () => {
     expect(demoInviteToken("floripa")).toBe(demoInviteToken("floripa"));
     expect(demoInviteToken("floripa")).toMatch(HEX_64);
     expect(demoInviteToken("floripa")).not.toBe(demoInviteToken("mesa"));
+  });
+});
+
+describe("demoReceiptToken", () => {
+  it("demoReceiptToken é determinístico, tem o formato do newShareToken (43 caracteres base64url) e muda com a parcela", () => {
+    expect(demoReceiptToken("moto", 1)).toBe(demoReceiptToken("moto", 1));
+    expect(demoReceiptToken("moto", 1)).toMatch(SHARE_TOKEN_RE);
+    expect(demoReceiptToken("moto", 1)).not.toBe(demoReceiptToken("moto", 2));
+    expect(demoReceiptToken("moto", 1)).not.toBe(demoReceiptToken("mesa", 1));
   });
 });
 

@@ -222,6 +222,20 @@ export function demoInviteToken(contractKey: string): string {
     .digest("hex");
 }
 
+/**
+ * A demo receipt link, the same on every seed so the screenshots open the
+ * public receipt (local only). Shaped like newShareToken (43 base64url
+ * chars); e2e/scripts/capture.ts computes the same hash.
+ */
+export function demoReceiptToken(
+  contractKey: string,
+  sequence: number
+): string {
+  return createHash("sha256")
+    .update(`quitto-demo-receipt:${contractKey}:${sequence}`)
+    .digest("base64url");
+}
+
 const REMINDER_TYPES: ReadonlySet<string> = new Set([
   NOTIFICATION_TYPE.installmentDueSoon,
   NOTIFICATION_TYPE.installmentOverdue,

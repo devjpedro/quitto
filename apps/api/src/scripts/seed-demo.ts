@@ -24,9 +24,9 @@ import {
   type DemoAccountKey,
   type DemoContract,
   demoInviteToken,
+  demoReceiptToken,
   reminderDedupeKey,
 } from "../lib/demo-seed-kit";
-import { newShareToken } from "../lib/receipt-share";
 import { deleteObjects, presignUpload } from "../lib/storage";
 
 const DAY_MS = 86_400_000;
@@ -275,7 +275,7 @@ async function insertHistory(
     if (installmentId) {
       await db.insert(receiptShare).values({
         installmentId,
-        token: newShareToken(),
+        token: demoReceiptToken(ctx.spec.key, r.sequence),
         createdByUserId: ctx.ownerId,
         createdAt: new Date(r.at),
       });

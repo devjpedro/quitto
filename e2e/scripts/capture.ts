@@ -17,6 +17,10 @@ import { chromium, type Page } from "@playwright/test";
 //                        data-testid starts with <prefix> (a list's row or
 //                        card) and waits for the panel or sheet it opens;
 //   --name <label>       the label of the files (default "home");
+//   --locale pt-BR|en-US the language of the browser, the context and the
+//                        cookie (en-US files get an "-en" suffix);
+//   --receipt moto:1     opens the seed's public receipt link of that
+//                        contract and installment (use with --anon);
 //   --accept-invites     accepts the pending invites first. It changes the
 //                        database: run seed:demo again afterwards.
 const WEB = process.env.WEB_URL ?? "http://localhost:3001";
@@ -50,6 +54,7 @@ const name = arg(
 );
 let path = arg("path", "/");
 let expectedPath = new URL(path, WEB).pathname;
+const locale = arg("locale", "pt-BR");
 const sizes = arg("sizes", DEFAULT_SIZES)
   .split(",")
   .map((size) => {
@@ -298,10 +303,23 @@ if (process.argv.includes("--invite")) {
   expectedPath = path;
 }
 
+/** The seed's receipt link: apps/api/src/lib/demo-seed-kit.ts (demoReceiptToken) computes the same. */
+function demoReceiptToken(contractKey: string, sequence: number): string {
+  return createHash("sha256")
+    .update(`quitto-demo-receipt:${contractKey}:${sequence}`)
+    .digest("base64url");
+}
+
+if (process.argv.includes("--receipt")) {
+  const [contractKey = "", sequence = ""] = arg("receipt").split(":");
+  path = `/r/${demoReceiptToken(contractKey, Number(sequence))}`;
+  expectedPath = path;
+}
+
 // The full Chromium, not the headless shell: only it has the PDF viewer the
 // installment panel's proof preview shows (owner's decision 4).
 const browser = await chromium.launch({
-  args: ["--lang=pt-BR"],
+  args: [`--lang=${locale}`],
   channel: "chromium",
 });
 try {
@@ -310,13 +328,14 @@ try {
       const context = await browser.newContext({
         viewport: { width: size.width, height: size.height },
         deviceScaleFactor: 1,
-        locale: "pt-BR",
+        locale,
         isMobile: size.mobile,
         hasTouch: size.mobile,
       });
       await context.addCookies([
         ...session,
         { name: "theme", value: theme, url: WEB },
+        { name: "locale", value: locale, url: WEB },
       ]);
       const page = await context.newPage();
       await page.goto(`${WEB}${path}`);
@@ -329,7 +348,10 @@ try {
           `${account} caiu em ${landed}, não em ${expectedPath}: rodou o seed:demo?`
         );
       }
-      const file = join(out, `${account}-${name}-${size.name}-${theme}`);
+      const file = join(
+        out,
+        `${account}-${name}-${size.name}-${theme}${locale === "pt-BR" ? "" : "-en"}`
+      );
       const where = `${account} ${size.width}x${size.height} ${theme} (${path})`;
       if (clickPrefix) {
         await noLoading(page, where);
