@@ -385,3 +385,10 @@
     translate: 0 0;
   }
 }
+
+/* On paper the showcase is just the page: no green, no dots. */
+@media print {
+  .stage-dots::before {
+    display: none;
+  }
+}
