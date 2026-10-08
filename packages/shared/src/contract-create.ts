@@ -91,16 +91,30 @@ export const splitScheduleSchema = z.object({
   firstDueDate: dueDate,
 });
 
-export const monthlyScheduleSchema = z.object({
-  mode: z.literal("monthly"),
-  monthlyAmountCents: z
-    .number({ error: "schedule.monthly.required" })
-    .int("schedule.monthly.required")
-    .min(1, "schedule.monthly.required")
-    .max(MAX_AMOUNT_CENTS, "amount.tooHigh"),
-  months: installmentCount,
-  firstDueDate: dueDate,
-});
+export const monthlyScheduleSchema = z
+  .object({
+    mode: z.literal("monthly"),
+    monthlyAmountCents: z
+      .number({ error: "schedule.monthly.required" })
+      .int("schedule.monthly.required")
+      .min(1, "schedule.monthly.required")
+      .max(MAX_AMOUNT_CENTS, "amount.tooHigh"),
+    months: installmentCount,
+    firstDueDate: dueDate,
+  })
+  // Each field fits, but the contract's total (monthly × months) is stored in an int4 too.
+  .superRefine((schedule, ctx) => {
+    if (
+      schedule.monthlyAmountCents <= MAX_AMOUNT_CENTS &&
+      schedule.monthlyAmountCents * schedule.months > MAX_AMOUNT_CENTS
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "amount.tooHigh",
+        path: ["monthlyAmountCents"],
+      });
+    }
+  });
 
 const installmentRowSchema = z.object({
   amountCents: z

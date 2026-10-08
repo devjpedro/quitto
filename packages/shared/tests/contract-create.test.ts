@@ -322,6 +322,20 @@ describe("o teto dos valores em centavos (int4)", () => {
     ).toEqual(["amount.tooHigh"]);
   });
 
+  it("o mensal × os meses passa do teto, com cada campo válido: amount.tooHigh", () => {
+    const found = issues({
+      ...valid,
+      schedule: {
+        mode: "monthly",
+        monthlyAmountCents: 200_000_000,
+        months: 12,
+        firstDueDate: "2026-11-05",
+      },
+    });
+    expect(found.map((i) => i.code)).toEqual(["amount.tooHigh"]);
+    expect(found[0]?.path).toBe("schedule.monthlyAmountCents");
+  });
+
   it("o próprio teto ainda passa", () => {
     expect(
       issues({
