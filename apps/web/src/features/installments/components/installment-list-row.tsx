@@ -1,9 +1,4 @@
-import {
-  CaretDown,
-  CaretUp,
-  Hourglass,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { Hourglass, WarningCircle } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { DateTile } from "@/components/ui/date-tile";
 import { Money } from "@/components/ui/money";
@@ -21,19 +16,15 @@ const TAG_ICON = { overdue: WarningCircle, review: Hourglass } as const;
 
 function LineBody({
   counterparty,
-  expanded,
   locale,
   view,
 }: {
   counterparty: string | null;
-  /** `null`: not a run (no caret). */
-  expanded: boolean | null;
   locale: Locale;
   view: InstallmentLineView;
 }) {
   const receive = view.direction === "receive";
   const TagIcon = view.tag?.icon ? TAG_ICON[view.tag.icon] : null;
-  const Caret = expanded ? CaretUp : CaretDown;
   const meta = [counterparty, view.sequences, view.ago].filter(Boolean);
   return (
     <>
@@ -74,13 +65,6 @@ function LineBody({
         </span>
       </span>{" "}
       <span className="flex shrink-0 items-center gap-2 max-md:col-start-3 max-md:row-start-1">
-        {expanded === null ? null : (
-          <Caret
-            aria-hidden="true"
-            className="shrink-0 text-ink-muted"
-            size={16}
-          />
-        )}
         <Money
           cents={view.amountCents}
           className={cn(
@@ -99,7 +83,6 @@ function LineBody({
 export function InstallmentListRow({
   item,
   locale,
-  nested = false,
   onIntent,
   onOpen,
   selected,
@@ -107,8 +90,6 @@ export function InstallmentListRow({
 }: {
   item: InstallmentListItem;
   locale: Locale;
-  /** An installment under its run: the contract and the person are on the run's line, so it says only "Parcela 3 de 12". */
-  nested?: boolean;
   /** Hover or focus: the panel's data starts loading. */
   onIntent: (item: InstallmentListItem) => void;
   onOpen: (id: string) => void;
@@ -127,53 +108,7 @@ export function InstallmentListRow({
       type="button"
     >
       <LineBody
-        counterparty={nested ? null : item.counterpartyName}
-        expanded={null}
-        locale={locale}
-        view={
-          nested
-            ? {
-                ...view,
-                sequences: "",
-                title: m.panel_title({
-                  count: item.installmentsCount,
-                  sequence: item.sequence,
-                }),
-              }
-            : view
-        }
-      />
-    </button>
-  );
-}
-
-/** Several overdue installments of one contract as one line (decision 3): it opens in place. */
-export function InstallmentRunRow({
-  expanded,
-  items,
-  locale,
-  onToggle,
-  view,
-}: {
-  expanded: boolean;
-  items: InstallmentListItem[];
-  locale: Locale;
-  onToggle: () => void;
-  view: InstallmentLineView;
-}) {
-  const [first] = items;
-  return (
-    <button
-      aria-expanded={expanded}
-      className={ROW}
-      data-group-ids={items.map((it) => it.installmentId).join(" ")}
-      data-testid={`installment-run-${first?.installmentId}`}
-      onClick={onToggle}
-      type="button"
-    >
-      <LineBody
-        counterparty={first?.counterpartyName ?? null}
-        expanded={expanded}
+        counterparty={item.counterpartyName}
         locale={locale}
         view={view}
       />

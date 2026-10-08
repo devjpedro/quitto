@@ -22,20 +22,13 @@ import { PANEL_TITLE_ID, PanelArrows } from "./panel-header";
 import { PanelSkeleton } from "./panel-skeleton";
 import { SheetFooter, useSheetPrimary } from "./sheet-footer";
 
-/** The installment's line, or the button of the closed group that holds it. */
-function rowOrGroup(id: string): HTMLElement | null {
-  const row = document.querySelector<HTMLElement>(
-    `[data-installment-row="${id}"]`
-  );
-  const group = document.querySelector<HTMLElement>(
-    `[data-group-ids~="${id}"]`
-  );
-  return row ?? group;
+function rowOf(id: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-installment-row="${id}"]`);
 }
 
-/** Esc's return (DIRECAO › Contrato): the focus goes back to the installment's line, or to its group's button. */
+/** Esc's return (DIRECAO › Contrato): the focus goes back to the installment's line. */
 export function focusInstallmentRow(id: string): void {
-  rowOrGroup(id)?.focus();
+  rowOf(id)?.focus();
 }
 
 /**
@@ -199,17 +192,17 @@ function SheetPanel({
     <ResponsiveSheet
       adjustReturnFocus={(opener) =>
         // ↑ ↓ moved on from the line that opened the panel: Esc goes back to
-        // the line (or group) it stopped on (DIRECAO: "devolve o foco à linha").
+        // the line it stopped on (DIRECAO: "devolve o foco à linha").
         // A card's button that opened it keeps the focus.
-        opener?.closest("[data-installment-row], [data-group-ids]")
-          ? rowOrGroup(installment.id)
+        opener?.closest("[data-installment-row]")
+          ? rowOf(installment.id)
           : opener
       }
       description={contract.contract.title}
       // "Histórico" closes the sheet and takes the list away: the focus goes
       // to the tab now shown.
       fallbackFocus={() =>
-        rowOrGroup(installment.id) ??
+        rowOf(installment.id) ??
         document.querySelector<HTMLElement>(
           '[data-testid="contract-tabs"] [aria-checked="true"]'
         )

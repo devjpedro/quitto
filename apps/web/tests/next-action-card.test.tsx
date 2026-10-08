@@ -68,7 +68,6 @@ const WA_PREFIX = "https://wa.me/?text=";
 const CHARGE_NAME = "Cobrar no WhatsApp (abre o WhatsApp)";
 const OF_TEN = /de 10/;
 const DATE_LIKE = /30\/08|agosto/;
-const GROUP_1_3 = /^Parcelas 1 a 3/;
 const OCTOBER_30 = /30\/10|outubro/;
 const TODAY_WORD = /hoje/g;
 const REMIND_NAME = /^Lembrar no WhatsApp/;
@@ -250,13 +249,9 @@ describe("NextActionCard (o cartão verde do contrato)", () => {
     // At once: with confirmation the mark is "confirmed"; the line, the bar
     // and the hero follow, and the card moves on to the proof to review.
     await waitFor(() => expect(statusOf(client, "i3")).toBe("confirmed"));
-    // The line joins the paid ones at the start: "Parcelas 1 a 3".
-    expect(tileOf("i3")).toBeNull();
-    expect(
-      within(screen.getByTestId("installment-list")).getByRole("button", {
-        name: GROUP_1_3,
-      })
-    ).toBeVisible();
+    // The line stays where it is (no groups): its tile steps from "overdue" to "paid".
+    expect(tileOf("i3")).not.toHaveClass("bg-danger-subtle");
+    expect(tileOf("i3")).toHaveClass("bg-brand-subtle");
     expect(thirdSegment()).toHaveAttribute("data-status", "paid");
     expect(
       within(screen.getByTestId("contract-hero")).getByText("R$ 3.360,00")
@@ -281,11 +276,6 @@ describe("NextActionCard (o cartão verde do contrato)", () => {
     });
     await waitFor(() => expect(statusOf(client, "i3")).toBe("pending"));
     expect(tileOf("i3")).toHaveClass("bg-danger-subtle");
-    expect(
-      within(screen.getByTestId("installment-list")).queryByRole("button", {
-        name: GROUP_1_3,
-      })
-    ).toBeNull();
     expect(thirdSegment()).toHaveAttribute("data-status", "overdue");
     expect(
       within(screen.getByTestId("contract-hero")).getByText("R$ 3.840,00")

@@ -10,7 +10,7 @@ import {
 } from "../lib/installment-groups";
 import { installmentLineView } from "../lib/installment-line-view";
 import type { InstallmentListItem } from "../types";
-import { InstallmentListRow, InstallmentRunRow } from "./installment-list-row";
+import { InstallmentListRow } from "./installment-list-row";
 
 function groupTitle(
   group: InstallmentGroup,
@@ -60,27 +60,22 @@ function GroupTotals({ group }: { group: InstallmentGroup }) {
 
 /**
  * The month's groups (mockup 17, C): each a title with its total and one
- * filled block with straight dividers. A run of overdue installments is one
- * line that opens in place (decision 3).
+ * filled block with straight dividers, one line per installment.
  */
 export function InstallmentsList({
-  expanded,
   groups,
   locale,
   month,
   onIntent,
   onOpen,
-  onToggle,
   selectedId,
   today,
 }: {
-  expanded: ReadonlySet<string>;
   groups: InstallmentGroup[];
   locale: Locale;
   month: string;
   onIntent: (item: InstallmentListItem) => void;
   onOpen: (id: string) => void;
-  onToggle: (lineId: string) => void;
   selectedId: string | null;
   today: string;
 }) {
@@ -99,70 +94,26 @@ export function InstallmentsList({
               {groupTitle(group, month, today, locale)}
             </SectionTitle>
             <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
-              {group.lines.flatMap((line) => {
-                const view = installmentLineView(line, group.id, today, locale);
-                const [first] = line.items;
-                if (!first) {
-                  return [];
+              {group.lines.map((line) => {
+                const [item] = line.items;
+                if (!item) {
+                  return null;
                 }
-                if (line.items.length === 1) {
-                  return [
-                    <li
-                      className="first:rounded-t-card last:rounded-b-card"
-                      key={line.id}
-                    >
-                      <InstallmentListRow
-                        item={first}
-                        locale={locale}
-                        onIntent={onIntent}
-                        onOpen={onOpen}
-                        selected={selectedId === first.installmentId}
-                        view={view}
-                      />
-                    </li>,
-                  ];
-                }
-                const open = expanded.has(line.id);
-                const rows = [
+                return (
                   <li
                     className="first:rounded-t-card last:rounded-b-card"
-                    key={`run-${line.id}`}
+                    key={line.id}
                   >
-                    <InstallmentRunRow
-                      expanded={open}
-                      items={line.items}
+                    <InstallmentListRow
+                      item={item}
                       locale={locale}
-                      onToggle={() => onToggle(line.id)}
-                      view={view}
+                      onIntent={onIntent}
+                      onOpen={onOpen}
+                      selected={selectedId === item.installmentId}
+                      view={installmentLineView(line, group.id, today, locale)}
                     />
-                  </li>,
-                ];
-                if (open) {
-                  for (const item of line.items) {
-                    rows.push(
-                      <li
-                        className="bg-surface-card-hover/40 last:rounded-b-card"
-                        key={item.installmentId}
-                      >
-                        <InstallmentListRow
-                          item={item}
-                          locale={locale}
-                          nested
-                          onIntent={onIntent}
-                          onOpen={onOpen}
-                          selected={selectedId === item.installmentId}
-                          view={installmentLineView(
-                            { id: item.installmentId, items: [item] },
-                            group.id,
-                            today,
-                            locale
-                          )}
-                        />
-                      </li>
-                    );
-                  }
-                }
-                return rows;
+                  </li>
+                );
               })}
             </ul>
           </section>

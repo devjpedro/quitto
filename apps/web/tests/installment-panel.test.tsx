@@ -357,7 +357,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(screen.getByTestId("installment-panel-docked")).toBeVisible();
   });
 
-  it("Esc numa parcela de um grupo fechado devolve o foco ao botão do grupo (a linha sai com o painel)", async () => {
+  it("Esc numa parcela na URL devolve o foco à linha dela (a linha sai com o painel)", async () => {
     const user = userEvent.setup();
     renderPage({ installment: "i1" });
     const title = await screen.findByRole("heading", {
@@ -367,9 +367,9 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(title).not.toHaveFocus();
     act(() => title.focus());
     await user.keyboard("{Escape}");
-    const group = document.querySelector('[data-group-ids~="i1"]');
-    expect(group).toHaveAttribute("data-group-ids", "i1 i2");
-    await waitFor(() => expect(group).toHaveFocus());
+    const line = document.querySelector('[data-installment-row="i1"]');
+    expect(line).not.toBeNull();
+    await waitFor(() => expect(line).toHaveFocus());
   });
 
   it("a 1600, Enter em 'Confirmar recebimento' troca os blocos e o foco fica na coluna (no título), não no body: ↓ leva à parcela 5", async () => {

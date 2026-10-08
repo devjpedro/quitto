@@ -99,15 +99,15 @@ describe("groupInstallments", () => {
     ]);
   });
 
-  it("grupo vazio some; Atrasadas seguidas do mesmo contrato viram uma linha que o chip conta uma vez", () => {
+  it("grupo vazio some; as atrasadas do mesmo contrato não se agrupam: uma linha cada, e o chip as conta", () => {
     const r = group([
       listInstallment({ contractId: "m", dueDate: "2026-09-05", sequence: 3 }),
       listInstallment({ contractId: "m", dueDate: "2026-10-05", sequence: 4 }),
       listInstallment({ contractId: "x", dueDate: "2026-10-06" }),
     ]);
     expect(ids(r)).toEqual(["overdue"]);
-    expect(r.groups[0]?.lines.map((l) => l.items.length)).toEqual([2, 1]);
-    expect(r.counts.overdue).toBe(2);
+    expect(r.groups[0]?.lines.map((l) => l.items.length)).toEqual([1, 1, 1]);
+    expect(r.counts.overdue).toBe(3);
   });
 
   it("pagas do mês no grupo Pagas, depois dos outros", () => {

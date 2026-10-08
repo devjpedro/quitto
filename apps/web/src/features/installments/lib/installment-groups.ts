@@ -4,7 +4,7 @@ import { weekEnd } from "./month-range";
 
 export type GroupId = "overdue" | "awaiting" | "week" | "month" | "paid";
 
-/** A line of the list: one installment, or several overdue ones of one contract (mockup 17, decision 3). */
+/** A line of the list: one installment (the owner took the runs of overdue ones out: one line each). */
 export interface InstallmentLine {
   id: string;
   items: InstallmentListItem[];
@@ -12,7 +12,7 @@ export interface InstallmentLine {
 
 export interface InstallmentGroup {
   id: GroupId;
-  /** Every installment of the group, collapsed lines included. */
+  /** Every installment of the group. */
   items: InstallmentListItem[];
   lines: InstallmentLine[];
   payCents: number;
@@ -44,23 +44,6 @@ function groupOf(
   return item.dueDate.startsWith(month) ? "month" : null;
 }
 
-/** The overdue of one contract become one line (in the place of its first). */
-function overdueLines(items: InstallmentListItem[]): InstallmentLine[] {
-  const lines: InstallmentLine[] = [];
-  const byContract = new Map<string, InstallmentLine>();
-  for (const item of items) {
-    const line = byContract.get(item.contractId);
-    if (line) {
-      line.items.push(item);
-    } else {
-      const created = { id: item.installmentId, items: [item] };
-      byContract.set(item.contractId, created);
-      lines.push(created);
-    }
-  }
-  return lines;
-}
-
 function totals(items: InstallmentListItem[]) {
   let payCents = 0;
   let receiveCents = 0;
@@ -77,8 +60,7 @@ function totals(items: InstallmentListItem[]) {
 /**
  * The month's installments by urgency (D9): Atrasadas, Aguardando
  * confirmação, Esta semana, Ainda em <mês>, Pagas. A group with nothing is
- * gone. The chips' counts are of the month without the filter (the overdue
- * ones count lines, as the list shows them).
+ * gone. The chips' counts are of the month without the filter.
  */
 export function groupInstallments(
   items: InstallmentListItem[],
@@ -99,7 +81,7 @@ export function groupInstallments(
     .filter((p) => p.id === "overdue")
     .map((p) => p.item);
   const counts = {
-    overdue: overdueLines(overdueAll).length,
+    overdue: overdueAll.length,
     awaiting: placed.filter(
       (p) => p.item.status === INSTALLMENT_STATUS.awaitingConfirmation
     ).length,
@@ -121,10 +103,10 @@ export function groupInstallments(
     if (members.length === 0) {
       return [];
     }
-    const lines =
-      id === "overdue"
-        ? overdueLines(members)
-        : members.map((item) => ({ id: item.installmentId, items: [item] }));
+    const lines = members.map((item) => ({
+      id: item.installmentId,
+      items: [item],
+    }));
     return [{ id, items: members, lines, ...totals(members) }];
   });
   return { counts, groups };

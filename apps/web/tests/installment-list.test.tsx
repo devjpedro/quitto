@@ -60,9 +60,6 @@ const ACTION_NAMES = [
   /^Conferir comprovante$/,
 ];
 const RECEIVED = /recebida/;
-const GROUP_1_2 = /^Parcelas 1 e 2/;
-const SHOW = /Mostrar as parcelas$/;
-const HIDE = /Esconder as parcelas$/;
 const ROW_30_JUN = /^Parcela 1 30 de junho/;
 const ROW_3 = /^Parcela 3 30 de agosto Atrasada · 36 dias R\$/;
 
@@ -122,22 +119,20 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
     const { list } = renderList();
     expect(list).toHaveAccessibleName("Parcelas do contrato");
     const buttons = within(list).getAllByRole("button");
-    // The paid group (1 and 2) and one line each for 3 to 10.
-    expect(buttons).toHaveLength(9);
+    // One line per installment, 1 to 10: no group, no accordion.
+    expect(buttons).toHaveLength(10);
     for (const button of buttons) {
       expect(button).toHaveAttribute("type", "button");
-      // Each is a whole line (an installment, or a group that opens in place).
-      expect(
-        button.hasAttribute("data-installment-row") ||
-          button.hasAttribute("aria-expanded")
-      ).toBe(true);
+      // Each is a whole line, an installment, and none opens in place.
+      expect(button).toHaveAttribute("data-installment-row");
+      expect(button).not.toHaveAttribute("aria-expanded");
       expect(button.querySelector("button, a")).toBeNull();
     }
     expect(within(list).queryByRole("link")).toBeNull();
     for (const name of ACTION_NAMES) {
       expect(within(list).queryByRole("button", { name })).toBeNull();
     }
-    expect(buttons[0]).toHaveAccessibleName(GROUP_1_2);
+    expect(buttons[0]).toHaveAccessibleName(ROW_30_JUN);
     // The tile's "03" is drawn, not said: the name says "Parcela 3" (review I5).
     expect(row(list, "i3")).toHaveAccessibleName(ROW_3);
     expect(row(list, "i3")).toHaveTextContent(
@@ -194,81 +189,25 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
     });
   });
 
-  it("o grupo das pagas abre no lugar (aria-expanded) e mostra a 1 e a 2", async () => {
-    const user = userEvent.setup();
+  it("sem accordion: as pagas, as atrasadas e as abertas, uma linha cada, em ordem", () => {
     const { list } = renderList();
-    const group = within(list).getByRole("button", { name: GROUP_1_2 });
-    expect(group).toHaveAttribute("aria-expanded", "false");
-    expect(group).toHaveAccessibleName(SHOW);
-    expect(group).toHaveTextContent("Confirmadas");
-    expect(row(list, "i1")).toBeNull();
-
-    await user.click(group);
-    expect(group).toHaveAttribute("aria-expanded", "true");
-    expect(group).toHaveAccessibleName(HIDE);
-    expect(row(list, "i1")).toHaveAccessibleName(ROW_30_JUN);
-    expect(row(list, "i2")).toBeVisible();
-    // The installments come right below the group, in the same block.
-    const items = within(list).getAllByRole("listitem");
-    expect(items[1]).toContainElement(row(list, "i1"));
-    expect(items[2]).toContainElement(row(list, "i2"));
-    expect(items[3]).toContainElement(row(list, "i3"));
-    // Opening a group navigates nowhere.
-    expect(navigate).not.toHaveBeenCalled();
-
-    await user.click(group);
-    expect(group).toHaveAttribute("aria-expanded", "false");
-    expect(row(list, "i1")).toBeNull();
-  });
-
-  it("uma parcela de um grupo fechado que está na URL abre o grupo", () => {
-    route.search = { installment: "i2" };
-    const { list } = renderList();
+    const lines = within(list).getAllByRole("listitem");
+    expect(lines).toHaveLength(10);
     expect(
-      within(list).getByRole("button", { name: GROUP_1_2 })
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
+      lines.map((line) =>
+        line
+          .querySelector("[data-installment-row]")
+          ?.getAttribute("data-installment-row")
+      )
+    ).toEqual(["i1", "i2", "i3", "i4", "i5", "i6", "i7", "i8", "i9", "i10"]);
+    expect(list.querySelector("[aria-expanded]")).toBeNull();
+    expect(within(list).queryByText("Confirmadas")).toBeNull();
   });
 
-  it("um grupo fechado à mão reabre quando a URL entra nele (revisão I2)", async () => {
-    const user = userEvent.setup();
-    const { list, goTo } = renderList();
-    const group = within(list).getByRole("button", { name: GROUP_1_2 });
-    await user.click(group);
-    await user.click(group);
-    expect(group).toHaveAttribute("aria-expanded", "false");
-
-    goTo("i2");
-    expect(group).toHaveAttribute("aria-expanded", "true");
-    expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
-  });
-
-  it("fechado à mão com a 2 na URL: fica fechado; a URL vai à 1 e volta à 2, e o grupo segue aberto", async () => {
-    const user = userEvent.setup();
+  it("uma parcela paga que está na URL está lá, selecionada, sem abrir nada", () => {
     route.search = { installment: "i2" };
-    const { list, goTo } = renderList();
-    const group = within(list).getByRole("button", { name: GROUP_1_2 });
-    expect(group).toHaveAttribute("aria-expanded", "true");
-    await user.click(group);
-    // Closed by hand wins while the URL stays put.
-    expect(group).toHaveAttribute("aria-expanded", "false");
-    expect(row(list, "i2")).toBeNull();
-
-    goTo("i1");
-    expect(group).toHaveAttribute("aria-expanded", "true");
-    goTo("i2");
-    expect(group).toHaveAttribute("aria-expanded", "true");
+    const { list } = renderList();
     expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
-  });
-
-  it("aberto à mão: segue aberto quando a URL sai do grupo", async () => {
-    const user = userEvent.setup();
-    const { list, goTo } = renderList();
-    const group = within(list).getByRole("button", { name: GROUP_1_2 });
-    await user.click(group);
-    goTo("i5");
-    expect(group).toHaveAttribute("aria-expanded", "true");
-    expect(row(list, "i1")).toBeVisible();
   });
 
   it("quitado: as 10 linhas, sem tag, com 'recebida' no nome acessível", () => {
@@ -284,9 +223,7 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
 
   it("o valor da paga em ink-muted, o da aberta em ink", () => {
     const { list } = renderList();
-    const paid = within(
-      within(list).getByRole("button", { name: GROUP_1_2 })
-    ).getByText("R$ 960,00");
+    const paid = within(row(list, "i1")).getByText("R$ 480,00");
     expect(paid.parentElement).toHaveClass("text-ink-muted");
     const open = within(row(list, "i5")).getByText("R$ 480,00");
     expect(open.parentElement).not.toHaveClass("text-ink-muted");

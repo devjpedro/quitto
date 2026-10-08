@@ -208,11 +208,7 @@ describe("InstallmentsPage", () => {
     expect(nav.search).toMatchObject({ month: "2026-09" });
   });
 
-  it("abrir uma sequência de atrasadas mostra as parcelas, sem key repetida", async () => {
-    const user = userEvent.setup();
-    const error = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+  it("atrasadas do mesmo contrato: uma linha por parcela, sem accordion", async () => {
     const run = [3, 4].map((sequence) =>
       listInstallment({
         installmentId: `r${sequence}`,
@@ -230,17 +226,13 @@ describe("InstallmentsPage", () => {
       error: null,
     });
     renderWithProviders(<InstallmentsPage />);
-    const toggle = await screen.findByTestId("installment-run-r3");
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByTestId("installment-row-r3")).toHaveTextContent(
-      "Parcela 3 de 12"
-    );
+    const first = await screen.findByTestId("installment-row-r3");
+    expect(first).toHaveTextContent("Notebook da Marina");
     expect(screen.getByTestId("installment-row-r4")).toHaveTextContent(
-      "Parcela 4 de 12"
+      "Notebook da Marina"
     );
-    expect(error).not.toHaveBeenCalled();
-    error.mockRestore();
+    expect(screen.queryByTestId("installment-run-r3")).toBeNull();
+    expect(document.querySelector("[aria-expanded]")).toBeNull();
   });
 
   it("um mês futuro vazio oferece voltar ao mês de hoje, não o próximo", async () => {

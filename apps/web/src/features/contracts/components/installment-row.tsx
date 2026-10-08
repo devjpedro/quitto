@@ -1,6 +1,4 @@
 import {
-  CaretDown,
-  CaretUp,
   CheckCircle,
   FileMagnifyingGlass,
   FileText,
@@ -11,7 +9,6 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import type { BarStatus } from "@/components/ui/installment-bar";
 import { Money } from "@/components/ui/money";
 import { NumberTile } from "@/components/ui/number-tile";
 import { Tag } from "@/components/ui/tag";
@@ -51,7 +48,6 @@ function RowBody({
   tag,
   tile,
   title,
-  trailing,
 }: {
   amountCents: number;
   amountClass?: string;
@@ -63,7 +59,6 @@ function RowBody({
   tag: RowTag;
   tile: ReactNode;
   title: string;
-  trailing?: ReactNode;
 }) {
   const TagIcon = tag?.icon ? TAG_ICON[tag.icon] : null;
   return (
@@ -87,7 +82,6 @@ function RowBody({
           </span>
         ) : null}
       </span>{" "}
-      {trailing}
       <Money
         cents={amountCents}
         className={cn(
@@ -148,67 +142,6 @@ export function InstallmentRow({
         }
         title={view.title}
       />
-    </button>
-  );
-}
-
-/** A group's line (the paid ones at the start, a run of overdue ones, the tail): it opens in place. */
-export function GroupRow({
-  amountCents,
-  expanded,
-  ids,
-  label,
-  meta,
-  muted,
-  onToggle,
-  tag,
-  title,
-  tone,
-}: {
-  amountCents: number;
-  expanded: boolean;
-  /** The group's installments, space separated: where Esc gives the focus back when the line left. */
-  ids: string;
-  label: string;
-  meta: string | null;
-  muted: boolean;
-  onToggle: () => void;
-  tag: RowTag;
-  title: string;
-  tone: BarStatus;
-}) {
-  const Caret = expanded ? CaretUp : CaretDown;
-  return (
-    <button
-      aria-expanded={expanded}
-      className={ROW}
-      data-group-ids={ids}
-      onClick={onToggle}
-      type="button"
-    >
-      <RowBody
-        amountCents={amountCents}
-        // A phone leaves the amount its own width (min-w-0), but two groups
-        // in a row (the paid ones, then the overdue run) would put their
-        // carets at different places: a floor for the sums lines them up.
-        amountClass="max-md:min-w-[5.5rem]"
-        meta={meta}
-        muted={muted}
-        sr={null}
-        tag={tag}
-        tile={<NumberTile label={label} range tone={tone} />}
-        title={title}
-        trailing={
-          <Caret
-            aria-hidden="true"
-            className="shrink-0 text-ink-muted"
-            size={16}
-          />
-        }
-      />{" "}
-      <span className="sr-only">
-        {expanded ? m.contract_group_collapse() : m.contract_group_expand()}
-      </span>
     </button>
   );
 }

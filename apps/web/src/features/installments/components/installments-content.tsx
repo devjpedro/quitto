@@ -1,7 +1,7 @@
 import { isPaidStatus } from "@quitto/shared";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { contractQueryOptions } from "@/features/contracts/api";
 import { LATERAL_UP, useMediaQuery } from "@/hooks/use-media-query";
 import { todayISO } from "@/lib/format";
@@ -25,18 +25,6 @@ import { InstallmentsList } from "./installments-list";
 import { InstallmentsToolbar } from "./installments-toolbar";
 
 const route = getRouteApi("/_app/installments");
-
-/** The arrows walk what is on screen: an open run shows its installments, a closed one none of them. */
-function visibleItems(
-  groups: InstallmentGroup[],
-  expanded: ReadonlySet<string>
-): InstallmentListItem[] {
-  return groups.flatMap((group) =>
-    group.lines.flatMap((line) =>
-      line.items.length === 1 || expanded.has(line.id) ? line.items : []
-    )
-  );
-}
 
 /** The most urgent installment's contract: the first line of the first group that is not paid. */
 function urgentContract(groups: InstallmentGroup[]): string | null {
@@ -64,16 +52,6 @@ export function InstallmentsContent() {
     month,
     today,
   });
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const toggle = useCallback((lineId: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (!next.delete(lineId)) {
-        next.add(lineId);
-      }
-      return next;
-    });
-  }, []);
   const calendar = urlSearch.view === "calendar";
   const wide = useMediaQuery(LATERAL_UP, false);
   const gridItems = useMemo(
@@ -85,7 +63,7 @@ export function InstallmentsContent() {
   const carried = gridItems.filter(
     (item) => item.dueDate < monthFrom && !isPaidStatus(item.status)
   ).length;
-  let visible = visibleItems(groups, expanded);
+  let visible = groups.flatMap((group) => group.items);
   if (calendar) {
     const cells = calendarMonth(month, gridItems, today).flat();
     visible = wide
@@ -110,13 +88,11 @@ export function InstallmentsContent() {
   );
   let body: ReactNode = (
     <InstallmentsList
-      expanded={expanded}
       groups={groups}
       locale={locale}
       month={month}
       onIntent={prefetch}
       onOpen={panel.openInstallment}
-      onToggle={toggle}
       selectedId={panel.installmentId}
       today={today}
     />
