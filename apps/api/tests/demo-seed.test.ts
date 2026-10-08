@@ -203,8 +203,9 @@ describe("demoScenario: os números do mockup 13", () => {
       T
     );
     expect(ms.settled).toEqual({
-      paidCents: 1_020_000,
-      payableTotalCents: 2_660_000,
+      // + the Geladeira da Paula (5 × R$ 240,00), paid off.
+      paidCents: 1_140_000,
+      payableTotalCents: 2_780_000,
       receivedCents: 554_000,
       receivableTotalCents: 1_370_000,
     });
@@ -215,6 +216,24 @@ describe("demoScenario: os números do mockup 13", () => {
       nextDueDate: "2026-10-13",
     });
     expect(ms.previousMonthAllClear).toBeNull();
+  });
+
+  it("a Geladeira é o quitado da agora", () => {
+    const geladeira = scenario.contracts.find((c) => c.key === "geladeira");
+    expect(geladeira?.owner).toBe("agora");
+    expect(geladeira?.installments).toHaveLength(5);
+    expect(geladeira?.installments.every((it) => it.status === "paid")).toBe(
+      true
+    );
+  });
+
+  it("a Câmera tem o convite pendente para um e-mail sem conta", () => {
+    const camera = scenario.contracts.find((c) => c.key === "camera");
+    expect(camera?.inviteEmail).toBe("julia.nogueira@exemplo.com");
+    expect(camera?.inviteState).toBeUndefined();
+    expect(camera?.counterpart.account).toBeNull();
+    const accounts = scenario.accounts.map((a) => a.email);
+    expect(accounts).not.toContain(camera?.inviteEmail as string);
   });
 
   it("contrato com confirmação: as pagas são 'confirmed', como o produto gera", () => {

@@ -238,12 +238,30 @@ function scenarioA(t: string): DemoContract[] {
     },
     {
       ...base("camera", "agora", "Câmera da Júlia", "seller", "Júlia Nogueira"),
+      inviteEmail: "julia.nogueira@exemplo.com",
       createdDaysAgo: 150,
       installments: monthly({
         amountCents: 25_000,
         months: 6,
         firstDueDate: shiftMonths(addDays(t, 17), -4),
         paid: 4,
+      }),
+    },
+    {
+      // Paid off a couple of months ago: the "Concluídos" tab and a settled card, with no effect on the home.
+      ...base(
+        "geladeira",
+        "agora",
+        "Geladeira da Paula",
+        "buyer",
+        "Paula Freitas"
+      ),
+      createdDaysAgo: 200,
+      installments: monthly({
+        amountCents: 24_000,
+        months: 5,
+        firstDueDate: shiftMonths(t, -6),
+        paid: 5,
       }),
     },
     {

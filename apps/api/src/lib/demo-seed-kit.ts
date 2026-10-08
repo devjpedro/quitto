@@ -77,6 +77,8 @@ export interface DemoContract {
   installments: DemoInstallment[];
   /** The counterpart's slot is invited by e-mail to this account (left pending). */
   invite: DemoAccountKey | null;
+  /** Same, to an e-mail that has no account (the invite stays pending; "Convite pendente" in Pessoas). Wins over `invite`. */
+  inviteEmail?: string;
   /** How the pending `invite` ended; omitted, it is pending (the invite page's states, phase 3). Accepted is `counterpart.account`/`joinedAt`. */
   inviteState?: "declined" | "expired";
   key: string;

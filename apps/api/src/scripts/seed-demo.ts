@@ -374,7 +374,9 @@ for (const spec of scenario.contracts) {
   if (!owner) {
     throw new Error(`conta ${spec.owner} não existe no cenário`);
   }
-  const invitee = spec.invite ? (users.get(spec.invite)?.email ?? null) : null;
+  const invitee =
+    spec.inviteEmail ??
+    (spec.invite ? (users.get(spec.invite)?.email ?? null) : null);
   contracts.set(
     spec.key,
     await createContract(spec, owner.id, owner.name, invitee, users)
