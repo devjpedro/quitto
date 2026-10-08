@@ -1097,5 +1097,6 @@
   "app_error_generic": "Something went wrong. Try again.",
   "home_sequence_title": "Up next",
   "home_sequence_more": "+ {count} in Installments",
-  "home_upcoming_see_more": "{count} more in Installments"
+  "home_upcoming_see_more": "{count} more in Installments",
+  "back_to_top": "Back to top"
 }

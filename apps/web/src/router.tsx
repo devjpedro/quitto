@@ -12,6 +12,8 @@ export function getRouter() {
     routeTree,
     defaultPreload: "intent",
     scrollRestoration: true,
+    // From md the white panel is what scrolls (ShellFrame), not the page.
+    scrollToTopSelectors: ["#conteudo"],
     defaultErrorComponent: RouteError,
     // Fallback do <Suspense> de cada rota: sem ele uma rota que suspende (chunk
     // ainda baixando) cai no Suspense do Outlet raiz com `null` → tela vazia.

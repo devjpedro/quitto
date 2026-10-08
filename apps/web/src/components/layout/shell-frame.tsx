@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
+import { BackToTop } from "./back-to-top";
 
 /**
  * The canvas column beside the white panel, from md: the sidebar, or the
@@ -37,13 +38,11 @@ export function ShellLogoRow({ link }: { link?: { label: string; to: "/" } }) {
 
 const PANEL_HEIGHT =
   "md:h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))]";
-const PANEL_MIN_HEIGHT =
-  "md:min-h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))]";
 
 /**
  * Structure B (DIRECAO › Layout): the warm canvas, a column on it, and the
  * content in one white panel with 12 px of canvas around. `fit="page"` grows
- * with the content (the app); `fit="screen"` is the screen's height and the
+ * with the content (the app; from md the panel scrolls inside the screen's height, and "Voltar ao topo" shows after a screen of scroll); `fit="screen"` is the screen's height and the
  * panel scrolls inside it (the wizard and the invite). Below md there is no
  * panel: `page-surfaces` makes a card the surface.
  */
@@ -64,7 +63,7 @@ export function ShellFrame({
 }) {
   return (
     <div
-      className="min-h-dvh bg-surface-sunken pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans text-ink md:bg-canvas md:pt-3 md:pr-[max(0.75rem,env(safe-area-inset-right))] md:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+      className="min-h-dvh bg-surface-sunken pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans text-ink md:h-dvh md:overflow-hidden md:bg-canvas md:pt-3 md:pr-[max(0.75rem,env(safe-area-inset-right))] md:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       id="app-shell"
     >
       <a
@@ -80,8 +79,10 @@ export function ShellFrame({
         <main
           className={cn(
             "max-md:page-surfaces min-w-0 flex-1 focus:outline-none md:rounded-panel md:bg-surface",
+            // From md the page does not scroll: the sidebar and the panel's four
+            // corners stay, and the panel scrolls inside (mockup 20, B3).
             fit === "page"
-              ? PANEL_MIN_HEIGHT
+              ? `${PANEL_HEIGHT} md:overflow-y-auto md:overscroll-contain`
               : `${PANEL_HEIGHT} md:overflow-hidden`,
             mainClassName
           )}
@@ -92,6 +93,7 @@ export function ShellFrame({
         </main>
       </div>
       {bottom}
+      {fit === "page" ? <BackToTop target="conteudo" /> : null}
     </div>
   );
 }
