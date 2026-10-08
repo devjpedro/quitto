@@ -6,9 +6,9 @@ import {
   contractTitleSchema,
   counterpartySchema,
   isContractErrorCode,
+  MAX_AMOUNT_CENTS,
   monthlyScheduleSchema,
   splitScheduleSchema,
-  sumMismatch,
 } from "@quitto/shared";
 import type { CodeParams } from "@/lib/error-codes";
 import type { WizardField } from "./wizard-fields";
@@ -86,7 +86,7 @@ const SCHEDULE_FIELD: Record<string, WizardField> = {
   firstDueDate: "firstDueDate",
 };
 
-/** The one-by-one list: each amount, then the sum (it blocks: owner's decision 9). */
+/** The one-by-one list: each amount, then the sum, which only has to fit the largest amount (it never has to match the agreed total). */
 export function validateAdjusted(values: WizardValues): FieldIssue[] {
   const schedule = scheduleOf(values);
   if (!(schedule && values.installments)) {
@@ -112,19 +112,13 @@ export function validateAdjusted(values: WizardValues): FieldIssue[] {
   if (issues.length > 0) {
     return issues;
   }
-  const mismatch = sumMismatch(
-    schedule,
-    values.installments.map((row) => ({ amountCents: row.amountCents ?? 0 }))
+  // No sum to match: the total is what the rows add up to (owner's decision, mockup 20 B7).
+  const sum = values.installments.reduce(
+    (acc, row) => acc + (row.amountCents ?? 0),
+    0
   );
-  if (mismatch) {
-    issues.push({
-      field: "installments",
-      code:
-        mismatch.direction === "over"
-          ? "installments.sum.over"
-          : "installments.sum.under",
-      params: { diff: mismatch.diff },
-    });
+  if (sum > MAX_AMOUNT_CENTS) {
+    issues.push({ field: "installments", code: "amount.tooHigh" });
   }
   return issues;
 }

@@ -30,7 +30,6 @@ describe("wizardPreview", () => {
       person: null,
       rows: [],
       count: 0,
-      mismatch: false,
     });
   });
 
@@ -87,7 +86,7 @@ describe("wizardPreview", () => {
     expect(model.overdueCount).toBe(1);
   });
 
-  it("uma a uma passando do total: a tag ajustada, a soma como total e mismatch", () => {
+  it("uma a uma passando do total: a tag ajustada e a soma como total", () => {
     const installments = [
       160_000,
       ...Array.from({ length: 11 }, () => 50_000),
@@ -100,7 +99,6 @@ describe("wizardPreview", () => {
     expect(model.rows[0]?.adjusted).toBe(true);
     expect(model.rows[1]?.adjusted).toBe(false);
     expect(model.totalCents).toBe(710_000);
-    expect(model.mismatch).toBe(true);
   });
 
   it("a outra parte e o 'só eu'", () => {

@@ -1,31 +1,29 @@
-import { Check, WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { FieldNote } from "@/components/ui/field";
 import { Money } from "@/components/ui/money";
-import { Tag } from "@/components/ui/tag";
 import { errorCodeText } from "@/lib/error-codes";
 import { formatMoney } from "@/lib/locale-format";
-import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import type { ContractWizard } from "../hooks/use-contract-wizard";
-import { adjustState } from "../lib/adjust";
+import { type AdjustState, adjustState } from "../lib/adjust";
 import { fieldId } from "../lib/field-id";
 
-function takeLabel(direction: "over" | "under", amount: string, count: number) {
-  if (direction === "over") {
+function sumLabel({ count, moved }: AdjustState): string {
+  if (moved) {
     return count === 1
-      ? m.wizard_fix_take_one({ amount })
-      : m.wizard_fix_take_other({ amount, count });
+      ? m.wizard_adjust_now_one()
+      : m.wizard_adjust_now_other({ count });
   }
   return count === 1
-    ? m.wizard_fix_add_one({ amount })
-    : m.wizard_fix_add_other({ amount, count });
+    ? m.wizard_adjust_sum_one()
+    : m.wizard_adjust_sum_other({ count });
 }
 
 /**
- * The sum under the list (mockup 15, D5/D7). When it does not add up, the
- * block turns danger-subtle, says by how much, and offers the two one-tap
- * fixes; "Continuar" sends the focus here (it is the field "installments").
- * On a phone it sits in the action bar, above "Continuar" (E7).
+ * The total under the list (mockup 20, B7). It is the sum of the rows and
+ * never blocks: when it moved, the block says "Total agora R$ X · era R$ Y"
+ * and offers "Manter R$ Y", which takes the difference from the rows the
+ * person did not change. On a phone it sits in the action bar, above "Continuar".
  */
 export function AdjustSum({ wizard }: { wizard: ContractWizard }) {
   const { locale } = wizard;
@@ -34,104 +32,43 @@ export function AdjustSum({ wizard }: { wizard: ContractWizard }) {
     return null;
   }
   const id = fieldId("installments");
-  const { mismatch } = state;
-  const diff = mismatch ? formatMoney(mismatch.diff, locale) : "";
+  const issue = wizard.issueFor("installments");
+  const error = issue
+    ? errorCodeText(issue.code, issue.params ?? {}, locale)
+    : undefined;
+  const previous = formatMoney(state.previous, locale);
+  const { keep } = state;
   return (
     <div
-      aria-describedby={mismatch ? `${id}-note` : undefined}
-      className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-card px-3.5 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-        mismatch ? "bg-danger-subtle" : "bg-surface-card"
-      )}
+      aria-describedby={error ? `${id}-note` : undefined}
+      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-card bg-surface-card px-3.5 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       id={id}
       tabIndex={-1}
     >
       <div className="min-w-0 flex-1">
-        <small
-          className={cn(
-            "block text-xs",
-            mismatch ? "text-danger" : "text-ink-muted"
-          )}
-        >
-          {state.count === 1
-            ? m.wizard_adjust_sum_one()
-            : m.wizard_adjust_sum_other({ count: state.count })}
+        <small className="block text-ink-muted text-xs">
+          {sumLabel(state)}
         </small>
-        <Money
-          cents={state.sum}
-          className={mismatch ? "text-danger" : undefined}
-          size="list"
-        />{" "}
-        <span
-          className={cn(
-            "text-[12.5px] tabular-nums",
-            mismatch ? "text-danger" : "text-ink-muted"
-          )}
-        >
-          {m.wizard_adjust_of({ total: formatMoney(state.total, locale) })}
-        </span>
+        <Money cents={state.sum} size="list" />{" "}
+        {state.moved ? (
+          <span className="text-[12.5px] text-ink-muted tabular-nums">
+            {m.wizard_adjust_was()} <s>{previous}</s>
+          </span>
+        ) : null}
       </div>
-      {mismatch ? (
-        <Tag tone="danger">
-          <WarningCircle aria-hidden="true" size={12} weight="bold" />
-          {mismatch.direction === "over"
-            ? m.wizard_adjust_over({ amount: diff })
-            : m.wizard_adjust_under({ amount: diff })}
-        </Tag>
-      ) : (
-        <Tag tone="brand">
-          <Check aria-hidden="true" size={12} weight="bold" />
-          {m.wizard_adjust_ok()}
-        </Tag>
-      )}
-      {mismatch ? (
-        <>
-          <p
-            className="flex w-full items-start gap-1.5 font-medium text-[12.5px] text-danger leading-[1.4]"
-            id={`${id}-note`}
-          >
-            <WarningCircle
-              aria-hidden="true"
-              className="mt-px shrink-0"
-              size={15}
-              weight="fill"
-            />
-            {errorCodeText(
-              mismatch.direction === "over"
-                ? "installments.sum.over"
-                : "installments.sum.under",
-              { diff: mismatch.diff },
-              locale
-            )}{" "}
-            {m.wizard_adjust_choose()}
-          </p>
-          <div className="flex w-full flex-wrap gap-2">
-            {state.take ? (
-              <Button
-                onClick={() => wizard.setValue("installments", state.take)}
-                size="sm"
-                variant="inset"
-              >
-                {takeLabel(mismatch.direction, diff, state.freeCount)}
-              </Button>
-            ) : null}
-            {state.useTotal ? (
-              <Button
-                onClick={() => {
-                  if (state.useTotal) {
-                    wizard.replace(state.useTotal);
-                  }
-                }}
-                size="sm"
-                variant="inset"
-              >
-                {m.wizard_fix_use_total({
-                  amount: formatMoney(state.sum, locale),
-                })}
-              </Button>
-            ) : null}
-          </div>
-        </>
+      {state.moved && keep ? (
+        <Button
+          onClick={() => wizard.setValue("installments", keep)}
+          size="sm"
+          variant="inset"
+        >
+          {m.wizard_adjust_keep({ total: previous })}
+        </Button>
+      ) : null}
+      {error ? (
+        <div className="w-full">
+          <FieldNote error={error} id={id} />
+        </div>
       ) : null}
     </div>
   );

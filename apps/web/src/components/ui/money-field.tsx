@@ -1,5 +1,5 @@
 import type { Locale } from "@quitto/shared";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { moneyParts } from "@/lib/locale-format";
 import { formatMoneyInput, parseMoneyInput } from "@/lib/money-input";
 import { TextField } from "./field";
@@ -15,11 +15,13 @@ export function MoneyField({
   hint,
   id,
   label,
+  labelAside,
   labelHidden,
   locale,
   name,
   onBlur,
   onValueChange,
+  readOnly,
   tall,
   value,
   warning,
@@ -30,11 +32,14 @@ export function MoneyField({
   hint?: string;
   id: string;
   label: string;
+  labelAside?: ReactNode;
   labelHidden?: boolean;
   locale: Locale;
   name?: string;
   onBlur?: () => void;
   onValueChange: (cents: number | null) => void;
+  /** A figure the form computes (the adjusted total): shown, focusable, not typed in. */
+  readOnly?: boolean;
   tall?: boolean;
   value: number | null;
   warning?: string;
@@ -58,6 +63,7 @@ export function MoneyField({
       inputClassName="tabular-nums"
       inputMode="decimal"
       label={label}
+      labelAside={labelAside}
       labelHidden={labelHidden}
       leading={moneyParts(0, locale).currency}
       name={name}
@@ -71,6 +77,7 @@ export function MoneyField({
       }}
       onFocus={() => setFocused(true)}
       placeholder={formatMoneyInput(0, locale)}
+      readOnly={readOnly}
       tall={tall}
       value={text}
       warning={warning}

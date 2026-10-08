@@ -117,6 +117,41 @@ export function rowsOf(values: WizardValues): ScheduleRow[] {
   );
 }
 
+/**
+ * The schedule the API checks the list against. Adjusted one by one, the total
+ * is what the rows add up to (mockup 20, B7), so it goes as a split of that
+ * sum: a monthly amount no longer describes the contract.
+ */
+function scheduleRequest(
+  values: WizardValues
+): ContractRequestInput["schedule"] {
+  const adjusted = values.installments;
+  if (adjusted) {
+    return {
+      mode: "split",
+      totalAmountCents: adjusted.reduce(
+        (sum, row) => sum + (row.amountCents ?? 0),
+        0
+      ),
+      installmentsCount: adjusted.length,
+      firstDueDate: values.firstDueDate,
+    };
+  }
+  return values.mode === "monthly"
+    ? {
+        mode: "monthly",
+        monthlyAmountCents: values.monthlyCents ?? 0,
+        months: values.count ?? 0,
+        firstDueDate: values.firstDueDate,
+      }
+    : {
+        mode: "split",
+        totalAmountCents: values.totalCents ?? 0,
+        installmentsCount: values.count ?? 0,
+        firstDueDate: values.firstDueDate,
+      };
+}
+
 /** The POST /api/contracts body; null while there is no side (step 1 not done). */
 export function toRequest(values: WizardValues): ContractRequestInput | null {
   if (values.ownerRole === null) {
@@ -130,20 +165,7 @@ export function toRequest(values: WizardValues): ContractRequestInput | null {
     ...(description ? { description } : {}),
     ownerRole: values.ownerRole,
     requiresConfirmation: withParty && values.requiresConfirmation,
-    schedule:
-      values.mode === "monthly"
-        ? {
-            mode: "monthly",
-            monthlyAmountCents: values.monthlyCents ?? 0,
-            months: values.count ?? 0,
-            firstDueDate: values.firstDueDate,
-          }
-        : {
-            mode: "split",
-            totalAmountCents: values.totalCents ?? 0,
-            installmentsCount: values.count ?? 0,
-            firstDueDate: values.firstDueDate,
-          },
+    schedule: scheduleRequest(values),
     ...(values.installments
       ? {
           installments: values.installments.map((row) => ({

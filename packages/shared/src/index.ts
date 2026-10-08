@@ -18,6 +18,7 @@ export {
   counterpartySchema,
   installmentRowsSchema,
   isContractErrorCode,
+  MAX_AMOUNT_CENTS,
   MAX_INSTALLMENTS,
   monthlyScheduleSchema,
   oppositeRole,

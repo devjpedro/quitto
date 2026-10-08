@@ -1,13 +1,8 @@
-import {
-  CalendarDots,
-  CurrencyCircleDollar,
-  WarningCircle,
-} from "@phosphor-icons/react";
+import { CalendarDots, CurrencyCircleDollar } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { Emphasis } from "@/components/ui/emphasis";
 import { Money } from "@/components/ui/money";
 import { PlaceholderBlock } from "@/components/ui/placeholder-block";
-import { Tag } from "@/components/ui/tag";
 import { summaryText } from "@/lib/schedule-summary";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -63,12 +58,6 @@ export function ContractPreviewCard({
             {m.preview_placeholder_side()}
           </PlaceholderBlock>
         )}
-        {model.mismatch ? (
-          <Tag tone="danger">
-            <WarningCircle aria-hidden="true" size={12} weight="bold" />
-            {m.preview_mismatch()}
-          </Tag>
-        ) : null}
       </div>
       {showTitle ? (
         <>

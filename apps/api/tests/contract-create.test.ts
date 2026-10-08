@@ -213,6 +213,27 @@ describe("POST /api/contracts", () => {
     expect(row?.monthlyAmountCents).toBeNull();
   });
 
+  it("uma a uma que muda o total: o schedule vai com a soma das parcelas, e o contrato guarda a soma", async () => {
+    const cookie = await signUpCookie(uniqueEmail("newtotal"));
+    const installments = [160_000, ...times(11, 50_000)].map((amountCents) => ({
+      amountCents,
+      dueDate: "2026-11-10",
+    }));
+    const res = await post(cookie, {
+      ...base,
+      schedule: { ...SPLIT, totalAmountCents: 710_000 },
+      installments,
+    });
+    expect(res.status).toBe(200);
+    const { id } = await res.json();
+    const [row] = await db.select().from(contract).where(eq(contract.id, id));
+    expect(row).toMatchObject({
+      totalAmountCents: 710_000,
+      installmentsCount: 12,
+      monthlyAmountCents: null,
+    });
+  });
+
   it("422 com error.code e details.path/diff quando a soma passa; nada é criado", async () => {
     const email = uniqueEmail("over");
     const cookie = await signUpCookie(email);

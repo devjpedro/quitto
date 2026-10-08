@@ -107,21 +107,16 @@ describe("validateAdjusted", () => {
     ]);
   });
 
-  it("a soma passa: installments.sum.over com a diferença", () => {
-    expect(validateAdjusted(adjusted([400_000, 300_000]))).toEqual([
-      {
-        field: "installments",
-        code: "installments.sum.over",
-        params: { diff: 100_000 },
-      },
-    ]);
+  it("a soma passa ou falta do total: não é erro, o total vira a soma", () => {
+    expect(validateAdjusted(adjusted([400_000, 300_000]))).toEqual([]);
+    const values = adjusted([400_000, 100_000]);
+    expect(validateAdjusted(values)).toEqual([]);
+    expect(codes(values, 2)).toEqual([]);
   });
 
-  it("a soma falta: installments.sum.under, e o passo 2 não avança", () => {
-    const values = adjusted([400_000, 100_000]);
-    expect(validateAdjusted(values)[0]?.code).toBe("installments.sum.under");
-    expect(codes(values, 2)).toEqual([
-      ["installments", "installments.sum.under"],
+  it("a soma maior que o maior valor aceito: amount.tooHigh na lista", () => {
+    expect(validateAdjusted(adjusted([2_000_000_000, 2_000_000_000]))).toEqual([
+      { field: "installments", code: "amount.tooHigh" },
     ]);
   });
 

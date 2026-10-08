@@ -1,3 +1,4 @@
+import { contractRequestSchema } from "@quitto/shared";
 import { describe, expect, it } from "vitest";
 import {
   emptyValues,
@@ -155,5 +156,41 @@ describe("toRequest", () => {
     expect(body?.installments).toEqual([
       { amountCents: 600_000, dueDate: "2026-11-10" },
     ]);
+  });
+
+  it("ajustada passando do total: o total vai como a soma, e o pedido passa no schema", () => {
+    const body = toRequest({
+      ...filled,
+      count: 2,
+      installments: [
+        { amountCents: 400_000, dueDate: "2026-11-10", edited: true },
+        { amountCents: 300_000, dueDate: "2026-12-10", edited: false },
+      ],
+    });
+    expect(body?.schedule).toEqual({
+      mode: "split",
+      totalAmountCents: 700_000,
+      installmentsCount: 2,
+      firstDueDate: "2026-11-10",
+    });
+    expect(contractRequestSchema.safeParse(body).success).toBe(true);
+  });
+
+  it("mensal ajustada: vai como divisão da soma, nunca com o valor mensal", () => {
+    const body = toRequest({
+      ...filled,
+      mode: "monthly",
+      monthlyCents: 100_000,
+      count: 2,
+      installments: [
+        { amountCents: 100_000, dueDate: "2026-11-10", edited: false },
+        { amountCents: 50_000, dueDate: "2026-12-10", edited: true },
+      ],
+    });
+    expect(body?.schedule).toMatchObject({
+      mode: "split",
+      totalAmountCents: 150_000,
+    });
+    expect(contractRequestSchema.safeParse(body).success).toBe(true);
   });
 });

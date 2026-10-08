@@ -25,7 +25,6 @@ const base: PreviewModel = {
   lastDueDate: "2027-10-10",
   statuses: null,
   overdueCount: 0,
-  mismatch: false,
 };
 
 describe("PreviewSummary", () => {

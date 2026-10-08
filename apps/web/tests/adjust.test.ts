@@ -31,41 +31,41 @@ describe("editRow", () => {
 });
 
 describe("adjustState", () => {
-  it("D7: R$ 1.100,00 a mais, as duas correções", () => {
+  it("o total vira a soma, e o antigo vem como 'era'", () => {
     const state = adjustState({
       ...base,
       installments: twelve(160_000, 50_000),
     });
-    expect(state?.sum).toBe(710_000);
-    expect(state?.mismatch).toEqual({ diff: 110_000, direction: "over" });
-    expect(state?.freeCount).toBe(11);
-    expect(state?.take?.map((row) => row.amountCents)).toEqual([
+    expect(state).toMatchObject({
+      sum: 710_000,
+      previous: 600_000,
+      moved: true,
+      freeCount: 11,
+    });
+    expect(state?.keep?.map((row) => row.amountCents)).toEqual([
       160_000,
       ...Array.from({ length: 11 }, () => 40_000),
     ]);
-    expect(state?.useTotal?.totalCents).toBe(710_000);
-    expect(state?.useTotal?.installments).toHaveLength(12);
   });
 
-  it("D5: confere, sem correção", () => {
+  it("a soma igual ao total: nada se moveu, sem atalho", () => {
     const state = adjustState({
       ...base,
       installments: twelve(160_000, 40_000),
     });
-    expect(state?.mismatch).toBeNull();
-    expect(state?.take).toBeNull();
-    expect(state?.useTotal).toBeNull();
+    expect(state?.moved).toBe(false);
+    expect(state?.keep).toBeNull();
   });
 
-  it("mensal: só tirar das outras, nunca trocar o total (decisão 25)", () => {
+  it("mensal: 'manter' tira das outras, o total antigo é mensal × meses", () => {
     const state = adjustState({
       ...base,
       mode: "monthly",
       monthlyCents: 50_000,
       installments: twelve(160_000, 50_000),
     });
-    expect(state?.take).not.toBeNull();
-    expect(state?.useTotal).toBeNull();
+    expect(state?.previous).toBe(600_000);
+    expect(state?.keep).not.toBeNull();
   });
 
   it("sem lista: null", () => {

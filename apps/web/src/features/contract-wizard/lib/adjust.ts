@@ -1,9 +1,4 @@
-import {
-  type SumMismatch,
-  scheduleTotal,
-  spreadDifference,
-  sumMismatch,
-} from "@quitto/shared";
+import { scheduleTotal, spreadDifference, sumMismatch } from "@quitto/shared";
 import {
   scheduleOf,
   type WizardInstallment,
@@ -23,18 +18,19 @@ export function editRow(
 
 export interface AdjustState {
   count: number;
-  /** Rows the person did not change: where "Tirar R$ X das outras N" goes. */
+  /** Rows the person did not change: where "Manter R$ Y" takes the difference from. */
   freeCount: number;
-  mismatch: SumMismatch | null;
+  /** The list with the difference spread over the free rows ("Manter R$ Y"); null when it cannot be. */
+  keep: WizardInstallment[] | null;
+  /** The sum differs from the total the person agreed on (mockup 20, B7): it never blocks. */
+  moved: boolean;
+  /** The agreed total, "era R$ Y". */
+  previous: number;
+  /** The new total: what the rows add up to. */
   sum: number;
-  /** The list with the difference spread over the free rows; null when it cannot be. */
-  take: WizardInstallment[] | null;
-  total: number;
-  /** The values with the sum as the new total: only a total split (planner's decision 25). */
-  useTotal: WizardValues | null;
 }
 
-/** The sum under the one-by-one list and its two one-tap fixes (owner's decision 9). */
+/** The new total under the one-by-one list, and the way back to the old one (owner's decision, mockup 20, B7). */
 export function adjustState(values: WizardValues): AdjustState | null {
   const schedule = scheduleOf(values);
   const rows = values.installments;
@@ -57,18 +53,14 @@ export function adjustState(values: WizardValues): AdjustState | null {
   return {
     count: rows.length,
     freeCount: rows.filter((row) => !row.edited).length,
-    mismatch,
-    sum,
-    take: spread
+    moved: mismatch !== null,
+    previous: scheduleTotal(schedule),
+    keep: spread
       ? rows.map((row, index) => ({
           ...row,
           amountCents: spread[index] ?? row.amountCents,
         }))
       : null,
-    total: scheduleTotal(schedule),
-    useTotal:
-      mismatch && schedule.mode === "split"
-        ? { ...values, totalCents: sum }
-        : null,
+    sum,
   };
 }

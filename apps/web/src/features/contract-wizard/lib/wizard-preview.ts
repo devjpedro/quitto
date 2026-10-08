@@ -1,8 +1,7 @@
-import { sumMismatch } from "@quitto/shared";
 import type { PreviewModel } from "@/components/preview/types";
 import type { BarStatus } from "@/components/ui/installment-bar";
 import { scheduleSummary } from "@/lib/schedule-summary";
-import { rowsOf, scheduleOf, type WizardValues } from "./wizard-values";
+import { rowsOf, type WizardValues } from "./wizard-values";
 
 /** Past 24 installments the bar goes by zones (DIRECAO › Progresso). */
 const SEGMENTS_MAX = 24;
@@ -23,7 +22,6 @@ export function wizardPreview(
   values: WizardValues,
   today: string
 ): PreviewModel {
-  const schedule = scheduleOf(values);
   const rows = rowsOf(values);
   let side: PreviewModel["side"] = null;
   if (values.ownerRole === "seller") {
@@ -58,8 +56,5 @@ export function wizardPreview(
         ? rows.map((row) => barStatus(row.dueDate, today))
         : null,
     overdueCount: rows.filter((row) => row.dueDate < today).length,
-    mismatch: Boolean(
-      schedule && values.installments && sumMismatch(schedule, rows)
-    ),
   };
 }

@@ -17,7 +17,6 @@ const EMPTY: PreviewModel = {
   lastDueDate: null,
   statuses: null,
   overdueCount: 0,
-  mismatch: false,
 };
 
 const FILLED: PreviewModel = {
@@ -51,7 +50,6 @@ const FILLED: PreviewModel = {
   lastDueDate: "2027-10-10",
   statuses: Array.from({ length: 12 }, () => "open" as const),
   overdueCount: 0,
-  mismatch: false,
 };
 
 describe("ContractPreviewCard", () => {
@@ -88,13 +86,12 @@ describe("ContractPreviewCard", () => {
     expect(container).not.toHaveTextContent("convite por e-mail");
   });
 
-  it("ajustada e soma diferente: as tags", () => {
+  it("ajustada: a tag, e nenhum aviso de soma", () => {
     render(
       <ContractPreviewCard
         locale="pt-BR"
         model={{
           ...FILLED,
-          mismatch: true,
           rows: FILLED.rows.map((row, index) => ({
             ...row,
             adjusted: index === 0,
@@ -102,7 +99,7 @@ describe("ContractPreviewCard", () => {
         }}
       />
     );
-    expect(screen.getByText("soma diferente do total")).toBeVisible();
+    expect(screen.queryByText("soma diferente do total")).toBeNull();
     expect(screen.getAllByText("ajustada")).toHaveLength(1);
   });
 

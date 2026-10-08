@@ -37,7 +37,6 @@ describe("invitePreviewModel", () => {
       person: { kind: "other", name: "Bia Lopes" },
       count: 4,
       lastDueDate: "2027-02-10",
-      mismatch: false,
     });
     expect(invitePreviewModel(FLORIPA).rows).toHaveLength(3);
   });

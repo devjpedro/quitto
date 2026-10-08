@@ -146,6 +146,20 @@ describe("contractRequestSchema", () => {
     ).toEqual([]);
   });
 
+  it("uma a uma com o total igual à soma das parcelas: passa (B7, o total vira a soma)", () => {
+    const installments = [160_000, ...times(11, 50_000)].map((amountCents) => ({
+      amountCents,
+      dueDate: "2026-11-10",
+    }));
+    expect(
+      contractRequestSchema.safeParse({
+        ...valid,
+        schedule: { ...valid.schedule, totalAmountCents: 710_000 },
+        installments,
+      }).success
+    ).toBe(true);
+  });
+
   it("uma a uma passando do total: installments.sum.over com {diff}", () => {
     const installments = [160_000, ...times(11, 50_000)].map(
       (amountCents, index) => ({

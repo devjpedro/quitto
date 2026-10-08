@@ -15,6 +15,7 @@ import { StepSchedule } from "@/features/contract-wizard/components/step-schedul
 import { NOTEBOOK, renderWizard, toStep } from "./wizard-harness";
 
 const SPLIT = /valor total/i;
+const TOTAL_LABEL = /Valor total/;
 const ADJUST = /Ajustar uma a uma/;
 const AMOUNT_ROWS = /^Valor da parcela/;
 // The whole text: "2" alone also matches "2-adjust".
@@ -110,7 +111,7 @@ describe("StepSchedule", () => {
 });
 
 describe("Ajustar uma a uma", () => {
-  it("a soma passa: bloqueia, foco na frase, e 'Tirar R$ 1.100,00 das outras 11' fecha", async () => {
+  it("a soma passa: o total vira a soma, 'era R$ 6.000,00', e o Continuar segue", async () => {
     const user = userEvent.setup();
     const { wizard } = schedule();
     toStep(wizard, 2, NOTEBOOK);
@@ -123,19 +124,15 @@ describe("Ajustar uma a uma", () => {
     await user.clear(first);
     await user.type(first, "1600");
     await user.tab();
-    expect(screen.getByText("R$ 1.100,00 a mais")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByTestId("step")).toHaveTextContent("2-adjust");
-    expect(document.getElementById("wizard-installments")).toHaveFocus();
-    await user.click(
-      screen.getByRole("button", { name: "Tirar R$ 1.100,00 das outras 11" })
-    );
-    expect(screen.getByText("Confere")).toBeVisible();
+    expect(screen.getByText("Total agora · soma das 12")).toBeVisible();
+    expect(screen.getByText("R$ 7.100,00")).toBeVisible();
+    expect(document.querySelector("s")).toHaveTextContent("R$ 6.000,00");
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     expect(screen.getByTestId("step")).toHaveTextContent(ONLY_STEP_3);
+    expect(wizard().values.installments?.[0]?.amountCents).toBe(160_000);
   });
 
-  it("'Usar R$ 7.100,00 como total' troca o total e mantém a lista", async () => {
+  it("'Manter R$ 6.000,00' tira a diferença das outras 11 e o total volta", async () => {
     const user = userEvent.setup();
     const { wizard } = schedule();
     toStep(wizard, 2, NOTEBOOK);
@@ -145,14 +142,21 @@ describe("Ajustar uma a uma", () => {
     await user.type(first, "1600");
     await user.tab();
     await user.click(
-      screen.getByRole("button", { name: "Usar R$ 7.100,00 como total" })
+      screen.getByRole("button", { name: "Manter R$ 6.000,00" })
     );
-    expect(wizard().values.totalCents).toBe(710_000);
-    expect(wizard().values.installments?.[0]?.amountCents).toBe(160_000);
-    expect(screen.getByText("Confere")).toBeVisible();
+    expect(screen.getByText("Soma das 12 parcelas")).toBeVisible();
+    expect(
+      wizard().values.installments?.reduce(
+        (sum, row) => sum + (row.amountCents ?? 0),
+        0
+      )
+    ).toBe(600_000);
+    expect(
+      screen.queryByRole("button", { name: "Manter R$ 6.000,00" })
+    ).toBeNull();
   });
 
-  it("sair do uma a uma com a soma errada e Continuar volta à lista com a frase", async () => {
+  it("no passo 2: o total mostra a soma, 'ajustado', e 'Desfazer ajustes' volta ao combinado", async () => {
     const user = userEvent.setup();
     const { wizard } = schedule();
     toStep(wizard, 2, NOTEBOOK);
@@ -163,10 +167,16 @@ describe("Ajustar uma a uma", () => {
     await user.tab();
     act(() => wizard().back());
     expect(screen.getByTestId("step")).toHaveTextContent(ONLY_STEP_2);
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByTestId("step")).toHaveTextContent("2-adjust");
-    expect(document.getElementById("wizard-installments")).toHaveFocus();
-    expect(screen.getByText("R$ 1.100,00 a mais")).toBeVisible();
+    const total = screen.getByRole("textbox", { name: TOTAL_LABEL });
+    expect(total).toHaveValue("7.100,00");
+    expect(total).toHaveAttribute("readonly");
+    expect(screen.getByText("ajustado")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Desfazer ajustes" }));
+    expect(wizard().values.installments).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Valor total" })).toHaveValue(
+      "6.000,00"
+    );
+    expect(screen.queryByText("ajustado")).toBeNull();
   });
 
   it("com 1 parcela: 'Soma da parcela', nunca 'Soma das 1 parcelas'", async () => {

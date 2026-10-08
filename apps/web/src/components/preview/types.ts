@@ -21,8 +21,6 @@ export interface PreviewModel {
   count: number;
   description: string | null;
   lastDueDate: string | null;
-  /** The adjusted rows do not add up to the agreed total (the danger tag at the top). */
-  mismatch: boolean;
   overdueCount: number;
   person: { kind: "other"; name: string } | { kind: "solo" } | null;
   /** The first 3; empty draws the dashed rows. */
