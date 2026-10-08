@@ -6,7 +6,6 @@ export const FEEDBACK = {
   paymentConfirmed: "Pagamento confirmado",
   paymentDisputed: "Pagamento contestado",
   installmentPaid: "Parcela marcada como paga",
-  contractCreated: "Contrato criado",
   installmentUpdated: "Parcela atualizada",
   participantAdded: "Participante adicionado",
   participantRemoved: "Participante removido",

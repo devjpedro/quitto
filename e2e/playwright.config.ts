@@ -31,6 +31,7 @@ export default defineConfig({
         "**/shell.spec.ts",
         "**/home*.spec.ts",
         "**/contract-*.spec.ts",
+        "**/wizard*.spec.ts",
       ],
     },
   ],

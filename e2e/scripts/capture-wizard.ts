@@ -77,10 +77,35 @@ async function adjustMismatch(page: Page): Promise<void> {
   await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
 }
 
+const OTHER_OPTION = /Adicionar a outra parte/;
+
+async function party(page: Page): Promise<void> {
+  await schedule(page);
+  await next(page);
+  await page.getByRole("radio", { name: OTHER_OPTION }).click();
+  await page.getByLabel("Nome", { exact: true }).fill("Renata Campos");
+  await page
+    .getByLabel("E-mail para o convite")
+    .fill("renata.campos@exemplo.com");
+  await page
+    .getByRole("checkbox", { name: "Quero confirmar cada pagamento" })
+    .click();
+}
+
 /** Each frame from a fresh /contracts/new. Tasks 7 and 8 add theirs here. */
 const DRIVE: Record<string, (page: Page) => Promise<void>> = {
   "about-empty": async () => undefined,
   "about-filled": about,
+  party,
+  review: async (page) => {
+    await party(page);
+    await next(page);
+  },
+  // E3 (phone only): the summary opened over the step.
+  "summary-open": async (page) => {
+    await schedule(page);
+    await page.getByTestId("wizard-summary").getByRole("button").click();
+  },
   schedule: async (page) => await schedule(page),
   // D6: total zero and a first due date in the past, after "Continuar".
   "schedule-errors": async (page) => {

@@ -1,16 +1,16 @@
-import type { CreateContractInput } from "@quitto/shared";
+import type { ContractRequestInput } from "@quitto/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { unwrap } from "@/lib/api-client";
-import { FEEDBACK } from "@/lib/feedback";
 import { invalidateContractViews } from "@/lib/invalidate-contract-views";
 
-export function useCreateContractMutation() {
+/** POST /api/contracts; the wizard shows its own errors (on the field), so no global toast. */
+export function useCreateContract() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateContractInput) =>
-      unwrap(api.api.contracts.post(input)),
-    meta: { successMessage: FEEDBACK.contractCreated },
+    mutationFn: (body: ContractRequestInput) =>
+      unwrap(api.api.contracts.post(body)),
+    meta: { silentError: true },
     onSuccess: () => invalidateContractViews(qc),
   });
 }

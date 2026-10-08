@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OWNER_ROLE, PARTICIPANT_ROLE } from "./domain";
+import { PARTICIPANT_ROLE } from "./domain";
 import { isValidPixKey } from "./pix";
 
 export type {
@@ -117,56 +117,6 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)");
 
-/** Papéis que o dono pode ter ao criar um contrato (neutral fica fora do produto). */
-export const CONTRACT_OWNER_ROLES = [
-  OWNER_ROLE.buyer,
-  OWNER_ROLE.seller,
-] as const;
-export const ownerRoleSchema = z.enum(CONTRACT_OWNER_ROLES);
-
-const scheduleAutoSchema = z.object({
-  mode: z.literal("auto"),
-  totalAmountCents: z.number().int().min(1, "Informe um valor"),
-  installmentsCount: z
-    .number()
-    .int()
-    .min(1, "Mínimo 1 parcela")
-    .max(600, "Máximo 600 parcelas"),
-  firstDueDate: isoDate,
-});
-
-const scheduleCustomSchema = z.object({
-  mode: z.literal("custom"),
-  installments: z
-    .array(
-      z.object({
-        amountCents: z.number().int().min(1, "Informe um valor"),
-        dueDate: isoDate,
-      })
-    )
-    .min(1, "Adicione ao menos uma parcela")
-    .max(600, "Máximo 600 parcelas"),
-});
-
-const scheduleMonthlySchema = z.object({
-  mode: z.literal("monthly"),
-  monthlyAmountCents: z.number().int().min(1, "Informe um valor"),
-  months: z.number().int().min(1, "Mínimo 1 mês").max(600, "Máximo 600 meses"),
-  firstDueDate: isoDate,
-});
-
-export const createContractSchema = z.object({
-  title: z.string().min(1, "Informe um título").max(200, "Título muito longo"),
-  description: z.string().max(2000, "Descrição muito longa").optional(),
-  ownerRole: ownerRoleSchema,
-  requiresConfirmation: z.boolean(),
-  schedule: z.discriminatedUnion("mode", [
-    scheduleAutoSchema,
-    scheduleCustomSchema,
-    scheduleMonthlySchema,
-  ]),
-});
-
 export const updateInstallmentSchema = z
   .object({
     amountCents: z.number().int().min(1, "Informe um valor").optional(),
@@ -176,7 +126,6 @@ export const updateInstallmentSchema = z
     message: "Altere ao menos um campo",
   });
 
-export type CreateContractInput = z.infer<typeof createContractSchema>;
 export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
 
 /** Chave PIX válida (formato). Normalização final acontece no servidor. */

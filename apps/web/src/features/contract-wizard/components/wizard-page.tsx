@@ -1,3 +1,4 @@
+import { CircleNotch } from "@phosphor-icons/react";
 import { useSearch } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { StepFrame, StepHeader } from "@/components/layout/step-frame";
@@ -15,10 +16,13 @@ import { PAGE_TITLE } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { useContractWizard } from "../hooks/use-contract-wizard";
+import { useWizardSubmit } from "../hooks/use-wizard-submit";
 import { AdjustInstallments } from "./adjust-installments";
 import { AdjustLegend, AdjustSum } from "./adjust-sum";
 import { DiscardDialog } from "./discard-dialog";
 import { StepAbout } from "./step-about";
+import { StepParty } from "./step-party";
+import { StepReview } from "./step-review";
 import { StepSchedule } from "./step-schedule";
 import { STEP_LABEL, WizardRail } from "./wizard-rail";
 
@@ -30,10 +34,16 @@ import { STEP_LABEL, WizardRail } from "./wizard-rail";
 export function ContractWizardPage() {
   useDocumentTitle(PAGE_TITLE.contractNew);
   const { title } = useSearch({ from: "/_focus/contracts/new" });
-  const wizard = useContractWizard({ titleFromSearch: title });
+  const submitter = useWizardSubmit();
+  const wizard = useContractWizard({
+    titleFromSearch: title,
+    onSubmit: (values) =>
+      submitter.submit(values, (issue) => wizard.report(issue)),
+  });
   const keyboard = useVisualViewportInset() >= KEYBOARD_MIN_PX;
   const reduced = useReducedMotion();
   const { step } = wizard;
+  const buttonLabel = step === 4 ? m.wizard_create() : m.wizard_continue();
   return (
     <>
       <StepFrame
@@ -49,12 +59,24 @@ export function ContractWizardPage() {
             {wizard.adjusting ? <AdjustSum wizard={wizard} /> : null}
             {wizard.adjusting ? <AdjustLegend wizard={wizard} /> : null}
             <Button
+              aria-busy={submitter.creating || undefined}
               block
               className={wizard.adjusting ? "md:mt-7" : undefined}
               onClick={wizard.next}
               size="lg"
             >
-              {step === 4 ? m.wizard_create() : m.wizard_continue()}
+              {submitter.creating ? (
+                <>
+                  <CircleNotch
+                    aria-hidden="true"
+                    className="animate-spin motion-reduce:animate-none"
+                    size={16}
+                  />
+                  {m.wizard_creating()}
+                </>
+              ) : (
+                buttonLabel
+              )}
             </Button>
           </div>
         }
@@ -104,6 +126,8 @@ export function ContractWizardPage() {
             {step === 2 && wizard.adjusting ? (
               <AdjustInstallments wizard={wizard} />
             ) : null}
+            {step === 3 ? <StepParty wizard={wizard} /> : null}
+            {step === 4 ? <StepReview wizard={wizard} /> : null}
           </motion.div>
         </AnimatePresence>
       </StepFrame>
