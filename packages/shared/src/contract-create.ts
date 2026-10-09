@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { isRealISODate } from "./date";
+import { isRealISODate, todayISO } from "./date";
 import { OWNER_ROLE } from "./domain";
-import { type ScheduleInput, scheduleCount, sumMismatch } from "./schedule";
+import {
+  buildSchedule,
+  type ScheduleInput,
+  scheduleCount,
+  sumMismatch,
+} from "./schedule";
 
 /**
  * Every code the contract form and POST /api/contracts raise (mockup 15,
@@ -26,6 +31,9 @@ export const CONTRACT_ERROR_CODES = [
   "installments.sum.over",
   "installments.sum.under",
   "installments.count.mismatch",
+  "installments.paid.invalid",
+  "installments.paid.duplicate",
+  "installments.paid.future",
   "counterparty.name.required",
   "counterparty.name.tooLong",
   "counterparty.email.invalid",
@@ -182,6 +190,66 @@ export function toScheduleInput(
   return schedule;
 }
 
+interface PaidCheckBody {
+  paidInstallments?: number[] | undefined;
+}
+
+function customDueDates(schedule: z.output<typeof scheduleSchema>): string[] {
+  return schedule.mode === "custom"
+    ? schedule.installments.map((row) => row.dueDate)
+    : [];
+}
+
+function scheduleDueDates(
+  schedule: ScheduleInput,
+  rows?: readonly { amountCents: number; dueDate: string }[]
+): string[] {
+  return buildSchedule(schedule, rows).map((row) => row.dueDate);
+}
+
+/** Only real, distinct installments due up to today can come paid (never a future one). */
+function checkPaidInstallments(
+  body: PaidCheckBody,
+  ctx: z.RefinementCtx,
+  loadDueDates: () => readonly string[]
+): void {
+  const paid = body.paidInstallments;
+  if (!paid || paid.length === 0) {
+    return;
+  }
+  const dueDates = loadDueDates();
+  const today = todayISO();
+  const seen = new Set<number>();
+  for (const [index, sequence] of paid.entries()) {
+    if (!Number.isInteger(sequence) || sequence < 1) {
+      continue; // the item's own rule already flagged it
+    }
+    const dueDate = dueDates[sequence - 1];
+    const code =
+      dueDate === undefined
+        ? "installments.paid.invalid"
+        : paidCode(seen.has(sequence), dueDate > today);
+    seen.add(sequence);
+    if (code) {
+      ctx.addIssue({
+        code: "custom",
+        message: code,
+        path: ["paidInstallments", index],
+      });
+    }
+  }
+}
+
+function paidCode(
+  repeated: boolean,
+  future: boolean
+): ContractErrorCode | null {
+  if (repeated) {
+    return "installments.paid.duplicate";
+  }
+  return future ? "installments.paid.future" : null;
+}
+
 export const contractRequestSchema = z
   .object({
     title: contractTitleSchema,
@@ -191,11 +259,22 @@ export const contractRequestSchema = z
     requiresConfirmation: z.boolean({ error: "contract.create.failed" }),
     schedule: scheduleSchema,
     installments: installmentRowsSchema.optional(),
+    // 1-based sequences of the installments already paid when the contract is created.
+    paidInstallments: z
+      .array(
+        z
+          .number({ error: "installments.paid.invalid" })
+          .int("installments.paid.invalid")
+          .min(1, "installments.paid.invalid")
+      )
+      .max(MAX_INSTALLMENTS, "installments.paid.invalid")
+      .optional(),
     counterparty: counterpartySchema.optional(),
   })
   .superRefine((body, ctx) => {
     const schedule = toScheduleInput(body.schedule);
     if (schedule === null) {
+      checkPaidInstallments(body, ctx, () => customDueDates(body.schedule));
       return;
     }
     if (
@@ -211,6 +290,7 @@ export const contractRequestSchema = z
       return;
     }
     if (!body.installments) {
+      checkPaidInstallments(body, ctx, () => scheduleDueDates(schedule));
       return;
     }
     if (body.installments.length !== scheduleCount(schedule)) {
@@ -232,7 +312,11 @@ export const contractRequestSchema = z
         path: ["installments"],
         params: { diff: mismatch.diff },
       });
+      return;
     }
+    checkPaidInstallments(body, ctx, () =>
+      scheduleDueDates(schedule, body.installments)
+    );
   });
 
 export type ContractRequestInput = z.input<typeof contractRequestSchema>;

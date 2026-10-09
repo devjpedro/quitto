@@ -274,9 +274,9 @@ describe("oppositeRole / codes / datas", () => {
     expect(oppositeRole("buyer")).toBe("seller");
   });
 
-  it("os 22 códigos, sem repetição", () => {
-    expect(CONTRACT_ERROR_CODES).toHaveLength(22);
-    expect(new Set(CONTRACT_ERROR_CODES).size).toBe(22);
+  it("os 25 códigos, sem repetição", () => {
+    expect(CONTRACT_ERROR_CODES).toHaveLength(25);
+    expect(new Set(CONTRACT_ERROR_CODES).size).toBe(25);
   });
 
   it("isRealISODate recusa 31/02 e 2026-13-01", () => {
@@ -357,5 +357,77 @@ describe("o teto dos valores em centavos (int4)", () => {
         schedule: { ...valid.schedule, totalAmountCents: MAX },
       })
     ).toEqual([]);
+  });
+});
+
+describe("paidInstallments", () => {
+  const past = {
+    ...valid,
+    schedule: { ...valid.schedule, firstDueDate: "2020-01-10" },
+  };
+  const mixed = {
+    ...valid,
+    schedule: {
+      mode: "custom" as const,
+      installments: [
+        { amountCents: 100, dueDate: "2020-01-10" },
+        { amountCents: 100, dueDate: "2020-02-10" },
+        { amountCents: 100, dueDate: "2999-03-10" },
+      ],
+    },
+  };
+
+  it("aceita parcelas vencidas, em qualquer ordem", () => {
+    expect(issues({ ...past, paidInstallments: [3, 1, 12] })).toEqual([]);
+    expect(issues({ ...mixed, paidInstallments: [2, 1] })).toEqual([]);
+  });
+
+  it("aceita lista vazia e ausente", () => {
+    expect(issues({ ...past, paidInstallments: [] })).toEqual([]);
+    expect(issues(past)).toEqual([]);
+  });
+
+  it("rejeita parcela futura", () => {
+    const found = issues({ ...mixed, paidInstallments: [1, 3] });
+    expect(found).toEqual([
+      {
+        code: "installments.paid.future",
+        path: "paidInstallments.1",
+        params: undefined,
+      },
+    ]);
+  });
+
+  it("rejeita futura num contrato novo", () => {
+    expect(
+      issues({ ...valid, paidInstallments: [1] }).map((i) => i.code)
+    ).toEqual(["installments.paid.future"]);
+  });
+
+  it("rejeita repetida", () => {
+    expect(
+      issues({ ...past, paidInstallments: [2, 2] }).map((i) => i.code)
+    ).toEqual(["installments.paid.duplicate"]);
+  });
+
+  it("rejeita fora de 1..n, zero, negativa e fracionária", () => {
+    expect(
+      issues({ ...past, paidInstallments: [13] }).map((i) => i.code)
+    ).toEqual(["installments.paid.invalid"]);
+    for (const bad of [0, -1, 1.5]) {
+      expect(
+        issues({ ...past, paidInstallments: [bad] }).map((i) => i.code)
+      ).toEqual(["installments.paid.invalid"]);
+    }
+  });
+
+  it("os códigos novos estão na lista traduzível", () => {
+    for (const code of [
+      "installments.paid.invalid",
+      "installments.paid.duplicate",
+      "installments.paid.future",
+    ]) {
+      expect(isContractErrorCode(code)).toBe(true);
+    }
   });
 });

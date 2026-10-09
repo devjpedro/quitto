@@ -51,6 +51,12 @@ const ERROR_TEXT: Record<ContractErrorCode, Text> = {
     m.error_installments_sum_under({ diff: money(p.diff, locale) }, { locale }),
   "installments.count.mismatch": (_p, locale) =>
     m.error_installments_count_mismatch({}, { locale }),
+  "installments.paid.invalid": (_p, locale) =>
+    m.error_installments_paid_invalid({}, { locale }),
+  "installments.paid.duplicate": (_p, locale) =>
+    m.error_installments_paid_duplicate({}, { locale }),
+  "installments.paid.future": (_p, locale) =>
+    m.error_installments_paid_future({}, { locale }),
   "counterparty.name.required": (_p, locale) =>
     m.error_counterparty_name_required({}, { locale }),
   "counterparty.name.tooLong": (_p, locale) =>
