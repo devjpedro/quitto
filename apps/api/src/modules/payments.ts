@@ -70,6 +70,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
 
+      // a chave tem de ser da própria parcela (o presign a gera assim)
+      if (!body.objectKey.startsWith(`proofs/${inst.contractId}/${inst.id}/`)) {
+        throw new ValidationError("Comprovante não pertence à parcela");
+      }
+
       // valida que o objeto realmente subiu (e tamanho/tipo coerentes)
       const head = await headObject(body.objectKey).catch(() => null);
       if (!head) {

@@ -253,4 +253,24 @@ describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
     );
     expect(res.status).toBe(422);
   });
+
+  it("rejeita uma chave que existe no bucket mas não é desta parcela (-> 422)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("prefix"));
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const objectKey = `proofs/${cId}/outra-parcela/${crypto.randomUUID()}-x.pdf`;
+    await putObjectRaw(objectKey, "application/pdf");
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/proofs`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          objectKey,
+          fileName: "x.pdf",
+          mimeType: "application/pdf",
+        }),
+      })
+    );
+    expect(res.status).toBe(422);
+  });
 });
