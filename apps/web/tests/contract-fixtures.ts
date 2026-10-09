@@ -71,6 +71,7 @@ export function motoDetail(over: Partial<ContractDetail> = {}): ContractDetail {
       dueDate,
       status: STATUS[i] as string,
       paidAt: PAID_AT[i] ?? null,
+      registeredOnCreate: false,
     })),
     participants: [
       {
@@ -131,6 +132,7 @@ export function installmentDetail(
     status: "awaiting_confirmation",
     paidAt: null,
     confirmedAt: null,
+    registeredOnCreate: false,
     receiver: {
       name: "João Souza",
       hasAccount: true,

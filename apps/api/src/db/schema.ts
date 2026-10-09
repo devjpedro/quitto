@@ -135,6 +135,10 @@ export const installment = pgTable(
     status: installmentStatusEnum("status").notNull().default("pending"),
     paidAt: timestamp("paid_at"),
     confirmedAt: timestamp("confirmed_at"),
+    // Already paid when the contract was created: no proof, approval or reminder.
+    registeredOnCreate: boolean("registered_on_create")
+      .notNull()
+      .default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("installment_contract_id_idx").on(table.contractId)]

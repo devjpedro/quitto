@@ -1,6 +1,7 @@
 import {
   AUDIT_TYPE,
   INSTALLMENT_STATUS,
+  isPaidStatus,
   NOTIFICATION_TYPE,
 } from "@quitto/shared";
 import { Elysia, t } from "elysia";
@@ -90,11 +91,12 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         );
       }
 
-      const newStatus = nextStatus(
-        inst.status,
-        "submit_proof",
-        c.requiresConfirmation
-      );
+      // Paid when the contract was created: the proof is only attached, the
+      // status stays and nobody is told (it is past, not a payment to approve).
+      const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
+      const newStatus = attachOnly
+        ? inst.status
+        : nextStatus(inst.status, "submit_proof", c.requiresConfirmation);
 
       const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
@@ -105,6 +107,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           sizeBytes,
           uploadedBy: user.id,
         });
+        if (attachOnly) {
+          return inst;
+        }
         const row = await transitionInstallment(tx, inst, {
           status: newStatus,
           ...(newStatus === "paid" ? { paidAt: new Date() } : {}),

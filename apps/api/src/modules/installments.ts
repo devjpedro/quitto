@@ -38,6 +38,7 @@ const detailSchema = t.Object({
   status: t.String(),
   paidAt: nullable(t.String()),
   confirmedAt: nullable(t.String()),
+  registeredOnCreate: t.Boolean(),
   receiver: t.Object({
     name: nullable(t.String()),
     hasAccount: t.Boolean(),
@@ -207,6 +208,7 @@ export const installmentsModule = new Elysia({ prefix: "/api" })
         status: inst.status,
         paidAt: inst.paidAt?.toISOString() ?? null,
         confirmedAt: inst.confirmedAt?.toISOString() ?? null,
+        registeredOnCreate: inst.registeredOnCreate,
         receiver: {
           name: recebedor.displayName,
           hasAccount: recebedor.hasAccount,

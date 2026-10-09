@@ -193,6 +193,7 @@ export const contractDetailModule = new Elysia({ prefix: "/api" })
             dueDate: it.dueDate,
             status: it.status,
             paidAt: it.paidAt?.toISOString() ?? null,
+            registeredOnCreate: it.registeredOnCreate,
           })),
         participants: peopleView({
           people,

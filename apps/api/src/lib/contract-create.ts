@@ -1,12 +1,15 @@
 import {
+  AUDIT_TYPE,
   buildSchedule,
   type ContractRequest,
+  INSTALLMENT_STATUS,
   oppositeRole,
   type ScheduleRow,
   toScheduleInput,
 } from "@quitto/shared";
 import { db } from "../db/client";
 import { contract, installment, invite, participant } from "../db/schema";
+import { recordEvent } from "./audit";
 import { normalizeEmail } from "./email";
 import { inviteExpiry, newInviteToken } from "./invite-mail";
 
@@ -14,6 +17,11 @@ export interface CreatedContract {
   id: string;
   /** The invite to e-mail after the commit; null with no other party or no e-mail. */
   invite: { email: string; role: "buyer" | "seller"; token: string } | null;
+}
+
+/** The due day, at noon UTC so every time zone reads the same calendar day. */
+function dueDayAsDate(dueDate: string): Date {
+  return new Date(`${dueDate}T12:00:00.000Z`);
 }
 
 function requestRows(body: ContractRequest): ScheduleRow[] {
@@ -44,6 +52,7 @@ export async function createContract(
   const schedule = toScheduleInput(body.schedule);
   const party = body.counterparty ?? null;
   const email = party?.email ? normalizeEmail(party.email) : null;
+  const paidSequences = new Set(body.paidInstallments ?? []);
   const totalAmountCents = rows.reduce((sum, row) => sum + row.amountCents, 0);
 
   return await db.transaction(async (tx) => {
@@ -68,13 +77,32 @@ export async function createContract(
       throw new Error("contract insert returned no row");
     }
     await tx.insert(installment).values(
-      rows.map((row) => ({
-        contractId: created.id,
-        sequence: row.sequence,
-        amountCents: row.amountCents,
-        dueDate: row.dueDate,
-      }))
+      rows.map((row) => {
+        const paid = paidSequences.has(row.sequence);
+        return {
+          contractId: created.id,
+          sequence: row.sequence,
+          amountCents: row.amountCents,
+          dueDate: row.dueDate,
+          // Past, not a payment to approve: paid on its due day, whatever the contract's rule.
+          ...(paid
+            ? {
+                status: INSTALLMENT_STATUS.paid,
+                paidAt: dueDayAsDate(row.dueDate),
+                registeredOnCreate: true,
+              }
+            : {}),
+        };
+      })
     );
+    if (paidSequences.size > 0) {
+      await recordEvent(tx, {
+        contractId: created.id,
+        actorUserId: owner.id,
+        type: AUDIT_TYPE.installmentsPaidOnCreate,
+        metadata: { count: paidSequences.size },
+      });
+    }
     await tx.insert(participant).values({
       contractId: created.id,
       displayName: owner.name,

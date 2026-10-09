@@ -67,6 +67,7 @@ const CreateContractBody = t.Object({
     }),
   ]),
   installments: t.Optional(t.Array(InstallmentRow)),
+  paidInstallments: t.Optional(t.Array(t.Number())),
   counterparty: t.Optional(
     t.Object({ name: t.String(), email: t.Optional(t.String()) })
   ),

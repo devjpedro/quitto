@@ -79,6 +79,7 @@ export const contractDetailResponse = t.Object({
       dueDate: t.String(),
       status: t.String(),
       paidAt: t.Union([t.String(), t.Null()]),
+      registeredOnCreate: t.Boolean(),
     })
   ),
   participants: t.Array(
