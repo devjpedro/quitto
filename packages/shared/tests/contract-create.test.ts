@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
   CONTRACT_ERROR_CODES,
-  contractRequestSchema,
   isContractErrorCode,
+} from "../src/contract-codes";
+import {
+  contractRequestSchema,
   oppositeRole,
   toScheduleInput,
 } from "../src/contract-create";

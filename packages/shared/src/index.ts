@@ -1,23 +1,24 @@
-import { z } from "zod";
-import { isRealISODate } from "./date";
-
 export type {
   ContractErrorCode,
-  ContractRequest,
-  ContractRequestInput,
   ContractWarningCode,
-} from "./contract-create";
+} from "./contract-codes";
 // biome-ignore lint/performance/noBarrelFile: index.ts is the package entry point; domain.ts is an internal module, not a true barrel
 export {
   CONTRACT_ERROR_CODES,
   CONTRACT_WARNING_CODES,
+  isContractErrorCode,
+} from "./contract-codes";
+export type {
+  ContractRequest,
+  ContractRequestInput,
+} from "./contract-create";
+export {
   contractDescriptionSchema,
   contractOwnerRoleSchema,
   contractRequestSchema,
   contractTitleSchema,
   counterpartySchema,
   installmentRowsSchema,
-  isContractErrorCode,
   MAX_AMOUNT_CENTS,
   MAX_INSTALLMENTS,
   monthlyScheduleSchema,
@@ -88,45 +89,16 @@ export {
   spreadDifference,
   sumMismatch,
 } from "./schedule";
-
-/** Builds and validates an env object from a Zod schema, failing fast. */
-export function makeEnv<T extends z.ZodTypeAny>(
-  schema: T,
-  source: unknown
-): z.infer<T> {
-  const result = schema.safeParse(source);
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
-      .join("\n");
-    throw new Error(`Invalid environment variables:\n${issues}`);
-  }
-  return result.data;
-}
+export {
+  makeEnv,
+  type UpdateInstallmentInput,
+  updateInstallmentSchema,
+} from "./schemas";
 
 /** API error envelope shape (per spec: code + message + details). */
 export interface ApiErrorBody {
   error: { code: string; message: string; details?: Record<string, unknown> };
 }
-
-// ── Contracts ────────────────────────────────────────────────────────────────
-
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida (use AAAA-MM-DD)")
-  // A real day with a four-digit year: not 2027-02-31, not 0202-11-10.
-  .refine(isRealISODate, "Data inválida (use AAAA-MM-DD)");
-
-export const updateInstallmentSchema = z
-  .object({
-    amountCents: z.number().int().min(1, "Informe um valor").optional(),
-    dueDate: isoDate.optional(),
-  })
-  .refine((v) => v.amountCents !== undefined || v.dueDate !== undefined, {
-    message: "Altere ao menos um campo",
-  });
-
-export type UpdateInstallmentInput = z.infer<typeof updateInstallmentSchema>;
 
 // ── Receipts ─────────────────────────────────────────────────────────────────
 
