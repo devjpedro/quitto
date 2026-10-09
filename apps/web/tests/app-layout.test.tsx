@@ -232,9 +232,11 @@ describe("_app layout", () => {
     meGet.mockReturnValue(new Promise(() => undefined));
     renderWithProviders(<AppLayout />);
     await userEvent.click(screen.getByRole("button", { name: "bell" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Notificações" })
-    ).toBeVisible();
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("dialog", { name: "Notificações" })
+      ).toBeVisible()
+    );
   });
 
   it("⌘K → Notificações → Esc gives the focus back to the bell, not to <body>", async () => {
@@ -244,9 +246,11 @@ describe("_app layout", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "palette: Notificações" })
     );
-    expect(
-      await screen.findByRole("dialog", { name: "Notificações" })
-    ).toBeVisible();
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("dialog", { name: "Notificações" })
+      ).toBeVisible()
+    );
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("button", { name: "bell" })).toHaveFocus();
@@ -259,9 +263,11 @@ describe("_app layout", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "see all from the page" })
     );
-    expect(
-      await screen.findByRole("dialog", { name: "Notificações" })
-    ).toBeVisible();
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("dialog", { name: "Notificações" })
+      ).toBeVisible()
+    );
   });
 
   it("closing the panel opened by Ver todas gives the focus back to Ver todas: the opener wins over the bell fallback", async () => {
@@ -271,9 +277,11 @@ describe("_app layout", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "see all from the page" })
     );
-    expect(
-      await screen.findByRole("dialog", { name: "Notificações" })
-    ).toBeVisible();
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("dialog", { name: "Notificações" })
+      ).toBeVisible()
+    );
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(

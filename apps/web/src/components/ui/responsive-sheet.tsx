@@ -2,6 +2,7 @@ import { X } from "@phosphor-icons/react";
 import {
   AnimatePresence,
   motion,
+  type Transition,
   useDragControls,
   useReducedMotion,
 } from "motion/react";
@@ -26,6 +27,14 @@ export function useSheetVariant() {
   return useContext(SheetVariant);
 }
 
+/**
+ * From md the side panel lives inside the white board (the sidebar's 232 px
+ * column and the 12 px of canvas stay outside): this box is the board's, and
+ * it clips what crosses its edge, so the panel comes in and goes out through
+ * the board's border, never the window's.
+ */
+const BOARD_CLIP =
+  "fixed z-40 top-3 right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[calc(232px+env(safe-area-inset-left))] overflow-hidden rounded-panel";
 const DISMISS_OFFSET_PX = 120;
 const DISMISS_VELOCITY = 500;
 /** From md (the side panel; a phone keeps its 44 px targets): the column's filled 32 px square. */
@@ -39,6 +48,7 @@ export const FILLED_SQUARE =
 const FILLED_CLOSE = "bg-surface-card hover:bg-surface-card-hover md:top-4";
 
 const SPRING = { type: "spring", stiffness: 420, damping: 40 } as const;
+const SIDE_TRANSITION = { duration: 0.28, ease: [0.32, 0.72, 0, 1] } as const;
 
 /**
  * Variant and motion for the sheet. Dragging only exists on the bottom sheet
@@ -52,17 +62,24 @@ function useSheetMotion() {
   const hiddenReduced = { opacity: 0 };
   const dragControls = useDragControls();
   const variant: "side" | "bottom" = isWide ? "side" : "bottom";
-  // It fades as it travels: the way out is the way in, and what is still
-  // crossing the canvas margin or the page's end is already see-through.
-  const offscreen = isWide ? { x: "100%" } : { y: "100%" };
+  // The side panel crosses the board's edge (the board clips it) and fades as
+  // one piece: opacity and travel share the container and the timing. The
+  // bottom sheet fades as it travels, so the way out is the way in.
+  const offscreen = isWide ? { x: "100%", opacity: 0 } : { y: "100%" };
+  let transition: Transition = SPRING;
+  if (reduceMotion) {
+    transition = { duration: 0.15 };
+  } else if (isWide) {
+    transition = SIDE_TRANSITION;
+  }
   return {
     variant,
     dragControls,
     canDrag: variant === "bottom" && !reduceMotion,
     hidden: reduceMotion ? hiddenReduced : offscreen,
-    shown: reduceMotion ? { opacity: 1 } : { x: 0, y: 0 },
+    shown: reduceMotion ? { opacity: 1 } : { x: 0, y: 0, opacity: 1 },
     exit: reduceMotion ? hiddenReduced : { ...offscreen, opacity: 0 },
-    transition: reduceMotion ? { duration: 0.15 } : SPRING,
+    transition,
   };
 }
 
@@ -159,12 +176,33 @@ function SheetHeading({
  */
 function frameClass(variant: "side" | "bottom", hasFooter: boolean): string {
   if (variant === "side") {
-    return "top-3 right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] w-[420px] max-w-[calc(100vw-1.5rem)] rounded-panel";
+    // Inside the board's clip (BOARD_CLIP), flush with its right edge.
+    return "absolute inset-y-0 right-0 w-[420px] max-w-full rounded-panel pointer-events-auto";
   }
   return cn(
-    "inset-x-0 bottom-0 max-h-[91dvh] rounded-t-panel",
+    "fixed inset-x-0 bottom-0 max-h-[91dvh] rounded-t-panel",
     !hasFooter && "pb-[env(safe-area-inset-bottom)]"
   );
+}
+
+/** The scrim covers the board from md (where the side panel lives), the window below. */
+function scrimClass(variant: "side" | "bottom"): string {
+  return cn(
+    "bg-black/40",
+    variant === "side" ? BOARD_CLIP : "fixed inset-0 z-40"
+  );
+}
+
+/** The scrim fades with the same timing as the side panel. */
+function scrimTransition(variant: "side" | "bottom") {
+  return variant === "side" ? SIDE_TRANSITION : undefined;
+}
+
+/** The box that clips the side panel to the board; the bottom sheet needs none. */
+function clipClass(variant: "side" | "bottom"): string {
+  return variant === "side"
+    ? cn(BOARD_CLIP, "pointer-events-none z-50")
+    : "contents";
 }
 
 /** Side panel from md up, draggable bottom sheet below. Same content in both. */
@@ -222,95 +260,98 @@ export function ResponsiveSheet({
             <Dialog.Overlay asChild forceMount>
               <motion.div
                 animate={{ opacity: 1 }}
-                className="fixed inset-0 z-40 bg-black/40"
+                className={scrimClass(variant)}
                 exit={{ opacity: 0 }}
                 initial={{ opacity: 0 }}
+                transition={scrimTransition(variant)}
               />
             </Dialog.Overlay>
-            <Dialog.Content
-              asChild
-              forceMount
-              onCloseAutoFocus={onCloseAutoFocus}
-              onOpenAutoFocus={onOpenAutoFocus}
-              {...(description ? {} : { "aria-describedby": undefined })}
-            >
-              <motion.div
-                animate={shown}
-                className={cn(
-                  "fixed z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
-                  frameClass(variant, Boolean(footer))
-                )}
-                data-variant={variant}
-                drag={canDrag ? "y" : false}
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragControls={canDrag ? dragControls : undefined}
-                dragElastic={{ top: 0, bottom: 0.6 }}
-                dragListener={false}
-                exit={exit}
-                initial={hidden}
-                onDragEnd={(_, info) => {
-                  if (!canDrag) {
-                    return;
-                  }
-                  if (
-                    info.offset.y > DISMISS_OFFSET_PX ||
-                    info.velocity.y > DISMISS_VELOCITY
-                  ) {
-                    onOpenChange(false);
-                  }
-                }}
-                onKeyDown={onKeyDown}
-                ref={frameRef}
-                tabIndex={-1}
-                transition={transition}
+            <div className={clipClass(variant)}>
+              <Dialog.Content
+                asChild
+                forceMount
+                onCloseAutoFocus={onCloseAutoFocus}
+                onOpenAutoFocus={onOpenAutoFocus}
+                {...(description ? {} : { "aria-describedby": undefined })}
               >
-                <div
-                  className={cn("px-5 pt-2", canDrag && "touch-none")}
-                  onPointerDown={
-                    canDrag ? (event) => dragControls.start(event) : undefined
-                  }
+                <motion.div
+                  animate={shown}
+                  className={cn(
+                    "z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
+                    frameClass(variant, Boolean(footer))
+                  )}
+                  data-variant={variant}
+                  drag={canDrag ? "y" : false}
+                  dragConstraints={{ top: 0, bottom: 0 }}
+                  dragControls={canDrag ? dragControls : undefined}
+                  dragElastic={{ top: 0, bottom: 0.6 }}
+                  dragListener={false}
+                  exit={exit}
+                  initial={hidden}
+                  onDragEnd={(_, info) => {
+                    if (!canDrag) {
+                      return;
+                    }
+                    if (
+                      info.offset.y > DISMISS_OFFSET_PX ||
+                      info.velocity.y > DISMISS_VELOCITY
+                    ) {
+                      onOpenChange(false);
+                    }
+                  }}
+                  onKeyDown={onKeyDown}
+                  ref={frameRef}
+                  tabIndex={-1}
+                  transition={transition}
                 >
-                  {variant === "bottom" ? (
-                    <div
-                      aria-hidden="true"
-                      className="mx-auto mb-2 h-1 w-9 rounded-full bg-line-strong"
+                  <div
+                    className={cn("px-5 pt-2", canDrag && "touch-none")}
+                    onPointerDown={
+                      canDrag ? (event) => dragControls.start(event) : undefined
+                    }
+                  >
+                    {variant === "bottom" ? (
+                      <div
+                        aria-hidden="true"
+                        className="mx-auto mb-2 h-1 w-9 rounded-full bg-line-strong"
+                      />
+                    ) : null}
+                    <SheetHeading
+                      actions={variant === "side" ? headerActions : undefined}
+                      description={description}
+                      filled={filledControls}
+                      leading={leading}
+                      title={title}
                     />
-                  ) : null}
-                  <SheetHeading
-                    actions={variant === "side" ? headerActions : undefined}
-                    description={description}
-                    filled={filledControls}
-                    leading={leading}
-                    title={title}
-                  />
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-5">
-                  <SheetVariant.Provider value={variant}>
-                    {children}
-                  </SheetVariant.Provider>
-                </div>
-                {variant === "bottom" && footer ? (
-                  // Pinned under the scrolling body (mockup 14, frame E): the
-                  // main action never scrolls away. No radius here, so a
-                  // straight top line is fine.
-                  <div className="shrink-0 border-line border-t bg-surface px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                    {footer}
                   </div>
-                ) : null}
-                {/* Close comes AFTER the content: Radix focuses the first tabbable
+                  <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-5">
+                    <SheetVariant.Provider value={variant}>
+                      {children}
+                    </SheetVariant.Provider>
+                  </div>
+                  {variant === "bottom" && footer ? (
+                    // Pinned under the scrolling body (mockup 14, frame E): the
+                    // main action never scrolls away. No radius here, so a
+                    // straight top line is fine.
+                    <div className="shrink-0 border-line border-t bg-surface px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                      {footer}
+                    </div>
+                  ) : null}
+                  {/* Close comes AFTER the content: Radix focuses the first tabbable
                     element on open, and it must be the content, not "Close". */}
-                <Dialog.Close asChild>
-                  <IconButton
-                    className={cn(
-                      "absolute top-3 right-3",
-                      filledControls && cn(FILLED_CLOSE, FILLED_SQUARE)
-                    )}
-                    icon={X}
-                    label={m.sheet_close()}
-                  />
-                </Dialog.Close>
-              </motion.div>
-            </Dialog.Content>
+                  <Dialog.Close asChild>
+                    <IconButton
+                      className={cn(
+                        "absolute top-3 right-3",
+                        filledControls && cn(FILLED_CLOSE, FILLED_SQUARE)
+                      )}
+                      icon={X}
+                      label={m.sheet_close()}
+                    />
+                  </Dialog.Close>
+                </motion.div>
+              </Dialog.Content>
+            </div>
           </Dialog.Portal>
         ) : null}
       </AnimatePresence>

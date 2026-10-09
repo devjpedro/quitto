@@ -81,11 +81,14 @@ function SheetFromLauncher({ leaves }: { leaves: "at-open" | "after-open" }) {
 }
 
 describe("ResponsiveSheet", () => {
-  it("is a named dialog that focuses the content first, not the close button", () => {
+  it("is a named dialog that focuses the content first, not the close button", async () => {
     renderSheet();
-    expect(
-      screen.getByRole("dialog", { name: "Parcela 7 de 12" })
-    ).toBeVisible();
+    // The side panel fades in (opacity 0 to 1), so it is visible once it ends.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "Parcela 7 de 12" })
+      ).toBeVisible()
+    );
     expect(
       screen.getByRole("button", { name: "Enviar comprovante" })
     ).toHaveFocus();
@@ -107,8 +110,11 @@ describe("ResponsiveSheet", () => {
     );
     const side = screen.getByRole("dialog");
     expect(side).toHaveAttribute("data-variant", "side");
-    // viewport-fit=cover: a phone on its side (md+) has the notch at a side.
-    expect(side).toHaveClass(
+    // From md it lives inside the board: flush with the right edge of a box
+    // that clips it (viewport-fit=cover: that box stays off a side notch).
+    expect(side).toHaveClass("absolute", "inset-y-0", "right-0");
+    expect(side.parentElement).toHaveClass(
+      "overflow-hidden",
       "right-[max(0.75rem,env(safe-area-inset-right))]",
       "bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
     );
@@ -208,7 +214,7 @@ describe("ResponsiveSheet", () => {
       </ResponsiveSheet>
     );
     const { rerender } = render(sheet(true));
-    expect(screen.getByRole("dialog")).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeVisible());
     rerender(sheet(false));
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
@@ -362,9 +368,11 @@ describe("ResponsiveSheet", () => {
         <p>corpo</p>
       </ResponsiveSheet>
     );
-    expect(
-      await screen.findByRole("button", { name: "Próxima parcela" })
-    ).toBeVisible();
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("button", { name: "Próxima parcela" })
+      ).toBeVisible()
+    );
     expect(
       screen.queryByRole("button", { name: "Copiar código PIX" })
     ).toBeNull();
