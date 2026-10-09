@@ -1,6 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { Logo } from "@/components/logo";
+import type { MouseEvent, ReactNode } from "react";
+import { HomeLogo } from "@/components/home-logo";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { BackToTop } from "./back-to-top";
@@ -16,31 +15,26 @@ export const SHELL_COLUMN =
   "sticky top-3 hidden h-[calc(100dvh_-_0.75rem_-_max(0.75rem,env(safe-area-inset-bottom)))] w-[232px] shrink-0 flex-col overflow-y-auto p-3 md:flex";
 
 /**
- * The wordmark alone (phase 1.5, owner's decision 1): 24 px, 44 px tall.
- * With `link` it is a link (the sidebar's goes home); the focus ring is
- * inset so the column's overflow never clips it.
+ * The wordmark alone (phase 1.5, owner's decision 1): 24 px, 44 px tall. It
+ * is HomeLogo: a link home with a session, a picture without one. The focus
+ * ring is inset so the column's overflow never clips it.
  */
 export function ShellLogoRow({
   action,
-  link,
+  onLogoNavigate,
 }: {
   /** At the right of the logo, on the same line (the sidebar's "＋"). */
   action?: ReactNode;
-  link?: { label: string; to: "/" };
+  /** The logo's click, which may stop it (the wizard asks before leaving). */
+  onLogoNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const logo = <Logo size={24} />;
-  if (!link) {
-    return <div className="flex h-11 shrink-0 items-center px-2.5">{logo}</div>;
-  }
   return (
     <div className="flex shrink-0 items-center justify-between gap-2">
-      <Link
-        aria-label={link.label}
-        className="flex h-11 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
-        to={link.to}
-      >
-        {logo}
-      </Link>
+      <HomeLogo
+        className="flex h-11 items-center rounded-control px-2.5 focus-visible:ring-inset focus-visible:ring-offset-0"
+        onNavigate={onLogoNavigate}
+        size={24}
+      />
       {action}
     </div>
   );

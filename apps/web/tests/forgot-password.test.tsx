@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ vi.mock("@tanstack/react-router", async () => ({
 }));
 
 import { ForgotPasswordPage } from "../src/features/auth/components/forgot-password-page";
+import { renderWithProviders as render } from "./test-utils";
 
 const SUBMIT = "Mandar o link";
 

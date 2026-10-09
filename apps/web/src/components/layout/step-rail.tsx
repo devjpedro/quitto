@@ -1,4 +1,5 @@
 import type { Icon } from "@phosphor-icons/react";
+import type { MouseEvent } from "react";
 import { StepAnchor, type StepState } from "@/components/ui/step-anchor";
 import { cn } from "@/lib/utils";
 import { SHELL_COLUMN, ShellLogoRow } from "./shell-frame";
@@ -72,12 +73,15 @@ export function StepRail({
   footer,
   footerIcon: FooterIcon,
   group,
+  onLogoNavigate,
   order,
   steps,
 }: {
   footer: string;
   footerIcon: Icon;
   group: string;
+  /** The logo's click, which may stop it (the wizard asks before leaving). */
+  onLogoNavigate?: (event: MouseEvent<HTMLAnchorElement>) => void;
   order: "meta-first" | "label-first";
   steps: RailStep[];
 }) {
@@ -87,7 +91,7 @@ export function StepRail({
       className={SHELL_COLUMN}
       data-testid="wizard-rail"
     >
-      <ShellLogoRow />
+      <ShellLogoRow onLogoNavigate={onLogoNavigate} />
       {/* 72 px = the sidebar's search (16 + 40) and the gap before "Carteira" (16). */}
       <p className="mt-[72px] mb-1 px-3 text-ink-muted text-xs">{group}</p>
       <ol className="flex flex-col gap-1">

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,7 @@ vi.mock("@tanstack/react-router", async () => ({
 }));
 
 import { ResetPasswordPage } from "../src/features/auth/components/reset-password-page";
+import { renderWithProviders as render } from "./test-utils";
 
 afterEach(() => {
   mocks.search = { token: "tok-123" };

@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StepFrame, StepHeader } from "@/components/layout/step-frame";
+import { renderWithProviders as render } from "./test-utils";
 
 describe("StepFrame", () => {
   it("uma árvore só: coluna, palco, resumo, formulário e barra de ação, todos no HTML (o CSS escolhe pela largura)", () => {

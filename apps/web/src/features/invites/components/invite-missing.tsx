@@ -1,6 +1,6 @@
 import { type Icon, LinkBreak } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "@/components/logo";
+import { HomeLogo } from "@/components/home-logo";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages.js";
 import { StateHeading } from "./state-heading";
@@ -22,7 +22,7 @@ export function InviteNotice({
   return (
     <main className="flex min-h-dvh flex-col bg-surface-sunken px-4 pt-[calc(1rem+env(safe-area-inset-top))] md:items-center md:justify-center md:bg-canvas">
       <div className="w-full max-w-[476px] md:rounded-panel md:bg-surface md:p-9">
-        <Logo size={22} />
+        <HomeLogo size={22} />
         <div className="mt-8">
           <StateHeading icon={icon} title={title} tone={tone}>
             {children}

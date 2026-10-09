@@ -8,16 +8,12 @@ import { InviteFallback } from "@/features/invites/components/invite-fallback";
 import { InvitePage } from "@/features/invites/components/invite-page";
 import { useApiWarmup } from "@/hooks/use-api-warmup";
 import { PAGE_TITLE } from "@/lib/page-title";
-import { seedSession } from "@/lib/session-route";
 
 /**
- * Outside the app's layouts (owner's decision 1 and 13): it seeds the
- * session when there is one and never redirects; the page decides.
+ * Outside the app's layouts (owner's decision 1 and 13): it reads the
+ * session the root seeded and never redirects; the page decides.
  */
 export const Route = createFileRoute("/invites/$token")({
-  beforeLoad: async ({ context }) => ({
-    session: await seedSession(context.queryClient),
-  }),
   loader: ({ context, params }) => {
     context.queryClient.prefetchQuery(inviteLookupQueryOptions(params.token));
     if (context.session === "anon") {

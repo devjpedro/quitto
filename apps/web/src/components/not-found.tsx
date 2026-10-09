@@ -1,6 +1,6 @@
 import { LinkBreak } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "@/components/logo";
+import { HomeLogo } from "@/components/home-logo";
 import { Button } from "@/components/ui/button";
 import { StateHeading } from "@/features/invites/components/state-heading";
 import { m } from "@/paraglide/messages.js";
@@ -10,7 +10,7 @@ export function CenteredCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col items-center bg-surface-sunken px-4 pt-10 pb-10 text-ink md:bg-canvas">
       <div className="w-full max-w-[476px]">
-        <Logo size={24} />
+        <HomeLogo size={24} />
         <div className="mt-6 rounded-panel bg-surface p-6 md:p-7">
           {children}
         </div>

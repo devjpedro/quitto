@@ -27,13 +27,11 @@ import { useTourAutostart } from "@/features/tour/hooks/use-tour-autostart";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useIdentity } from "@/hooks/use-identity";
 import { useSessionGate } from "@/hooks/use-session-gate";
-import { seedSession } from "@/lib/session-route";
 import { m } from "@/paraglide/messages.js";
 
 export const Route = createFileRoute("/_app")({
-  beforeLoad: async ({ context, location }) => {
-    const status = await seedSession(context.queryClient);
-    if (status === "anon") {
+  beforeLoad: ({ context, location }) => {
+    if (context.session === "anon") {
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
     // "unknown" (cold API): render the shell anyway; the client validates.

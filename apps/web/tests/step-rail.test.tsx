@@ -1,8 +1,9 @@
 import { ShieldCheck } from "@phosphor-icons/react";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StepRail } from "@/components/layout/step-rail";
+import { renderWithProviders as render } from "./test-utils";
 
 const LATER_STEP = /Com quem/;
 const onSelect = vi.fn();

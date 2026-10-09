@@ -34,6 +34,8 @@ export interface ContractWizard {
   goTo(step: WizardStep): void;
   issueFor(field: WizardField): FieldIssue | undefined;
   locale: Locale;
+  /** The logo's click: with something filled in it asks first (as the ✕ does). */
+  logoClick(event: { preventDefault(): void }): void;
   next(): void;
   openAdjust(): void;
   preview: PreviewModel;
@@ -80,6 +82,8 @@ export function useContractWizard({
   const [adjusting, setAdjusting] = useState(false);
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [discardOpen, setDiscardOpen] = useState(false);
+  // Where the discard goes: back (the ✕) or home (the logo).
+  const discardHome = useRef(false);
   const focusTarget = useRef<WizardField | "heading" | null>(null);
   const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const identity = useIdentity();
@@ -174,10 +178,18 @@ export function useContractWizard({
       ]);
     },
     close: () => {
+      discardHome.current = false;
       if (isDirty) {
         setDiscardOpen(true);
       } else {
         leave();
+      }
+    },
+    logoClick: (event) => {
+      if (isDirty) {
+        event.preventDefault();
+        discardHome.current = true;
+        setDiscardOpen(true);
       }
     },
     closeAdjust: () => {
@@ -188,7 +200,11 @@ export function useContractWizard({
     discard: {
       confirm: () => {
         setDiscardOpen(false);
-        leave();
+        if (discardHome.current) {
+          navigate({ to: "/" });
+        } else {
+          leave();
+        }
       },
       open: discardOpen,
       setOpen: setDiscardOpen,

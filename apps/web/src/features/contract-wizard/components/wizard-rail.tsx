@@ -27,6 +27,7 @@ export function WizardRail({ wizard }: { wizard: ContractWizard }) {
       footer={m.wizard_rail_footer()}
       footerIcon={ShieldCheck}
       group={m.nav_new_contract()}
+      onLogoNavigate={wizard.logoClick}
       order="meta-first"
       steps={WIZARD_STEPS.map((step) => ({
         label: STEP_LABEL[step](),

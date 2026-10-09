@@ -13,8 +13,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, type ShellProps } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
+import { queryKeys } from "@/lib/query-keys";
 import type { SessionIdentity } from "@/lib/session-resolver";
-import { renderWithProviders } from "./test-utils";
+import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
 vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn(async () => undefined) }));
 vi.mock("@/lib/api", () => ({
@@ -84,7 +85,10 @@ async function renderAt(
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  renderWithProviders(<RouterProvider router={router} />);
+  // The app has a session (the root seeds it), so the logo is a link home.
+  const client = makeTestQueryClient();
+  client.setQueryData(queryKeys.session, maria);
+  renderWithProviders(<RouterProvider router={router} />, { client });
   await screen.findByRole("heading", { name: `page ${path}` });
 }
 

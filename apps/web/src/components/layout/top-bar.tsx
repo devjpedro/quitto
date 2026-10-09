@@ -1,6 +1,6 @@
 import { Bell, CaretLeft, MagnifyingGlass } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
-import { Logo } from "@/components/logo";
+import { HomeLogo } from "@/components/home-logo";
 import { IconButton } from "@/components/ui/icon-button";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
@@ -34,7 +34,7 @@ export function TopBar({
           {detail.backLabel}
         </Link>
       ) : (
-        <Logo size={22} />
+        <HomeLogo size={22} />
       )}
       <div className="flex items-center gap-0.5">
         {detail ? null : (

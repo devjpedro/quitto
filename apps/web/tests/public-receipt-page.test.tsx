@@ -1,5 +1,5 @@
 import type { PublicReceipt } from "@quitto/shared";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +13,7 @@ import { PublicReceiptPage } from "../src/features/receipts/components/public-re
 import { ReceiptUnavailable } from "../src/features/receipts/components/receipt-unavailable";
 import { overwriteGetLocale } from "../src/paraglide/runtime.js";
 import { Route } from "../src/routes/r.$token";
+import { renderWithProviders as render } from "./test-utils";
 
 const receipt: PublicReceipt = {
   contractTitle: "Aluguel do apê",

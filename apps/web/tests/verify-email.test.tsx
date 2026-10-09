@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -20,6 +20,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 import { VerifyEmailPage } from "../src/features/auth/components/verify-email-page";
 import { Route } from "../src/routes/verify-email";
+import { renderWithProviders as render } from "./test-utils";
 
 afterEach(() => {
   mocks.search = { error: "TOKEN_EXPIRED", redirect: "/invites/tok" };

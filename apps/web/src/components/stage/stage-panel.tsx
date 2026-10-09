@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Logo } from "@/components/logo";
+import { HomeLogo } from "@/components/home-logo";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,10 +27,10 @@ export function StagePanel({
       {...rest}
     >
       <span className="absolute top-5 left-5 z-[2] lg:hidden print:hidden">
-        <Logo size={22} variant="inverted" />
+        <HomeLogo size={22} variant="inverted" />
       </span>
       <span className="absolute top-[34px] left-9 z-[2] hidden lg:block print:hidden">
-        <Logo size={28} variant="inverted" />
+        <HomeLogo size={28} variant="inverted" />
       </span>
       {children}
     </section>

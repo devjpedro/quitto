@@ -1,6 +1,6 @@
 import { CaretLeft, X } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useRef } from "react";
-import { Logo } from "@/components/logo";
+import { HomeLogo } from "@/components/home-logo";
 import {
   KEYBOARD_MIN_PX,
   useVisualViewportInset,
@@ -26,7 +26,7 @@ export const ACTION_BAR =
 function HeaderStart({ brand }: { brand: boolean }) {
   return brand ? (
     <span className="flex h-11 items-center px-3 md:hidden">
-      <Logo size={22} />
+      <HomeLogo size={22} />
     </span>
   ) : (
     <span aria-hidden="true" className="size-11 md:hidden" />

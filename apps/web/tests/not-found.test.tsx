@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotFound } from "@/components/not-found";
 import { overwriteGetLocale } from "@/paraglide/runtime.js";
+import { renderWithProviders as render } from "./test-utils";
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
