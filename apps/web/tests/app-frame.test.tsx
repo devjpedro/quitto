@@ -105,6 +105,18 @@ describe("AppFrame", () => {
     );
   });
 
+  it("depois de navegar por um link da sidebar o foco vai para o bloco rolável, para o teclado rolar", async () => {
+    await renderAt("/");
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    await userEvent.click(
+      within(sidebarNav as HTMLElement).getByRole("link", { name: "Contratos" })
+    );
+    await screen.findByRole("heading", { name: "page /contracts" });
+    expect(document.getElementById("conteudo")).toHaveFocus();
+  });
+
   it("the bell and the sidebar row carry the unread count and open the panel", async () => {
     await renderAt("/", { unreadCount: 3 });
     const bells = screen.getAllByRole("button", {

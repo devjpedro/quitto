@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useRef } from "react";
 import type { SessionIdentity } from "@/lib/session-resolver";
 import type { MomentCardView } from "./moment-card";
 import type { NavCounts } from "./nav-items";
@@ -32,6 +33,31 @@ export interface ShellProps {
 }
 
 /**
+ * From md the block scrolls, not the page: after a link of the sidebar or of the
+ * tab bar the focus would stay there, and Space, PageDown and ↓ would scroll
+ * nothing. So a change of page hands the focus to the block, but only when it
+ * was on the navigation (or nowhere): a field the person is typing in is theirs.
+ */
+function useFocusBlockOnNavigate() {
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const previous = useRef(pathname);
+  useEffect(() => {
+    if (previous.current === pathname) {
+      return;
+    }
+    previous.current = pathname;
+    const active = document.activeElement;
+    const onNavigation =
+      active === null ||
+      active === document.body ||
+      active.closest("aside, nav") !== null;
+    if (onNavigation) {
+      document.getElementById("conteudo")?.focus({ preventScroll: true });
+    }
+  }, [pathname]);
+}
+
+/**
  * Desktop (structure B, mockup 12): the sidebar sits on the warm canvas, held
  * to the left edge, and only the content is a white panel. No max width: the
  * frame follows the screen with 12 px of canvas around the panel, and the
@@ -49,6 +75,7 @@ export function AppFrame({
   children,
   ...shell
 }: ShellProps & { children: ReactNode }) {
+  useFocusBlockOnNavigate();
   return (
     <ShellFrame
       bottom={<TabBar />}
