@@ -28,6 +28,13 @@ function useStepBox(targets: string[]) {
     setViewport({ height: window.innerHeight, width: window.innerWidth });
   }, [targets]);
   useLayoutEffect(() => {
+    // A sidebar that scrolls can hide what the step explains: bring it in first.
+    for (const target of targets) {
+      const found = document.querySelector<HTMLElement>(
+        `[data-tour="${target}"]`
+      );
+      found?.scrollIntoView?.({ block: "nearest" });
+    }
     measure();
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);
@@ -35,7 +42,7 @@ function useStepBox(targets: string[]) {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
     };
-  }, [measure]);
+  }, [measure, targets]);
   return { box, viewport };
 }
 
@@ -67,7 +74,9 @@ function TourDialog() {
   const step = TOUR_STEPS[index] as (typeof TOUR_STEPS)[number];
   const last = index === TOUR_STEPS.length - 1;
   const { box, viewport } = useStepBox(step.targets);
-  const place = balloonPlacement(box, viewport);
+  // The balloon's own height, so it never hangs off the bottom of a short window.
+  const [height, setHeight] = useState(0);
+  const place = balloonPlacement(box, viewport, height);
 
   function finish() {
     complete.mutate(true);
@@ -93,12 +102,12 @@ function TourDialog() {
         {box ? (
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed z-[60] rounded-control shadow-[0_0_0_9999px_rgb(0_0_0/0.55)] ring-4 ring-white transition-[top,left,width,height] duration-200 motion-reduce:transition-none"
+            className="pointer-events-none fixed z-[60] rounded-control shadow-[0_0_0_9999px_rgb(0_0_0/0.55)] ring-2 ring-white ring-inset transition-[top,left,width,height] duration-200 motion-reduce:transition-none"
             style={{
-              top: box.top - 4,
-              left: box.left - 4,
-              width: box.right - box.left + 8,
-              height: box.bottom - box.top + 8,
+              top: box.top,
+              left: box.left,
+              width: box.right - box.left,
+              height: box.bottom - box.top,
             }}
           />
         ) : null}
@@ -106,6 +115,11 @@ function TourDialog() {
           aria-describedby="tour-body"
           className="fixed z-[61] flex flex-col gap-2 rounded-card bg-surface p-4 text-ink shadow-float focus:outline-none"
           onKeyDown={onKeyDown}
+          ref={(node) => {
+            if (node) {
+              setHeight(node.offsetHeight);
+            }
+          }}
           style={place}
         >
           <Progress current={index + 1} />

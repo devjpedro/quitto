@@ -78,11 +78,13 @@ export const BALLOON_WIDTH = 360;
 /**
  * Where the balloon goes, as CSS offsets. From md it sits beside the target,
  * at its right (the sidebar's items); below md, above it (the tab bar) or
- * below it (the top bar's bell). Always inside the screen.
+ * below it (the top bar's bell). Always inside the screen: `height` is the
+ * balloon's own, measured, so a short window pulls it up instead of cutting it.
  */
 export function balloonPlacement(
   box: Box | null,
-  viewport: { height: number; width: number }
+  viewport: { height: number; width: number },
+  height = 0
 ): { bottom?: number; left: number; top?: number; width: number } {
   const width = Math.min(BALLOON_WIDTH, viewport.width - MARGIN * 2);
   if (!box) {
@@ -97,7 +99,10 @@ export function balloonPlacement(
   if (viewport.width >= 768) {
     return {
       left: clampLeft(box.right + GAP),
-      top: Math.max(MARGIN, box.top - 8),
+      top: Math.max(
+        MARGIN,
+        Math.min(box.top - 8, viewport.height - height - MARGIN)
+      ),
       width,
     };
   }

@@ -144,6 +144,59 @@ describe("tour guiado", () => {
     expect(patchMe).toHaveBeenCalledWith({ tourCompleted: true });
   });
 
+  it("Criar meu primeiro contrato, no último passo, também grava como visto", async () => {
+    renderShell(null);
+    await screen.findByRole("dialog");
+    for (let i = 0; i < 4; i++) {
+      await userEvent.click(screen.getByRole("button", { name: "Próximo" }));
+    }
+    await userEvent.click(
+      screen.getByRole("link", { name: "Criar meu primeiro contrato" })
+    );
+    expect(patchMe).toHaveBeenCalledWith({ tourCompleted: true });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("o recorte do spotlight é a caixa exata do alvo (sem folga que invada o vizinho) e o alvo é trazido à tela", async () => {
+    const scroll = vi.fn();
+    const proto = HTMLElement.prototype as unknown as {
+      scrollIntoView?: () => void;
+    };
+    const original = proto.scrollIntoView;
+    proto.scrollIntoView = scroll;
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        top: 100,
+        left: 20,
+        right: 120,
+        bottom: 146,
+        width: 100,
+        height: 46,
+        x: 20,
+        y: 100,
+        toJSON: () => ({}),
+      });
+    try {
+      renderShell(null);
+      await screen.findByRole("dialog");
+      const spot = document.querySelector<HTMLElement>(
+        '[aria-hidden="true"].fixed.rounded-control'
+      );
+      expect(spot).toHaveStyle({
+        top: "100px",
+        left: "20px",
+        width: "100px",
+        height: "46px",
+      });
+      expect(spot?.className).toContain("ring-inset");
+      expect(scroll).toHaveBeenCalledWith({ block: "nearest" });
+    } finally {
+      rect.mockRestore();
+      proto.scrollIntoView = original;
+    }
+  });
+
   it("Refazer em Ajustes › Perfil zera a marca e abre o tour", async () => {
     patchMe.mockResolvedValue({ data: { tourCompletedAt: null }, error: null });
     const { client } = renderSettings("profile");
@@ -180,6 +233,17 @@ describe("posição do balão", () => {
     expect(placed.top).toBe(66);
     // Never past the screen's edge.
     expect(placed.left + placed.width).toBeLessThanOrEqual(phone.width - 16);
+  });
+
+  it("a partir de md, numa janela baixa o balão sobe até caber, com margem", () => {
+    const short = { height: 600, width: 1512 };
+    const bell = { top: 404, left: 54, right: 313, bottom: 450 };
+    const placed = balloonPlacement(bell, short, 220);
+    expect(placed.top).toBe(600 - 220 - 16);
+    // Com folga de sobra, segue o alvo.
+    expect(balloonPlacement(bell, desktop, 220).top).toBe(396);
+    // Mais alto que a janela: nunca acima da margem.
+    expect(balloonPlacement(bell, short, 700).top).toBe(16);
   });
 
   it("sem alvo na tela, o balão fica no meio", () => {
