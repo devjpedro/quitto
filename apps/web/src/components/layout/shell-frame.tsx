@@ -88,7 +88,7 @@ export function ShellFrame({
         {column}
         <main
           className={cn(
-            "max-md:page-surfaces min-w-0 flex-1 focus:outline-none md:rounded-panel md:bg-surface",
+            "max-md:page-surfaces min-w-0 flex-1 focus:outline-none md:relative md:rounded-panel md:bg-surface",
             // From md the page does not scroll: the sidebar and the panel's four
             // corners stay, and the panel scrolls inside (mockup 20, B3).
             fit === "page"
