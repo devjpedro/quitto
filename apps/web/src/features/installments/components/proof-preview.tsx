@@ -112,8 +112,9 @@ export function ProofPreview({
                   "w-11 px-0 md:w-9",
                   tone.innerButton
                 )}
-                download
                 href={proof.downloadUrl}
+                rel="noopener noreferrer"
+                target="_blank"
               >
                 <DownloadSimple aria-hidden="true" size={16} />
               </a>

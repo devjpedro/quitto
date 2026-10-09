@@ -451,6 +451,13 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       "button",
       { name: "Abrir" }
     );
+    expect(
+      screen
+        .getByTestId("proof-preview")
+        .querySelector(
+          'a[href="https://files.quitto.test/pix-moto-outubro.pdf"]'
+        )
+    ).toHaveAttribute("target", "_blank");
     await user.click(open);
     const viewer = await screen.findByRole("dialog", {
       name: "pix-moto-outubro.pdf",
@@ -460,6 +467,10 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(
       within(viewer).getAllByRole("link", { name: "Baixar" })[0]
     ).toHaveAttribute("href", "https://files.quitto.test/pix-moto-outubro.pdf");
+    // The file lives on another origin: "Baixar" opens a tab, it never takes the app's own away.
+    expect(
+      within(viewer).getAllByRole("link", { name: "Baixar" })[0]
+    ).toHaveAttribute("target", "_blank");
     expect(
       viewer.querySelector('object[type="application/pdf"]')
     ).not.toBeNull();

@@ -54,8 +54,9 @@ function DownloadLink({
         buttonVariants({ size: "sm", variant: "inset" }),
         className
       )}
-      download
       href={proof.downloadUrl}
+      rel="noopener noreferrer"
+      target="_blank"
     >
       <DownloadSimple aria-hidden="true" size={16} />
       {m.proof_viewer_download()}
