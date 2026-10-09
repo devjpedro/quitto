@@ -3,7 +3,7 @@ import { signup, waitForHydrated } from "../fixtures";
 
 const NOW_STEP = /Agora: o que pede/;
 
-test("tour: abre sozinho na conta nova, anda pelos 5 passos e, pulado, não volta; Refazer em Ajustes abre de novo", async ({
+test("tour: abre sozinho na conta nova, anda pelos 5 passos e, concluído, não volta; Refazer em Ajustes abre de novo", async ({
   page,
 }) => {
   await signup(page, undefined, { skipTour: false });
@@ -18,7 +18,18 @@ test("tour: abre sozinho na conta nova, anda pelos 5 passos e, pulado, não volt
   ).toBeVisible();
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("dialog", { name: NOW_STEP })).toBeVisible();
-  await page.getByRole("button", { name: "Pular o tour" }).click();
+  // Walks to the end (5 de 5), then skips: the PATCH is awaited, or the reload below could cancel it.
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByText("5 de 5")).toBeVisible();
+  await Promise.all([
+    page.waitForResponse(
+      (res) =>
+        res.request().method() === "PATCH" && res.url().endsWith("/api/me")
+    ),
+    page.getByRole("button", { name: "Concluir" }).click(),
+  ]);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   // Saved as seen: a reload does not bring it back.
   await page.reload();
@@ -57,4 +68,30 @@ test("a partir de md só o bloco branco rola: a página fica parada e o Voltar a
   expect(await panel.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Voltar ao topo" }).click();
   await expect.poll(() => panel.evaluate((el) => el.scrollTop)).toBe(0);
+});
+
+test("a partir de md, depois de navegar pela sidebar o PageDown rola o bloco", async ({
+  page,
+}, testInfo) => {
+  // biome-ignore lint/suspicious/noSkippedTests: the phone scrolls the page, as before
+  test.skip(testInfo.project.name === "mobile", "no celular a página rola");
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await signup(page);
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .first()
+    .getByRole("link", { name: "Contratos" })
+    .click();
+  await page.waitForURL("**/contracts");
+  const panel = page.locator("#conteudo");
+  await panel.evaluate((el) => {
+    const filler = document.createElement("div");
+    filler.style.height = "3000px";
+    el.append(filler);
+  });
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("PageDown");
+  await expect
+    .poll(() => panel.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(0);
 });
