@@ -113,6 +113,39 @@ describe("panelView (spec §4.1, mockup 14 §2)", () => {
     ).toEqual({ blocks: ["receipt"], primary: "whatsapp_receipt" });
   });
 
+  it("paga ao criar o contrato: o aviso, anexar depois (só quem paga, e só sem comprovante), o recibo", () => {
+    const pay = {
+      ...base,
+      perspective: "pay" as const,
+      caps: { isApprover: false, isPayer: true },
+      isOwner: false,
+      status: "paid",
+      registeredOnCreate: true,
+    };
+    expect(panelView(pay).blocks).toEqual([
+      "registered",
+      "attach_later",
+      "receipt",
+    ]);
+    expect(panelView({ ...pay, hasProof: true }).blocks).toEqual([
+      "registered",
+      "receipt",
+      "proofs",
+    ]);
+    expect(
+      panelView({
+        ...base,
+        perspective: "receive",
+        status: "paid",
+        registeredOnCreate: true,
+      }).blocks
+    ).toEqual(["registered", "receipt"]);
+    // A paid one from a normal payment is untouched.
+    expect(panelView({ ...pay, registeredOnCreate: false }).blocks).toEqual([
+      "receipt",
+    ]);
+  });
+
   it("P6: contestada: quem paga vê a contestação e reenvia; quem recebe vê e pode marcar como recebida", () => {
     expect(
       panelView({

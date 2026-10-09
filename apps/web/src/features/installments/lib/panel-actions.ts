@@ -8,6 +8,8 @@ export type PanelBlock =
   | "pix"
   | "no_pix"
   | "upload"
+  | "registered"
+  | "attach_later"
   | "mark_paid_link"
   | "charge"
   | "mark_received"
@@ -33,6 +35,8 @@ export interface PanelInput {
   hasProof: boolean;
   isOwner: boolean;
   perspective: Perspective;
+  /** Paid when the contract was created: no proof was asked, one can still be attached. */
+  registeredOnCreate?: boolean;
   requiresConfirmation: boolean;
   status: string;
 }
@@ -65,6 +69,20 @@ function receiptPrimary(input: PanelInput): PanelPrimary {
     : "share_receipt";
 }
 
+/** Paid when the contract was created: say so, and let the payer attach a proof later. */
+function registeredPanel(input: PanelInput): PanelView {
+  const attach = !input.hasProof && input.caps.isPayer;
+  return {
+    blocks: [
+      "registered",
+      ...(attach ? (["attach_later"] as const) : []),
+      "receipt",
+      ...(input.hasProof ? (["proofs"] as const) : []),
+    ],
+    primary: receiptPrimary(input),
+  };
+}
+
 /**
  * What the panel shows for this role and state (spec §4.1; ajuste 14 §2.2:
  * no explanatory notes, only what there is to decide). One pure decision, so
@@ -74,6 +92,9 @@ export function panelView(input: PanelInput): PanelView {
   const { caps, hasProof, perspective, requiresConfirmation, status } = input;
   if (perspective === "view") {
     return viewerPanel(status, hasProof);
+  }
+  if (isPaidStatus(status) && input.registeredOnCreate) {
+    return registeredPanel(input);
   }
   if (isPaidStatus(status)) {
     return {
@@ -121,7 +142,11 @@ export function panelInputOf(
     participants: { linked: boolean; role: string }[];
     role: string;
   },
-  installment: { proofs: unknown[]; status: string }
+  installment: {
+    proofs: unknown[];
+    registeredOnCreate?: boolean;
+    status: string;
+  }
 ): PanelInput {
   const perspective = perspectiveOf(contract.role);
   const otherRole = perspective === "receive" ? "buyer" : "seller";
@@ -132,6 +157,7 @@ export function panelInputOf(
     hasProof: installment.proofs.length > 0,
     isOwner: contract.isOwner,
     perspective,
+    registeredOnCreate: installment.registeredOnCreate,
     requiresConfirmation: contract.contract.requiresConfirmation,
     status: installment.status,
   };

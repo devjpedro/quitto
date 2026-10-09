@@ -43,10 +43,7 @@ export const CONTRACT_ERROR_CODES = [
 export type ContractErrorCode = (typeof CONTRACT_ERROR_CODES)[number];
 
 /** Warnings never block (owner's decision 8); the web raises them. */
-export const CONTRACT_WARNING_CODES = [
-  "schedule.firstDue.past",
-  "installments.date.order",
-] as const;
+export const CONTRACT_WARNING_CODES = ["installments.date.order"] as const;
 export type ContractWarningCode = (typeof CONTRACT_WARNING_CODES)[number];
 
 const ERROR_CODES: ReadonlySet<string> = new Set(CONTRACT_ERROR_CODES);

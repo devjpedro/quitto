@@ -149,4 +149,26 @@ describe("groupEvents (Histórico: um bloco por dia, os iguais seguidos numa lin
     expect(other?.label).toBe("Segunda-feira, 14 de setembro");
     expect(same?.label).toBe("Segunda-feira, 10 de novembro de 2025");
   });
+
+  it("parcelas pagas ao criar: uma linha com a contagem, sem parcela no texto", () => {
+    const paid = (isMe: boolean, count: number) =>
+      groupEvents(
+        [
+          ev({
+            type: "installments_paid_on_create",
+            installmentId: null,
+            installmentSequence: null,
+            isMe,
+            metadata: { count },
+          }),
+        ],
+        ctx
+      )[0]?.rows[0];
+    expect(paid(true, 3)?.text).toBe(
+      "Você marcou 3 parcelas como pagas ao criar o contrato"
+    );
+    expect(paid(false, 1)?.text).toBe(
+      "marcou 1 parcela como paga ao criar o contrato"
+    );
+  });
 });

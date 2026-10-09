@@ -109,6 +109,23 @@ function roleWord(role: unknown, locale: Locale): string {
     : m.history_role_viewer({}, { locale });
 }
 
+function paidOnCreateCopy(raw: unknown, locale: Locale): Copy {
+  const options = { locale };
+  const count = typeof raw === "number" ? raw : 0;
+  const one = count === 1;
+  return {
+    icon: "hand",
+    tone: "brand",
+    meta: null,
+    mine: one
+      ? m.history_you_paid_on_create_one({}, options)
+      : m.history_you_paid_on_create_other({ count }, options),
+    theirs: one
+      ? m.history_paid_on_create_one({}, options)
+      : m.history_paid_on_create_other({ count }, options),
+  };
+}
+
 function copyOf(
   e: ContractEvent,
   run: ContractEvent[],
@@ -118,6 +135,7 @@ function copyOf(
   const options = { locale };
   const sequence = e.installmentSequence ?? 0;
   const md = (e.metadata ?? {}) as {
+    count?: unknown;
     fileName?: unknown;
     participantName?: unknown;
     reason?: unknown;
@@ -202,6 +220,8 @@ function copyOf(
             mine: m.history_you_received({ sequence }, options),
             theirs: m.history_received({ sequence }, options),
           };
+    case "installments_paid_on_create":
+      return paidOnCreateCopy(md.count, locale);
     case "receipt_share_created":
       return run.length > 1
         ? {

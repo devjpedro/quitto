@@ -216,16 +216,19 @@ function DropArea({ mode }: { mode: PanelMode }) {
  * only once there is something to see: the progress or the refusal.
  */
 export function ProofDropzone({
+  alwaysShow = false,
   mode,
   title,
 }: {
+  /** In the bottom sheet the zone hides behind the pinned "Enviar comprovante"; a block with no such button keeps it. */
+  alwaysShow?: boolean;
   mode: PanelMode;
   title: string;
 }) {
   const { upload } = usePanel();
   const { state } = upload;
   const resting = state.phase === "idle" || state.phase === "dragging";
-  if (mode === "bottom" && resting) {
+  if (mode === "bottom" && resting && !alwaysShow) {
     return null;
   }
   return (

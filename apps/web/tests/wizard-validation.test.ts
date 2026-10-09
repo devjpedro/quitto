@@ -177,26 +177,22 @@ describe("validateStep 3 e 4", () => {
 });
 
 describe("scheduleWarnings", () => {
-  it("1º vencimento antes de hoje: aviso no campo", () => {
-    expect(
-      scheduleWarnings({ ...step2, firstDueDate: "2026-09-10" }, "2026-10-05")
-    ).toEqual([{ field: "firstDueDate", code: "schedule.firstDue.past" }]);
-    expect(scheduleWarnings(step2, "2026-10-05")).toEqual([]);
+  it("1º vencimento antes de hoje: sem aviso (a pergunta das já pagas assume)", () => {
+    expect(scheduleWarnings({ ...step2, firstDueDate: "2026-09-10" })).toEqual(
+      []
+    );
   });
 
   it("uma parcela que vence antes da anterior: aviso na linha", () => {
     expect(
-      scheduleWarnings(
-        {
-          ...step2,
-          count: 2,
-          installments: [
-            { amountCents: 300_000, dueDate: "2026-12-10", edited: true },
-            { amountCents: 300_000, dueDate: "2026-11-10", edited: true },
-          ],
-        },
-        "2026-10-05"
-      )
+      scheduleWarnings({
+        ...step2,
+        count: 2,
+        installments: [
+          { amountCents: 300_000, dueDate: "2026-12-10", edited: true },
+          { amountCents: 300_000, dueDate: "2026-11-10", edited: true },
+        ],
+      })
     ).toEqual([
       { field: "installments.1.dueDate", code: "installments.date.order" },
     ]);

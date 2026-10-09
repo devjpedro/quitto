@@ -14,6 +14,7 @@ import { ProofDropzone } from "./proof-dropzone";
 import { ProofList } from "./proof-list";
 import { ProofPreview } from "./proof-preview";
 import { ReceiptBlock } from "./receipt-block";
+import { RegisteredNote } from "./registered-note";
 import { ReviewBlock } from "./review-block";
 
 export interface PanelBlockProps {
@@ -34,6 +35,10 @@ export const PANEL_BLOCKS: Partial<
   pix: (props) => <PixBlock {...props} />,
   upload: ({ mode }) => (
     <ProofDropzone mode={mode} title={m.panel_after_paying()} />
+  ),
+  registered: () => <RegisteredNote />,
+  attach_later: ({ mode }) => (
+    <ProofDropzone alwaysShow mode={mode} title={m.panel_attach_later()} />
   ),
   reupload: ({ mode }) => (
     <ProofDropzone mode={mode} title={m.panel_resend_title()} />

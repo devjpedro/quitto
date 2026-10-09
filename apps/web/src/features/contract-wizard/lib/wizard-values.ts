@@ -30,6 +30,10 @@ export interface WizardValues {
   mode: "split" | "monthly" | null;
   monthlyCents: number | null;
   ownerRole: "buyer" | "seller" | null;
+  /** "As parcelas antes de hoje já foram pagas?": every one, none, or the ones in `paidSequences`. */
+  paid: "all" | "none" | "some";
+  /** With `paid: "some"`: the sequences (1-based) ticked as paid. */
+  paidSequences: number[];
   party: "solo" | "other" | null;
   requiresConfirmation: boolean;
   title: string;
@@ -47,6 +51,8 @@ export function emptyValues(title = ""): WizardValues {
     mode: null,
     monthlyCents: null,
     ownerRole: null,
+    paid: "all",
+    paidSequences: [],
     party: null,
     requiresConfirmation: false,
     title,
@@ -117,6 +123,23 @@ export function rowsOf(values: WizardValues): ScheduleRow[] {
   );
 }
 
+/** The installments due before today: the ones the paid question is about (empty when none is). */
+export function pastRows(values: WizardValues, today: string): ScheduleRow[] {
+  return rowsOf(values).filter((row) => row.dueDate < today);
+}
+
+/** The sequences that enter the contract already paid, by the person's answer. */
+export function paidSequencesOf(values: WizardValues, today: string): number[] {
+  const past = pastRows(values, today).map((row) => row.sequence);
+  if (values.paid === "none") {
+    return [];
+  }
+  if (values.paid === "all") {
+    return past;
+  }
+  return past.filter((sequence) => values.paidSequences.includes(sequence));
+}
+
 /**
  * The schedule the API checks the list against. Adjusted one by one, the total
  * is what the rows add up to (mockup 20, B7), so it goes as a split of that
@@ -153,13 +176,17 @@ function scheduleRequest(
 }
 
 /** The POST /api/contracts body; null while there is no side (step 1 not done). */
-export function toRequest(values: WizardValues): ContractRequestInput | null {
+export function toRequest(
+  values: WizardValues,
+  today: string
+): ContractRequestInput | null {
   if (values.ownerRole === null) {
     return null;
   }
   const description = values.description.trim();
   const email = values.counterpartyEmail.trim();
   const withParty = values.party === "other";
+  const paid = paidSequencesOf(values, today);
   return {
     title: values.title,
     ...(description ? { description } : {}),
@@ -174,6 +201,7 @@ export function toRequest(values: WizardValues): ContractRequestInput | null {
           })),
         }
       : {}),
+    ...(paid.length > 0 ? { paidInstallments: paid } : {}),
     ...(withParty
       ? {
           counterparty: {

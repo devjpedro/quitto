@@ -70,8 +70,6 @@ const ERROR_TEXT: Record<ContractErrorCode, Text> = {
 };
 
 const WARNING_TEXT: Record<ContractWarningCode, (locale: Locale) => string> = {
-  "schedule.firstDue.past": (locale) =>
-    m.warning_schedule_first_due_past({}, { locale }),
   "installments.date.order": (locale) =>
     m.warning_installments_date_order({}, { locale }),
 };

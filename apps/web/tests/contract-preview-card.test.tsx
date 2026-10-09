@@ -17,6 +17,7 @@ const EMPTY: PreviewModel = {
   lastDueDate: null,
   statuses: null,
   overdueCount: 0,
+  paidCount: 0,
 };
 
 const FILLED: PreviewModel = {
@@ -50,6 +51,7 @@ const FILLED: PreviewModel = {
   lastDueDate: "2027-10-10",
   statuses: Array.from({ length: 12 }, () => "open" as const),
   overdueCount: 0,
+  paidCount: 0,
 };
 
 describe("ContractPreviewCard", () => {

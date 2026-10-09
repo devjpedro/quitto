@@ -79,14 +79,17 @@ export function PreviewProgress({
 }) {
   const legend =
     model.side === "receive"
-      ? m.preview_progress_received({ paid: 0, total: model.count })
-      : m.preview_progress_paid({ paid: 0, total: model.count });
+      ? m.preview_progress_received({
+          paid: model.paidCount,
+          total: model.count,
+        })
+      : m.preview_progress_paid({ paid: model.paidCount, total: model.count });
   return (
     <div className="mt-4">
       <InstallmentBar
         installmentsCount={model.count}
         overdueCount={model.overdueCount}
-        paidCount={0}
+        paidCount={model.paidCount}
         statuses={model.statuses}
       />
       <p className="mt-2 flex justify-between gap-2 whitespace-nowrap text-ink-muted text-xs tabular-nums">
@@ -111,7 +114,7 @@ export function PreviewRows({
   locale: Locale;
   model: PreviewModel;
 }) {
-  const more = model.count - model.rows.length;
+  const more = model.count - model.paidCount - model.rows.length;
   const last = model.lastDueDate
     ? formatDate(model.lastDueDate, locale, "short")
     : "";

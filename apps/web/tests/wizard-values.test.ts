@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   emptyValues,
   isWizardDate,
+  pastRows,
   rowsOf,
   scheduleOf,
   toRequest,
   type WizardValues,
 } from "@/features/contract-wizard/lib/wizard-values";
+
+const TODAY = "2026-10-05";
+const request = (values: WizardValues) => toRequest(values, TODAY);
 
 const filled: WizardValues = {
   ...emptyValues(),
@@ -93,16 +97,16 @@ describe("scheduleOf / rowsOf", () => {
 
 describe("toRequest", () => {
   it("sem papel: null (o passo 1 não passou)", () => {
-    expect(toRequest(emptyValues())).toBeNull();
+    expect(request(emptyValues())).toBeNull();
   });
 
   it("só eu acompanho: requiresConfirmation false mesmo com o checkbox marcado antes (decisão 7)", () => {
     expect(
-      toRequest({ ...filled, party: null, requiresConfirmation: true })
+      request({ ...filled, party: null, requiresConfirmation: true })
         ?.requiresConfirmation
     ).toBe(false);
     expect(
-      toRequest({ ...filled, party: "solo", requiresConfirmation: true })
+      request({ ...filled, party: "solo", requiresConfirmation: true })
     ).toEqual({
       title: "Notebook da Renata",
       description: "Dell Inspiron 15, usado, com carregador",
@@ -118,7 +122,7 @@ describe("toRequest", () => {
   });
 
   it("com a outra parte: o nome, o e-mail aparado e a confirmação", () => {
-    const body = toRequest({
+    const body = request({
       ...filled,
       party: "other",
       counterpartyName: "Renata Campos",
@@ -133,7 +137,7 @@ describe("toRequest", () => {
   });
 
   it("outra parte sem e-mail: sem a chave email; descrição vazia some", () => {
-    const body = toRequest({
+    const body = request({
       ...filled,
       description: "  ",
       party: "other",
@@ -145,7 +149,7 @@ describe("toRequest", () => {
   });
 
   it("a lista ajustada vai em installments", () => {
-    const body = toRequest({
+    const body = request({
       ...filled,
       count: 1,
       totalCents: 600_000,
@@ -159,7 +163,7 @@ describe("toRequest", () => {
   });
 
   it("ajustada passando do total: o total vai como a soma, e o pedido passa no schema", () => {
-    const body = toRequest({
+    const body = request({
       ...filled,
       count: 2,
       installments: [
@@ -177,7 +181,7 @@ describe("toRequest", () => {
   });
 
   it("mensal ajustada: vai como divisão da soma, nunca com o valor mensal", () => {
-    const body = toRequest({
+    const body = request({
       ...filled,
       mode: "monthly",
       monthlyCents: 100_000,
@@ -191,6 +195,51 @@ describe("toRequest", () => {
       mode: "split",
       totalAmountCents: 150_000,
     });
+    expect(contractRequestSchema.safeParse(body).success).toBe(true);
+  });
+});
+
+describe("as parcelas já pagas", () => {
+  // 1º vencimento três meses atrás: as de 10/07, 10/08 e 10/09 vencem antes de TODAY.
+  const past: WizardValues = { ...filled, firstDueDate: "2026-07-10" };
+
+  it("pastRows: só o que vence antes de hoje (hoje não conta)", () => {
+    expect(pastRows(past, TODAY).map((row) => row.sequence)).toEqual([1, 2, 3]);
+    expect(pastRows({ ...past, firstDueDate: "2026-10-05" }, TODAY)).toEqual(
+      []
+    );
+    expect(pastRows(filled, TODAY)).toEqual([]);
+  });
+
+  it("Todas (o padrão): manda as vencidas em paidInstallments", () => {
+    expect(past.paid).toBe("all");
+    expect(request(past)?.paidInstallments).toEqual([1, 2, 3]);
+  });
+
+  it("Nenhuma: não manda o campo", () => {
+    expect(request({ ...past, paid: "none" })).not.toHaveProperty(
+      "paidInstallments"
+    );
+  });
+
+  it("Algumas: só as marcadas que ainda são vencidas", () => {
+    expect(
+      request({ ...past, paid: "some", paidSequences: [3, 1, 9] })
+        ?.paidInstallments
+    ).toEqual([1, 3]);
+    expect(
+      request({ ...past, paid: "some", paidSequences: [] })
+    ).not.toHaveProperty("paidInstallments");
+  });
+
+  it("sem parcela vencida a resposta é ignorada", () => {
+    expect(request({ ...filled, paid: "all" })).not.toHaveProperty(
+      "paidInstallments"
+    );
+  });
+
+  it("o corpo passa no schema do shared", () => {
+    const body = request({ ...past, paid: "some", paidSequences: [2] });
     expect(contractRequestSchema.safeParse(body).success).toBe(true);
   });
 });

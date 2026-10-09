@@ -6,6 +6,8 @@ import {
   type WizardValues,
 } from "@/features/contract-wizard/lib/wizard-values";
 
+const ONE_PAID = /^1 já paga · /;
+
 const VARIED: WizardValues = {
   ...emptyValues(),
   ownerRole: "seller",
@@ -43,5 +45,33 @@ describe("reviewView", () => {
       reviewView(values, wizardPreview(values, "2026-10-05"), "pt-BR")
         .confirmLine
     ).toBe("A outra parte confirma cada pagamento");
+  });
+});
+
+describe("reviewView com parcelas já pagas", () => {
+  const PAST: WizardValues = {
+    ...VARIED,
+    installments: null,
+    count: 6,
+    firstDueDate: "2026-07-10",
+  };
+
+  it("o detalhe do cronograma diz quantas já foram pagas, junto das datas", () => {
+    const view = reviewView(PAST, wizardPreview(PAST, "2026-10-05"), "pt-BR");
+    expect(view.scheduleDetail?.startsWith("3 já pagas · ")).toBe(true);
+    // The range still starts at the first installment, not at the first open one.
+    expect(view.scheduleDetail).toContain("de 10/07/2026 a 10/12/2026");
+  });
+
+  it("uma só: '1 já paga'; nenhuma: nada", () => {
+    const one = { ...PAST, paid: "some" as const, paidSequences: [2] };
+    expect(
+      reviewView(one, wizardPreview(one, "2026-10-05"), "pt-BR").scheduleDetail
+    ).toMatch(ONE_PAID);
+    const none = { ...PAST, paid: "none" as const };
+    expect(
+      reviewView(none, wizardPreview(none, "2026-10-05"), "pt-BR")
+        .scheduleDetail
+    ).not.toContain("já paga");
   });
 });

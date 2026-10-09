@@ -18,6 +18,8 @@ export function applyChange<K extends keyof WizardValues>(
   const next: WizardValues = { ...values, [key]: value };
   if (RESETS_ADJUSTED.has(key) && values[key] !== value) {
     next.installments = null;
+    // The ticks were by sequence: another schedule is another list.
+    next.paidSequences = [];
   }
   // Without another party there is no one to confirm (owner's decision 10).
   if (key === "party" && value !== "other") {

@@ -27,6 +27,7 @@ export function invitePreviewModel(view: InviteView): PreviewModel {
       lastDueDate: null,
       statuses: null,
       overdueCount: 0,
+      paidCount: 0,
     };
   }
   const count = terms.installmentsCount;
@@ -45,5 +46,6 @@ export function invitePreviewModel(view: InviteView): PreviewModel {
         ? Array.from({ length: count }, () => "open" as const)
         : null,
     overdueCount: 0,
+    paidCount: 0,
   };
 }

@@ -1,3 +1,4 @@
+import { todayISO } from "@quitto/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ export function useWizardSubmit() {
   return {
     creating: create.isPending,
     submit: (values: WizardValues, report: (issue: FieldIssue) => void) => {
-      const body = toRequest(values);
+      const body = toRequest(values, todayISO());
       if (!body || create.isPending || create.isSuccess) {
         return;
       }

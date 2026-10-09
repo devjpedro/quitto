@@ -205,15 +205,9 @@ export function validateStep(
   ];
 }
 
-/** Warnings never block (owner's decision 8): a first due date before today; an adjusted row due before the previous one. */
-export function scheduleWarnings(
-  values: WizardValues,
-  today: string
-): FieldWarning[] {
+/** Warnings never block (owner's decision 8): an adjusted row due before the previous one. A past first due date asks "já foram pagas?" instead. */
+export function scheduleWarnings(values: WizardValues): FieldWarning[] {
   const warnings: FieldWarning[] = [];
-  if (isWizardDate(values.firstDueDate) && values.firstDueDate < today) {
-    warnings.push({ field: "firstDueDate", code: "schedule.firstDue.past" });
-  }
   const rows = values.installments ?? [];
   for (let index = 1; index < rows.length; index += 1) {
     const due = rows[index]?.dueDate ?? "";

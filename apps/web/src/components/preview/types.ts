@@ -22,6 +22,8 @@ export interface PreviewModel {
   description: string | null;
   lastDueDate: string | null;
   overdueCount: number;
+  /** Installments that enter the contract already paid (the bar and the legend count them). */
+  paidCount: number;
   person: { kind: "other"; name: string } | { kind: "solo" } | null;
   /** The first 3; empty draws the dashed rows. */
   rows: PreviewRow[];

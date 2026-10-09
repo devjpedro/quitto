@@ -82,8 +82,41 @@ describe("wizardPreview", () => {
       { ...step2, firstDueDate: "2026-09-05" },
       TODAY
     );
+    // 05/09 and 05/10 with today = 05/10: "Todas" (the default) paints the first as paid.
+    expect(model.statuses?.slice(0, 3)).toEqual(["paid", "today", "open"]);
+    expect(model.overdueCount).toBe(0);
+    expect(model.paidCount).toBe(1);
+  });
+
+  it("Nenhuma: as vencidas ficam atrasadas na barra e nada conta como paga", () => {
+    const model = wizardPreview(
+      { ...step2, firstDueDate: "2026-09-05", paid: "none" },
+      TODAY
+    );
     expect(model.statuses?.slice(0, 3)).toEqual(["overdue", "today", "open"]);
     expect(model.overdueCount).toBe(1);
+    expect(model.paidCount).toBe(0);
+  });
+
+  it("Algumas: só as marcadas ficam pagas; o cartão lista as 3 que faltam", () => {
+    const model = wizardPreview(
+      {
+        ...step2,
+        firstDueDate: "2026-07-05",
+        paid: "some",
+        paidSequences: [1, 3],
+      },
+      TODAY
+    );
+    expect(model.statuses?.slice(0, 4)).toEqual([
+      "paid",
+      "overdue",
+      "paid",
+      "today",
+    ]);
+    expect(model.paidCount).toBe(2);
+    expect(model.overdueCount).toBe(1);
+    expect(model.rows.map((row) => row.sequence)).toEqual([2, 4, 5]);
   });
 
   it("uma a uma passando do total: a tag ajustada e a soma como total", () => {

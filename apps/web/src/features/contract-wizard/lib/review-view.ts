@@ -4,7 +4,7 @@ import { formatDate, formatMoney } from "@/lib/locale-format";
 import { summaryText } from "@/lib/schedule-summary";
 import { m } from "@/paraglide/messages.js";
 import { confirmTitle } from "./confirm-title";
-import type { WizardValues } from "./wizard-values";
+import { rowsOf, type WizardValues } from "./wizard-values";
 
 export interface ReviewView {
   aboutDetail?: string;
@@ -21,8 +21,11 @@ export interface ReviewView {
   scheduleLine: string;
 }
 
-function datesOf(preview: PreviewModel, locale: Locale): string | undefined {
-  const first = preview.rows[0]?.dueDate;
+function datesOf(
+  preview: PreviewModel,
+  first: string | undefined,
+  locale: Locale
+): string | undefined {
   const last = preview.lastDueDate;
   if (!(first && last)) {
     return;
@@ -58,12 +61,19 @@ function scheduleLineOf(preview: PreviewModel, locale: Locale): string {
   });
 }
 
+function paidLine(count: number): string {
+  return count === 1
+    ? m.wizard_review_paid_one()
+    : m.wizard_review_paid_other({ count });
+}
+
 /** Step 4's lines (mockup 15, D4): the whole review below 1140, the two extras beside the preview. */
 export function reviewView(
   values: WizardValues,
   preview: PreviewModel,
   locale: Locale
 ): ReviewView {
+  const paidText = preview.paidCount === 0 ? "" : paidLine(preview.paidCount);
   const receives = values.ownerRole === "seller";
   const withParty = values.party === "other";
   const name = values.counterpartyName.trim();
@@ -87,7 +97,10 @@ export function reviewView(
     aboutLine: `${side} ${m.home_dot_after({ text: values.title.trim() })}`,
     aboutDetail: values.description.trim() || undefined,
     scheduleLine: scheduleLineOf(preview, locale),
-    scheduleDetail: datesOf(preview, locale),
+    scheduleDetail:
+      [paidText, datesOf(preview, rowsOf(values)[0]?.dueDate, locale)]
+        .filter(Boolean)
+        .join(" · ") || undefined,
     partyName: withParty && name ? name : null,
     partyLine: withParty && name ? name : m.preview_person_solo(),
     partyDetail: withParty ? partyDetail : undefined,

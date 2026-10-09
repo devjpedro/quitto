@@ -6,13 +6,14 @@ import { OptionCard, OptionGroup } from "@/components/ui/option-card";
 import { ResponsiveText } from "@/components/ui/responsive-text";
 import { Tag } from "@/components/ui/tag";
 import { weekdayLong } from "@/lib/date-parts";
-import { errorCodeText, warningCodeText } from "@/lib/error-codes";
+import { errorCodeText } from "@/lib/error-codes";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import type { ContractWizard } from "../hooks/use-contract-wizard";
 import { fieldId } from "../lib/field-id";
 import type { WizardField } from "../lib/wizard-fields";
 import type { WizardValues } from "../lib/wizard-values";
+import { PaidQuestion } from "./paid-question";
 import { StepHeading } from "./step-heading";
 
 const LINK =
@@ -117,10 +118,6 @@ export function StepSchedule({ wizard }: { wizard: ContractWizard }) {
       ? errorCodeText(issue.code, issue.params ?? {}, locale)
       : undefined;
   };
-  const warningOf = (field: WizardField) => {
-    const warning = wizard.warningFor(field);
-    return warning ? warningCodeText(warning.code, locale) : undefined;
-  };
   const monthly = values.mode === "monthly";
   const modeError = errorOf("mode");
   return (
@@ -215,10 +212,10 @@ export function StepSchedule({ wizard }: { wizard: ContractWizard }) {
                 onValueChange={(iso) => wizard.setValue("firstDueDate", iso)}
                 tall
                 value={values.firstDueDate}
-                warning={warningOf("firstDueDate")}
               />
             </div>
           </div>
+          <PaidQuestion wizard={wizard} />
           <AdjustPrompt wizard={wizard} />
         </>
       ) : null}

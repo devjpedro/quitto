@@ -149,7 +149,7 @@ export function useContractWizard({
     }
   };
 
-  const warnings = scheduleWarnings(values, today);
+  const warnings = scheduleWarnings(values);
   const preview = useMemo(() => wizardPreview(values, today), [values, today]);
 
   return {
