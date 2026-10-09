@@ -1,5 +1,5 @@
 import { CaretLeft, X } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Logo } from "@/components/logo";
 import {
   KEYBOARD_MIN_PX,
@@ -123,6 +123,40 @@ export function StepFrame({
 }) {
   const keyboard = useVisualViewportInset();
   const lifted = keyboard >= KEYBOARD_MIN_PX ? keyboard : 0;
+  const topRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  // Below md the page scrolls under the held header and the action bar: their
+  // heights become the page's scroll-padding, so a focused field (or a
+  // scrollIntoView) lands between them, never behind either. The bar's
+  // height already carries the safe area and the lift above the keyboard.
+  useEffect(() => {
+    const root = document.documentElement;
+    const top = topRef.current;
+    const bottom = footerRef.current;
+    const sync = () => {
+      const barTop = bottom?.getBoundingClientRect().height ?? 0;
+      root.style.setProperty(
+        "--step-top",
+        `${Math.ceil(top?.getBoundingClientRect().height ?? 0)}px`
+      );
+      root.style.setProperty(
+        "--step-bottom",
+        `${Math.ceil(barTop + (lifted ? lifted : 0))}px`
+      );
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    for (const element of [top, bottom]) {
+      if (element) {
+        observer.observe(element);
+      }
+    }
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--step-top");
+      root.style.removeProperty("--step-bottom");
+    };
+  }, [lifted]);
   return (
     <ShellFrame column={rail} fit="screen" mainClassName="relative">
       {onClose ? (
@@ -155,7 +189,10 @@ export function StepFrame({
           )}
           data-testid="wizard-form"
         >
-          <div className="max-md:sticky max-md:top-0 max-md:z-20 max-md:bg-surface-sunken max-md:pt-[env(safe-area-inset-top)] max-md:pb-3">
+          <div
+            className="max-md:sticky max-md:top-0 max-md:z-20 max-md:bg-surface-sunken max-md:pt-[env(safe-area-inset-top)] max-md:pb-3"
+            ref={topRef}
+          >
             {header}
             {progress}
             {summary}
@@ -163,7 +200,8 @@ export function StepFrame({
           <div
             className={cn(
               // md:min-h-0 lets a child (the one-by-one list) scroll inside the column.
-              "flex flex-1 flex-col px-4 pt-5 md:min-h-0 md:px-0 md:pt-9",
+              // max-md:gap-4: the last field ends 16 px above the action bar.
+              "flex flex-1 flex-col px-4 pt-5 max-md:gap-4 md:min-h-0 md:px-0 md:pt-9",
               align === "center" && "md:justify-center md:pt-0"
             )}
           >
@@ -172,6 +210,7 @@ export function StepFrame({
               <div
                 className={ACTION_BAR}
                 data-testid="wizard-footer"
+                ref={footerRef}
                 style={
                   lifted ? { bottom: lifted, paddingBottom: 10 } : undefined
                 }

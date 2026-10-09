@@ -265,6 +265,39 @@ test("celular: no uma a uma, a última parcela rola para cima da barra", async (
   expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(bar?.y ?? 0);
 });
 
+for (const height of [844, 664]) {
+  test(`celular ${height}: o último campo rola inteiro 16 px acima da barra, e o campo focado não fica atrás do resumo nem da barra`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height });
+    await signup(page);
+    await openWizard(page);
+    const description = page.getByLabel("Descrição opcional");
+    await page.getByLabel("Nome do contrato").fill("Notebook da Renata");
+    await page.evaluate(() =>
+      window.scrollTo(0, document.documentElement.scrollHeight)
+    );
+    const bar = await page.getByTestId("wizard-footer").boundingBox();
+    const last = await description.boundingBox();
+    expect((last?.y ?? 0) + (last?.height ?? 0) + 16).toBeLessThanOrEqual(
+      (bar?.y ?? 0) + 1
+    );
+    // A focused field goes between the held summary and the bar.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await description.focus();
+    await page.waitForTimeout(400);
+    const summary = await page.getByTestId("wizard-summary").boundingBox();
+    const field = await description.boundingBox();
+    const barNow = await page.getByTestId("wizard-footer").boundingBox();
+    expect(field?.y ?? 0).toBeGreaterThanOrEqual(
+      (summary?.y ?? 0) + (summary?.height ?? 0)
+    );
+    expect((field?.y ?? 0) + (field?.height ?? 0)).toBeLessThanOrEqual(
+      barNow?.y ?? 0
+    );
+  });
+}
+
 test("passo 3: a sugestão preenche o nome da pessoa de outro contrato", async ({
   page,
 }) => {
