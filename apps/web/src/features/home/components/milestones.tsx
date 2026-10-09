@@ -123,7 +123,7 @@ export function Milestones({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn("@container", onlyMoment && "md:hidden")}
+      className={cn("@container flex flex-col", onlyMoment && "md:hidden")}
     >
       <SectionTitle id={headingId}>{m.home_milestones_title()}</SectionTitle>
       {/* The milestone of the moment is the sidebar's lime card from md; the phone gets it here. */}
@@ -137,9 +137,12 @@ export function Milestones({
         </div>
       ) : null}
       {rows.length > 0 ? (
-        <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
+        <ul className="flex flex-1 flex-col divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
           {rows.map(({ cell }) => (
-            <li className="min-w-0 px-4 py-3.5" key={cell.id}>
+            <li
+              className="flex min-w-0 flex-1 flex-col justify-center px-4 py-3.5"
+              key={cell.id}
+            >
               <CellView cell={cell} locale={locale} today={today} />
             </li>
           ))}

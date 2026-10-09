@@ -112,7 +112,7 @@ function SequenceRow({
     </>
   );
   const className =
-    "group/row flex min-h-16 items-center gap-3 rounded-[inherit] px-3 py-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+    "group/row flex min-h-16 flex-1 items-center gap-3 rounded-[inherit] px-3 py-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
   return action.kind === "invite" ? (
     <Link
       className={className}
@@ -155,7 +155,7 @@ export function NextInLine({
   return (
     <section
       aria-labelledby={titleId}
-      className="overflow-hidden rounded-card bg-surface-card"
+      className="flex flex-col overflow-hidden rounded-card bg-surface-card"
     >
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-1.5">
         <h2 className="font-semibold text-sm" id={titleId}>
@@ -165,9 +165,9 @@ export function NextInLine({
           {actions.length}
         </span>
       </div>
-      <ul className="divide-y divide-divider">
+      <ul className="flex flex-1 flex-col divide-y divide-divider">
         {shown.map((action) => (
-          <li key={action.id}>
+          <li className="flex flex-1 flex-col" key={action.id}>
             <SequenceRow action={action} locale={locale} today={today} />
           </li>
         ))}

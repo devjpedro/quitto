@@ -29,6 +29,24 @@ test("muitas ações: um cartão em destaque e 'Na sequência' com 4 linhas e o 
   await expectNoPageScrollX(page);
 });
 
+test("a 1512 px o cartão verde e 'Na sequência' têm a mesma altura", async ({
+  page,
+}, testInfo) => {
+  // biome-ignore lint/suspicious/noSkippedTests: o projeto mobile tem viewport própria
+  test.skip(
+    testInfo.project.name === "mobile",
+    "o projeto mobile tem viewport própria"
+  );
+  await page.setViewportSize({ width: 1512, height: 900 });
+  await signup(page);
+  await seedOneEach(page.request, "Altura E2E", [-40, -30, -20]);
+  await page.goto("/");
+  await waitForHydrated(page);
+  const hero = await box(page.getByRole("article"));
+  const next = await box(page.getByRole("region", { name: "Na sequência" }));
+  expect(Math.abs(hero.height - next.height)).toBeLessThanOrEqual(1);
+});
+
 for (const width of [800, 1024, 1440, 1920, 2560]) {
   test.describe(`tela a ${width} px`, () => {
     test.use({ viewport: { width, height: 1000 } });

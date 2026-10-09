@@ -37,13 +37,13 @@ export function ActionList({
   return (
     <section
       aria-label={m.home_actions_title()}
-      className="focus:outline-none"
+      className="h-full focus:outline-none"
       onKeyDownCapture={swallowKeyRepeat}
       ref={sectionRef}
     >
-      <ul>
+      <ul className="h-full">
         {first.map((action) => (
-          <li key={action.id}>
+          <li className="h-full" key={action.id}>
             <ActionCard
               action={action}
               first

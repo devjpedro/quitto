@@ -37,7 +37,7 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
   const date = weekdayName(item.dueDate, locale);
   return (
     <Link
-      className="flex min-h-16 items-center gap-3.5 rounded-[inherit] py-2.5 pr-4 pl-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+      className="flex min-h-16 flex-1 items-center gap-3.5 rounded-[inherit] py-2.5 pr-4 pl-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
       params={{ id: item.contractId }}
       search={{ installment: item.installmentId }}
       to="/contracts/$id"
@@ -113,7 +113,7 @@ export function UpcomingList({
       // The sticky top bar (~56 px) covers the title on a phone. Takes the
       // focus when "Ver próximos 30 dias" jumps here; the ring keeps 4 px off,
       // in the page color (sunken on a phone, the panel from md).
-      className="scroll-mt-16 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:scroll-mt-4 md:focus-visible:ring-offset-surface"
+      className="flex scroll-mt-16 flex-col rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-sunken md:scroll-mt-4 md:focus-visible:ring-offset-surface"
       id={UPCOMING_SECTION_ID}
       tabIndex={-1}
     >
@@ -150,13 +150,13 @@ export function UpcomingList({
           variant="compact"
         />
       ) : (
-        <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
+        <ul className="flex flex-1 flex-col divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
           {shown.map((item) => (
             // The first and last rows take the block's corners (the row
             // inherits them), so the inset focus ring follows the curve
             // instead of being clipped by it.
             <li
-              className="first:rounded-t-card last:rounded-b-card"
+              className="flex flex-1 flex-col first:rounded-t-card last:rounded-b-card"
               key={item.installmentId}
             >
               <UpcomingRow item={item} locale={locale} />
