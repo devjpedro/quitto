@@ -14,6 +14,8 @@ import { queryKeys } from "@/lib/query-keys";
 import { m } from "@/paraglide/messages.js";
 import type { MonthQuery } from "./lib/month-range";
 
+const PROOF_URL_REFRESH_MS = 240_000;
+
 /**
  * GET /api/installments/:id (Task 1): what the panel draws. null: the
  * installment does not exist or is not yours (an old notification's link).
@@ -23,6 +25,9 @@ export const installmentQueryOptions = (id: string) =>
     queryKey: queryKeys.installment(id),
     queryFn: () =>
       unwrapOrNull(api.api.installments({ installmentId: id }).get()),
+    // The proofs' presigned URLs last 5 min: while the panel stays open on one, they are renewed before they expire.
+    refetchInterval: (query) =>
+      query.state.data?.proofs.length ? PROOF_URL_REFRESH_MS : false,
   });
 
 /**

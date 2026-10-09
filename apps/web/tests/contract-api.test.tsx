@@ -149,6 +149,18 @@ describe("contract API (features/contracts/api.ts)", () => {
     );
   });
 
+  // The presigned URLs of the proofs last 5 min: a panel left open renews them.
+  it("installmentQueryOptions: com comprovante refaz o pedido antes de a URL expirar; sem ele, não", () => {
+    const interval = installmentQueryOptions("i1").refetchInterval as (q: {
+      state: { data: unknown };
+    }) => number | false;
+    expect(interval({ state: { data: { proofs: [{ id: "p1" }] } } })).toBe(
+      240_000
+    );
+    expect(interval({ state: { data: { proofs: [] } } })).toBe(false);
+    expect(interval({ state: { data: null } })).toBe(false);
+  });
+
   // ?tab=history on a deleted contract: the first page is null, and no more pages.
   it("contractEventsQueryOptions: um 404 é a página null, com um só pedido e sem erro", async () => {
     eventsGet.mockReset().mockResolvedValue(NOT_FOUND);
