@@ -1,6 +1,7 @@
 import {
   AUDIT_TYPE,
   contractRequestSchema,
+  isPaidStatus,
   NOTIFICATION_TYPE,
   parsePixKey,
   todayISO,
@@ -195,6 +196,24 @@ export const contractsModule = new Elysia({ prefix: "/api" })
       const { isOwner } = await getContractRole(user.id, params.id);
       if (!isOwner) {
         throw new ForbiddenError("Apenas o dono edita parcelas");
+      }
+
+      const [current] = await db
+        .select({ status: installment.status })
+        .from(installment)
+        .where(
+          and(
+            eq(installment.id, params.installmentId),
+            eq(installment.contractId, params.id)
+          )
+        )
+        .limit(1);
+      if (!current) {
+        throw new ForbiddenError("Parcela não pertence ao contrato");
+      }
+      // A paid installment is a record (the totals and the milestones read it): no trail would show a change.
+      if (isPaidStatus(current.status)) {
+        throw new ValidationError("Parcela paga não pode ser editada");
       }
 
       const [updated] = await db

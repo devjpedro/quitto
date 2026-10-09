@@ -699,6 +699,13 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     );
   });
 
+  it("parcela paga: o dono não vê 'Editar valor ou data'", () => {
+    renderPage({ installment: "i2", details: { i2: paidDetail() } });
+    expect(
+      screen.queryByRole("button", { name: "Editar valor ou data" })
+    ).toBeNull();
+  });
+
   it("P5 (quem não é dono): sem 'Compartilhar recibo'; PDF e, se o link existe, Copiar", () => {
     renderPage({
       contract: motoDetail({

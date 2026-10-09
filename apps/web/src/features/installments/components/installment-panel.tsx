@@ -3,6 +3,7 @@ import {
   ClockCounterClockwise,
   PencilSimple,
 } from "@phosphor-icons/react";
+import { isPaidStatus } from "@quitto/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
@@ -39,6 +40,8 @@ function PanelFoot({
   route: PanelRoute;
 }) {
   const [editing, setEditing] = useState(false);
+  // A paid installment is a record: the API refuses the edit.
+  const canEdit = contract.isOwner && !isPaidStatus(detail.status);
   return (
     <div
       className={cn(
@@ -49,7 +52,7 @@ function PanelFoot({
           : "mt-auto shadow-[0_-1px_0_var(--divider)]"
       )}
     >
-      {contract.isOwner ? (
+      {canEdit ? (
         <button
           className={FOOT_LINK}
           onClick={() => setEditing(true)}
@@ -71,7 +74,7 @@ function PanelFoot({
         <ClockCounterClockwise aria-hidden="true" size={15} />
         {m.panel_history()}
       </button>
-      {contract.isOwner ? (
+      {canEdit ? (
         <EditInstallmentDialog
           contractId={contract.contract.id}
           detail={detail}
