@@ -22,7 +22,7 @@ import { describeAction } from "../lib/action-view";
 import type { HomeAction } from "../types";
 
 /** How many of the other actions get a line; the rest is "+ N em Parcelas". */
-export const SEQUENCE_MAX = 4;
+export const SEQUENCE_MAX = 3;
 
 const STATUS_TEXT: Record<TagTone, string> = {
   neutral: "text-ink-muted",
@@ -112,7 +112,7 @@ function SequenceRow({
     </>
   );
   const className =
-    "group/row flex min-h-16 flex-1 items-center gap-3 rounded-[inherit] px-3 py-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+    "group/row flex min-h-16 items-center gap-3 rounded-[inherit] px-3 py-2.5 transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
   return action.kind === "invite" ? (
     <Link
       className={className}
@@ -135,7 +135,8 @@ function SequenceRow({
 
 /**
  * "Na sequência" (mockup 20, B1): the actions after the one in the spotlight,
- * a line each and no button (a tap opens it), up to four, then "+ N em
+ * a line each and no button (a tap opens it), up to three (what fits the
+ * natural height of the spotlight card, so no block is stretched), then "+ N em
  * Parcelas". Filled like the other blocks, with straight dividers.
  */
 export function NextInLine({
@@ -155,7 +156,7 @@ export function NextInLine({
   return (
     <section
       aria-labelledby={titleId}
-      className="flex flex-col overflow-hidden rounded-card bg-surface-card"
+      className="overflow-hidden rounded-card bg-surface-card"
     >
       <div className="flex items-baseline justify-between px-4 pt-3.5 pb-1.5">
         <h2 className="font-semibold text-sm" id={titleId}>
@@ -165,9 +166,9 @@ export function NextInLine({
           {actions.length}
         </span>
       </div>
-      <ul className="flex flex-1 flex-col divide-y divide-divider">
+      <ul className="divide-y divide-divider">
         {shown.map((action) => (
-          <li className="flex flex-1 flex-col" key={action.id}>
+          <li key={action.id}>
             <SequenceRow action={action} locale={locale} today={today} />
           </li>
         ))}

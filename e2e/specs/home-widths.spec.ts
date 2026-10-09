@@ -8,7 +8,7 @@ import {
   seedWide,
 } from "../home-helpers";
 
-test("muitas ações: um cartão em destaque e 'Na sequência' com 4 linhas e o '+ N'; sem carrossel", async ({
+test("muitas ações: um cartão em destaque e 'Na sequência' com 3 linhas e o '+ N'; sem carrossel", async ({
   page,
 }) => {
   await signup(page);
@@ -20,31 +20,13 @@ test("muitas ações: um cartão em destaque e 'Na sequência' com 4 linhas e o 
   await expect(card(page, "Muitas E2E 1 · parcela 1 de 1")).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(1);
   const next = page.getByRole("region", { name: "Na sequência" });
-  await expect(next.getByRole("listitem")).toHaveCount(4);
-  await expect(next.getByText("+ 1 em Parcelas")).toBeVisible();
+  await expect(next.getByRole("listitem")).toHaveCount(3);
+  await expect(next.getByText("+ 2 em Parcelas")).toBeVisible();
   await expect(next.getByRole("button")).toHaveCount(0);
   // No carousel any more: nothing says "1 de N", nothing hides in a strip.
   await expect(page.getByText("1 de 6")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Ver todas" })).toHaveCount(0);
   await expectNoPageScrollX(page);
-});
-
-test("a 1512 px o cartão verde e 'Na sequência' têm a mesma altura", async ({
-  page,
-}, testInfo) => {
-  // biome-ignore lint/suspicious/noSkippedTests: o projeto mobile tem viewport própria
-  test.skip(
-    testInfo.project.name === "mobile",
-    "o projeto mobile tem viewport própria"
-  );
-  await page.setViewportSize({ width: 1512, height: 900 });
-  await signup(page);
-  await seedOneEach(page.request, "Altura E2E", [-40, -30, -20]);
-  await page.goto("/");
-  await waitForHydrated(page);
-  const hero = await box(page.getByRole("article"));
-  const next = await box(page.getByRole("region", { name: "Na sequência" }));
-  expect(Math.abs(hero.height - next.height)).toBeLessThanOrEqual(1);
 });
 
 for (const width of [800, 1024, 1440, 1920, 2560]) {

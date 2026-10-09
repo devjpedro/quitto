@@ -64,7 +64,7 @@ export function HomeContent() {
       ) : null}
       {layout.empty ? <HomeEmpty /> : null}
       {layout.hasContract || layout.compactGuide || home.actions.length > 0 ? (
-        <div className="flex lateral:grid lateral:grid-cols-2 flex-col lateral:items-stretch gap-7 lateral:gap-x-7 lateral:gap-y-9 md:gap-8">
+        <div className="flex lateral:grid lateral:grid-cols-2 flex-col lateral:items-start gap-7 lateral:gap-x-7 lateral:gap-y-9 md:gap-8">
           {home.actions.length > 0 ? (
             <>
               <ActionList actions={home.actions} today={home.today} />
