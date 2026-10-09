@@ -2,7 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { contractQueryOptions } from "@/features/contracts/api";
 import type { PanelRoute } from "../types";
-import { InstallmentPanelHost } from "./installment-panel-host";
+import { InstallmentPanelHost } from "./lazy-installment-panel-host";
 
 /** The open installment's contract is gone: the search lets the panel go. */
 function ClearPanel({ route }: { route: PanelRoute }) {

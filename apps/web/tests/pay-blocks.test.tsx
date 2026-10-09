@@ -52,6 +52,16 @@ const { navigate, router, served, calls } = vi.hoisted(() => {
   };
 });
 
+// The page loads the panel on demand; these tests open it at once.
+vi.mock(
+  "@/features/installments/components/lazy-installment-panel-host",
+  async () => ({
+    InstallmentPanelHost: (
+      await import("@/features/installments/components/installment-panel-host")
+    ).InstallmentPanelHost,
+  })
+);
+
 vi.mock("@/lib/api", () => ({
   api: {
     api: {

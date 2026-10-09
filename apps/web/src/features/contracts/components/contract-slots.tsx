@@ -1,4 +1,4 @@
-import { InstallmentPanelHost } from "@/features/installments/components/installment-panel-host";
+import { InstallmentPanelHost } from "@/features/installments/components/lazy-installment-panel-host";
 import type { ContractRoute } from "../hooks/use-contract-route";
 import { useContractPanelRoute } from "../hooks/use-contract-route";
 import { nextActionOf } from "../lib/next-action";
