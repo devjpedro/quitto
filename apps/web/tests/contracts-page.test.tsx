@@ -103,6 +103,12 @@ describe("ContractsPage", () => {
     expect(screen.queryByText(TO_PAY)).toBeNull();
   });
 
+  it("com contratos o cabeçalho é só o título: o Novo contrato é o da sidebar, não um segundo", async () => {
+    await renderPage([PAY]);
+    expect(await screen.findByText("Empréstimo do Carlos")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Novo contrato" })).toBeNull();
+  });
+
   it("sem contratos: o palco sem cartão fantasma, Novo contrato e o tour", async () => {
     await renderPage([]);
     expect(await screen.findByText("Nenhum contrato ainda")).toBeVisible();

@@ -1,8 +1,6 @@
-import { Plus } from "@phosphor-icons/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { getRouteApi, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { getRouteApi } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { SectionBoundary } from "@/components/ui/section-boundary";
 import { contractsQueryOptions } from "@/hooks/use-contracts";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -18,7 +16,7 @@ import { ContractsToolbar } from "./contracts-toolbar";
 
 const route = getRouteApi("/_app/contracts/");
 
-function ContractsContent({ onEmpty }: { onEmpty: (empty: boolean) => void }) {
+function ContractsContent() {
   const { data } = useSuspenseQuery(contractsQueryOptions);
   const search = route.useSearch();
   const navigate = route.useNavigate();
@@ -27,8 +25,6 @@ function ContractsContent({ onEmpty }: { onEmpty: (empty: boolean) => void }) {
       navigate({ search: next, replace: true, resetScroll: false }),
     [navigate]
   );
-  const none = data.length === 0;
-  useEffect(() => onEmpty(none), [none, onEmpty]);
   const { cards, counts, totals } = contractsFilter(data, search);
   const today = todayISO();
   return (
@@ -61,34 +57,20 @@ function ContractsContent({ onEmpty }: { onEmpty: (empty: boolean) => void }) {
 }
 
 /**
- * "Contratos" (mockup 17, frame A). The title and the desktop "+ Novo
- * contrato" draw at once; the cards stream in one section. Same breathing
- * room and 1840 px stop as the home.
+ * "Contratos" (mockup 20, B4). Only the title in the header: "Novo contrato"
+ * is the sidebar's (the ＋ of the tab bar on a phone, the empty state's own),
+ * once per screen like the home. Same breathing room and 1840 px stop.
  */
 export function ContractsPage() {
   useDocumentTitle(m.page_title_contracts());
-  // No contracts: the empty state has the one "Novo contrato" (decision 11).
-  // Reported by the list below: a second reader of the query out here would
-  // change how the section's own error reaches its boundary.
-  const [hasNone, setHasNone] = useState(false);
   return (
     <div className="lateral:p-8 p-4 md:p-6" data-testid="contracts-page">
       <div className="mx-auto flex w-full max-w-[1840px] flex-col gap-4 md:gap-5">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-bold font-display text-[28px] leading-[1.1] tracking-[-0.035em] md:text-[32px]">
-            {m.contracts_title()}
-          </h1>
-          {hasNone ? null : (
-            <Button asChild className="hidden md:inline-flex">
-              <Link to="/contracts/new">
-                <Plus aria-hidden="true" size={16} weight="bold" />
-                {m.nav_new_contract()}
-              </Link>
-            </Button>
-          )}
-        </div>
+        <h1 className="font-bold font-display text-[28px] leading-[1.1] tracking-[-0.035em] md:text-[32px]">
+          {m.contracts_title()}
+        </h1>
         <SectionBoundary fallback={<ContractsSkeleton />}>
-          <ContractsContent onEmpty={setHasNone} />
+          <ContractsContent />
         </SectionBoundary>
       </div>
     </div>
