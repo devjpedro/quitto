@@ -309,6 +309,29 @@ describe("PeopleTab (mockup 14, Pessoas)", () => {
     await waitFor(() => expect(menu).toHaveFocus());
   });
 
+  it("no celular o ⋮ abre um sheet com o rosto, o nome e os itens de 44 px, e o Remover ainda confirma", async () => {
+    const wide = window.innerWidth;
+    window.innerWidth = 390;
+    try {
+      renderPeople(motoDetail());
+      await userEvent.click(
+        screen.getByRole("button", { name: "Ações de Rafael Prado" })
+      );
+      const sheet = await screen.findByRole("dialog", {
+        name: "Rafael Prado",
+      });
+      expect(screen.queryByRole("menu")).toBeNull();
+      await userEvent.click(
+        within(sheet).getByRole("button", { name: "Remover do contrato" })
+      );
+      expect(
+        await screen.findByRole("dialog", { name: "Remover Rafael Prado?" })
+      ).toBeVisible();
+    } finally {
+      window.innerWidth = wide;
+    }
+  });
+
   it("quem não é dono não vê Reenviar, Copiar, ⋯, o convite tracejado nem a ação da aba", () => {
     const silvia = {
       ...motoDetail().participants[2],
