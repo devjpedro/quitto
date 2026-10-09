@@ -74,6 +74,9 @@ test("lista: o cartão com o %, a barra e o rodapé; Concluídos e Recebo filtra
   await expect(overdueCard).toHaveCount(0);
 });
 
+/** O centro do palco vazio é transparente na máscara: o buraco dos pontinhos. */
+const CENTER_HOLE = /radial-gradient\(.*rgba\(0, 0, 0, 0\) 70%/;
+
 test("vazio: o palco sem cartão fantasma, Novo contrato e o tour", async ({
   page,
 }) => {
@@ -88,6 +91,12 @@ test("vazio: o palco sem cartão fantasma, Novo contrato e o tour", async ({
   await expect(
     empty.getByRole("button", { name: "Fazer o tour" })
   ).toBeVisible();
+  // Os pontinhos somem atrás do texto: a máscara abre um buraco no centro.
+  const mask = await page
+    .locator(".empty-stage")
+    .first()
+    .evaluate((el) => getComputedStyle(el, "::before").maskImage);
+  expect(mask).toMatch(CENTER_HOLE);
 });
 
 test("celular: nada transborda", async ({ page }, testInfo) => {
