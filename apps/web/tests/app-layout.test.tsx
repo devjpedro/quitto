@@ -174,6 +174,23 @@ describe("_app layout", () => {
     );
   });
 
+  it("on 401 drops the cached session, so the login logo is not a link", async () => {
+    meGet.mockResolvedValue({
+      data: null,
+      error: {
+        status: 401,
+        value: { error: { code: "UNAUTHORIZED", message: "x" } },
+      },
+    });
+    const client = makeTestQueryClient();
+    client.setQueryData(queryKeys.session, seeded);
+    renderWithProviders(<AppLayout />, { client });
+
+    await waitFor(() => expect(navigate).toHaveBeenCalled());
+    expect(client.getQueryData(queryKeys.session)).toBeUndefined();
+    expect(client.getQueryData(queryKeys.me)).toBeUndefined();
+  });
+
   it("stores the identity cookie once /me loads", async () => {
     meGet.mockResolvedValue({
       data: {

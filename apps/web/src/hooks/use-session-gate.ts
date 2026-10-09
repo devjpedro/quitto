@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
@@ -5,7 +6,8 @@ import {
   usePersistIdentityCookie,
 } from "@/hooks/use-identity-cookie";
 import { useLocaleSync } from "@/hooks/use-locale-sync";
-import { useMeQuery } from "@/hooks/use-me";
+import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
+import { queryKeys } from "@/lib/query-keys";
 import { isSessionLost } from "@/lib/session-gate";
 
 /**
@@ -16,6 +18,7 @@ import { isSessionLost } from "@/lib/session-gate";
 export function useSessionGate(): void {
   const me = useMeQuery();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const sessionLost = isSessionLost(me.error);
 
   useLocaleSync(me.data?.locale);
@@ -24,7 +27,11 @@ export function useSessionGate(): void {
   useEffect(() => {
     if (sessionLost) {
       clearIdentityCookie();
+      // /login is reached client-side: a session still in the cache would
+      // make its logo a link back to a home that bounces to /login.
+      queryClient.removeQueries({ queryKey: queryKeys.session });
+      queryClient.removeQueries({ queryKey: meQueryOptions.queryKey });
       navigate({ to: "/login", search: { redirect: undefined } });
     }
-  }, [sessionLost, navigate]);
+  }, [sessionLost, navigate, queryClient]);
 }
