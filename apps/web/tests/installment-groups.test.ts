@@ -52,6 +52,26 @@ describe("groupInstallments", () => {
     expect(r.groups).toEqual([]);
   });
 
+  it("Pagas em <mês> lista pelo dia em que o dinheiro andou, como o marco da home", () => {
+    const r = group([
+      // vencia em setembro, foi paga em outubro: é de outubro
+      listInstallment({
+        dueDate: "2026-09-20",
+        status: "confirmed",
+        movedOn: "2026-10-03",
+      }),
+      // vencia em outubro, foi paga em setembro: não é de outubro
+      listInstallment({
+        dueDate: "2026-10-05",
+        status: "confirmed",
+        movedOn: "2026-09-28",
+      }),
+    ]);
+    expect(ids(r)).toEqual(["paid"]);
+    expect(r.groups[0]?.items).toHaveLength(1);
+    expect(r.groups[0]?.items[0]?.dueDate).toBe("2026-09-20");
+  });
+
   it("somas por direção, nunca juntas", () => {
     const r = group([
       listInstallment({

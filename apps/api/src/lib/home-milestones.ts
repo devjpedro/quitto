@@ -52,7 +52,10 @@ function payerActedAt(it: HomeInstallmentRow): Date | null {
  * never moves a payment to the next month. Receiving, paidAt: the
  * confirmation, when the contract asks for one.
  */
-function movedAt(direction: Direction, it: HomeInstallmentRow): Date | null {
+export function movedAt(
+  direction: Direction,
+  it: HomeInstallmentRow
+): Date | null {
   if (!isPaidStatus(it.status)) {
     return null;
   }

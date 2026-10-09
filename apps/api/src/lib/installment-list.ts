@@ -2,9 +2,11 @@ import {
   type Direction,
   INSTALLMENT_STATUS,
   isOverdue,
+  isoDateInTimeZone,
   isPaidStatus,
 } from "@quitto/shared";
-import type { PartyContract } from "./home-parties";
+import { movedAt } from "./home-milestones";
+import type { HomeInstallmentRow, PartyContract } from "./home-parties";
 
 export type InstallmentListStatus = "overdue" | "awaiting" | "open" | "paid";
 
@@ -26,6 +28,12 @@ export interface InstallmentListItem {
   dueDate: string;
   installmentId: string;
   installmentsCount: number;
+  /**
+   * The day the money moved for the caller (the same one the home's "Pago em
+   * <mês>" counts, São Paulo's calendar); `null` while unpaid. "Pagas em
+   * <mês>" lists by this day, not by the due date.
+   */
+  movedOn: string | null;
   paidAt: string | null;
   sequence: number;
   status: string;
@@ -54,10 +62,19 @@ function matchesStatus(
   }
 }
 
+function inRange(day: string, from?: string, to?: string): boolean {
+  return (!from || day >= from) && (!to || day <= to);
+}
+
+/** A paid installment is in the window by its due date or by the day the money moved. */
 function inWindow(
   it: { dueDate: string; status: string },
+  movedOn: string | null,
   { from, to, pastDue }: InstallmentFilter
 ): boolean {
+  if (movedOn !== null && inRange(movedOn, from, to)) {
+    return true;
+  }
   if (to && it.dueDate > to) {
     return false;
   }
@@ -65,6 +82,14 @@ function inWindow(
     return true;
   }
   return pastDue && !isPaidStatus(it.status);
+}
+
+function movedOnOf(
+  direction: Direction,
+  it: HomeInstallmentRow
+): string | null {
+  const at = movedAt(direction, it);
+  return at === null ? null : isoDateInTimeZone(at);
 }
 
 /** The caller's installments (a side to pay or receive, never a followed contract), by window, side and state. Pure. */
@@ -79,8 +104,9 @@ export function listInstallments(
       continue;
     }
     for (const it of party.installments) {
+      const movedOn = movedOnOf(party.direction, it);
       if (
-        !inWindow(it, filter) ||
+        !inWindow(it, movedOn, filter) ||
         (filter.status && !matchesStatus(filter.status, it, today))
       ) {
         continue;
@@ -96,6 +122,7 @@ export function listInstallments(
         status: it.status,
         direction: party.direction,
         counterpartyName: party.counterpartyName,
+        movedOn,
         paidAt: it.paidAt ? it.paidAt.toISOString() : null,
       });
     }

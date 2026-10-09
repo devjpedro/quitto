@@ -23,14 +23,16 @@ export type InstallmentFilter = "pay" | "receive" | "overdue" | "awaiting";
 
 const ORDER: GroupId[] = ["overdue", "awaiting", "week", "month", "paid"];
 
-/** Which group an installment belongs to (D9); `null` for a paid one that is not of the month. */
+/** Which group an installment belongs to (D9); `null` for a paid one whose money did not move in the month. */
 function groupOf(
   item: InstallmentListItem,
   month: string,
   today: string
 ): GroupId | null {
   if (isPaidStatus(item.status)) {
-    return item.dueDate.startsWith(month) ? "paid" : null;
+    // By the day the money moved, like the home's "Pago em <mês>" (a legacy
+    // row without the day falls back to its due date).
+    return (item.movedOn ?? item.dueDate).startsWith(month) ? "paid" : null;
   }
   if (item.dueDate < today) {
     return item.status === INSTALLMENT_STATUS.awaitingConfirmation

@@ -92,6 +92,36 @@ describe("listInstallments", () => {
     ).toEqual(["paid", "late"]);
   });
 
+  it("a paga entra pela janela do dia em que o dinheiro andou (o marco da home), com movedOn", () => {
+    const q = party("c1", "Apartamento", "pay", [
+      // venceu em setembro, paga em outubro: é de outubro
+      inst({
+        id: "late",
+        sequence: 1,
+        dueDate: "2026-09-20",
+        status: "confirmed",
+        paidAt: new Date("2026-10-03T15:00:00Z"),
+      }),
+      // vence em outubro, paga em setembro: continua na janela pelo vencimento
+      inst({
+        id: "early",
+        sequence: 2,
+        dueDate: "2026-10-05",
+        status: "confirmed",
+        paidAt: new Date("2026-09-28T15:00:00Z"),
+      }),
+    ]);
+    const items = listInstallments(
+      [q],
+      { from: "2026-10-01", to: "2026-10-31", pastDue: false },
+      TODAY
+    );
+    expect(items.map((i) => [i.installmentId, i.movedOn])).toEqual([
+      ["late", "2026-10-03"],
+      ["early", "2026-09-28"],
+    ]);
+  });
+
   it("status overdue inclui a contestada vencida e exclui a que espera confirmação", () => {
     const q = party("c1", "Moto", "receive", [
       inst({ id: "late", sequence: 1, dueDate: "2026-10-01" }),

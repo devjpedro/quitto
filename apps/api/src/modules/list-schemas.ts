@@ -58,6 +58,7 @@ const installmentListItemSchema = t.Object({
   status: t.String(),
   direction: directionSchema,
   counterpartyName: nullableString,
+  movedOn: nullableString,
   paidAt: nullableString,
 });
 

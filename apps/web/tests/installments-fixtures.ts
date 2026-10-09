@@ -18,6 +18,7 @@ export function listInstallment(
     status: "pending",
     direction: "pay",
     counterpartyName: "Carlos Lima",
+    movedOn: null,
     paidAt: null,
     ...overrides,
   };
