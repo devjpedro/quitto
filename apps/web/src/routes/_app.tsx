@@ -4,30 +4,58 @@ import {
   redirect,
   useMatch,
 } from "@tanstack/react-router";
-import type { ComponentProps } from "react";
+import { type ComponentProps, lazy, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { CommandPalette } from "@/components/command-palette/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
+import { prefetchWhenIdle, warmMotion } from "@/components/ui/motion-scope";
 import { ContractMobileMenu } from "@/features/contracts/components/contract-mobile-menu";
+import { homeQueryOptions } from "@/features/home/api";
 import {
   useActiveContracts,
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
 } from "@/features/home/shell-selectors";
-import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
 import {
   NotificationsPanelContext,
   useNotificationsPanel,
 } from "@/features/notifications/hooks/use-notifications-panel";
-import { TourOverlay } from "@/features/tour/components/tour-overlay";
 import { useTourAutostart } from "@/features/tour/hooks/use-tour-autostart";
+import { useTourOpen } from "@/features/tour/lib/tour-store";
 import { useCommandPalette } from "@/hooks/use-command-palette";
+import { useEverTrue } from "@/hooks/use-ever-true";
 import { useIdentity } from "@/hooks/use-identity";
 import { useSessionGate } from "@/hooks/use-session-gate";
 import { m } from "@/paraglide/messages.js";
+
+// Nothing here draws until the user asks (⌘K, the bell, the tour): the chunks
+// come on first use, and the browser fetches them ahead when it is idle.
+const loadPalette = () =>
+  import("@/components/command-palette/command-palette").then((mod) => ({
+    default: mod.CommandPalette,
+  }));
+const loadNotifications = () =>
+  import("@/features/notifications/components/notifications-panel").then(
+    (mod) => ({ default: mod.NotificationsPanel })
+  );
+const loadTour = () =>
+  import("@/features/tour/components/tour-overlay").then((mod) => ({
+    default: mod.TourOverlay,
+  }));
+const CommandPalette = lazy(loadPalette);
+const NotificationsPanel = lazy(loadNotifications);
+const TourOverlay = lazy(loadTour);
+
+function prefetchOverlays() {
+  return prefetchWhenIdle(() => {
+    warmMotion();
+    loadPalette();
+    loadNotifications();
+    loadTour();
+  });
+}
 
 export const Route = createFileRoute("/_app")({
   beforeLoad: ({ context, location }) => {
@@ -36,11 +64,19 @@ export const Route = createFileRoute("/_app")({
     }
     // "unknown" (cold API): render the shell anyway; the client validates.
   },
+  // The shell reads the home (bell, counts, sidebar): fetched here, in the SSR,
+  // it arrives dehydrated instead of as a request after hydration. Not awaited:
+  // it streams in, and a cold API never holds the page.
+  loader: ({ context }) => {
+    context.queryClient.prefetchQuery(homeQueryOptions);
+  },
   component: AppLayout,
 });
 
 function AppLayout() {
   useSessionGate();
+  // The overlays and the animation engine are fetched once the page is quiet.
+  useEffect(prefetchOverlays, []);
   useTourAutostart();
   const identity = useIdentity();
   const unreadCount = useUnreadCount();
@@ -50,6 +86,9 @@ function AppLayout() {
   const notifications = useNotificationsPanel();
   // Registered ONCE here: this layout owns the global ⌘K shortcut.
   const { open: searchOpen, setOpen: setSearchOpen } = useCommandPalette();
+  const paletteMounted = useEverTrue(searchOpen);
+  const notificationsMounted = useEverTrue(notifications.open);
+  const tourMounted = useEverTrue(useTourOpen());
   // A contract on a phone: the top bar goes back to the list and carries the
   // contract's "⋯" (decision 15: decided by the route, no width JS).
   const contractMatch = useMatch({
@@ -90,19 +129,25 @@ function AppLayout() {
         onOpenSearch={() => setSearchOpen(true)}
         unreadCount={unreadCount}
       >
-        <CommandPalette
-          onOpenChange={setSearchOpen}
-          onOpenNotifications={notifications.show}
-          open={searchOpen}
-        />
-        <NotificationsPanel
-          // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
-          fallbackFocus={visibleNotificationsTrigger}
-          onOpenChange={notifications.setOpen}
-          open={notifications.open}
-          unreadCount={unreadCount}
-        />
-        <TourOverlay />
+        <Suspense fallback={null}>
+          {paletteMounted ? (
+            <CommandPalette
+              onOpenChange={setSearchOpen}
+              onOpenNotifications={notifications.show}
+              open={searchOpen}
+            />
+          ) : null}
+          {notificationsMounted ? (
+            <NotificationsPanel
+              // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
+              fallbackFocus={visibleNotificationsTrigger}
+              onOpenChange={notifications.setOpen}
+              open={notifications.open}
+              unreadCount={unreadCount}
+            />
+          ) : null}
+          {tourMounted ? <TourOverlay /> : null}
+        </Suspense>
         <ErrorBoundary
           FallbackComponent={ErrorFallback}
           resetKeys={[identity?.id]}
