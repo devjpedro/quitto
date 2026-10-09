@@ -151,6 +151,65 @@ describe("HomePage", () => {
     ).toBeVisible();
   });
 
+  it("o cabeçalho: a data por extenso no celular e o resumo da contagem só para leitor de tela", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({ actions: [installmentAction(), inviteAction()] }),
+      error: null,
+    });
+    renderHome();
+    const summary = (await screen.findByText("2 coisas pedem sua atenção"))
+      .parentElement as HTMLElement;
+    const [phoneDate, wideDate, count] = Array.from(summary.children);
+    expect(phoneDate).toHaveClass("md:hidden");
+    expect(phoneDate).toHaveTextContent("Sexta-feira, 2 de outubro");
+    expect(wideDate).toHaveClass("max-md:hidden");
+    expect(count).toHaveClass("max-md:sr-only");
+  });
+
+  it("sem contrato não há 'Próximos 30 dias' nem 'Marcos'; com um convite, o guia vira compacto no fim", async () => {
+    const noContract = {
+      ...homeFixture().onboarding,
+      hasContract: false,
+      hasPixKey: false,
+      hasCounterparty: false,
+      remindersOn: false,
+      counterpartyContractId: null,
+    };
+    getHome.mockResolvedValue({
+      data: homeFixture({ onboarding: noContract }),
+      error: null,
+    });
+    const { unmount } = renderHome();
+    await screen.findByRole("heading", {
+      name: "Cadastre o primeiro acordo que você quer acompanhar.",
+    });
+    expect(
+      screen.queryByRole("heading", { name: "Próximos 30 dias" })
+    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Marcos" })).toBeNull();
+    unmount();
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [inviteAction()],
+        onboarding: noContract,
+      }),
+      error: null,
+    });
+    renderHome();
+    await screen.findByRole("article");
+    expect(
+      screen.queryByRole("heading", { name: "Próximos 30 dias" })
+    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Marcos" })).toBeNull();
+    // The green card is the invite's: the guide only follows, compact.
+    expect(
+      screen.queryByRole("heading", {
+        name: "Cadastre o primeiro acordo que você quer acompanhar.",
+      })
+    ).toBeNull();
+    expect(screen.getByText("Comece por aqui")).toBeVisible();
+  });
+
   it("primeiro acesso: o guia verde lidera", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({

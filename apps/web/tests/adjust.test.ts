@@ -68,6 +68,34 @@ describe("adjustState", () => {
     expect(state?.keep).not.toBeNull();
   });
 
+  it("a soma menor que o total também se move: o 'era' fica acima do novo total e Manter devolve a diferença às livres", () => {
+    const state = adjustState({
+      ...base,
+      installments: twelve(10_000, 50_000),
+    });
+    expect(state).toMatchObject({
+      sum: 560_000,
+      previous: 600_000,
+      moved: true,
+    });
+    expect(
+      state?.keep?.reduce((acc, row) => acc + (row.amountCents ?? 0), 0)
+    ).toBe(600_000);
+    expect(state?.keep?.[0]?.amountCents).toBe(10_000);
+  });
+
+  it("com todas as linhas mexidas não há de onde tirar: keep é null, mas o total segue a soma", () => {
+    const state = adjustState({
+      ...base,
+      installments: twelve(160_000, 50_000).map((row) => ({
+        ...row,
+        edited: true,
+      })),
+    });
+    expect(state).toMatchObject({ moved: true, freeCount: 0, sum: 710_000 });
+    expect(state?.keep).toBeNull();
+  });
+
   it("sem lista: null", () => {
     expect(adjustState(base)).toBeNull();
   });

@@ -71,6 +71,24 @@ describe("homeLayout", () => {
     );
   });
 
+  it("24 atrasadas de um contrato são uma ação agrupada: o subtítulo diz 1, não 24", () => {
+    const sequences = Array.from({ length: 24 }, (_, i) => i + 1);
+    const home = homeFixture({
+      actions: [
+        installmentAction({
+          kind: "overdue",
+          count: 24,
+          sequences,
+          installmentIds: sequences.map((n) => `i${n}`),
+          totalCents: 24 * 125_000,
+        }),
+      ],
+    });
+    expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
+      "1 coisa pede sua atenção"
+    );
+  });
+
   it("acompanhar contratos não esconde o guia: só contam aqueles em que você é parte", () => {
     // Coordinator's rule, end to end: 5 followed contracts (the sidebar's
     // count), none where the person pays or receives.

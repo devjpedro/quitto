@@ -112,6 +112,7 @@ export function ContractCard({
               <RoleArrow
                 aria-hidden="true"
                 className="self-center text-brand"
+                data-direction={item.direction}
                 size={13}
                 weight="bold"
               />

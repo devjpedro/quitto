@@ -225,12 +225,24 @@ describe("InstallmentsPage", () => {
       data: { today: "2026-10-08", hasContracts: true, items: run },
       error: null,
     });
+    // Two rows of one contract must not repeat a React key.
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     renderWithProviders(<InstallmentsPage />);
     const first = await screen.findByTestId("installment-row-r3");
     expect(first).toHaveTextContent("Notebook da Marina");
+    expect(first).toHaveTextContent("parcela 3 de 12");
     expect(screen.getByTestId("installment-row-r4")).toHaveTextContent(
       "Notebook da Marina"
     );
+    expect(screen.getByTestId("installment-row-r4")).toHaveTextContent(
+      "parcela 4 de 12"
+    );
+    expect(
+      error.mock.calls.filter((call) => String(call[0]).includes("same key"))
+    ).toHaveLength(0);
+    error.mockRestore();
     expect(screen.queryByTestId("installment-run-r3")).toBeNull();
     // The month Select is the only control that expands: no row opens a group.
     expect(

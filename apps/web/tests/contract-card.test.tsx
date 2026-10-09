@@ -25,11 +25,27 @@ describe("ContractCard (B4)", () => {
     expect(within(card).getByText("falta")).toBeVisible();
     expect(within(card).getByText("R$ 3.840,00")).toBeInTheDocument();
     // The direction is the arrow (and a word for the screen reader), not a tag.
-    expect(card.querySelector("svg[aria-hidden='true']")).not.toBeNull();
+    expect(card.querySelector("svg[data-direction='receive']")).not.toBeNull();
     expect(within(card).getByText("Você recebe.")).toHaveClass("sr-only");
     expect(within(card).queryByText("Parcelas")).toBeNull();
     expect(within(card).queryByText("Mensal")).toBeNull();
     expect(within(card).queryByText("Falta")).toBeNull();
+  });
+
+  it("a seta segue a direção: recebo ↙, pago ↗, e quem só acompanha não tem seta", () => {
+    const arrows = (direction: "receive" | "pay" | null) => {
+      const { container, unmount } = renderWithProviders(
+        <ContractCard item={listItem({ direction })} today={TODAY} />
+      );
+      const found = Array.from(
+        container.querySelectorAll("svg[data-direction]")
+      ).map((svg) => svg.getAttribute("data-direction"));
+      unmount();
+      return found;
+    };
+    expect(arrows("receive")).toEqual(["receive"]);
+    expect(arrows("pay")).toEqual(["pay"]);
+    expect(arrows(null)).toEqual([]);
   });
 
   it("quem só acompanha não tem seta: fica a tag 'Você acompanha'", () => {
