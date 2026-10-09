@@ -435,11 +435,10 @@ describe("HomePage", () => {
     });
     renderHome();
     const next = await screen.findByRole("region", { name: "Na sequência" });
-    // 3 lines, the invite that would be cut, and the 3 installments left.
-    expect(within(next).getAllByRole("listitem")).toHaveLength(4);
-    expect(within(next).getByText("+ 3 em Parcelas")).toBeVisible();
+    // 3 lines at most; the invite left over turns the footer into "Ver mais N".
+    expect(within(next).getAllByRole("listitem")).toHaveLength(3);
     expect(
-      within(next).getByRole("link", { name: "+ 3 em Parcelas" })
+      within(next).getByRole("button", { name: "Ver mais 4" })
     ).toHaveClass("focus-visible:ring-2");
     // The amount rides the title's line on a phone (the meta keeps the width) and its own column from md.
     const row = within(next).getAllByRole("listitem")[0] as HTMLElement;

@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
-import { useId } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { IconTile, type IconTileTone } from "@/components/ui/icon-tile";
 import { Money } from "@/components/ui/money";
 import { PersonAvatar } from "@/components/ui/person-avatar";
@@ -21,7 +21,7 @@ import { getLocale } from "@/paraglide/runtime.js";
 import { describeAction } from "../lib/action-view";
 import type { HomeAction } from "../types";
 
-/** How many of the other actions get a line; the rest is "+ N em Parcelas". */
+/** How many of the other actions get a line; the rest is "+ N em Parcelas" or "Ver mais N". */
 export const SEQUENCE_MAX = 3;
 
 const STATUS_TEXT: Record<TagTone, string> = {
@@ -148,11 +148,37 @@ export function NextInLine({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  // Parcelas does not list invites, so none of them is left to "+ N em Parcelas".
-  const head = actions.slice(0, SEQUENCE_MAX);
+  const [expanded, setExpanded] = useState(false);
+  const listId = useId();
   const tail = actions.slice(SEQUENCE_MAX);
-  const shown = [...head, ...tail.filter((action) => action.kind === "invite")];
-  const more = tail.filter((action) => action.kind !== "invite").length;
+  // Parcelas does not list invites: if one is left over, the rest expands in
+  // place; if only installments are, "+ N em Parcelas" takes you there.
+  const hasHiddenInvite = tail.some((action) => action.kind === "invite");
+  const shown = expanded ? actions : actions.slice(0, SEQUENCE_MAX);
+  const footerClass =
+    "block w-full border-divider border-t px-4 py-3 text-left text-ink-muted text-sm transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset";
+  let footer: ReactNode = null;
+  if (hasHiddenInvite) {
+    footer = (
+      <button
+        aria-controls={listId}
+        aria-expanded={expanded}
+        className={footerClass}
+        onClick={() => setExpanded((open) => !open)}
+        type="button"
+      >
+        {expanded
+          ? m.home_sequence_less()
+          : m.home_sequence_expand({ count: tail.length })}
+      </button>
+    );
+  } else if (tail.length > 0) {
+    footer = (
+      <Link className={footerClass} search={{}} to="/installments">
+        {m.home_sequence_more({ count: tail.length })}
+      </Link>
+    );
+  }
   return (
     <section
       aria-labelledby={titleId}
@@ -166,22 +192,14 @@ export function NextInLine({
           {actions.length}
         </span>
       </div>
-      <ul className="divide-y divide-divider">
+      <ul className="divide-y divide-divider" id={listId}>
         {shown.map((action) => (
           <li key={action.id}>
             <SequenceRow action={action} locale={locale} today={today} />
           </li>
         ))}
       </ul>
-      {more > 0 ? (
-        <Link
-          className="block border-divider border-t px-4 py-3 text-ink-muted text-sm transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
-          search={{}}
-          to="/installments"
-        >
-          {m.home_sequence_more({ count: more })}
-        </Link>
-      ) : null}
+      {footer}
     </section>
   );
 }

@@ -1060,6 +1060,8 @@
   "app_error_generic": "Algo deu errado. Tente de novo.",
   "home_sequence_title": "Na sequência",
   "home_sequence_more": "+ {count} em Parcelas",
+  "home_sequence_expand": "Ver mais {count}",
+  "home_sequence_less": "Mostrar menos",
   "home_upcoming_see_more": "Mais {count} em Parcelas",
   "back_to_top": "Voltar ao topo",
   "tour_start": "Fazer o tour",
