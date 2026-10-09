@@ -6,6 +6,7 @@ import { m } from "@/paraglide/messages.js";
 import type { InstallmentDetail, ProofItem } from "../types";
 import { PANEL_TONE, type PanelMode } from "./panel-context";
 import { FileRow, proofMeta } from "./proof-list";
+import { ProofViewer } from "./proof-viewer";
 
 /**
  * A PDF as the mockup draws it (mockup 14, frames A and G): its first page as
@@ -14,7 +15,7 @@ import { FileRow, proofMeta } from "./proof-list";
  * width in Chrome, 3 to 5 px here): the frame is 8 px wider than the paper on
  * each side and above it, and the paper crops it. The viewer is a picture
  * here (inert): no wheel or focus scrolls it to its gutter, and "Abrir" opens
- * the file.
+ * the viewer.
  */
 function PdfPaper({ mode, proof }: { mode: PanelMode; proof: ProofItem }) {
   return (
@@ -87,20 +88,22 @@ export function ProofPreview({
       <FileRow
         actions={
           <>
-            <a
-              className={cn(
-                buttonVariants({ size: "sm", variant: "inset" }),
-                tone.innerButton
-              )}
-              href={proof.downloadUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <ArrowsOutSimple aria-hidden="true" size={16} />
-              {m.panel_proof_open()}
-            </a>
-            {/* On a phone "Abrir" hands the file to the system's viewer,
-                which saves and shares it: the line keeps its words whole. */}
+            <ProofViewer
+              proof={proof}
+              trigger={
+                <button
+                  className={cn(
+                    buttonVariants({ size: "sm", variant: "inset" }),
+                    tone.innerButton
+                  )}
+                  type="button"
+                >
+                  <ArrowsOutSimple aria-hidden="true" size={16} />
+                  {m.panel_proof_open()}
+                </button>
+              }
+            />
+            {/* On a phone the viewer has its own "Baixar": the line keeps its words whole. */}
             {mode === "bottom" ? null : (
               <a
                 aria-label={m.panel_proof_download()}

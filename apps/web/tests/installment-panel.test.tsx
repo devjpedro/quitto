@@ -219,6 +219,8 @@ afterEach(async () => {
   window.innerWidth = 1024;
 });
 
+const SENT_BY = /enviado por/;
+
 describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
   it("a 1600 px: a coluna fixa (installment-panel-docked), sem diálogo; a 1024: o sheet lateral com o título do contrato na descrição; a 390: o bottom sheet", () => {
     const wide = renderPage({ width: 1600 });
@@ -442,6 +444,61 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
   });
 
+  it("Abrir mostra o comprovante num visualizador dentro do app: nome, tamanho, quem enviou, Baixar; Esc fecha e o foco volta ao Abrir", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const open = within(screen.getByTestId("proof-preview")).getByRole(
+      "button",
+      { name: "Abrir" }
+    );
+    await user.click(open);
+    const viewer = await screen.findByRole("dialog", {
+      name: "pix-moto-outubro.pdf",
+    });
+    expect(viewer).toHaveAccessibleDescription(SENT_BY);
+    // The header's "Baixar" (jsdom also draws the object's fallback, which a browser with a PDF viewer hides).
+    expect(
+      within(viewer).getAllByRole("link", { name: "Baixar" })[0]
+    ).toHaveAttribute("href", "https://files.quitto.test/pix-moto-outubro.pdf");
+    expect(
+      viewer.querySelector('object[type="application/pdf"]')
+    ).not.toBeNull();
+    // Esc closes the viewer only: the installment's panel stays.
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "pix-moto-outubro.pdf" })
+      ).toBeNull()
+    );
+    expect(screen.getByTestId("proof-preview")).toBeVisible();
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+
+  it("o X do visualizador também fecha, e sem leitor de PDF no navegador aparece o aviso com Baixar", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("navigator", { ...navigator, pdfViewerEnabled: false });
+    renderPage();
+    await user.click(
+      within(screen.getByTestId("proof-preview")).getByRole("button", {
+        name: "Abrir",
+      })
+    );
+    const viewer = await screen.findByRole("dialog", {
+      name: "pix-moto-outubro.pdf",
+    });
+    expect(
+      within(viewer).getByText("Não deu para mostrar o PDF aqui")
+    ).toBeVisible();
+    expect(viewer.querySelector("object")).toBeNull();
+    await user.click(within(viewer).getByRole("button", { name: "Fechar" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "pix-moto-outubro.pdf" })
+      ).toBeNull()
+    );
+    vi.unstubAllGlobals();
+  });
+
   it("antes da hidratação (o HTML do servidor), a prévia do comprovante é só a linha do arquivo, sem iframe nem img", () => {
     hydration.done = false;
     renderPage();
@@ -488,10 +545,9 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     renderPage({ width: 390 });
     const card = screen.getByTestId("proof-preview");
     expect(card.querySelector("iframe")).toBeNull();
-    expect(within(card).getByRole("link", { name: "Abrir" })).toHaveAttribute(
-      "href",
-      "https://files.quitto.test/pix-moto-outubro.pdf"
-    );
+    // "Abrir" opens the viewer inside the app (no link, no new tab).
+    expect(within(card).queryByRole("link", { name: "Abrir" })).toBeNull();
+    expect(within(card).getByRole("button", { name: "Abrir" })).toBeVisible();
     // The bottom sheet pins the confirm in its footer; the block keeps "Contestar".
     expect(
       screen.getAllByRole("button", { name: "Confirmar recebimento" })

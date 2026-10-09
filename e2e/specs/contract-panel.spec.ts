@@ -23,6 +23,7 @@ import {
 const WHATSAPP_HREF = /^https:\/\/wa\.me\/\?text=/;
 const ANY_INSTALLMENT = /[?&]installment=/;
 const REASON = "O valor que chegou foi R$ 240,00.";
+const PDF_NAME = /\.pdf$/;
 const WEB = "http://localhost:3001";
 
 type Parties = Awaited<ReturnType<typeof twoParties>>;
@@ -327,6 +328,42 @@ test("a notificação do comprovante abre o painel na parcela", async ({
     );
     await expect(
       page.getByRole("dialog", { name: "Parcela 1 de 3" })
+    ).toBeVisible();
+  } finally {
+    await closeBoth(parties);
+  }
+});
+
+test("Abrir mostra o comprovante num visualizador do app, sem nova aba; Esc fecha e o foco volta ao Abrir", async ({
+  browser,
+}) => {
+  const parties = await ownerPays(browser);
+  const first = idOf(parties, 1);
+  try {
+    await uploadProofApi(parties.owner.page.request, first);
+    const approver = parties.other.page;
+    const panel = await openPanel(approver, parties.id, first);
+    const open = panel
+      .getByTestId("proof-preview")
+      .filter({ visible: true })
+      .first()
+      .getByRole("button", { name: "Abrir" });
+    await waitForHydrated(approver);
+    const pagesBefore = approver.context().pages().length;
+    await open.click();
+    const viewer = approver.getByRole("dialog", { name: PDF_NAME });
+    await expect(viewer).toBeVisible();
+    await expect(
+      viewer.getByRole("link", { name: "Baixar" }).first()
+    ).toBeVisible();
+    expect(approver.context().pages()).toHaveLength(pagesBefore);
+    await scan(approver);
+    await approver.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(open).toBeFocused();
+    // The installment's panel is still there.
+    await expect(
+      approver.getByRole("dialog", { name: "Parcela 1 de 3" })
     ).toBeVisible();
   } finally {
     await closeBoth(parties);
