@@ -38,15 +38,12 @@ export function ActionCard({
   action,
   first,
   onActionStart,
-  sameContractBefore = false,
   today,
   tryLock,
 }: {
   action: HomeAction;
   first: boolean;
   onActionStart: (id: string) => void;
-  /** A card above is of the same contract: this one leaves the bar to it. */
-  sameContractBefore?: boolean;
   today: string;
   tryLock: () => boolean;
 }) {
@@ -55,7 +52,6 @@ export function ActionCard({
   const view = describeAction(action, {
     first,
     locale,
-    sameContractBefore,
     today,
   });
   const buttons = actionButtons(action);

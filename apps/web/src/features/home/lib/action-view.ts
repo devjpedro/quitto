@@ -70,13 +70,11 @@ export function describeAction(
   {
     first,
     locale,
-    sameContractBefore = false,
     today,
   }: {
     first: boolean;
     locale: Locale;
     /** A card above is of the same contract, and already shows its bar. */
-    sameContractBefore?: boolean;
     today: string;
   }
 ): ActionView {
@@ -112,21 +110,8 @@ export function describeAction(
     amountCents: action.totalCents,
     person: personLine(action, today, locale),
     terms: null,
-    legend: sameContractBefore ? null : legendOf(action, locale),
+    legend: legendOf(action, locale),
   };
-}
-
-/** Per card, whether a card above is of the same contract (invites have none of their own). */
-export function sameContractBefore(actions: HomeAction[]): boolean[] {
-  const seen = new Set<string>();
-  return actions.map((action) => {
-    if (action.kind === "invite") {
-      return false;
-    }
-    const repeat = seen.has(action.contractId);
-    seen.add(action.contractId);
-    return repeat;
-  });
 }
 
 function payButtons(action: InstallmentAction): ActionButtonKind[] {

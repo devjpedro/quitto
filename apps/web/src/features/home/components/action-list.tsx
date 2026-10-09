@@ -2,7 +2,6 @@ import type { KeyboardEvent } from "react";
 import { useActionLock } from "@/hooks/use-action-lock";
 import { m } from "@/paraglide/messages.js";
 import { useActionFocus } from "../hooks/use-action-focus";
-import { sameContractBefore } from "../lib/action-view";
 import type { HomeAction } from "../types";
 import { ActionCard } from "./action-card";
 
@@ -35,7 +34,6 @@ export function ActionList({
   const first = actions.slice(0, 1);
   const tryLock = useActionLock();
   const { sectionRef, onActionStart } = useActionFocus(first);
-  const repeats = sameContractBefore(first);
   return (
     <section
       aria-label={m.home_actions_title()}
@@ -50,7 +48,6 @@ export function ActionList({
               action={action}
               first
               onActionStart={onActionStart}
-              sameContractBefore={repeats[0]}
               today={today}
               tryLock={tryLock}
             />

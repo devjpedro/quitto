@@ -17,8 +17,6 @@ export interface InstallmentLineView {
   /** The signed side of the amount: money in or out. */
   amountCents: number;
   direction: "pay" | "receive";
-  /** More than one installment on the line. */
-  run: number;
   sequences: string;
   tag: LineTag | null;
   /** The date on the tile: the oldest of the line. */
@@ -96,7 +94,6 @@ export function installmentLineView(
         ? formatRelativeDays(oldest.dueDate, today, locale)
         : null,
     direction: first.direction,
-    run: line.items.length,
     sequences: sequencesLabel(
       line.items.map((it) => it.sequence),
       first.installmentsCount,

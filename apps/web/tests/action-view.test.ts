@@ -167,24 +167,6 @@ describe("describeAction: cartão simples", () => {
   });
 });
 
-describe("describeAction: o mesmo contrato num cartão anterior", () => {
-  it("sem a legenda (e assim sem a barra): ela já está no cartão de cima", () => {
-    const view = describeAction(installmentAction(), {
-      ...ctx,
-      sameContractBefore: true,
-    });
-    expect(view.legend).toBeNull();
-    expect(view.person).toEqual({
-      name: "Maria Souza",
-      text: "para Maria Souza",
-    });
-    expect(describeAction(installmentAction(), ctx).legend).toEqual({
-      done: "6 pagas",
-      remaining: "falta R$ 7.500,00",
-    });
-  });
-});
-
 describe("describeAction: grupo de atrasadas", () => {
   it("a receber: a contagem na tag e o 'desde' só na linha de quem deve (uma vez por tela), o total e as parcelas", () => {
     expect(describeAction(marinaGroup(), ctx)).toMatchObject({

@@ -30,24 +30,11 @@ function LineBody({
     <>
       <span className="relative shrink-0 max-md:row-span-3">
         <DateTile iso={view.tileDate} locale={locale} />
-        {view.run > 1 ? (
-          <span
-            aria-hidden="true"
-            className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-ink font-semibold text-[11px] text-ink-inverse tabular-nums leading-none"
-          >
-            {view.run}
-          </span>
-        ) : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 max-md:contents">
         <span className="min-w-0 truncate font-medium text-sm max-md:col-start-2 max-md:row-start-1">
           {view.title}
         </span>{" "}
-        {view.run > 1 ? (
-          <span className="sr-only">
-            {m.installments_run_count({ count: view.run })}
-          </span>
-        ) : null}
         {view.tag ? (
           <Tag
             className="self-center max-md:col-span-2 max-md:col-start-2 max-md:row-start-3 max-md:justify-self-start md:order-2"
