@@ -362,6 +362,34 @@ describe("HomePage", () => {
     expect(within(next).getByText("+ 2 em Parcelas")).toBeVisible();
   });
 
+  it("'+ N em Parcelas' conta só parcelas: o convite que passa de 4 continua em linha, porque Parcelas não o lista", async () => {
+    getHome.mockResolvedValue({
+      data: homeFixture({
+        actions: [
+          ...[1, 2, 3, 4, 5, 6, 7].map((n) =>
+            installmentAction({ installmentId: `i${n}`, sequence: n })
+          ),
+          inviteAction(),
+        ],
+      }),
+      error: null,
+    });
+    renderHome();
+    const next = await screen.findByRole("region", { name: "Na sequência" });
+    // 4 lines, the invite that would be cut, and the 2 installments left.
+    expect(within(next).getAllByRole("listitem")).toHaveLength(5);
+    expect(within(next).getByText("+ 2 em Parcelas")).toBeVisible();
+    expect(
+      within(next).getByRole("link", { name: "+ 2 em Parcelas" })
+    ).toHaveClass("focus-visible:ring-2");
+    // The amount rides the title's line on a phone (the meta keeps the width) and its own column from md.
+    const row = within(next).getAllByRole("listitem")[0] as HTMLElement;
+    expect(
+      row.querySelectorAll(".md\\:hidden .tabular-nums, .md\\:hidden")
+    ).not.toHaveLength(0);
+    expect(row.querySelector(".max-md\\:hidden")).not.toBeNull();
+  });
+
   it("'Próximos 30 dias' mostra 3 linhas e 'Mais N em Parcelas', sem os totais", async () => {
     getHome.mockResolvedValue({
       data: homeFixture({

@@ -60,18 +60,31 @@ function SequenceRow({
   const [icon, tileTone] = tileOf(action, view.tone);
   const sign =
     action.kind !== "invite" && action.direction === "receive" ? "+" : "−";
+  const money =
+    action.kind === "invite" ? null : (
+      <Money
+        cents={view.amountCents ?? action.totalCents}
+        className={action.direction === "receive" ? "text-brand" : "text-ink"}
+        sign={sign}
+        size="list"
+      />
+    );
   const body = (
     <>
       <IconTile icon={icon} tone={tileTone} />
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium text-sm">
-          {view.title}
-          {view.sequence && action.kind !== "invite" && action.count === 1 ? (
-            <span className="font-normal text-ink-muted max-md:hidden">
-              {" "}
-              {m.home_dot_after({ text: view.sequence })}
-            </span>
-          ) : null}
+        {/* On a phone the amount sits on the title's line, so the meta keeps the whole width. */}
+        <span className="flex min-w-0 items-baseline gap-2">
+          <span className="min-w-0 flex-1 truncate font-medium text-sm">
+            {view.title}
+            {view.sequence && action.kind !== "invite" && action.count === 1 ? (
+              <span className="font-normal text-ink-muted max-md:hidden">
+                {" "}
+                {m.home_dot_after({ text: view.sequence })}
+              </span>
+            ) : null}
+          </span>
+          {money ? <span className="shrink-0 md:hidden">{money}</span> : null}
         </span>
         <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-ink-muted">
           <span className={cn("shrink-0 font-medium", STATUS_TEXT[view.tone])}>
@@ -83,22 +96,14 @@ function SequenceRow({
               {view.person.name ? (
                 <PersonAvatar name={view.person.name} />
               ) : null}
-              <PersonText line={view.person} strong="text-ink" />
+              <span className="min-w-[4.5rem] truncate">
+                <PersonText line={view.person} strong="text-ink" />
+              </span>
             </>
           ) : null}
         </span>
       </span>
-      {action.kind === "invite" ? null : (
-        <Money
-          cents={view.amountCents ?? action.totalCents}
-          className={cn(
-            "shrink-0",
-            action.direction === "receive" ? "text-brand" : "text-ink"
-          )}
-          sign={sign}
-          size="list"
-        />
-      )}
+      {money ? <span className="shrink-0 max-md:hidden">{money}</span> : null}
       <CaretRight
         aria-hidden="true"
         className="shrink-0 text-ink-muted"
@@ -142,8 +147,11 @@ export function NextInLine({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const shown = actions.slice(0, SEQUENCE_MAX);
-  const more = actions.length - shown.length;
+  // Parcelas does not list invites, so none of them is left to "+ N em Parcelas".
+  const head = actions.slice(0, SEQUENCE_MAX);
+  const tail = actions.slice(SEQUENCE_MAX);
+  const shown = [...head, ...tail.filter((action) => action.kind === "invite")];
+  const more = tail.filter((action) => action.kind !== "invite").length;
   return (
     <section
       aria-labelledby={titleId}
@@ -166,7 +174,7 @@ export function NextInLine({
       </ul>
       {more > 0 ? (
         <Link
-          className="block border-divider border-t px-4 py-3 text-ink-muted text-sm transition-colors hover:bg-surface-card-hover"
+          className="block border-divider border-t px-4 py-3 text-ink-muted text-sm transition-colors hover:bg-surface-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
           search={{}}
           to="/installments"
         >
