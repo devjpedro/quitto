@@ -127,7 +127,7 @@ export function InstallmentsContent() {
     );
   }
   return (
-    <div className="lateral:grid lateral:grid-cols-[minmax(0,1fr)_420px] lateral:gap-x-7">
+    <div className="lateral:grid lateral:gap-x-7 lateral:has-[>aside:not(:empty)]:grid-cols-[minmax(0,1fr)_420px]">
       <div className="flex min-w-0 flex-col gap-4 md:gap-5">
         <InstallmentsHeader />
         <InstallmentsToolbar

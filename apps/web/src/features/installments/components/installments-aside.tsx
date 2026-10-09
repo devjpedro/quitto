@@ -23,22 +23,26 @@ function UrgentCard({
     return null;
   }
   return (
-    <NextActionCard
-      action={action}
-      detail={detail}
-      route={{
-        today,
-        openInstallment: (installmentId) => onOpen(installmentId, contractId),
-      }}
-      withContract
-    />
+    <div className="lateral:block hidden">
+      <NextActionCard
+        action={action}
+        detail={detail}
+        route={{
+          today,
+          openInstallment: (installmentId) => onOpen(installmentId, contractId),
+        }}
+        withContract
+      />
+    </div>
   );
 }
 
 /**
  * From 1440 px a 420 px column held while the list scrolls (mockup 17, C):
  * the panel of the open installment, or the green card of the most urgent
- * one. Below 1440 it is the sheet, from the same host.
+ * one. Below 1440 it is the sheet, from the same host. With neither (nothing
+ * open and no card to show) the aside is empty and the page lets the list
+ * take the whole width.
  */
 export function InstallmentsAside({
   contractId,
@@ -54,7 +58,7 @@ export function InstallmentsAside({
   const open = panel.installmentId !== null && contractId !== undefined;
   return (
     <aside
-      className="lateral:sticky lateral:top-8 lateral:flex contents lateral:max-h-[calc(100dvh-5.5rem)] lateral:flex-col lateral:self-start"
+      className="lateral:sticky lateral:top-8 lateral:flex contents lateral:max-h-[calc(100dvh-5.5rem)] lateral:flex-col lateral:self-start lateral:empty:hidden"
       data-testid="installments-side"
     >
       {open ? (
@@ -63,13 +67,11 @@ export function InstallmentsAside({
         </SectionBoundary>
       ) : null}
       {!open && urgentContractId ? (
-        <div className="lateral:block hidden">
-          <UrgentCard
-            contractId={urgentContractId}
-            onOpen={onOpenWithContract}
-            today={panel.today}
-          />
-        </div>
+        <UrgentCard
+          contractId={urgentContractId}
+          onOpen={onOpenWithContract}
+          today={panel.today}
+        />
       ) : null}
     </aside>
   );

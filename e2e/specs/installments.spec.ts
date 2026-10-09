@@ -204,3 +204,26 @@ test("axe em claro e escuro (lista e calendário)", async ({
   await expect(page.getByTestId("installments-calendar")).toBeVisible();
   await scan(page);
 });
+
+test("a 1512 px sem parcela aberta nem cartão, o vazio ocupa a largura inteira", async ({
+  page,
+}, testInfo) => {
+  // biome-ignore lint/suspicious/noSkippedTests: o projeto mobile tem viewport própria
+  test.skip(
+    testInfo.project.name === "mobile",
+    "o projeto mobile tem viewport própria"
+  );
+  await page.setViewportSize({ width: 1512, height: 900 });
+  await signup(page);
+  await page.goto("/installments");
+  await waitForHydrated(page);
+  await expect(page.getByTestId("installments-side")).toBeHidden();
+  const main = await page.locator("#conteudo").boundingBox();
+  const empty = await page.getByTestId("installments-empty").boundingBox();
+  expect(main).not.toBeNull();
+  expect(empty).not.toBeNull();
+  // The stage reaches the panel's padding on the right: no 420 px column is held.
+  expect((main?.x ?? 0) + (main?.width ?? 0)).toBeLessThan(
+    (empty?.x ?? 0) + (empty?.width ?? 0) + 80
+  );
+});
