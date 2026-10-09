@@ -109,17 +109,17 @@ test.describe("tela larga a 2560 px: o teto do conteúdo", () => {
   });
 });
 
-test("'Novo contrato' vive na sidebar (desktop) e no ＋ da tab bar (celular), não no cabeçalho da home", async ({
+test("'Novo contrato' vive na sidebar (desktop) (o ＋ na linha da logo) e no ＋ da tab bar (celular), não no cabeçalho da home", async ({
   page,
 }, testInfo) => {
   await signup(page);
   await expect(
     page.locator("#conteudo").getByRole("link", { name: "Novo contrato" })
   ).toHaveCount(0);
-  const nav = page
-    .getByRole("navigation", { name: "Navegação principal" })
+  // Desktop: the "＋" on the logo's line; phone: the tab bar's.
+  const shortcut = page
+    .getByRole("link", { name: "Novo contrato" })
     .filter({ visible: true });
-  const shortcut = nav.getByRole("link", { name: "Novo contrato" });
   await expect(shortcut).toBeVisible();
   await expect(shortcut).toHaveAttribute("href", "/contracts/new");
   if (testInfo.project.name !== "mobile") {

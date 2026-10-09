@@ -20,19 +20,29 @@ export const SHELL_COLUMN =
  * With `link` it is a link (the sidebar's goes home); the focus ring is
  * inset so the column's overflow never clips it.
  */
-export function ShellLogoRow({ link }: { link?: { label: string; to: "/" } }) {
+export function ShellLogoRow({
+  action,
+  link,
+}: {
+  /** At the right of the logo, on the same line (the sidebar's "＋"). */
+  action?: ReactNode;
+  link?: { label: string; to: "/" };
+}) {
   const logo = <Logo size={24} />;
   if (!link) {
     return <div className="flex h-11 shrink-0 items-center px-2.5">{logo}</div>;
   }
   return (
-    <Link
-      aria-label={link.label}
-      className="flex h-11 shrink-0 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
-      to={link.to}
-    >
-      {logo}
-    </Link>
+    <div className="flex shrink-0 items-center justify-between gap-2">
+      <Link
+        aria-label={link.label}
+        className="flex h-11 items-center rounded-control px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
+        to={link.to}
+      >
+        {logo}
+      </Link>
+      {action}
+    </div>
   );
 }
 

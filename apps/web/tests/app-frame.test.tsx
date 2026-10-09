@@ -8,7 +8,7 @@ import {
   RouterProvider,
   useLocation,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, type ShellProps } from "@/components/layout/app-frame";
@@ -464,23 +464,36 @@ describe("AppFrame", () => {
     }
   });
 
-  it("a sidebar tem 'Novo contrato' discreto logo abaixo da Carteira: sem fundo, contorno line-strong, 44 px", async () => {
+  it("a sidebar tem o ＋ de Novo contrato na linha da logo: 36 px, sem fundo, contorno line-strong, nomeado e com tooltip no foco", async () => {
     await renderAt("/");
-    const [sidebarNav] = screen.getAllByRole("navigation", {
-      name: "Navegação principal",
-    });
-    const button = within(sidebarNav as HTMLElement).getByRole("link", {
-      name: "Novo contrato",
-    });
+    const aside = document.querySelector("aside") as HTMLElement;
+    const button = within(aside).getByRole("link", { name: "Novo contrato" });
     expect(button).toHaveClass(
-      "h-11",
+      "size-9",
       "border",
       "border-line-strong",
       "hover:bg-surface-card"
     );
     expect(button.className).not.toMatch(BG_FILL);
-    // Right after the last item of the wallet group (Pessoas).
-    expect(button.previousElementSibling).toHaveTextContent("Pessoas");
+    expect(button).toHaveTextContent("");
+    expect(button).toHaveAttribute("data-tour", "new-contract");
+    // On the logo's line, beside the link home, and no wide button under the group.
+    const logo = within(aside).getByRole("link", { name: "Quitto, início" });
+    expect(logo.parentElement).toBe(button.parentElement);
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    expect(
+      within(sidebarNav as HTMLElement).queryByRole("link", {
+        name: "Novo contrato",
+      })
+    ).toBeNull();
+    // The tooltip names it on keyboard focus.
+    act(() => button.focus());
+    expect(button).toHaveFocus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Novo contrato"
+    );
   });
 
   it("no detalhe, a barra de cima tem ‹ Contratos, o sino e as ações, sem busca e sem avatar", async () => {

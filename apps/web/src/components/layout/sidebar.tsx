@@ -1,5 +1,6 @@
 import { Bell, GearSix, MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { AccountMenu } from "./account-menu";
@@ -73,6 +74,19 @@ export function Sidebar({
     // search field (44 px) to 28 px instead of letting the column scroll.
     <aside className={SHELL_COLUMN}>
       <ShellLogoRow
+        action={
+          // The exception to "outline only on fields" (owner, mockup 20): a quiet "＋" on the logo's line, named by its tooltip.
+          <Tooltip label={m.nav_new_contract()}>
+            <Link
+              aria-label={m.nav_new_contract()}
+              className="flex size-9 shrink-0 items-center justify-center rounded-control border border-line-strong text-ink transition-colors hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              data-tour="new-contract"
+              to="/contracts/new"
+            >
+              <Plus aria-hidden="true" size={20} />
+            </Link>
+          </Tooltip>
+        }
         link={{
           label: m.logo_home_link(),
           to: "/",
@@ -103,15 +117,6 @@ export function Sidebar({
         {PRIMARY_NAV.map((item) => (
           <SidebarLink count={navCounts[item.id]} item={item} key={item.to} />
         ))}
-        {/* The exception to "outline only on fields" (owner, mockup 20): a quiet button, right under the group. */}
-        <Link
-          className="mt-2 flex h-11 items-center justify-center gap-2 rounded-control border border-line-strong text-ink text-sm transition-colors hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          data-tour="new-contract"
-          to="/contracts/new"
-        >
-          <Plus aria-hidden="true" size={16} weight="bold" />
-          {m.nav_new_contract()}
-        </Link>
         <p className="mt-4 mb-1 px-3 text-ink-muted text-xs">
           {m.nav_section_account()}
         </p>
