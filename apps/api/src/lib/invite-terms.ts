@@ -17,6 +17,8 @@ export interface InviteTerms {
   lastDueDate: string | null;
   maxCents: number | null;
   minCents: number | null;
+  /** Sequences already paid when the contract was created: the invitee sees them as paid, not open. */
+  paidSequences: number[];
   totalCents: number;
 }
 
@@ -28,6 +30,7 @@ export interface InviteTermsRow {
   maxDay: number | null;
   minCents: number | null;
   minDay: number | null;
+  paidSequences: number[];
   totalCents: number | null;
 }
 
@@ -44,6 +47,7 @@ export function toInviteTerms(row: InviteTermsRow): InviteTerms {
     lastDueDate: row.lastDueDate,
     maxCents: row.maxCents,
     minCents: row.minCents,
+    paidSequences: row.paidSequences,
     totalCents: row.totalCents ?? 0,
   };
 }
@@ -68,6 +72,9 @@ export async function loadInviteTerms(
       minDay: sql<
         number | null
       >`min(extract(day from ${installment.dueDate}))::int`,
+      paidSequences: sql<
+        number[]
+      >`coalesce(array_agg(${installment.sequence} order by ${installment.sequence}) filter (where ${installment.status} in ('paid', 'confirmed')), '{}')`,
       maxDay: sql<
         number | null
       >`max(extract(day from ${installment.dueDate}))::int`,

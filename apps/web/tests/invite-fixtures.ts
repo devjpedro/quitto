@@ -21,6 +21,7 @@ export const FLORIPA: InviteView = {
     lastDueDate: "2027-02-10",
     maxCents: 30_000,
     minCents: 30_000,
+    paidSequences: [],
     totalCents: 120_000,
   },
   schedulePreview: [

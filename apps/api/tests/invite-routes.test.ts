@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { addMonths, todayISO } from "@quitto/shared";
 import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
@@ -13,7 +14,10 @@ import { signUpCookie, uniqueEmail } from "./helpers/auth";
 // uniqueEmail gives "<tag>-<ts>-<n>@example.com".
 const MASKED = /^[a-z]•••@example[.]com$/;
 
-async function setup(inviteeEmail: string) {
+async function setup(
+  inviteeEmail: string,
+  extra: Record<string, unknown> = {}
+) {
   const ownerCookie = await signUpCookie(uniqueEmail("owner"));
   const res = await app.handle(
     new Request("http://localhost/api/contracts", {
@@ -31,6 +35,7 @@ async function setup(inviteeEmail: string) {
           firstDueDate: "2026-11-10",
         },
         counterparty: { name: "João Souza", email: inviteeEmail },
+        ...extra,
       }),
     })
   );
@@ -89,6 +94,25 @@ describe("GET /api/invites/:token", () => {
       { sequence: 2, dueDate: "2026-12-10", amountCents: 30_000 },
       { sequence: 3, dueDate: "2027-01-10", amountCents: 30_000 },
     ]);
+  });
+
+  it("contrato com parcelas já pagas: paidSequences e a prévia sem elas", async () => {
+    const email = uniqueEmail("joao");
+    const { token } = await setup(email, {
+      ownerRole: "buyer",
+      schedule: {
+        mode: "split",
+        totalAmountCents: 120_000,
+        installmentsCount: 4,
+        firstDueDate: addMonths(todayISO(), -3),
+      },
+      paidInstallments: [1, 2],
+    });
+    const body = await (await get(token, await signUpCookie(email))).json();
+    expect(body.terms.paidSequences).toEqual([1, 2]);
+    expect(
+      body.schedulePreview.map((r: { sequence: number }) => r.sequence)
+    ).toEqual([3, 4]);
   });
 
   it("o dono: owner, com o nome da vaga", async () => {

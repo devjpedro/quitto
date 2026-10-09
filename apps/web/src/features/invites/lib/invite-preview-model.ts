@@ -31,6 +31,7 @@ export function invitePreviewModel(view: InviteView): PreviewModel {
     };
   }
   const count = terms.installmentsCount;
+  const paid = new Set(terms.paidSequences);
   return {
     side: sideOfRole(view.role),
     title: view.contract.title,
@@ -43,9 +44,11 @@ export function invitePreviewModel(view: InviteView): PreviewModel {
     lastDueDate: terms.lastDueDate,
     statuses:
       count > 0 && count <= 24
-        ? Array.from({ length: count }, () => "open" as const)
+        ? Array.from({ length: count }, (_, i) =>
+            paid.has(i + 1) ? ("paid" as const) : ("open" as const)
+          )
         : null,
     overdueCount: 0,
-    paidCount: 0,
+    paidCount: paid.size,
   };
 }

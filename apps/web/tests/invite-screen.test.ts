@@ -41,6 +41,18 @@ describe("invitePreviewModel", () => {
     expect(invitePreviewModel(FLORIPA).rows).toHaveLength(3);
   });
 
+  it("com parcelas já pagas: a barra e a contagem as mostram pagas", () => {
+    const model = invitePreviewModel({
+      ...FLORIPA,
+      terms: {
+        ...(FLORIPA.terms as NonNullable<typeof FLORIPA.terms>),
+        paidSequences: [1, 2],
+      },
+    });
+    expect(model.paidCount).toBe(2);
+    expect(model.statuses).toEqual(["paid", "paid", "open", "open"]);
+  });
+
   it("o papel numa frase", () => {
     expect(roleLabel("buyer")).toBe("quem paga");
     expect(roleLabel("viewer")).toBe("quem acompanha");

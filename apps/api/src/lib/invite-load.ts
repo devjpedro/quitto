@@ -1,3 +1,4 @@
+import { isPaidStatus } from "@quitto/shared";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import {
@@ -55,17 +56,22 @@ async function loadSubject(row: InviteRow) {
   return subject;
 }
 
+/** The first 3 still-open installments (all of them paid: the first 3, as the wizard's preview). */
 async function loadSchedulePreview(contractId: string) {
-  return await db
+  const rows = await db
     .select({
       sequence: installment.sequence,
       dueDate: installment.dueDate,
       amountCents: installment.amountCents,
+      status: installment.status,
     })
     .from(installment)
     .where(eq(installment.contractId, contractId))
-    .orderBy(asc(installment.sequence))
-    .limit(3);
+    .orderBy(asc(installment.sequence));
+  const open = rows.filter((row) => !isPaidStatus(row.status));
+  return (open.length > 0 ? open : rows)
+    .slice(0, 3)
+    .map(({ status: _status, ...row }) => row);
 }
 
 async function participatesIn(contractId: string, userId: string) {

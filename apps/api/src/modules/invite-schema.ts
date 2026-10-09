@@ -42,6 +42,7 @@ export const inviteViewSchema = t.Object({
       lastDueDate: nullableString,
       maxCents: nullableInt,
       minCents: nullableInt,
+      paidSequences: t.Array(t.Integer()),
       totalCents: t.Integer(),
     }),
     t.Null(),
