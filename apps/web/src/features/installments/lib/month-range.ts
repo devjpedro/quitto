@@ -1,5 +1,5 @@
 import type { Locale } from "@quitto/shared";
-import { monthLabel } from "@/components/ui/month-select";
+import { monthLabel } from "@/lib/month-label";
 
 const WEEK_AHEAD = 6;
 

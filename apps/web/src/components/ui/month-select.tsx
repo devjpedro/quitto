@@ -1,5 +1,6 @@
 import type { Locale } from "@quitto/shared";
 import { capitalize } from "@/lib/format";
+import { monthLabel } from "@/lib/month-label";
 import { Select, type SelectOption } from "./select";
 
 interface MonthGroup {
@@ -14,17 +15,6 @@ function shift(month: string, delta: number): string {
   const index =
     Number(month.slice(0, 4)) * 12 + (Number(month.slice(5, 7)) - 1) + delta;
   return `${String(Math.floor(index / 12)).padStart(4, "0")}-${String((index % 12) + 1).padStart(2, "0")}`;
-}
-
-/** "Outubro de 2026" / "October 2026". */
-export function monthLabel(month: string, locale: Locale): string {
-  return capitalize(
-    new Intl.DateTimeFormat(locale, {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(new Date(`${month}-01T00:00:00Z`))
-  );
 }
 
 function monthName(month: string, locale: Locale): string {
