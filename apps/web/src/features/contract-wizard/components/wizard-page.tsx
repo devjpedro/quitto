@@ -1,12 +1,14 @@
 import { CircleNotch } from "@phosphor-icons/react";
 import { useSearch } from "@tanstack/react-router";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import { div as MotionDiv } from "motion/react-m";
 import { StepFrame, StepHeader } from "@/components/layout/step-frame";
 import { StepProgress } from "@/components/layout/step-progress";
 import { ContractPreviewCard } from "@/components/preview/contract-preview-card";
 import { PreviewStage } from "@/components/preview/preview-stage";
 import { PreviewSummary } from "@/components/preview/preview-summary";
 import { Button } from "@/components/ui/button";
+import { MotionScope } from "@/components/ui/motion-scope";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
   KEYBOARD_MIN_PX,
@@ -108,32 +110,34 @@ export function ContractWizardPage() {
           />
         }
       >
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            animate={{ opacity: 1, x: 0 }}
-            // Only the one-by-one list shrinks (it scrolls inside, from md); every other step
-            // keeps its content height, or a short screen puts the footer over the fields.
-            className={cn(
-              "flex flex-1 flex-col",
-              wizard.adjusting && "min-h-0"
-            )}
-            data-testid="wizard-step"
-            exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12 }}
-            initial={reduced ? { opacity: 0 } : { opacity: 0, x: 12 }}
-            key={`${step}-${wizard.adjusting}`}
-            transition={{ duration: 0.16 }}
-          >
-            {step === 1 ? <StepAbout wizard={wizard} /> : null}
-            {step === 2 && !wizard.adjusting ? (
-              <StepSchedule wizard={wizard} />
-            ) : null}
-            {step === 2 && wizard.adjusting ? (
-              <AdjustInstallments wizard={wizard} />
-            ) : null}
-            {step === 3 ? <StepParty wizard={wizard} /> : null}
-            {step === 4 ? <StepReview wizard={wizard} /> : null}
-          </motion.div>
-        </AnimatePresence>
+        <MotionScope>
+          <AnimatePresence initial={false} mode="wait">
+            <MotionDiv
+              animate={{ opacity: 1, x: 0 }}
+              // Only the one-by-one list shrinks (it scrolls inside, from md); every other step
+              // keeps its content height, or a short screen puts the footer over the fields.
+              className={cn(
+                "flex flex-1 flex-col",
+                wizard.adjusting && "min-h-0"
+              )}
+              data-testid="wizard-step"
+              exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12 }}
+              initial={reduced ? { opacity: 0 } : { opacity: 0, x: 12 }}
+              key={`${step}-${wizard.adjusting}`}
+              transition={{ duration: 0.16 }}
+            >
+              {step === 1 ? <StepAbout wizard={wizard} /> : null}
+              {step === 2 && !wizard.adjusting ? (
+                <StepSchedule wizard={wizard} />
+              ) : null}
+              {step === 2 && wizard.adjusting ? (
+                <AdjustInstallments wizard={wizard} />
+              ) : null}
+              {step === 3 ? <StepParty wizard={wizard} /> : null}
+              {step === 4 ? <StepReview wizard={wizard} /> : null}
+            </MotionDiv>
+          </AnimatePresence>
+        </MotionScope>
       </StepFrame>
       <DiscardDialog wizard={wizard} />
     </>

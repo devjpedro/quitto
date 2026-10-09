@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -228,6 +228,10 @@ describe("ResponsiveSheet", () => {
       </ResponsiveSheet>
     );
     const { rerender } = render(sheet(true));
+    // The animation engine loads on demand (MotionScope): let it arrive.
+    await act(async () => {
+      await import("@/lib/motion-features");
+    });
     rerender(sheet(false));
     await waitFor(() => {
       const dialog = screen.getByRole("dialog", { hidden: true });

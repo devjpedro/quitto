@@ -1,11 +1,11 @@
 import { X } from "@phosphor-icons/react";
 import {
   AnimatePresence,
-  motion,
   type Transition,
   useDragControls,
   useReducedMotion,
 } from "motion/react";
+import { div as MotionDiv } from "motion/react-m";
 import { Dialog } from "radix-ui";
 import {
   createContext,
@@ -16,6 +16,7 @@ import {
   useRef,
 } from "react";
 import { IconButton } from "@/components/ui/icon-button";
+import { MotionScope } from "@/components/ui/motion-scope";
 import { MD_UP, useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -253,108 +254,112 @@ export function ResponsiveSheet({
   );
 
   return (
-    <Dialog.Root onOpenChange={onOpenChange} open={open}>
-      <AnimatePresence>
-        {open ? (
-          <Dialog.Portal forceMount>
-            <Dialog.Overlay asChild forceMount>
-              <motion.div
-                animate={{ opacity: 1 }}
-                className={scrimClass(variant)}
-                exit={{ opacity: 0 }}
-                initial={{ opacity: 0 }}
-                transition={scrimTransition(variant)}
-              />
-            </Dialog.Overlay>
-            <div className={clipClass(variant)}>
-              <Dialog.Content
-                asChild
-                forceMount
-                onCloseAutoFocus={onCloseAutoFocus}
-                onOpenAutoFocus={onOpenAutoFocus}
-                {...(description ? {} : { "aria-describedby": undefined })}
-              >
-                <motion.div
-                  animate={shown}
-                  className={cn(
-                    "z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
-                    frameClass(variant, Boolean(footer))
-                  )}
-                  data-variant={variant}
-                  drag={canDrag ? "y" : false}
-                  dragConstraints={{ top: 0, bottom: 0 }}
-                  dragControls={canDrag ? dragControls : undefined}
-                  dragElastic={{ top: 0, bottom: 0.6 }}
-                  dragListener={false}
-                  exit={exit}
-                  initial={hidden}
-                  onDragEnd={(_, info) => {
-                    if (!canDrag) {
-                      return;
-                    }
-                    if (
-                      info.offset.y > DISMISS_OFFSET_PX ||
-                      info.velocity.y > DISMISS_VELOCITY
-                    ) {
-                      onOpenChange(false);
-                    }
-                  }}
-                  onKeyDown={onKeyDown}
-                  ref={frameRef}
-                  tabIndex={-1}
-                  transition={transition}
+    <MotionScope>
+      <Dialog.Root onOpenChange={onOpenChange} open={open}>
+        <AnimatePresence>
+          {open ? (
+            <Dialog.Portal forceMount>
+              <Dialog.Overlay asChild forceMount>
+                <MotionDiv
+                  animate={{ opacity: 1 }}
+                  className={scrimClass(variant)}
+                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0 }}
+                  transition={scrimTransition(variant)}
+                />
+              </Dialog.Overlay>
+              <div className={clipClass(variant)}>
+                <Dialog.Content
+                  asChild
+                  forceMount
+                  onCloseAutoFocus={onCloseAutoFocus}
+                  onOpenAutoFocus={onOpenAutoFocus}
+                  {...(description ? {} : { "aria-describedby": undefined })}
                 >
-                  <div
-                    className={cn("px-5 pt-2", canDrag && "touch-none")}
-                    onPointerDown={
-                      canDrag ? (event) => dragControls.start(event) : undefined
-                    }
+                  <MotionDiv
+                    animate={shown}
+                    className={cn(
+                      "z-50 flex flex-col bg-surface text-ink shadow-float focus:outline-none",
+                      frameClass(variant, Boolean(footer))
+                    )}
+                    data-variant={variant}
+                    drag={canDrag ? "y" : false}
+                    dragConstraints={{ top: 0, bottom: 0 }}
+                    dragControls={canDrag ? dragControls : undefined}
+                    dragElastic={{ top: 0, bottom: 0.6 }}
+                    dragListener={false}
+                    exit={exit}
+                    initial={hidden}
+                    onDragEnd={(_, info) => {
+                      if (!canDrag) {
+                        return;
+                      }
+                      if (
+                        info.offset.y > DISMISS_OFFSET_PX ||
+                        info.velocity.y > DISMISS_VELOCITY
+                      ) {
+                        onOpenChange(false);
+                      }
+                    }}
+                    onKeyDown={onKeyDown}
+                    ref={frameRef}
+                    tabIndex={-1}
+                    transition={transition}
                   >
-                    {variant === "bottom" ? (
-                      <div
-                        aria-hidden="true"
-                        className="mx-auto mb-2 h-1 w-9 rounded-full bg-line-strong"
+                    <div
+                      className={cn("px-5 pt-2", canDrag && "touch-none")}
+                      onPointerDown={
+                        canDrag
+                          ? (event) => dragControls.start(event)
+                          : undefined
+                      }
+                    >
+                      {variant === "bottom" ? (
+                        <div
+                          aria-hidden="true"
+                          className="mx-auto mb-2 h-1 w-9 rounded-full bg-line-strong"
+                        />
+                      ) : null}
+                      <SheetHeading
+                        actions={variant === "side" ? headerActions : undefined}
+                        description={description}
+                        filled={filledControls}
+                        leading={leading}
+                        title={title}
                       />
-                    ) : null}
-                    <SheetHeading
-                      actions={variant === "side" ? headerActions : undefined}
-                      description={description}
-                      filled={filledControls}
-                      leading={leading}
-                      title={title}
-                    />
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-5">
-                    <SheetVariant.Provider value={variant}>
-                      {children}
-                    </SheetVariant.Provider>
-                  </div>
-                  {variant === "bottom" && footer ? (
-                    // Pinned under the scrolling body (mockup 14, frame E): the
-                    // main action never scrolls away. No radius here, so a
-                    // straight top line is fine.
-                    <div className="shrink-0 border-line border-t bg-surface px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-                      {footer}
                     </div>
-                  ) : null}
-                  {/* Close comes AFTER the content: Radix focuses the first tabbable
+                    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-5">
+                      <SheetVariant.Provider value={variant}>
+                        {children}
+                      </SheetVariant.Provider>
+                    </div>
+                    {variant === "bottom" && footer ? (
+                      // Pinned under the scrolling body (mockup 14, frame E): the
+                      // main action never scrolls away. No radius here, so a
+                      // straight top line is fine.
+                      <div className="shrink-0 border-line border-t bg-surface px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+                        {footer}
+                      </div>
+                    ) : null}
+                    {/* Close comes AFTER the content: Radix focuses the first tabbable
                     element on open, and it must be the content, not "Close". */}
-                  <Dialog.Close asChild>
-                    <IconButton
-                      className={cn(
-                        "absolute top-3 right-3",
-                        filledControls && cn(FILLED_CLOSE, FILLED_SQUARE)
-                      )}
-                      icon={X}
-                      label={m.sheet_close()}
-                    />
-                  </Dialog.Close>
-                </motion.div>
-              </Dialog.Content>
-            </div>
-          </Dialog.Portal>
-        ) : null}
-      </AnimatePresence>
-    </Dialog.Root>
+                    <Dialog.Close asChild>
+                      <IconButton
+                        className={cn(
+                          "absolute top-3 right-3",
+                          filledControls && cn(FILLED_CLOSE, FILLED_SQUARE)
+                        )}
+                        icon={X}
+                        label={m.sheet_close()}
+                      />
+                    </Dialog.Close>
+                  </MotionDiv>
+                </Dialog.Content>
+              </div>
+            </Dialog.Portal>
+          ) : null}
+        </AnimatePresence>
+      </Dialog.Root>
+    </MotionScope>
   );
 }
