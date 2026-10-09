@@ -113,6 +113,7 @@ function PanelContent({
     payerName: payer?.displayName ?? null,
     perspective,
     proofs: detail.proofs,
+    registeredOnCreate: detail.registeredOnCreate,
     requiresConfirmation: contract.contract.requiresConfirmation,
     status: detail.status,
     today: route.today,

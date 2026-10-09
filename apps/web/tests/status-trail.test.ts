@@ -33,6 +33,22 @@ describe("trailSteps (o topo do painel: o valor e a trilha, sem tag e sem data p
     expect(steps[1]?.tone).toBe("warning");
   });
 
+  it("registrada na criação, num contrato com confirmação: dois passos, sem Comprovante nem Confirmada", () => {
+    const steps = trailSteps({
+      ...common,
+      perspective: "receive",
+      requiresConfirmation: true,
+      registeredOnCreate: true,
+      status: "paid",
+      dueDate: "2026-09-30",
+      paidAt: "2026-09-30T12:00:00.000Z",
+    });
+    expect(steps.map((s) => [s.key, s.state])).toEqual([
+      ["due", "done"],
+      ["done", "done"],
+    ]);
+  });
+
   it("P3, quem recebe uma atrasada: A receber atual em danger; Rafael envia; você confirma", () => {
     const steps = trailSteps({
       ...common,

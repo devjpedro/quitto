@@ -25,6 +25,8 @@ export interface TrailInput {
   payerName: string | null;
   perspective: Perspective;
   proofs: { createdAt: string; state: string }[];
+  /** Declared paid when the contract was created: nobody sent a proof or confirmed it, so two steps. */
+  registeredOnCreate?: boolean;
   requiresConfirmation: boolean;
   status: string;
   today: string;
@@ -212,7 +214,7 @@ export function trailSteps(input: TrailInput): TrailStep[] {
     tone: overdue ? "danger" : "brand",
     sub: dueSub(input.dueDate, today, locale),
   };
-  if (!requiresConfirmation) {
+  if (!requiresConfirmation || input.registeredOnCreate) {
     return [
       due,
       {
