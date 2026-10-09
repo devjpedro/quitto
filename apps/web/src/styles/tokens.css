@@ -373,6 +373,45 @@
   }
 }
 
+/*
+ * The showcase never scrolls or crops (owner's round 2): from `lg` the panel is
+ * the window's height and its composition shrinks with that height, so the
+ * headline always fits. The piece that matters least leaves first (`.stage-extra`).
+ */
+.stage-fit {
+  --stage-h: 1;
+  --stage-w: 1;
+  transform: scale(calc(var(--stage-h) * var(--stage-w)));
+}
+
+@media (width >= 64rem) and (width < 80rem) {
+  .stage-fit {
+    --stage-w: 0.8;
+  }
+}
+
+@media (width >= 64rem) and (height < 900px) {
+  .stage-fit {
+    --stage-h: 0.9;
+  }
+}
+
+@media (width >= 64rem) and (height < 800px) {
+  .stage-fit {
+    --stage-h: 0.8;
+  }
+}
+
+@media (width >= 64rem) and (height < 720px) {
+  .stage-fit {
+    --stage-h: 0.7;
+  }
+
+  .stage-extra {
+    display: none;
+  }
+}
+
 @utility piece-shadow {
   box-shadow: var(--piece-shadow);
 }

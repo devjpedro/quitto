@@ -168,3 +168,33 @@ for (const scheme of ["light", "dark"] as const) {
     }
   });
 }
+
+for (const [width, height] of [
+  [1512, 760],
+  [1280, 720],
+  [1920, 1080],
+]) {
+  test(`a vitrine cabe na janela ${width}×${height}: o título não corta e o painel não rola`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    for (const path of ["/login", "/login?mode=signup", "/forgot-password"]) {
+      await page.goto(path);
+      await waitForHydrated(page);
+      const { panelBottom, textBottom } = await page.evaluate(() => {
+        const panel = document
+          .querySelector('section[aria-label="Quitto"]')
+          ?.getBoundingClientRect();
+        const bottoms = [
+          ...document.querySelectorAll('section[aria-label="Quitto"] p'),
+        ].map((p) => p.getBoundingClientRect().bottom);
+        return {
+          panelBottom: panel?.bottom ?? 0,
+          textBottom: Math.max(...bottoms),
+        };
+      });
+      expect(panelBottom).toBeLessThanOrEqual(height);
+      expect(textBottom).toBeLessThanOrEqual(panelBottom);
+    }
+  });
+}

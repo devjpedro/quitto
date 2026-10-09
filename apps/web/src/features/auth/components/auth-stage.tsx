@@ -22,7 +22,7 @@ export type AuthStageKind = "check-email" | "invite" | "showcase";
 /** The tagline: the headline and its line, at the foot of the panel from `lg`. */
 function Tagline() {
   return (
-    <div className="absolute inset-x-12 bottom-[46px] max-lg:hidden">
+    <div className="stage-fit absolute inset-x-12 bottom-[46px] origin-bottom-left max-lg:hidden">
       <p className="whitespace-pre-line font-display font-semibold text-[64px] text-on-brand leading-[.98] tracking-[-0.045em]">
         {m.auth_stage_headline()}
       </p>
@@ -48,7 +48,7 @@ function Column({
     <div
       aria-hidden={decorative ? "true" : undefined}
       className={cn(
-        "absolute top-20 left-1/2 -ml-80 hidden h-[440px] w-[640px] origin-top lg:block lg:max-xl:scale-[.8]",
+        "stage-fit absolute top-20 left-1/2 -ml-80 hidden h-[440px] w-[640px] origin-top lg:block",
         className
       )}
     >
@@ -85,7 +85,7 @@ function ShowcaseStage() {
         <ActionPiece className="absolute top-[62px] left-[150px]" />
         <MomentPiece className="absolute top-0 left-[404px] w-[252px]" />
         <ReceiptPiece className="absolute top-[318px] left-1.5 w-[232px] -rotate-3" />
-        <PaidPiece className="absolute top-[362px] left-[330px]" />
+        <PaidPiece className="stage-extra absolute top-[362px] left-[330px]" />
       </Column>
       <Tagline />
       <PhoneHeader />
@@ -107,7 +107,7 @@ function InviteStage({
       <Column className="top-24 -ml-[200px] w-[400px]" decorative={false}>
         <InvitePiece preview={preview} terms={raw} />
       </Column>
-      <div className="absolute inset-x-12 bottom-[46px] max-lg:hidden">
+      <div className="stage-fit absolute inset-x-12 bottom-[46px] origin-bottom-left max-lg:hidden">
         <InviteTrail preview={preview} />
       </div>
       {/* The phone: the invite is the header's text, and the trail its chips (A4m). */}
@@ -160,7 +160,7 @@ export function AuthStage({
   return (
     <StagePanel
       className={cn(
-        "rounded-b-frame max-lg:h-[262px] lg:min-h-[836px] lg:rounded-frame",
+        "rounded-b-frame max-lg:h-[262px] lg:sticky lg:top-3 lg:h-[calc(100dvh-24px)] lg:self-start lg:rounded-frame",
         asInvite && "max-lg:h-[300px]"
       )}
       data-testid={asInvite ? "login-invite" : undefined}
