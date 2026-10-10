@@ -73,7 +73,7 @@ function compute(): Snapshot {
   const standalone = isStandalone();
   const supported = platformCanInstall(
     platform,
-    isInAppBrowser(navigator.userAgent)
+    isInAppBrowser(navigator.userAgent, platform)
   );
   // Android needs the browser's event; iOS has no event, only the steps.
   const hasWay = platform.kind === "android" ? deferred !== null : true;
@@ -138,5 +138,9 @@ export async function startInstall(platform: InstallPlatform) {
   // The event is single-use: after prompt() it can't be reused.
   deferred = null;
   notify();
-  await event.prompt();
+  try {
+    await event.prompt();
+  } catch {
+    // The browser refused: the card comes back on the next beforeinstallprompt.
+  }
 }

@@ -54,6 +54,7 @@ export function InstallSheet() {
   const ipad = platform.kind === "ios" && platform.device === "ipad";
   return (
     <ResponsiveSheet
+      filledControls
       leading={
         <img
           alt=""

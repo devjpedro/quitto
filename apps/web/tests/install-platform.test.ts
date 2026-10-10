@@ -80,6 +80,17 @@ describe("isInAppBrowser", () => {
   it("Chrome do Android instala", () => {
     expect(isInAppBrowser(ANDROID_CHROME)).toBe(false);
   });
+  it("WKWebView do iPadOS em modo desktop (UA Mac sem Safari) é navegador interno", () => {
+    const mac =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+    const platform = detectPlatform({
+      userAgent: mac,
+      platform: "MacIntel",
+      maxTouchPoints: 5,
+    });
+    expect(isInAppBrowser(mac, platform)).toBe(true);
+    expect(isInAppBrowser(`${mac} Safari/604.1`, platform)).toBe(false);
+  });
 });
 
 describe("platformCanInstall", () => {

@@ -19,8 +19,15 @@ const IPHONE_RE = /iPhone|iPod/;
 const IPAD_RE = /iPad/;
 const ANDROID_RE = /Android/;
 
-export function isInAppBrowser(userAgent: string): boolean {
+export function isInAppBrowser(
+  userAgent: string,
+  platform?: InstallPlatform
+): boolean {
   if (IN_APP_RE.test(userAgent)) {
+    return true;
+  }
+  // iPadOS in desktop mode says "Macintosh": the detected platform says it is iOS.
+  if (platform?.kind === "ios" && !SAFARI_RE.test(userAgent)) {
     return true;
   }
   // A WKWebView on iOS has no "Safari" token; Safari, CriOS and FxiOS all do.
