@@ -94,6 +94,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
   await expect(first).toHaveCount(0);
   await expect(page.getByText("Tudo em dia", { exact: true })).toBeVisible();
   await page.reload();
+  await waitForHydrated(page);
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();

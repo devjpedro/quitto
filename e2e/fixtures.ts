@@ -36,9 +36,16 @@ export function randomEmail(): string {
 /**
  * Espera o cliente hidratar. O app marca `data-hydrated` no <html> pós-hidratação;
  * clicar antes disso (numa página SSR) é no-op porque o handler ainda não anexou.
+ * Também espera o streaming do SSR assentar: até o React trocar o fallback de
+ * um Suspense, o conteúdo chega num `<div hidden id="S:n">` e o testid aparece
+ * duas vezes (no build de produção a janela é grande o bastante para o strict
+ * mode do Playwright pegar).
  */
 export async function waitForHydrated(page: Page): Promise<void> {
   await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+  await page.waitForFunction(
+    () => !document.querySelector('div[hidden][id^="S:"]')
+  );
 }
 
 /** Registra um usuário novo pela UI e espera cair no Agora. Retorna o e-mail. */
