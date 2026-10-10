@@ -1,8 +1,16 @@
 import { LazyMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { reloadOnceForChunkError } from "@/lib/chunk-reload";
 
 const loadFeatures = () =>
-  import("@/lib/motion-features").then((mod) => mod.default);
+  import("@/lib/motion-features")
+    .then((mod) => mod.default)
+    .catch((error: unknown) => {
+      reloadOnceForChunkError(error, sessionStorage, () =>
+        window.location.reload()
+      );
+      throw error;
+    });
 
 /** How long after the page is up the browser may fetch what the user has not asked for yet. */
 const PREFETCH_DELAY_MS = 2500;
