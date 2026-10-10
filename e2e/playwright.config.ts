@@ -27,6 +27,9 @@ export default defineConfig({
     // assert pt-BR copy: pin the browser to pt-BR so every page renders it.
     locale: "pt-BR",
     trace: "on-first-retry",
+    // The CI runs against the production build, which registers the service
+    // worker: it would sit between the page and every page.route stub.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
