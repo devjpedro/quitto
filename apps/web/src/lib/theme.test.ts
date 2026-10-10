@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { parseThemeCookie, THEME_COOKIE, THEME_INIT_SCRIPT } from "@/lib/theme";
+import {
+  parseThemeCookie,
+  THEME_COOKIE,
+  THEME_INIT_SCRIPT,
+  themeColorMetas,
+} from "@/lib/theme";
 
 describe("parseThemeCookie", () => {
   it("lê dark", () => expect(parseThemeCookie("theme=dark")).toBe("dark"));
@@ -43,5 +48,30 @@ describe("THEME_INIT_SCRIPT", () => {
     document.cookie = "theme=darkness";
     runScript();
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+});
+
+describe("themeColorMetas", () => {
+  it("com cookie: uma meta do tema", () => {
+    expect(themeColorMetas("dark")).toEqual([
+      { name: "theme-color", content: "#1A1B18" },
+    ]);
+    expect(themeColorMetas("light")).toEqual([
+      { name: "theme-color", content: "#F1F0EB" },
+    ]);
+  });
+  it("sem cookie: duas metas seguindo o prefers-color-scheme", () => {
+    expect(themeColorMetas(undefined)).toEqual([
+      {
+        name: "theme-color",
+        content: "#F1F0EB",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        name: "theme-color",
+        content: "#1A1B18",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ]);
   });
 });

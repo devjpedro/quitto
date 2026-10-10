@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { InstallCard } from "@/features/install/components/install-card";
 import { capitalize } from "@/lib/format";
 import { formatDate } from "@/lib/locale-format";
 import { m } from "@/paraglide/messages.js";
@@ -48,6 +49,7 @@ export function HomeContent() {
           {homeSubtitle(home, layout, locale)}
         </span>
       </p>
+      <InstallCard />
       {layout.heroGuide ? (
         <OnboardingGuide
           onboarding={home.onboarding}
