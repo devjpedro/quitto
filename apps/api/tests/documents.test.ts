@@ -196,6 +196,18 @@ describe("pdf renderer", () => {
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
   });
 
+  it("renders the proof line in the receipt PDF text", async () => {
+    const model = buildReceiptModel(
+      contract,
+      mkInst({ sequence: 1, status: "paid", paidAt: "2026-07-12" }),
+      participants,
+      { at: "2026-07-13T01:30:00Z", by: "Maria" }
+    );
+    const withProof = await renderReceiptPdf(model, "pt-BR");
+    const without = await renderReceiptPdf({ ...model, proof: null }, "pt-BR");
+    expect(withProof.length).toBeGreaterThan(without.length);
+  });
+
   it("renders a statement PDF (with quittance seal when fully paid)", async () => {
     const model = buildStatementModel(
       contract,

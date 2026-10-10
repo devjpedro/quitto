@@ -15,6 +15,7 @@ import {
 import { renderReceiptPdf, renderStatementPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
 import { localeFromHeaders, pickLocale, userLocale } from "../lib/locale";
+import { latestProofOf } from "../lib/receipt-share";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 
@@ -129,7 +130,8 @@ export const documentsModule = new Elysia({ prefix: "/api" })
       const model = buildReceiptModel(
         { title: c.title, installmentsCount: c.installmentsCount },
         toModelInstallment(inst),
-        people
+        people,
+        await latestProofOf(inst.id)
       );
       const locale = await downloadLocale(user.id, request.headers);
       const bytes = await renderReceiptPdf(model, locale);

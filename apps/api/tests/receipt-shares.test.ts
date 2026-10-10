@@ -6,6 +6,7 @@ import {
   auditEvent,
   contract,
   installment,
+  proof,
   receiptShare,
   user,
 } from "../src/db/schema";
@@ -240,6 +241,8 @@ describe("recibo público", () => {
         "installmentsCount",
         "paidAt",
         "payerName",
+        "proofAt",
+        "proofBy",
         "receiverName",
         "sequence",
       ].sort()
@@ -248,6 +251,47 @@ describe("recibo público", () => {
     expect(body.sequence).toBe(1);
     expect(body.installmentsCount).toBe(3);
     expect(body.paidAt).toMatch(ISO_DATE_RE);
+    // Marked paid with no proof: no line to state.
+    expect(body.proofBy).toBeNull();
+    expect(body.proofAt).toBeNull();
+  });
+
+  it("com comprovante: o primeiro nome e o instante do mais recente, nunca o arquivo", async () => {
+    const cookie = await signUpCookie(uniqueEmail("rs-proof"));
+    const { contractId, installmentId } = await createPaidInstallment(cookie);
+    const [c] = await db
+      .select({ ownerId: contract.ownerId })
+      .from(contract)
+      .where(eq(contract.id, contractId));
+    const ownerId = c?.ownerId as string;
+    await db
+      .update(user)
+      .set({ name: "Maria Aparecida Souza" })
+      .where(eq(user.id, ownerId));
+    const row = {
+      fileName: "segredo.pdf",
+      installmentId,
+      mimeType: "application/pdf",
+      objectKey: "secret/key",
+      sizeBytes: 10,
+      uploadedBy: ownerId,
+    };
+    await db
+      .insert(proof)
+      .values({ ...row, createdAt: new Date("2026-07-11T10:00:00Z") });
+    await db
+      .insert(proof)
+      .values({ ...row, createdAt: new Date("2026-07-12T21:30:00Z") });
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+
+    const text = await (await publicReq(token)).text();
+    const body = JSON.parse(text);
+    expect(body.proofBy).toBe("Maria");
+    expect(body.proofAt).toBe("2026-07-12T21:30:00.000Z");
+    expect(text).not.toContain("segredo");
+    expect(text).not.toContain("secret/key");
   });
 
   it("PDF público responde 200 com %PDF", async () => {

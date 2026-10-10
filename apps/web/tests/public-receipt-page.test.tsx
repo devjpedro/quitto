@@ -22,6 +22,8 @@ const receipt: PublicReceipt = {
   amountCents: 125_000,
   paidAt: "2026-09-05",
   payerName: "Maria Souza",
+  proofAt: null,
+  proofBy: null,
   receiverName: "João Pedro",
 };
 

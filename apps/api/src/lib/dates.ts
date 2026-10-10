@@ -45,3 +45,28 @@ export function endOfMonth(iso: string): string {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
 }
+
+/** The product's wall clock: instants are shown as São Paulo's, whatever the server's zone. */
+export const APP_TIME_ZONE = "America/Sao_Paulo";
+
+/** An instant as its São Paulo date (per the locale) and 24h time ("HH:mm"). */
+export function formatInstant(
+  iso: string,
+  locale: Locale
+): { date: string; time: string } {
+  const at = new Date(iso);
+  return {
+    date: new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: APP_TIME_ZONE,
+      year: "numeric",
+    }).format(at),
+    time: new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      minute: "2-digit",
+      timeZone: APP_TIME_ZONE,
+    }).format(at),
+  };
+}

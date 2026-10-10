@@ -36,6 +36,12 @@ export interface StatementModel {
   }[];
 }
 
+/** The latest proof of an installment: who sent it (first name) and when (ISO instant). Never the file. */
+export interface ReceiptProof {
+  at: string;
+  by: string;
+}
+
 export interface ReceiptModel {
   amountCents: number;
   contractTitle: string;
@@ -43,6 +49,7 @@ export interface ReceiptModel {
   installmentsCount: number;
   paidAt: string;
   parties: DocumentParties;
+  proof: ReceiptProof | null;
   sequence: number;
 }
 
@@ -88,9 +95,11 @@ export function buildStatementModel(
 export function buildReceiptModel(
   contract: ModelContract,
   installment: ModelInstallment,
-  participants: ModelParticipant[]
+  participants: ModelParticipant[],
+  proof: ReceiptProof | null = null
 ): ReceiptModel {
   return {
+    proof,
     contractTitle: contract.title,
     parties: partiesOf(participants),
     sequence: installment.sequence,

@@ -109,6 +109,9 @@ export interface PublicReceipt {
   installmentsCount: number;
   paidAt: string;
   payerName: string | null;
+  /** The instant of the latest proof, and its sender's first name; never the file. */
+  proofAt: string | null;
+  proofBy: string | null;
   receiverName: string | null;
   sequence: number;
 }
