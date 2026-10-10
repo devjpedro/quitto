@@ -25,6 +25,7 @@ export const meModule = new Elysia({ prefix: "/api" })
           locale: userTable.locale,
           createdAt: userTable.createdAt,
           tourCompletedAt: userTable.tourCompletedAt,
+          appInstalledAt: userTable.appInstalledAt,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
@@ -49,6 +50,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         hasPassword: credential !== undefined,
         createdAt: (row?.createdAt ?? new Date()).toISOString(),
         tourCompletedAt: row?.tourCompletedAt?.toISOString() ?? null,
+        appInstalledAt: row?.appInstalledAt?.toISOString() ?? null,
       };
     },
     {
@@ -64,6 +66,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         hasPassword: t.Boolean(),
         createdAt: t.String(),
         tourCompletedAt: t.Union([t.String(), t.Null()]),
+        appInstalledAt: t.Union([t.String(), t.Null()]),
       }),
     }
   )
@@ -171,4 +174,27 @@ export const meModule = new Elysia({ prefix: "/api" })
       return { dismissedAt: row.dismissedAt.toISOString() };
     },
     { response: t.Object({ dismissedAt: t.String() }) }
+  )
+  .post(
+    "/me/app-installed",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      // The first opening installed wins: repeats keep the original time.
+      await db
+        .update(userTable)
+        .set({ appInstalledAt: new Date() })
+        .where(
+          and(eq(userTable.id, user.id), isNull(userTable.appInstalledAt))
+        );
+      const [row] = await db
+        .select({ installedAt: userTable.appInstalledAt })
+        .from(userTable)
+        .where(eq(userTable.id, user.id))
+        .limit(1);
+      if (!row?.installedAt) {
+        throw new NotFoundError("Usuário não encontrado");
+      }
+      return { appInstalledAt: row.installedAt.toISOString() };
+    },
+    { response: t.Object({ appInstalledAt: t.String() }) }
   );
