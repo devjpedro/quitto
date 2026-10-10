@@ -50,6 +50,21 @@ test.describe("instalar o app · celular Android", () => {
       .toBe(1);
   });
 
+  test("o appinstalled esconde o card e marca a conta", async ({ page }) => {
+    await signup(page);
+    await waitForHydrated(page);
+    await fireInstallPrompt(page);
+    await expect(page.getByTestId(CARD)).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
+    await expect(page.getByTestId(CARD)).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const res = await page.request.get("/api/me");
+        return (await res.json()).appInstalledAt;
+      })
+      .not.toBeNull();
+  });
+
   test("o ✕ esconde o card, e ele continua escondido depois do reload", async ({
     page,
   }) => {
@@ -64,8 +79,12 @@ test.describe("instalar o app · celular Android", () => {
     await page.reload();
     await waitForHydrated(page);
     await fireInstallPrompt(page);
-    // Give the card the chance it would need to come back.
-    await page.waitForTimeout(500);
+    // The menu item only shows with `me` loaded and the event captured: from here on, the card's absence is the ✕.
+    await openAccountMenu(page);
+    await expect(
+      page.getByRole("menuitem", { name: "Instalar app" })
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(page.getByTestId(CARD)).toHaveCount(0);
   });
 
@@ -88,8 +107,12 @@ test.describe("instalar o app · celular Android", () => {
     await page.reload();
     await waitForHydrated(page);
     await fireInstallPrompt(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByTestId(CARD)).toHaveCount(0);
+    await openAccountMenu(page);
+    await expect(
+      page.getByRole("menuitem", { name: "Instalar app" })
+    ).toHaveCount(0);
   });
 
   test("abrir em standalone marca a conta, e o card some em outro navegador", async ({
@@ -127,8 +150,12 @@ test.describe("instalar o app · celular Android", () => {
     await second.goto("/");
     await waitForHydrated(second);
     await fireInstallPrompt(second);
-    await second.waitForTimeout(500);
+    await second.waitForLoadState("networkidle");
     await expect(second.getByTestId(CARD)).toHaveCount(0);
+    await openAccountMenu(second);
+    await expect(
+      second.getByRole("menuitem", { name: "Instalar app" })
+    ).toHaveCount(0);
     await other.close();
     expect(email).toBeTruthy();
   });
@@ -175,7 +202,7 @@ test.describe("instalar o app · navegador interno", () => {
   test("no Instagram nunca aparece", async ({ page }) => {
     await signup(page);
     await waitForHydrated(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByTestId(CARD)).toHaveCount(0);
     await openAccountMenu(page);
     await expect(
@@ -191,7 +218,7 @@ test.describe("instalar o app · desktop", () => {
     await signup(page);
     await waitForHydrated(page);
     await fireInstallPrompt(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByTestId(CARD)).toHaveCount(0);
   });
 });
