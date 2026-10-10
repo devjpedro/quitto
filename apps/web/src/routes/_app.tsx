@@ -122,15 +122,17 @@ function AppLayout() {
         onOpenSearch={() => setSearchOpen(true)}
         unreadCount={unreadCount}
       >
-        <Suspense fallback={null}>
-          {paletteMounted ? (
+        {paletteMounted ? (
+          <Suspense fallback={null}>
             <CommandPalette
               onOpenChange={setSearchOpen}
               onOpenNotifications={notifications.show}
               open={searchOpen}
             />
-          ) : null}
-          {notificationsMounted ? (
+          </Suspense>
+        ) : null}
+        {notificationsMounted ? (
+          <Suspense fallback={null}>
             <NotificationsPanel
               // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
               fallbackFocus={visibleNotificationsTrigger}
@@ -138,9 +140,13 @@ function AppLayout() {
               open={notifications.open}
               unreadCount={unreadCount}
             />
-          ) : null}
-          {tourMounted ? <TourOverlay /> : null}
-        </Suspense>
+          </Suspense>
+        ) : null}
+        {tourMounted ? (
+          <Suspense fallback={null}>
+            <TourOverlay />
+          </Suspense>
+        ) : null}
         <ErrorBoundary
           FallbackComponent={ErrorFallback}
           resetKeys={[identity?.id]}
