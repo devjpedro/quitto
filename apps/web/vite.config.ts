@@ -39,11 +39,20 @@ export default defineConfig(({ command }) => ({
             // Função SSR/server functions na mesma região da API (Fly gru): o
             // default (iad1) fazia cada chamada cruzar BR → EUA → BR duas vezes.
             vercel: { functions: { regions: ["gru1"] } },
-            routeRules: onVercel
-              ? { "/api/**": { proxy: "https://usequitto-api.fly.dev/api/**" } }
-              : apiProxyTarget
-                ? { "/api/**": { proxy: `${apiProxyTarget}/api/**` } }
-                : {},
+            routeRules: {
+              // The service worker file must always be revalidated, or a
+              // fixed sw.js would take days to reach the browsers.
+              "/sw.js": { headers: { "cache-control": "no-cache" } },
+              ...(onVercel
+                ? {
+                    "/api/**": {
+                      proxy: "https://usequitto-api.fly.dev/api/**",
+                    },
+                  }
+                : apiProxyTarget
+                  ? { "/api/**": { proxy: `${apiProxyTarget}/api/**` } }
+                  : {}),
+            },
           }),
         ]
       : []),
