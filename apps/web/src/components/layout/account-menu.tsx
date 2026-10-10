@@ -14,7 +14,6 @@ import {
   useInstallState,
 } from "@/features/install/lib/install-store";
 import { useChangeLocale } from "@/hooks/use-change-locale";
-import { useMeQuery } from "@/hooks/use-me";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useTheme } from "@/hooks/use-theme";
 import { LOCALE_NAME } from "@/lib/locale-names";
@@ -39,9 +38,9 @@ export function AccountMenu({
   const signOut = useSignOut();
   const isDark = theme === "dark";
   const install = useInstallState();
-  const { data: me } = useMeQuery();
-  const canInstall =
-    install.canInstall && me !== undefined && !me.appInstalledAt;
+  // Follows the browser only (phone, outside the app, Android with the event):
+  // the account's "installed" mark hides the home card, never this item.
+  const canInstall = install.canInstall;
   // WCAG 2.5.3: when the name is on screen, the accessible name includes it.
   const triggerLabel =
     variant === "full" && identity
