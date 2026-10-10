@@ -11,7 +11,6 @@ import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
 import { prefetchWhenIdle, warmMotion } from "@/components/ui/motion-scope";
 import { ContractMobileMenu } from "@/features/contracts/components/contract-mobile-menu";
-import { homeQueryOptions } from "@/features/home/api";
 import {
   useActiveContracts,
   useMomentMilestone,
@@ -63,12 +62,6 @@ export const Route = createFileRoute("/_app")({
       throw redirect({ to: "/login", search: { redirect: location.href } });
     }
     // "unknown" (cold API): render the shell anyway; the client validates.
-  },
-  // The shell reads the home (bell, counts, sidebar): fetched here, in the SSR,
-  // it arrives dehydrated instead of as a request after hydration. Not awaited:
-  // it streams in, and a cold API never holds the page.
-  loader: ({ context }) => {
-    context.queryClient.prefetchQuery(homeQueryOptions);
   },
   component: AppLayout,
 });
