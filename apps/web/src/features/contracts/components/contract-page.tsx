@@ -51,6 +51,10 @@ export const EMPTY_SLOTS: ContractSlots = {
  * hero (400 px). From lateral: a 420 px column on the right (the card and
  * the recent activity, or the docked panel), held while the page scrolls.
  * The aside is `contents` below lateral, so the card is a grid item there.
+ * From lateral the contract is the height of the screen: the head, the hero
+ * and the tabs stay, the tab's body scrolls on its own (a 60-installment
+ * list no longer scrolls the page), and the panel beside it stays in view.
+ * Below lateral the page scrolls, as a phone's does.
  */
 function ContractContent({ slots }: { slots: ContractSlots }) {
   const route = useContractRoute();
@@ -68,7 +72,7 @@ function ContractContent({ slots }: { slots: ContractSlots }) {
         card
           ? "md:grid-cols-[minmax(0,1fr)_400px] md:[grid-template-areas:'head_head'_'hero_card'_'tabs_tabs']"
           : "md:[grid-template-areas:'head'_'hero'_'tabs']",
-        "lateral:grid-cols-[minmax(0,1fr)_420px] lateral:grid-rows-[auto_auto_1fr] lateral:[grid-template-areas:'head_side'_'hero_side'_'tabs_side']"
+        "lateral:h-full lateral:min-h-[32rem] lateral:grid-cols-[minmax(0,1fr)_420px] lateral:grid-rows-[auto_auto_minmax(0,1fr)] lateral:[grid-template-areas:'head_side'_'hero_side'_'tabs_side']"
       )}
       data-perspective={perspectiveOf(detail.role)}
     >
@@ -106,14 +110,19 @@ function ContractContent({ slots }: { slots: ContractSlots }) {
         )}
         {slots.panel(detail, route)}
       </aside>
-      <div className="mt-7 min-w-0 [grid-area:tabs]">
+      <div className="mt-7 lateral:flex lateral:min-h-0 min-w-0 lateral:flex-col [grid-area:tabs]">
         <ContractTabs
           action={slots.tabAction(detail, route)}
           detail={detail}
           onTabChange={route.setTab}
           tab={route.tab}
         />
-        <div className="mt-3">{slots.tabBody[route.tab](detail, route)}</div>
+        <div
+          className="mt-3 lateral:min-h-0 lateral:flex-1 lateral:overflow-y-auto lateral:overscroll-contain"
+          data-testid="tab-body"
+        >
+          {slots.tabBody[route.tab](detail, route)}
+        </div>
       </div>
     </div>
   );
@@ -130,8 +139,8 @@ export function ContractPage({
 }) {
   useDocumentTitle(PAGE_TITLE.contractDetail);
   return (
-    <div className="lateral:p-8 p-4 pt-2 md:p-6">
-      <div className="mx-auto w-full max-w-[1840px]">
+    <div className="lateral:h-full lateral:p-8 p-4 pt-2 md:p-6">
+      <div className="mx-auto lateral:h-full w-full max-w-[1840px]">
         <SectionBoundary fallback={<ContractSkeleton />}>
           <ContractContent slots={slots} />
         </SectionBoundary>
