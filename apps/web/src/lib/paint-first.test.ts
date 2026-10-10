@@ -79,3 +79,63 @@ describe("withPaintFirst", () => {
     expect(withPaintFirst(json)).toBe(json);
   });
 });
+
+describe("paintFirst depois da troca da entrada", () => {
+  const whole = HEAD + BODY.replace("</body>", '<p class="ação">x</p></body>');
+
+  it("uma tag cortada no meio não fica presa até o fim", async () => {
+    const cut = whole.indexOf("<p c") + 4;
+    const out = await read(
+      paintFirst(streamOf([whole.slice(0, cut), whole.slice(cut)]))
+    );
+    expect(out).toBe(await read(paintFirst(streamOf([whole]))));
+  });
+
+  it("um caractere UTF-8 multibyte cortado no meio sai inteiro", async () => {
+    const bytes = new TextEncoder().encode(whole);
+    const cut = bytes.indexOf(0xa7); // 2º byte do "ç"
+    const split = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, cut));
+        controller.enqueue(bytes.slice(cut));
+        controller.close();
+      },
+    });
+    const out = await read(paintFirst(split));
+    expect(out).toContain('class="ação"');
+    expect(out).not.toContain("\uFFFD");
+    expect(out).toBe(await read(paintFirst(streamOf([whole]))));
+  });
+
+  it("o pedaço sai no mesmo pedido, sem esperar o fim", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const encoder = new TextEncoder();
+    const source = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        controller.enqueue(
+          encoder.encode(HEAD + BODY.replace("</body></html>", ""))
+        );
+        controller.enqueue(encoder.encode("<p>a</p><p c"));
+        await gate;
+        controller.enqueue(encoder.encode('lass="b">x</p></body></html>'));
+        controller.close();
+      },
+    });
+    const reader = paintFirst(source).getReader();
+    const seen: string[] = [];
+    const decoder = new TextDecoder();
+    while (!seen.join("").includes("<p c")) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      seen.push(decoder.decode(value));
+    }
+    expect(seen.join("")).toContain("<p c");
+    release();
+    await reader.cancel();
+  });
+});

@@ -39,11 +39,12 @@ export function paintFirst(
   return body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
       transform(chunk, controller) {
+        pending += decoder.decode(chunk, { stream: true });
         if (replaced) {
-          controller.enqueue(chunk);
+          controller.enqueue(encoder.encode(pending));
+          pending = "";
           return;
         }
-        pending += decoder.decode(chunk, { stream: true });
         const open = pending.lastIndexOf("<");
         const cut = open > pending.lastIndexOf(">") ? open : pending.length;
         const ready = rewrite(pending.slice(0, cut));
