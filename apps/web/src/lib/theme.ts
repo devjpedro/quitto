@@ -19,3 +19,27 @@ export function parseThemeCookie(
  * senão segue prefers-color-scheme. Garante zero-flash inclusive na 1ª visita.
  */
 export const THEME_INIT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|;\\s*)theme=(light|dark)(?:;|$)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`;
+
+export const THEME_COLOR = { light: "#F1F0EB", dark: "#1A1B18" } as const;
+
+/**
+ * The browser bar color. With a theme cookie it is that theme's; without it
+ * (first visit) two metas follow prefers-color-scheme, as the app itself does.
+ */
+export function themeColorMetas(theme: Theme | undefined) {
+  if (theme) {
+    return [{ name: "theme-color", content: THEME_COLOR[theme] }];
+  }
+  return [
+    {
+      name: "theme-color",
+      content: THEME_COLOR.light,
+      media: "(prefers-color-scheme: light)",
+    },
+    {
+      name: "theme-color",
+      content: THEME_COLOR.dark,
+      media: "(prefers-color-scheme: dark)",
+    },
+  ];
+}

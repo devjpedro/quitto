@@ -1,9 +1,20 @@
-import { GearSix, Moon, SignOut, Sun } from "@phosphor-icons/react";
+import {
+  DeviceMobile,
+  GearSix,
+  Moon,
+  SignOut,
+  Sun,
+} from "@phosphor-icons/react";
 import { isLocale, LOCALES } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
 import { DropdownMenu } from "radix-ui";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  startInstall,
+  useInstallState,
+} from "@/features/install/lib/install-store";
 import { useChangeLocale } from "@/hooks/use-change-locale";
+import { useMeQuery } from "@/hooks/use-me";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useTheme } from "@/hooks/use-theme";
 import { LOCALE_NAME } from "@/lib/locale-names";
@@ -27,6 +38,10 @@ export function AccountMenu({
   const changeLocale = useChangeLocale();
   const signOut = useSignOut();
   const isDark = theme === "dark";
+  const install = useInstallState();
+  const { data: me } = useMeQuery();
+  const canInstall =
+    install.canInstall && me !== undefined && !me.appInstalledAt;
   // WCAG 2.5.3: when the name is on screen, the accessible name includes it.
   const triggerLabel =
     variant === "full" && identity
@@ -83,6 +98,15 @@ export function AccountMenu({
             )}
             {isDark ? m.account_theme_light() : m.account_theme_dark()}
           </DropdownMenu.Item>
+          {canInstall ? (
+            <DropdownMenu.Item
+              className={ITEM}
+              onSelect={() => startInstall(install.platform)}
+            >
+              <DeviceMobile aria-hidden="true" size={18} />
+              {m.account_install()}
+            </DropdownMenu.Item>
+          ) : null}
           <DropdownMenu.Separator className="my-1 h-px bg-line" />
           <DropdownMenu.Label className="px-2.5 py-1 text-ink-muted text-xs">
             {m.account_language()}

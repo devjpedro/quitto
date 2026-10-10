@@ -11,10 +11,16 @@ import "@fontsource-variable/geist-mono";
 import "@fontsource-variable/bricolage-grotesque";
 import "../index.css";
 import { AppToaster } from "@/components/ui/app-toaster";
+import "@/features/install/lib/install-store"; // listens to beforeinstallprompt from the first script
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
+import { registerServiceWorker } from "@/lib/register-sw";
 import { initSentry } from "@/lib/sentry";
 import { seedSession } from "@/lib/session-route";
-import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
+import {
+  parseThemeCookie,
+  THEME_INIT_SCRIPT,
+  themeColorMetas,
+} from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -46,10 +52,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         name: "description",
         content: m.meta_description(),
       },
-      {
-        name: "theme-color",
-        content: loaderData === "dark" ? "#1A1B18" : "#F1F0EB",
-      },
+      ...themeColorMetas(loaderData),
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Quitto" },
       { title: "Quitto" },
     ],
     links: [
@@ -67,6 +74,7 @@ function RootDocument() {
   // Sentry só no cliente (no-op sem DSN); evita rodar o SDK de browser no SSR.
   useEffect(() => {
     initSentry();
+    registerServiceWorker();
     clearChunkReloadMark(sessionStorage); // load OK → libera novo reload no próximo deploy
     // Marca que o cliente hidratou — E2E espera por isso antes de interagir
     // (evita clicar num botão SSR antes do handler anexar).

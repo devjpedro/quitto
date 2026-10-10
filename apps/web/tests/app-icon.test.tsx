@@ -11,14 +11,19 @@ const readPublic = (name: string) =>
 
 interface HeadTag {
   content?: string;
+  media?: string;
   name?: string;
 }
 
 const runHead = (
   route: { options: { head?: unknown } },
-  loaderData: "light" | "dark"
+  loaderData: "light" | "dark" | undefined
 ) =>
-  (route.options.head as (ctx: { loaderData: string }) => { meta: HeadTag[] })({
+  (
+    route.options.head as (ctx: { loaderData: string | undefined }) => {
+      meta: HeadTag[];
+    }
+  )({
     loaderData,
   });
 
@@ -55,12 +60,32 @@ describe("AppIcon", () => {
 });
 
 describe("manifest.webmanifest", () => {
-  it("theme_color is the page's light theme-color meta, so the installed app's bar does not switch on open", () => {
-    // The manifest has no dark variant: it matches the light meta, the base.
+  it("abre em Floresta (#1F5A32): a página assume a cor do tema depois de carregar", () => {
+    // Mockup 21, M5: the splash no longer flashes light before the dark theme.
     const manifest = JSON.parse(readPublic("manifest.webmanifest"));
-    const themeColor = runHead(RootRoute, "light").meta.find(
+    expect(manifest.theme_color).toBe("#1F5A32");
+    expect(manifest.background_color).toBe("#1F5A32");
+  });
+
+  it("sem cookie de tema, duas metas theme-color seguem o prefers-color-scheme", () => {
+    const metas = runHead(RootRoute, undefined).meta.filter(
       (tag) => tag.name === "theme-color"
     );
-    expect(manifest.theme_color).toBe(themeColor?.content);
+    expect(metas.map((tag) => [tag.content, tag.media])).toEqual([
+      ["#F1F0EB", "(prefers-color-scheme: light)"],
+      ["#1A1B18", "(prefers-color-scheme: dark)"],
+    ]);
+  });
+
+  it("traz as metas do iOS para o app da tela inicial", () => {
+    const names = runHead(RootRoute, "light").meta.map((tag) => tag.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "apple-mobile-web-app-capable",
+        "mobile-web-app-capable",
+        "apple-mobile-web-app-status-bar-style",
+        "apple-mobile-web-app-title",
+      ])
+    );
   });
 });

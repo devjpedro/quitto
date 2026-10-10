@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "app_installed_at" timestamp;

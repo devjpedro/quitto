@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F1F0EB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1B18" media="(prefers-color-scheme: dark)">
+<title>Quitto</title>
+<style>
+:root{--bg:#F1F0EB;--ink:#111111;--muted:#62625D;--brand:#1F5A32;--trk:rgba(31,90,50,.22);--raise:#FFFFFF;--btn:#111111;--on-btn:#FFFFFF}
+:root.dark{--bg:#1A1B18;--ink:#ECEBE6;--muted:#9A9A92;--brand:#7CC495;--trk:rgba(124,196,149,.22);--raise:#242521;--btn:#ECEBE6;--on-btn:#151613}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+header{height:60px;display:flex;align-items:center;padding:0 16px;padding-top:env(safe-area-inset-top);flex:none}
+.wm{height:23.3px;width:64.8px;display:block;color:var(--brand)}
+.wm .t{stroke:var(--trk)}
+.wm .a{stroke:var(--brand)}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 32px 96px}
+.ico{width:72px;height:72px;border-radius:50%;background:var(--raise);position:relative;display:flex;align-items:center;justify-content:center}
+.ring{position:absolute;inset:0;width:72px;height:72px}
+.ring circle{fill:none;stroke:var(--trk);stroke-width:2.2}
+.wifi{width:28px;height:28px;fill:var(--brand);position:relative}
+h1{font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-.02em;margin-top:20px}
+p{font-size:15px;line-height:1.5;color:var(--muted);margin-top:8px;max-width:290px}
+button{margin-top:24px;height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--btn);color:var(--on-btn);font:500 15px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+button svg{width:18px;height:18px;fill:currentColor}
+</style>
+</head>
+<body>
+<header><svg class="wm" viewBox="0 -800 2946 1060" role="img" aria-label="Quitto"><path fill="currentColor" d="M428 167V21Q428 -4 431 -30Q435 -56 440 -85Q446 -114 451 -142H431Q417 -93 394 -58Q371 -23 336 -5Q301 14 250 14Q181 14 134 -22Q87 -58 63 -120Q39 -182 39 -259Q39 -345 65 -407Q91 -470 141 -504Q191 -539 261 -539Q308 -539 344 -521Q380 -503 403 -468Q426 -433 435 -380H454L453 -524H572V-263V167ZM303 -101Q327 -101 347 -110Q366 -120 382 -135Q397 -151 407 -170Q418 -190 423 -210Q428 -231 428 -250V-270Q428 -293 421 -320Q414 -346 399 -369Q384 -392 361 -406Q338 -421 305 -421Q270 -421 243 -401Q217 -381 203 -345Q190 -309 190 -259Q190 -213 203 -177Q216 -142 241 -122Q267 -101 303 -101Z M852 14Q760 14 713 -49Q666 -111 666 -239V-525H811V-256Q811 -180 834 -142Q857 -105 905 -105Q933 -105 953 -119Q974 -132 989 -158Q1004 -183 1012 -217Q1020 -250 1021 -290V-525H1164V-215V0H1048L1048 -164H1029Q1014 -102 992 -62Q969 -23 934 -5Q900 14 852 14Z M1266 0V-525H1410V0ZM1338 -603Q1296 -603 1274 -621Q1251 -639 1251 -672Q1251 -707 1274 -725Q1296 -743 1338 -743Q1382 -743 1404 -725Q1426 -707 1426 -673Q1426 -639 1404 -621Q1381 -603 1338 -603Z M1708 12Q1620 12 1579 -35Q1537 -81 1537 -183V-412H1461L1464 -524H1516Q1546 -525 1562 -534Q1577 -543 1581 -567L1593 -642H1675V-525H1807V-408H1675V-189Q1675 -153 1692 -137Q1709 -121 1743 -121Q1762 -121 1780 -125Q1798 -129 1811 -138V-4Q1780 6 1754 9Q1728 12 1708 12Z M2075 12Q1987 12 1946 -35Q1904 -81 1904 -183V-412H1828L1831 -524H1883Q1913 -525 1929 -534Q1944 -543 1948 -567L1960 -642H2042V-525H2174V-408H2042V-189Q2042 -153 2059 -137Q2076 -121 2110 -121Q2129 -121 2147 -125Q2165 -129 2178 -138V-4Q2147 6 2121 9Q2095 12 2075 12Z"/><circle class="t" cx="2586" cy="-230" r="270" fill="none" stroke-width="120"/><circle class="a" cx="2586" cy="-230" r="270" fill="none" stroke-width="120" stroke-linecap="round" stroke-dasharray="1200 1710" transform="rotate(125 2586 -230)"/></svg></header>
+<main>
+<div class="ico"><svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg><svg class="wifi" viewBox="0 0 256 256" aria-hidden="true"><path d="M213.92,210.62a8,8,0,1,1-11.84,10.76l-52-57.15a60,60,0,0,0-57.41,7.24,8,8,0,1,1-9.42-12.93A75.43,75.43,0,0,1,128,144c1.28,0,2.55,0,3.82.1L104.9,114.49A108,108,0,0,0,61,135.31,8,8,0,0,1,49.73,134,8,8,0,0,1,51,122.77a124.27,124.27,0,0,1,41.71-21.66L69.37,75.4a155.43,155.43,0,0,0-40.29,24A8,8,0,0,1,18.92,87,171.87,171.87,0,0,1,58,62.86L42.08,45.38A8,8,0,1,1,53.92,34.62ZM128,192a12,12,0,1,0,12,12A12,12,0,0,0,128,192ZM237.08,87A172.3,172.3,0,0,0,106,49.4a8,8,0,1,0,2,15.87A158.33,158.33,0,0,1,128,64a156.25,156.25,0,0,1,98.92,35.37A8,8,0,0,0,237.08,87ZM195,135.31a8,8,0,0,0,11.24-1.3,8,8,0,0,0-1.3-11.24,124.25,124.25,0,0,0-51.73-24.2A8,8,0,1,0,150,114.24,108.12,108.12,0,0,1,195,135.31Z"></path></svg></div>
+<h1 id="t">Sem conexão</h1>
+<p id="d">O Quitto precisa da internet para mostrar seus contratos.</p>
+<button type="button" id="b"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M244,56v48a12,12,0,0,1-12,12H184a12,12,0,1,1,0-24H201.1l-19-17.38c-.13-.12-.26-.24-.38-.37A76,76,0,1,0,127,204h1a75.53,75.53,0,0,0,52.15-20.72,12,12,0,0,1,16.49,17.45A99.45,99.45,0,0,1,128,228h-1.37A100,100,0,1,1,198.51,57.06L220,76.72V56a12,12,0,0,1,24,0Z"></path></svg><span id="l">Tentar de novo</span></button>
+</main>
+<script>
+(function () {
+  // Static page served by the service worker: it reads the same cookies as the app
+  // (theme, locale); with none, the system's dark mode and the browser's language.
+  function cookie(name) {
+    var m = document.cookie.match(new RegExp("(?:^|;\\s*)" + name + "=([^;]*)"));
+    return m ? m[1] : null;
+  }
+  var theme = cookie("theme");
+  var dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  if (dark) document.documentElement.classList.add("dark");
+  var loc = cookie("locale") || navigator.language || "pt-BR";
+  var en = /^en/i.test(loc);
+  if (en) {
+    document.documentElement.lang = "en-US";
+    document.getElementById("t").textContent = "You're offline";
+    document.getElementById("d").textContent = "Quitto needs the internet to show your contracts.";
+    document.getElementById("l").textContent = "Try again";
+  }
+  document.getElementById("b").addEventListener("click", function () { location.reload(); });
+  addEventListener("online", function () { location.reload(); });
+})();
+</script>
+</body>
+</html>

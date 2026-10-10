@@ -11,6 +11,8 @@ export interface SessionIdentity {
 }
 
 export interface SessionUser extends SessionIdentity {
+  /** ISO instant the app first opened installed (standalone); null = never. Hides the install prompt on every browser. */
+  appInstalledAt: string | null;
   /** ISO timestamp of the account's creation ("no Quitto desde setembro de 2025"). */
   createdAt: string;
   emailRemindersAvailable: boolean;
