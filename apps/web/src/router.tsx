@@ -1,3 +1,5 @@
+// First: the locale strategy is in place before anything renders.
+import "./lib/ssr-locale";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 import { PagePending } from "./components/layout/page-pending";
