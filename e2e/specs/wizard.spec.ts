@@ -157,10 +157,18 @@ test("uma a uma: 'Manter R$ 6.000,00' tira das outras e cria com o total combina
       barBox?.y ?? Number.POSITIVE_INFINITY
     );
   }
+  // From the one-by-one list: the other party, then the review, then create,
+  // each tap only once its step is on screen. Four blind taps used to create
+  // on the third and leave the fourth waiting on a bar that was going away
+  // (and, on a slow runner, under the "Contrato criado" toast).
   await next(page);
+  await expect(page.getByText("Soma das 12 parcelas")).toHaveCount(0);
   await next(page);
-  await next(page);
-  await next(page);
+  await settled(page, "Confira antes de criar");
+  await page
+    .getByTestId("wizard-footer")
+    .getByRole("button", { name: "Criar contrato" })
+    .click();
   await expect(page).toHaveURL(CONTRACT_URL);
   const id = page.url().split("/").at(-1) as string;
   const detail = await getContract(page.request, id);
