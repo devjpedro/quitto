@@ -4,6 +4,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { env } from "../env";
+import { inBatches, STATEMENT_BATCH } from "../lib/batches";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { type SendEmailInput, sendEmail } from "../lib/mailer";
 import {
@@ -46,16 +47,19 @@ export async function runReminderSweep(
   if (activeContracts.length === 0) {
     return { reminders: 0, emailsSent: 0 };
   }
+  // Every active contract in the database: the reads go by batches of ids.
   const contractIds = activeContracts.map((c) => c.id);
 
-  const people = await db
-    .select({
-      contractId: participant.contractId,
-      role: participant.role,
-      linkedUserId: participant.linkedUserId,
-    })
-    .from(participant)
-    .where(inArray(participant.contractId, contractIds));
+  const people = await inBatches(contractIds, STATEMENT_BATCH, (ids) =>
+    db
+      .select({
+        contractId: participant.contractId,
+        role: participant.role,
+        linkedUserId: participant.linkedUserId,
+      })
+      .from(participant)
+      .where(inArray(participant.contractId, ids))
+  );
 
   // payer (1º vinculado) por contrato
   const payerByContract = new Map<string, string | null>();
@@ -75,20 +79,25 @@ export async function runReminderSweep(
     ])
   );
 
-  const openInstallments = await db
-    .select({
-      id: installment.id,
-      contractId: installment.contractId,
-      dueDate: installment.dueDate,
-      status: installment.status,
-    })
-    .from(installment)
-    .where(
-      and(
-        inArray(installment.contractId, contractIds),
-        ne(installment.status, INSTALLMENT_STATUS.paid)
-      )
-    );
+  const openInstallments = await inBatches(
+    contractIds,
+    STATEMENT_BATCH,
+    (ids) =>
+      db
+        .select({
+          id: installment.id,
+          contractId: installment.contractId,
+          dueDate: installment.dueDate,
+          status: installment.status,
+        })
+        .from(installment)
+        .where(
+          and(
+            inArray(installment.contractId, ids),
+            ne(installment.status, INSTALLMENT_STATUS.paid)
+          )
+        )
+  );
 
   const inputs: ReminderInput[] = openInstallments.map((i) => ({
     installmentId: i.id,

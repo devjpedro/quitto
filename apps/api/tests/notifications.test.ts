@@ -6,6 +6,7 @@ import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
 import { addDays } from "../src/lib/dates";
+import { insertNotificationsReturning } from "../src/lib/notifications";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -472,4 +473,41 @@ describe("sweep de lembretes", () => {
     },
     SWEEP_TIMEOUT_MS
   );
+});
+
+describe("notificações em lotes", () => {
+  it("7 linhas com lote de 3 viram 3 inserts; a 2ª vez não duplica", async () => {
+    const cookie = await signUpCookie(uniqueEmail("lote"));
+    const userId = await meId(cookie);
+    const contractId = await createContract(cookie, false);
+    const inputs = Array.from({ length: 7 }, (_, n) => ({
+      userId,
+      contractId,
+      type: "installment_overdue",
+      dedupeKey: `lote:${contractId}:${n}`,
+    }));
+    let inserts = 0;
+    const counting = new Proxy(db, {
+      get(target, key) {
+        const value = Reflect.get(target, key, target);
+        if (key === "insert") {
+          return (...args: Parameters<typeof db.insert>) => {
+            inserts += 1;
+            return target.insert(...args);
+          };
+        }
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    expect(
+      await insertNotificationsReturning(counting, inputs, 3)
+    ).toHaveLength(7);
+    expect(inserts).toBe(3);
+    expect(await insertNotificationsReturning(db, inputs, 3)).toHaveLength(0);
+    const rows = await notifsFor(userId, contractId);
+    expect(rows.filter((r) => r.dedupeKey?.startsWith("lote:"))).toHaveLength(
+      7
+    );
+  });
 });
