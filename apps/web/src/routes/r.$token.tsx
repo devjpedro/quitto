@@ -7,10 +7,20 @@ import { m } from "@/paraglide/messages.js";
 function PublicReceiptRoute() {
   const receipt = Route.useLoaderData();
   const { token } = Route.useParams();
-  return <PublicReceiptPage receipt={receipt} token={token} />;
+  const { from } = Route.useSearch();
+  return (
+    <PublicReceiptPage
+      fromApp={from === "app"}
+      receipt={receipt}
+      token={token}
+    />
+  );
 }
 
 export const Route = createFileRoute("/r/$token")({
+  // `from=app`: opened from inside the app, so the page offers a "Voltar".
+  validateSearch: (s: Record<string, unknown>): { from?: "app" } =>
+    s.from === "app" ? { from: "app" } : {},
   // The page is the data, and an unknown token must answer HTTP 404: the one
   // loader that waits (planner's decision 14).
   loader: async ({ params }) => {

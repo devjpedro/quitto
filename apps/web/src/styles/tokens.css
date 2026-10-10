@@ -470,6 +470,15 @@
   .stage-dots::before {
     display: none;
   }
+
+  /* The receipt page: no margin box, so the browser has no room for its date and URL; the body's padding is the margin. */
+  @page {
+    margin: 0;
+  }
+
+  body:has([data-testid="public-receipt"]) {
+    padding: 14mm;
+  }
 }
 
 /* ⌘K: a 150 ms fade with a 4 px rise; with reduced motion, only the fade. */

@@ -120,8 +120,6 @@ vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
 const WEEKDAY_LONG = /quarta-feira|30 de setembro/i;
 const ACTION_NAMES =
   /Confirmar|Contestar|Compartilhar|Enviar|Marcar|Cobrar|Editar/;
-const RECEBI = /^Oi! Recebi a parcela 2 de 10 de “Moto do Rafa”/;
-const WA = "https://wa.me/?text=";
 const WHATSAPP = /WhatsApp/;
 
 /** Every installment the panel may open: the ones a test names, then plain open ones. */
@@ -209,8 +207,11 @@ beforeEach(() => {
   hydration.done = true;
   navigate.mockReset();
   navigate.mockImplementation(
-    (options: { search: (prev: Search) => Search }) => {
-      router.set(options.search(router.get()));
+    (options: { search: Search | ((prev: Search) => Search) }) => {
+      // The panel's own navigations edit the search; the receipt's goes to another page.
+      if (typeof options.search === "function") {
+        router.set(options.search(router.get()));
+      }
       return Promise.resolve();
     }
   );
@@ -596,7 +597,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(screen.getByRole("button", { name: "Contestar" })).toBeVisible();
   });
 
-  it("a 390, o duplo toque no rodapé: o 2º toque cai no 'Compartilhar recibo' que tomou o lugar do 'Confirmar recebimento' e não cria o link; passada a trava, o mesmo botão compartilha", async () => {
+  it("a 390, o duplo toque no rodapé: o 2º toque cai no 'Abrir recibo' que tomou o lugar do 'Confirmar recebimento' e não cria o link; passada a trava, o mesmo botão cria e abre", async () => {
     const user = userEvent.setup();
     calls.confirm.mockReturnValue(deferred<Answer>().promise);
     calls.share.mockResolvedValue({
@@ -608,15 +609,13 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       screen.getByRole("button", { name: "Confirmar recebimento" })
     );
     // The optimistic confirm swaps the footer's button in place.
-    const share = await screen.findByRole("button", {
-      name: "Compartilhar recibo",
-    });
-    await user.click(share);
+    const open = await screen.findByRole("button", { name: "Abrir recibo" });
+    await user.click(open);
     expect(calls.confirm).toHaveBeenCalledTimes(1);
     expect(calls.share).not.toHaveBeenCalled();
 
     vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
-    await user.click(share);
+    await user.click(open);
     await waitFor(() => expect(calls.share).toHaveBeenCalledTimes(1));
   });
 
@@ -651,9 +650,10 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
   });
 
-  it("P5 (dono): 'Compartilhar recibo' cria o link e copia (ou abre o compartilhamento do sistema, se existir); o link existente aparece com Copiar; 'Recibo em PDF' baixa", async () => {
+  it("P5 (dono): 'Abrir recibo' cria o link e abre a página na mesma aba, com from=app; o link existente aparece com Copiar; não há mais PDF, compartilhar nem WhatsApp aqui", async () => {
     const user = userEvent.setup();
     const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    navigate.mockClear();
     calls.share.mockResolvedValue({
       data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
       error: null,
@@ -664,42 +664,31 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
     const block = within(screen.getByTestId("receipt-block"));
     expect(block.getByText("Recibo da parcela 2")).toBeVisible();
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toHaveAttribute(
-      "href",
-      "/api/installments/i2/receipt.pdf"
-    );
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toHaveAttribute(
-      "download"
-    );
-    await user.click(
-      block.getByRole("button", { name: "Compartilhar recibo" })
-    );
+    for (const name of [
+      "Compartilhar recibo",
+      "Recibo em PDF",
+      "PDF",
+      "Copiar link do recibo",
+    ]) {
+      expect(block.queryByRole("button", { name })).toBeNull();
+      expect(block.queryByRole("link", { name })).toBeNull();
+    }
+    expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
+    await user.click(block.getByRole("button", { name: "Abrir recibo" }));
     await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith(
-        `${window.location.origin}/r/7fQ2kX9mVb`
-      )
-    );
-    expect(toastSuccess).toHaveBeenCalledWith("Link copiado");
-
-    // Where the system has a share sheet, it opens instead (a tap past the
-    // panel's double-tap lock).
-    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
-    const share = vi.fn(() => Promise.resolve());
-    Object.defineProperty(navigator, "share", {
-      configurable: true,
-      value: share,
-    });
-    await user.click(
-      block.getByRole("button", { name: "Compartilhar recibo" })
-    );
-    await waitFor(() =>
-      expect(share).toHaveBeenCalledWith({
-        url: `${window.location.origin}/r/7fQ2kX9mVb`,
+      expect(navigate).toHaveBeenCalledWith({
+        params: { token: "7fQ2kX9mVb" },
+        search: { from: "app" },
+        to: "/r/$token",
       })
     );
-    Reflect.deleteProperty(navigator, "share");
+    expect(calls.share).toHaveBeenCalledTimes(1);
     first.unmount();
 
+    // With the link made, "Abrir recibo" does not create another one.
+    navigate.mockClear();
+    calls.share.mockClear();
+    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
     renderPage({
       installment: "i2",
       details: {
@@ -710,6 +699,15 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
     const linked = within(screen.getByTestId("receipt-block"));
     expect(linked.getByText("localhost:3001/r/7fQ2kX9mVb")).toBeVisible();
+    await user.click(linked.getByRole("button", { name: "Abrir recibo" }));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        params: { token: "7fQ2kX9mVb" },
+        search: { from: "app" },
+        to: "/r/$token",
+      })
+    );
+    expect(calls.share).not.toHaveBeenCalled();
     await user.click(
       linked.getByRole("button", { name: "Copiar o link do recibo" })
     );
@@ -727,7 +725,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     ).toBeNull();
   });
 
-  it("P5 (quem não é dono): sem 'Compartilhar recibo'; PDF e, se o link existe, Copiar", () => {
+  it("P5 (quem não é dono): sem 'Abrir recibo' (não cria link); PDF e, se o link existe, Copiar", () => {
     renderPage({
       contract: motoDetail({
         role: "buyer",
@@ -743,9 +741,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       },
     });
     const block = within(screen.getByTestId("receipt-block"));
-    expect(
-      block.queryByRole("button", { name: "Compartilhar recibo" })
-    ).toBeNull();
+    expect(block.queryByRole("button", { name: "Abrir recibo" })).toBeNull();
     expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
     expect(
       block.getByRole("button", { name: "Copiar o link do recibo" })
@@ -756,77 +752,30 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     ).toBeNull();
   });
 
-  it("P5 do dono que recebe de quem não tem conta: 'Enviar a Pedro no WhatsApp' é o principal; o clique abre a janela na hora (window.open simulado) e, com o link criado, ela vai para o wa.me com 'Recebi a parcela…'; 'PDF' e 'Copiar link do recibo' (que cria o link se preciso)", async () => {
-    const user = userEvent.setup();
+  it("P5 do dono que recebe de quem não tem conta: o mesmo 'Abrir recibo' (sem WhatsApp, sem PDF), com o link, dos dois lados; no celular o rodapé o fixa e o bloco não o repete", () => {
     const base = motoDetail();
-    const contract = motoDetail({
+    const noAccount = motoDetail({
       participants: base.participants.map((p) =>
         p.role === "buyer"
           ? { ...p, displayName: "Pedro Alves", linked: false }
           : p
       ),
     });
-    const win = { close: vi.fn(), location: { href: "" }, opener: {} };
-    const open = vi
-      .spyOn(window, "open")
-      .mockReturnValue(win as unknown as Window);
-    const answer = deferred<Answer>();
-    calls.share.mockReturnValueOnce(answer.promise);
-    renderPage({ contract, installment: "i2", details: { i2: paidDetail() } });
-    const block = within(screen.getByTestId("receipt-block"));
-    // No link line yet, and no share: the WhatsApp is the way.
-    expect(
-      block.queryByRole("button", { name: "Compartilhar recibo" })
-    ).toBeNull();
-    await user.click(
-      block.getByRole("button", { name: "Enviar a Pedro no WhatsApp" })
-    );
-    // The window opened on the click, before the link exists.
-    expect(open).toHaveBeenCalledWith("", "_blank");
-    expect(win.opener).toBeNull();
-    expect(win.location.href).toBe("");
-    await act(async () => {
-      answer.resolve({
-        data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
-        error: null,
-      });
-      await answer.promise;
-    });
-    await waitFor(() => expect(win.location.href.startsWith(WA)).toBe(true));
-    const text = decodeURIComponent(win.location.href.slice(WA.length));
-    expect(text).toMatch(RECEBI);
-    expect(text).toContain(`${window.location.origin}/r/7fQ2kX9mVb`);
-
-    expect(block.getByRole("link", { name: "PDF" })).toHaveAttribute(
-      "href",
-      "/api/installments/i2/receipt.pdf"
-    );
-    calls.share.mockResolvedValue({
-      data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
-      error: null,
-    });
-    vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
-    await user.click(
-      block.getByRole("button", { name: "Copiar link do recibo" })
-    );
-    await waitFor(() => expect(calls.share).toHaveBeenCalledTimes(2));
-    open.mockRestore();
-  });
-
-  it("P5 do dono, com o link: 'Compartilhar recibo' e 'Recibo em PDF', sem um 3º botão de WhatsApp (o compartilhar já chega lá), dos dois lados e no celular", () => {
     const shared = {
       i2: paidDetail({
         receiptShare: { url: "http://localhost:3001/r/7fQ2kX9mVb" },
       }),
     };
-    const receiving = renderPage({ installment: "i2", details: shared });
+    const receiving = renderPage({
+      contract: noAccount,
+      installment: "i2",
+      details: shared,
+    });
     let block = within(screen.getByTestId("receipt-block"));
-    expect(
-      block.getByRole("button", { name: "Compartilhar recibo" })
-    ).toBeVisible();
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
+    expect(block.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
     expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
     expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
+    expect(block.queryByRole("link", { name: "PDF" })).toBeNull();
     receiving.unmount();
 
     const paying = renderPage({
@@ -840,15 +789,14 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       details: shared,
     });
     block = within(screen.getByTestId("receipt-block"));
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
-    expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
+    expect(block.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
+    expect(block.queryByRole("link", { name: "Recibo em PDF" })).toBeNull();
     paying.unmount();
 
-    // The bottom sheet pins "Compartilhar recibo" in its footer: the block keeps the PDF.
     renderPage({ installment: "i2", details: shared, width: 390 });
     block = within(screen.getByTestId("receipt-block"));
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
-    expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
+    expect(block.queryByRole("button", { name: "Abrir recibo" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
   });
 
   it("P6 (quem paga): o bloco danger com o rosto de quem contestou, o motivo entre aspas e o envio riscado", () => {

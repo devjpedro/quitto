@@ -1,4 +1,5 @@
 import type { PublicReceipt } from "@quitto/shared";
+import { QueryClient } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +12,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 import { PublicReceiptPage } from "../src/features/receipts/components/public-receipt-page";
 import { ReceiptUnavailable } from "../src/features/receipts/components/receipt-unavailable";
+import { queryKeys } from "../src/lib/query-keys";
 import { overwriteGetLocale } from "../src/paraglide/runtime.js";
 import { Route } from "../src/routes/r.$token";
 import { renderWithProviders as render } from "./test-utils";
@@ -29,10 +31,19 @@ const receipt: PublicReceipt = {
 
 const PARCELA_RE = /Parcela 3 de 12 · paga em 05\/09\/2026/;
 const PARCELA_EN_RE = /Installment 3 of 12 · paid on 09\/05\/2026/;
+const PROOF_PT =
+  "Comprovante enviado por Maria em 12/07/2026 às 22:30 e registrado no Quitto";
+const PROOF_EN =
+  "Proof sent by Maria on 07/12/2026 at 22:30 and recorded on Quitto";
+const PROOF = { proofAt: "2026-07-13T01:30:00.000Z", proofBy: "Maria" };
 const REVOKED_RE = /revogad/i;
 const SIGNUP_RE = /criar conta|cadastr/i;
 
+const { toastSuccess } = vi.hoisted(() => ({ toastSuccess: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
+
 afterEach(() => {
+  toastSuccess.mockReset();
   overwriteGetLocale(() => "pt-BR");
   vi.restoreAllMocks();
 });
@@ -81,6 +92,96 @@ describe("PublicReceiptPage", () => {
     render(<PublicReceiptPage receipt={receipt} token="tok" />);
     await userEvent.click(screen.getByRole("button", { name: "Imprimir" }));
     expect(print).toHaveBeenCalledTimes(1);
+  });
+
+  it("o horário do comprovante, no fuso de São Paulo; sem comprovante, a linha não existe", () => {
+    const { unmount } = render(
+      <PublicReceiptPage receipt={{ ...receipt, ...PROOF }} token="tok" />
+    );
+    expect(screen.getByTestId("receipt-proof")).toHaveTextContent(PROOF_PT);
+    unmount();
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    expect(screen.queryByTestId("receipt-proof")).toBeNull();
+  });
+
+  it("o horário do comprovante em en-US", () => {
+    overwriteGetLocale(() => "en-US");
+    render(
+      <PublicReceiptPage receipt={{ ...receipt, ...PROOF }} token="tok" />
+    );
+    expect(screen.getByTestId("receipt-proof")).toHaveTextContent(PROOF_EN);
+  });
+
+  it("Compartilhar e Imprimir são só ícone: nome e dica pelo aria-label", () => {
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    for (const name of ["Compartilhar", "Imprimir"]) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toBeVisible();
+      expect(button).toHaveTextContent("");
+    }
+  });
+
+  it("Compartilhar no computador copia o link e avisa", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    await user.click(screen.getByRole("button", { name: "Compartilhar" }));
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}${window.location.pathname}`
+    );
+    expect(toastSuccess).toHaveBeenCalledWith("Link copiado");
+  });
+
+  it("Compartilhar no celular (Android, com navigator.share) abre o compartilhamento do sistema", async () => {
+    const user = userEvent.setup();
+    const share = vi.fn(() => Promise.resolve());
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    });
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/126.0 Mobile Safari/537.36"
+    );
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    await user.click(screen.getByRole("button", { name: "Compartilhar" }));
+    expect(share).toHaveBeenCalledWith({
+      url: `${window.location.origin}${window.location.pathname}`,
+    });
+    expect(writeText).not.toHaveBeenCalled();
+    Reflect.deleteProperty(navigator, "share");
+  });
+
+  it("com from=app mostra o Voltar, que volta no histórico; sem ele, não", async () => {
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {
+      // No navigation in jsdom.
+    });
+    const { unmount } = render(
+      <PublicReceiptPage fromApp receipt={receipt} token="tok" />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    expect(back).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    expect(screen.queryByRole("button", { name: "Voltar" })).toBeNull();
+  });
+
+  it("deslogado vê o convite 'Criar conta'; logado, não", () => {
+    const { unmount } = render(
+      <PublicReceiptPage receipt={receipt} token="tok" />
+    );
+    expect(screen.getAllByRole("link", { name: "Criar conta" }).length).toBe(2);
+    unmount();
+    const client = new QueryClient();
+    client.setQueryData(queryKeys.session, {
+      id: "u1",
+      name: "João Souza",
+      email: "joao@x.dev",
+      image: null,
+    });
+    render(<PublicReceiptPage receipt={receipt} token="tok" />, { client });
+    expect(screen.queryByRole("link", { name: "Criar conta" })).toBeNull();
+    expect(screen.getByTestId("public-receipt")).toBeVisible();
   });
 
   it("em en-US: Payment receipt e a data no formato en-US", () => {
