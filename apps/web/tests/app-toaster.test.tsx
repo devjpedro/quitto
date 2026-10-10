@@ -76,9 +76,11 @@ describe("AppToaster", () => {
     expect(list?.style.getPropertyValue("--mobile-offset-bottom")).toBe(
       "var(--app-toast-bottom)"
     );
+    // Above the tab bar (or the StepFrame's action bar, --step-bottom) below
+    // md, and 24 px from the edge (or above that bar) from md.
     expect(list).toHaveClass(
-      "[--app-toast-bottom:calc(env(safe-area-inset-bottom)_+_5.25rem)]",
-      "md:[--app-toast-bottom:1.5rem]"
+      "[--app-toast-bottom:max(calc(env(safe-area-inset-bottom)_+_5.25rem),calc(var(--step-bottom,0px)_+_0.75rem))]",
+      "md:[--app-toast-bottom:max(1.5rem,calc(var(--step-bottom,0px)_+_0.75rem))]"
     );
   });
 

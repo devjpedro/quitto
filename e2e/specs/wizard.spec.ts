@@ -147,6 +147,16 @@ test("uma a uma: 'Manter R$ 6.000,00' tira das outras e cria com o total combina
   await page.getByLabel("Valor da parcela 1", { exact: true }).blur();
   await page.getByRole("button", { name: "Manter R$ 6.000,00" }).click();
   await expect(page.getByText("Soma das 12 parcelas")).toBeVisible();
+  // A toast never covers the action bar: on a phone it sat on "Continuar", and
+  // with the pointer over it the toast never left, so the next tap hung.
+  const toast = page.locator("[data-sonner-toast]").first();
+  if (await toast.isVisible()) {
+    const toastBox = await toast.boundingBox();
+    const barBox = await page.getByTestId("wizard-footer").boundingBox();
+    expect((toastBox?.y ?? 0) + (toastBox?.height ?? 0)).toBeLessThanOrEqual(
+      barBox?.y ?? Number.POSITIVE_INFINITY
+    );
+  }
   await next(page);
   await next(page);
   await next(page);

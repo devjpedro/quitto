@@ -32,12 +32,15 @@ const CLOSE =
  * (card radius, thin line, the float shadow) with ink text and a Phosphor
  * icon, so a status never rests on color alone; errors sit on danger-subtle.
  * Bottom right from md, clear of the header's "+ Novo contrato"; below md
- * they sit above the tab bar and its safe area.
+ * they sit above the tab bar and its safe area. In the wizard and the invite
+ * the StepFrame publishes its action bar's height as --step-bottom, and a toast
+ * sits above that bar too: on a phone it used to cover "Continuar", and while
+ * the pointer rested on it the toast never timed out.
  */
 export function AppToaster() {
   return (
     <Toaster
-      className="[--app-toast-bottom:calc(env(safe-area-inset-bottom)_+_5.25rem)] md:[--app-toast-bottom:1.5rem]"
+      className="[--app-toast-bottom:max(calc(env(safe-area-inset-bottom)_+_5.25rem),calc(var(--step-bottom,0px)_+_0.75rem))] md:[--app-toast-bottom:max(1.5rem,calc(var(--step-bottom,0px)_+_0.75rem))]"
       closeButton
       icons={{
         success: <CheckCircle className={`${ICON} text-brand`} />,
