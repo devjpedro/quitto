@@ -49,6 +49,8 @@ function Step({
 /** Mockup 21, M2: the three steps of "Add to Home Screen". The pieces are drawn with the app's tokens, never an iOS screenshot. */
 export function InstallSheet() {
   const { platform, sheetOpen } = useInstallState();
+  // The sheet only draws open (after a tap), but its element is built in the SSR too.
+  const host = typeof window === "undefined" ? "" : window.location.host;
   const ipad = platform.kind === "ios" && platform.device === "ipad";
   return (
     <ResponsiveSheet
@@ -125,7 +127,7 @@ export function InstallSheet() {
               />
               <div>
                 <p className="font-medium text-sm">Quitto</p>
-                <p className="text-ink-muted text-xs">{window.location.host}</p>
+                <p className="text-ink-muted text-xs">{host}</p>
               </div>
             </div>
           </div>
