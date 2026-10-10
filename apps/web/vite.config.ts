@@ -16,6 +16,10 @@ const analyze = process.env.ANALYZE === "1";
 // (.output/). O deploy-web força NITRO_PRESET=vercel — esse é o sinal explícito.
 const onVercel =
   Boolean(process.env.VERCEL) || process.env.NITRO_PRESET === "vercel";
+// Alvo do proxy de /api pra builds que não são da Vercel (o E2E do CI sobe o
+// build de produção em node-server e precisa chegar na API local). Só existe
+// quando a env está setada: um build local nunca fala com a API de produção.
+const apiProxyTarget = process.env.QUITTO_API_PROXY;
 const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 
 export default defineConfig(({ command }) => ({
@@ -35,9 +39,20 @@ export default defineConfig(({ command }) => ({
             // Função SSR/server functions na mesma região da API (Fly gru): o
             // default (iad1) fazia cada chamada cruzar BR → EUA → BR duas vezes.
             vercel: { functions: { regions: ["gru1"] } },
-            routeRules: onVercel
-              ? { "/api/**": { proxy: "https://usequitto-api.fly.dev/api/**" } }
-              : {},
+            routeRules: {
+              // The service worker file must always be revalidated, or a
+              // fixed sw.js would take days to reach the browsers.
+              "/sw.js": { headers: { "cache-control": "no-cache" } },
+              ...(onVercel
+                ? {
+                    "/api/**": {
+                      proxy: "https://usequitto-api.fly.dev/api/**",
+                    },
+                  }
+                : apiProxyTarget
+                  ? { "/api/**": { proxy: `${apiProxyTarget}/api/**` } }
+                  : {}),
+            },
           }),
         ]
       : []),

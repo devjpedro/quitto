@@ -17,6 +17,8 @@ import {
   useNavCounts,
   useUnreadCount,
 } from "@/features/home/shell-selectors";
+import { InstallSheet } from "@/features/install/components/install-sheet";
+import { useReportInstalled } from "@/features/install/hooks/use-report-installed";
 import {
   NotificationsPanelContext,
   useNotificationsPanel,
@@ -71,6 +73,7 @@ function AppLayout() {
   // The overlays and the animation engine are fetched once the page is quiet.
   useEffect(prefetchOverlays, []);
   useTourAutostart();
+  useReportInstalled();
   const identity = useIdentity();
   const unreadCount = useUnreadCount();
   const moment = useMomentMilestone();
@@ -142,6 +145,7 @@ function AppLayout() {
             />
           </Suspense>
         ) : null}
+        <InstallSheet />
         {tourMounted ? (
           <Suspense fallback={null}>
             <TourOverlay />

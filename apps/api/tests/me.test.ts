@@ -226,3 +226,41 @@ describe("tour guiado", () => {
     expect(res.locale).toBe("en-US");
   });
 });
+
+describe("app instalado", () => {
+  const get = (cookie: string) =>
+    app.handle(new Request("http://localhost/api/me", { headers: { cookie } }));
+  const mark = (cookie?: string) =>
+    app.handle(
+      new Request("http://localhost/api/me/app-installed", {
+        method: "POST",
+        headers: cookie ? { cookie } : {},
+      })
+    );
+
+  it("conta nova: ainda não abriu instalado (null)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-pwa"));
+    expect((await (await get(cookie)).json()).appInstalledAt).toBeNull();
+  });
+
+  it("exige sessão", async () => {
+    expect((await mark()).status).toBe(401);
+  });
+
+  it("marca a data e o GET devolve", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-pwa2"));
+    const res = await mark(cookie);
+    expect(res.status).toBe(200);
+    const { appInstalledAt } = await res.json();
+    expect((await (await get(cookie)).json()).appInstalledAt).toBe(
+      appInstalledAt
+    );
+  });
+
+  it("é idempotente: a primeira data fica", async () => {
+    const cookie = await signUpCookie(uniqueEmail("me-pwa3"));
+    const first = await (await mark(cookie)).json();
+    const second = await (await mark(cookie)).json();
+    expect(second.appInstalledAt).toBe(first.appInstalledAt);
+  });
+});

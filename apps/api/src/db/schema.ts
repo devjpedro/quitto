@@ -30,6 +30,8 @@ export const user = pgTable("user", {
   onboardingDismissedAt: timestamp("onboarding_dismissed_at"),
   // Set when the user finishes or skips the guided tour (first access); null = it shows once. "Refazer" in Ajustes clears it.
   tourCompletedAt: timestamp("tour_completed_at"),
+  // First time the app opened installed (standalone); null = never seen installed. Hides the install prompt on every browser of the account.
+  appInstalledAt: timestamp("app_installed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

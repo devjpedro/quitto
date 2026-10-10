@@ -2,17 +2,23 @@ import { defineConfig, devices } from "@playwright/test";
 
 const WEB = "http://localhost:3001";
 const API_HEALTH = "http://localhost:3000/api/ping";
+// In CI (or with E2E_PROD=1) the specs run against the production build of the
+// web (Nitro node-server, built beforehand with NITRO_PRESET=node-server and
+// QUITTO_API_PROXY=http://localhost:3000), not the Vite dev server.
+const PROD = !!process.env.CI || process.env.E2E_PROD === "1";
 
 export default defineConfig({
   testDir: "./specs",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // In CI the specs run against the dev server (Vite compiles each route on its
-  // first hit) on a 2-core runner: the multi-route and axe specs pass 30 s
-  // there while taking 10-20 s locally. Locally the defaults stay.
-  timeout: process.env.CI ? 120_000 : 30_000,
-  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
+  // The production build has no per-route compilation, so CI only needs a
+  // margin for the 2-core runner. Locally the defaults stay.
+  timeout: process.env.CI ? 45_000 : 30_000,
+  expect: { timeout: process.env.CI ? 8_000 : 5_000 },
+  // The runner has 2 cores shared by the API, the web server and Chromium; the
+  // specs wait on the network more than on the CPU, so 2 workers keep it busy.
+  workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
@@ -21,6 +27,9 @@ export default defineConfig({
     // assert pt-BR copy: pin the browser to pt-BR so every page renders it.
     locale: "pt-BR",
     trace: "on-first-retry",
+    // The CI runs against the production build, which registers the service
+    // worker: it would sit between the page and every page.route stub.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
@@ -57,7 +66,9 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "bun run --filter @quitto/web dev",
+      command: PROD
+        ? "PORT=3001 node ../apps/web/.output/server/index.mjs"
+        : "bun run --filter @quitto/web dev",
       url: WEB,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

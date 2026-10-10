@@ -122,6 +122,7 @@ test("axe em claro e escuro", async ({ page, context }) => {
     { name: "theme", value: "dark", url: "http://localhost:3001" },
   ]);
   await page.goto("/contracts");
+  await waitForHydrated(page);
   await expect(page.locator("html.dark")).toBeVisible();
   await expect(page.getByTestId("contracts-toolbar")).toBeVisible();
   await scan(page);
