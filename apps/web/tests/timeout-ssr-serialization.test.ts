@@ -1,8 +1,6 @@
-import {
-  type AnySerializationAdapter,
-  defaultSerovalPlugins,
-  makeSsrSerovalPlugin,
-} from "@tanstack/router-core";
+import type { AnySerializationAdapter } from "@tanstack/router-core";
+import { defaultSerovalPlugins } from "@tanstack/router-core/ssr/client";
+import { makeSsrSerovalPlugin } from "@tanstack/router-core/ssr/server";
 import { crossSerializeStream } from "seroval";
 import { describe, expect, it } from "vitest";
 import { shouldRetryQuery } from "../src/lib/query";
