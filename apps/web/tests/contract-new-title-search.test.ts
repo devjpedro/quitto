@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Route } from "../src/routes/_app/contracts.new";
+import { Route } from "../src/routes/_focus/contracts.new";
 
 // `Route.options.validateSearch` é a união de todos os formatos de validador
 // aceitos pelo router; aqui ele é a função que a rota declara.

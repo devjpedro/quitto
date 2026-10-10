@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import { eq } from "drizzle-orm";
 import { app } from "../src/app";
+import { db } from "../src/db/client";
+import { user } from "../src/db/schema";
 import { buildStatementCsv } from "../src/lib/documents/csv";
+import { docText } from "../src/lib/documents/labels";
 import {
   buildReceiptModel,
   buildStatementModel,
@@ -82,7 +86,7 @@ describe("buildReceiptModel", () => {
 });
 
 describe("buildStatementCsv", () => {
-  it("emits a semicolon-delimited statement with a header and BR values", () => {
+  it("planilha pt-BR: ; e o cabeçalho de hoje (emits a semicolon-delimited statement with a header and BR values)", () => {
     const model = buildStatementModel(
       contract,
       [
@@ -96,7 +100,7 @@ describe("buildStatementCsv", () => {
       participants,
       today
     );
-    const csv = buildStatementCsv(model);
+    const csv = buildStatementCsv(model, "pt-BR");
     const lines = csv.trim().split("\r\n");
     expect(lines[0]).toBe("Nº;Vencimento;Valor;Status;Pago em");
     expect(lines[1]).toBe("1;10/07/2026;R$ 1.234,56;Paga;12/07/2026");
@@ -116,14 +120,66 @@ describe("buildStatementCsv", () => {
       participants,
       today
     );
-    const lines = buildStatementCsv(model).trim().split("\r\n");
+    const lines = buildStatementCsv(model, "pt-BR").trim().split("\r\n");
     expect(lines[1]).toBe("1;10/07/2026;R$ 10,00;Pendente;");
+  });
+});
+
+describe("docText", () => {
+  it("docText cobre os dois idiomas com os mesmos campos", () => {
+    expect(Object.keys(docText("en-US")).sort()).toEqual(
+      Object.keys(docText("pt-BR")).sort()
+    );
+    expect(Object.keys(docText("en-US").status)).toEqual(
+      Object.keys(docText("pt-BR").status)
+    );
+  });
+});
+
+describe("buildStatementCsv en-US", () => {
+  it("planilha en-US: vírgula, cabeçalho em inglês e o valor com vírgula entre aspas", () => {
+    const model = buildStatementModel(
+      contract,
+      [
+        mkInst({
+          sequence: 1,
+          amountCents: 123_456,
+          status: "paid",
+          paidAt: "2026-07-12",
+        }),
+      ],
+      participants,
+      today
+    );
+    const lines = buildStatementCsv(model, "en-US").split("\r\n");
+    expect(lines[0]).toBe("#,Due date,Amount,Status,Paid on");
+    expect(lines[1]).toBe('1,07/10/2026,"R$1,234.56",Paid,07/12/2026');
   });
 });
 
 const PDF_MAGIC = "%PDF";
 
 describe("pdf renderer", () => {
+  it("renderiza recibo e extrato nos dois idiomas (%PDF)", async () => {
+    const paid = [
+      mkInst({ sequence: 1, status: "paid", paidAt: "2026-07-01" }),
+      mkInst({ sequence: 2, status: "paid", paidAt: "2026-07-12" }),
+    ];
+    for (const locale of ["pt-BR", "en-US"] as const) {
+      const receipt = await renderReceiptPdf(
+        buildReceiptModel(contract, paid[0] as ModelInstallment, participants),
+        locale
+      );
+      const statement = await renderStatementPdf(
+        buildStatementModel(contract, paid, participants, today),
+        locale
+      );
+      for (const bytes of [receipt, statement]) {
+        expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
+      }
+    }
+  });
+
   it("renders a receipt PDF", async () => {
     const model = buildReceiptModel(
       contract,
@@ -135,7 +191,7 @@ describe("pdf renderer", () => {
       }),
       participants
     );
-    const bytes = await renderReceiptPdf(model);
+    const bytes = await renderReceiptPdf(model, "pt-BR");
     expect(bytes.length).toBeGreaterThan(0);
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
   });
@@ -150,7 +206,7 @@ describe("pdf renderer", () => {
       participants,
       today
     );
-    const bytes = await renderStatementPdf(model);
+    const bytes = await renderStatementPdf(model, "pt-BR");
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe(PDF_MAGIC);
   });
 });
@@ -264,6 +320,39 @@ describe("documents endpoints", () => {
     expect(res.headers.get("content-type")).toContain("application/pdf");
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("%PDF");
+  });
+
+  it("o extrato de quem escolheu en-US se chama statement-<slug>.pdf", async () => {
+    const email = uniqueEmail("doc-en");
+    const cookie = await signUpCookie(email);
+    await db.update(user).set({ locale: "en-US" }).where(eq(user.email, email));
+    const contractId = await createContract(cookie, false);
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/statement.pdf`,
+        { headers: { cookie } }
+      )
+    );
+    expect(res.headers.get("content-disposition")).toBe(
+      'attachment; filename="statement-c.pdf"'
+    );
+  });
+
+  it("sem idioma na conta, o cookie locale decide o nome do arquivo", async () => {
+    const cookie = await signUpCookie(uniqueEmail("doc-cookie"));
+    const contractId = await createContract(cookie, false);
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${contractId}/statement.csv`,
+        { headers: { cookie: `${cookie}; locale=en-US` } }
+      )
+    );
+    expect(res.headers.get("content-disposition")).toBe(
+      'attachment; filename="statement-c.csv"'
+    );
+    expect((await res.text()).split("\r\n")[0]).toContain(
+      "#,Due date,Amount,Status,Paid on"
+    );
   });
 
   it("does not leak another user's statement (404)", async () => {

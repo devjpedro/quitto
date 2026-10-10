@@ -1,0 +1,505 @@
+/*
+ * Redesign tokens. Names intentionally avoid the legacy shadcn tokens
+ * (accent, muted, border, card…) still defined in index.css, so legacy
+ * screens keep rendering until each one is rebuilt. Values are plain hex:
+ * tests/tokens-contrast.test.ts parses this file.
+ */
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    "Bricolage Grotesque Variable", "Geist Variable", ui-sans-serif, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+
+  --radius-frame: 24px;
+  --radius-panel: 20px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  /*
+   * Desktop tiers (DIRECAO › Layout, mockup 12): the home's side column from
+   * 1440 px and five action cards per row from 1840 px. Tailwind's 2xl
+   * (96rem, 1536 px) is the four-card tier. They become lateral: and wide:.
+   */
+  --breakpoint-lateral: 90rem;
+  --breakpoint-wide: 115rem;
+  /*
+   * The wizard and the invite (DIRECAO › Telas › Wizard): the preview's stage
+   * from 1140 px, and the preview card grows from 1920 px. In rem like the
+   * others: Tailwind 4 sorts an arbitrary px variant (min-[1140px]:) before
+   * md: (48rem), and md: would win the cascade from 1140 on.
+   */
+  --breakpoint-stage: 71.25rem;
+  --breakpoint-huge: 120rem;
+
+  --shadow-float:
+    0 18px 40px -12px rgb(17 17 17 / 0.18), 0 4px 10px -4px rgb(17 17 17 / 0.08);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-on-brand: var(--on-brand);
+  --color-on-brand-muted: var(--on-brand-muted);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-row-selected: var(--row-selected);
+  --color-field-line: var(--field-line);
+  --color-surface-card: var(--surface-card);
+  --color-surface-card-hover: var(--surface-card-hover);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-inset-hover: var(--surface-inset-hover);
+  --color-divider: var(--divider);
+  --color-track: var(--track);
+  --color-nav-hover: var(--nav-hover);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand-alert: var(--on-brand-alert);
+  --color-on-avatar: var(--on-avatar);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-selected-hover: var(--surface-selected-hover);
+  --color-avatar-clay: var(--avatar-clay);
+  --color-avatar-ochre: var(--avatar-ochre);
+  --color-avatar-plum: var(--avatar-plum);
+  --color-avatar-olive: var(--avatar-olive);
+  --color-avatar-cocoa: var(--avatar-cocoa);
+  --color-avatar-rose: var(--avatar-rose);
+  --color-avatar-wine: var(--avatar-wine);
+  --color-avatar-graphite: var(--avatar-graphite);
+}
+
+:root {
+  --canvas: #e6e4dd;
+  --surface: #ffffff;
+  --surface-sunken: #f1f0eb;
+  --surface-raised: #ffffff;
+  --ink: #111111;
+  --ink-muted: #62625d;
+  --ink-inverse: #ffffff;
+  --line: #e9e7e1;
+  --line-strong: #d5d3cc;
+  --brand: #1f5a32;
+  --brand-surface: #1f5a32;
+  --brand-subtle: #e8f0ea;
+  --on-brand: #ffffff;
+  --on-brand-muted: #c3dccb;
+  --highlight: #d7f26b;
+  --on-highlight: #111111;
+  --warning: #8a5a00;
+  --warning-subtle: #fdf3d8;
+  --danger: #b42318;
+  --danger-subtle: #fdecea;
+  /* The selected row (mockup 14): brand-subtle in light; its own step in dark, where ink-muted on brand-subtle is 4.44:1. */
+  --row-selected: #e8f0ea;
+  /* Form fields only: 3:1 against the field and what is around it (WCAG 1.4.11). */
+  --field-line: #86847d;
+  /* Fill, not outline (mockup 13, report §4). */
+  --surface-card: #f1f0eb;
+  --surface-card-hover: #eae8e1;
+  --surface-inset: #ffffff;
+  /* The inset button's hover: a step away from the hovered card, never onto it. */
+  --surface-inset-hover: #f4f3ef;
+  --divider: #e3e1da;
+  --track: #d5d3cc;
+  --nav-hover: #efede7;
+  --brand-hover: #174a28;
+  /* The chosen option (mockup 15, report §4); dark is not brand-subtle (ink-muted would read 4.44). */
+  --surface-selected: #e8f0ea;
+  --surface-selected-hover: #dde9e0;
+  /* The preview stage's dot texture (decorative). */
+  --dots: rgb(17 17 17 / 0.16);
+  /* The showcase (sign-in, sign-up, receipt; mockup 19): its dot texture and the shadow of the pieces that float on it. */
+  --stage-dots: rgb(255 255 255 / 0.16);
+  --piece-shadow:
+    0 30px 60px -22px rgb(4 22 10 / 0.62), 0 10px 22px -10px rgb(4 22 10 / 0.4);
+  --on-brand-alert: #ffb3a6;
+  /* The phone (page-surfaces): a white card on the sunken page (mockup 13). */
+  --page-card-hover: #f7f6f2;
+  --page-inset: #f1f0eb;
+  --page-inset-hover: #e6e5e0;
+  --page-divider: #eceae4;
+  /* People: 8 warm tones, white initials; no teal, blue or brand green. */
+  --on-avatar: #ffffff;
+  --avatar-clay: #a4502e;
+  --avatar-ochre: #8a5b00;
+  --avatar-plum: #7d3c68;
+  --avatar-olive: #5b6620;
+  --avatar-cocoa: #6b4a3a;
+  --avatar-rose: #9c4257;
+  --avatar-wine: #7a2e3a;
+  --avatar-graphite: #55544e;
+}
+
+.dark {
+  --canvas: #121311;
+  --surface: #242521;
+  --surface-sunken: #1a1b18;
+  --surface-raised: #2e2f2a;
+  --ink: #ecebe6;
+  --ink-muted: #9a9a92;
+  --ink-inverse: #151613;
+  --line: #34352f;
+  --line-strong: #45463f;
+  --brand: #7cc495;
+  --brand-surface: #2b5a3b;
+  --brand-subtle: #23382a;
+  --on-brand: #ecebe6;
+  --on-brand-muted: #b8d6c2;
+  --highlight: #d7f26b;
+  --on-highlight: #151613;
+  --warning: #f2c766;
+  --warning-subtle: #3a3120;
+  --danger: #ff8a7a;
+  --danger-subtle: #3d2420;
+  --row-selected: #213528;
+  --field-line: #7a7a72;
+  /* The card one step above the panel; what sits inside it one step below.
+     The hover steps down too, as in light: up from the card there is no
+     room (ink-muted meets the AA floor at #32332d). */
+  --surface-card: #2e2f2a;
+  --surface-card-hover: #282924;
+  --surface-inset: #242521;
+  /* Darker still: the hovered card is lighter, so a lighter hover would meet it. */
+  --surface-inset-hover: #1c1d1a;
+  --divider: #262723;
+  --track: #45463f;
+  --nav-hover: #1f201c;
+  --brand-hover: #24503a;
+  /* 1.068:1 below #1f3227: the repo's 1.06 floor for a hover step. */
+  --surface-selected: #1f3227;
+  --surface-selected-hover: #1b2d22;
+  --dots: rgb(236 235 230 / 0.12);
+  --stage-dots: rgb(236 235 230 / 0.12);
+  --piece-shadow:
+    0 30px 60px -22px rgb(0 0 0 / 0.7), 0 10px 22px -10px rgb(0 0 0 / 0.5);
+  --on-brand-alert: #ffb3a6;
+  /* The phone: card #242521 on the page #1a1b18, what sits inside one step
+     up, the hover one step down (between the card and the page). */
+  --page-card-hover: #1f201c;
+  --page-inset: #2e2f2a;
+  --page-inset-hover: #363731;
+  --page-divider: #1f201c;
+  --on-avatar: #ffffff;
+  --avatar-clay: #a4502e;
+  --avatar-ochre: #8a5b00;
+  --avatar-plum: #7d3c68;
+  --avatar-olive: #5b6620;
+  --avatar-cocoa: #6b4a3a;
+  --avatar-rose: #9c4257;
+  --avatar-wine: #7a2e3a;
+  --avatar-graphite: #55544e;
+}
+
+/*
+ * Phone (DIRECAO › Forma, mockup 13 lines 487-488): there is no white panel
+ * and the page is the sunken surface, so a card is the surface and what sits
+ * inside it takes the phone's own step: three layers in light and in dark.
+ * The shell's main applies it below md, and components keep the same classes
+ * (planner's decision 8).
+ */
+@utility page-surfaces {
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--page-card-hover);
+  --surface-inset: var(--page-inset);
+  --surface-inset-hover: var(--page-inset-hover);
+  --divider: var(--page-divider);
+}
+
+/*
+ * Installment bar (DIRECAO › Progresso): an overdue segment, a proof
+ * waiting, and the same two on the green card. The status is in the
+ * pattern, never only in the color: overdue leans -45°, a proof waiting the
+ * opposite way (+45°), since danger and warning are close in lightness.
+ */
+@utility stripes-danger {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--danger) 0 2px,
+    color-mix(in srgb, var(--danger) 30%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-warning {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--warning) 0 2px,
+    color-mix(in srgb, var(--warning) 28%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-on-brand {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--on-brand) 0 2px,
+    color-mix(in srgb, var(--on-brand) 32%, transparent) 2px 4px
+  );
+}
+
+@utility stripes-on-brand-alert {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--on-brand-alert) 0 2px,
+    color-mix(in srgb, var(--on-brand-alert) 32%, transparent) 2px 4px
+  );
+}
+
+/*
+ * The wizard's preview stage (mockup 15, full screen): dots that fade out
+ * around the card, in a fixed ellipse so a wide screen never spreads them
+ * over the whole stage. Decorative texture, not a gradient fill.
+ */
+.preview-stage::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle,
+    var(--dots) 1.05px,
+    transparent 1.5px
+  );
+  background-position: 7px 7px;
+  background-size: 14px 14px;
+  mask-image: radial-gradient(
+    ellipse 540px 480px at 50% 52%,
+    #000 35%,
+    transparent 80%
+  );
+}
+
+/*
+ * The empty states' stage (mockup 20, B8): the wizard's dots, only toward
+ * the sides (owner's round 2). Decorative texture, behind the content.
+ */
+.empty-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle,
+    var(--dots) 1.05px,
+    transparent 1.5px
+  );
+  background-position: 7px 7px;
+  background-size: 14px 14px;
+  border-radius: inherit;
+  /* Opposite of the wizard's: no dots behind the title, the sentence and the
+   * buttons (hole of 70% of the radius, across the whole height), and they
+   * come in only toward the sides, so the text keeps its AA contrast. */
+  mask-image: radial-gradient(
+    ellipse 300px 100% at 50% 50%,
+    transparent 70%,
+    #000 100%
+  );
+}
+
+.empty-stage > * {
+  position: relative;
+}
+
+/*
+ * The preview card is the raised layer in dark (#2E2F2A), so its list goes
+ * one step down (#242521) and the tiles inside it back up (mockup 15 §4).
+ * In light the card is white and the usual card/inset steps already fit.
+ */
+.dark .preview-surfaces {
+  --surface-card: var(--surface);
+  --surface-inset: var(--surface-raised);
+  --divider: var(--surface-sunken);
+}
+
+/*
+ * The ＋ of the tab bar (owner's decision 18): on a phone the wizard rises
+ * over the frozen picture of Agora. With reduced motion the browser's
+ * cross-fade stays; without View Transitions the route just swaps.
+ */
+/* The wizard and the invite publish the heights of their held header and action bar (StepFrame). */
+@media (width < 48rem) {
+  html {
+    scroll-padding-top: calc(var(--step-top, -16px) + 16px);
+    scroll-padding-bottom: calc(var(--step-bottom, -16px) + 16px);
+  }
+}
+
+@media (width < 48rem) and (prefers-reduced-motion: no-preference) {
+  html:active-view-transition-type(sheet-up)::view-transition-old(root) {
+    animation: none;
+  }
+  html:active-view-transition-type(sheet-up)::view-transition-new(root) {
+    animation: sheet-up 420ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/*
+ * The showcase (DIRECAO › Autenticação: vitrine): the Floresta panel of the
+ * screens without an account. Its dots fade out around the pieces; on a phone
+ * the panel is a header, and they gather in its lower right corner.
+ */
+.stage-dots::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background-image: radial-gradient(
+    circle,
+    var(--stage-dots) 1.1px,
+    transparent 1.6px
+  );
+  background-position: 8px 8px;
+  background-size: 16px 16px;
+  mask-image: radial-gradient(
+    ellipse 80% 70% at 70% 90%,
+    #000 20%,
+    transparent 75%
+  );
+}
+
+@media (width >= 64rem) {
+  .stage-dots::before {
+    mask-image: radial-gradient(
+      ellipse 58% 44% at 50% 40%,
+      #000 25%,
+      transparent 78%
+    );
+  }
+}
+
+/*
+ * The showcase never scrolls or crops (owner's round 2): from `lg` the panel is
+ * the window's height and its composition shrinks with that height, so the
+ * headline always fits. The piece that matters least leaves first (`.stage-extra`).
+ */
+.stage-fit {
+  --stage-h: 1;
+  --stage-w: 1;
+  transform: scale(calc(var(--stage-h) * var(--stage-w)));
+}
+
+@media (width >= 64rem) and (width < 80rem) {
+  .stage-fit {
+    --stage-w: 0.8;
+  }
+}
+
+@media (width >= 64rem) and (height < 900px) {
+  .stage-fit {
+    --stage-h: 0.9;
+  }
+}
+
+@media (width >= 64rem) and (height < 800px) {
+  .stage-fit {
+    --stage-h: 0.8;
+  }
+}
+
+@media (width >= 64rem) and (height < 720px) {
+  .stage-fit {
+    --stage-h: 0.7;
+  }
+
+  .stage-extra {
+    display: none;
+  }
+}
+
+@utility piece-shadow {
+  box-shadow: var(--piece-shadow);
+}
+
+/* The receipt's paper floats as a cut-out (a mask), so its shadow is a filter. */
+@utility piece-drop {
+  filter: drop-shadow(0 24px 30px rgb(4 22 10 / 0.45))
+    drop-shadow(0 6px 10px rgb(4 22 10 / 0.25));
+}
+
+.dark .piece-drop {
+  filter: drop-shadow(0 24px 30px rgb(0 0 0 / 0.6))
+    drop-shadow(0 6px 10px rgb(0 0 0 / 0.4));
+}
+
+/* The perforated edge of the receipt: a row of bites out of its bottom. */
+@utility perforated {
+  --bite: 6px;
+  mask:
+    radial-gradient(circle var(--bite) at 50% 100%, #0000 97%, #000 100%) 50% 0
+    / calc(2 * var(--bite) + 6px) 100% repeat-x;
+}
+
+/* One entrance (mockup 19, decision 9): the pieces rise into place, in sequence. */
+@media (prefers-reduced-motion: no-preference) {
+  .piece-rise {
+    animation: piece-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--rise-delay, 0s);
+  }
+}
+
+@keyframes piece-rise {
+  from {
+    opacity: 0;
+    translate: 0 18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* On paper the showcase is just the page: no green, no dots. */
+@media print {
+  .stage-dots::before {
+    display: none;
+  }
+}
+
+/* ⌘K: a 150 ms fade with a 4 px rise; with reduced motion, only the fade. */
+.palette-in[data-state="open"] {
+  animation: palette-in 150ms ease-out both;
+}
+
+/* `transform`, not `translate`: Tailwind centers the panel with `translate`. */
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-in[data-state="open"] {
+    animation-name: palette-fade;
+  }
+
+  @keyframes palette-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

@@ -61,6 +61,7 @@ describe("decline invite", () => {
       })
     );
     expect(dec.status).toBe(200);
+    expect((await dec.json()).status).toBe("declined");
 
     const notifs = await db
       .select()

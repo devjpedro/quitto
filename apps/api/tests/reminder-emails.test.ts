@@ -47,76 +47,116 @@ function recorder() {
   };
 }
 const webOrigin = "https://app.test";
+/** The sweep is global (every open installment of every active contract): its cost follows the database, not the test (see notifications.test.ts). */
+const SWEEP_TIMEOUT_MS = 60_000;
 
 describe("e-mail de lembrete na varredura", () => {
-  it("chave global desligada → nenhum envio", async () => {
-    const email = await userWithOverdueContract("rem-off", true);
-    const r = recorder();
-    await runReminderSweep({ emailEnabled: false, send: r.send, webOrigin });
-    expect(r.sent.filter((s) => s.to === email)).toHaveLength(0);
-  });
+  it(
+    "chave global desligada → nenhum envio",
+    async () => {
+      const email = await userWithOverdueContract("rem-off", true);
+      const r = recorder();
+      await runReminderSweep({ emailEnabled: false, send: r.send, webOrigin });
+      expect(r.sent.filter((s) => s.to === email)).toHaveLength(0);
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-  it("ligada + opt-in → 1 e-mail com os itens; 2ª varredura → nada", async () => {
-    const email = await userWithOverdueContract("rem-on", true);
-    const r1 = recorder();
-    await runReminderSweep({ emailEnabled: true, send: r1.send, webOrigin });
-    const mine = r1.sent.filter((s) => s.to === email);
-    expect(mine).toHaveLength(1);
-    expect(mine[0]?.html).toContain("Contrato rem-on");
-    expect(mine[0]?.html).toContain("https://app.test/settings");
+  it(
+    "ligada + opt-in → 1 e-mail com os itens; 2ª varredura → nada",
+    async () => {
+      const email = await userWithOverdueContract("rem-on", true);
+      const r1 = recorder();
+      await runReminderSweep({ emailEnabled: true, send: r1.send, webOrigin });
+      const mine = r1.sent.filter((s) => s.to === email);
+      expect(mine).toHaveLength(1);
+      expect(mine[0]?.html).toContain("Contrato rem-on");
+      expect(mine[0]?.html).toContain("https://app.test/settings/reminders");
 
-    const r2 = recorder();
-    await runReminderSweep({ emailEnabled: true, send: r2.send, webOrigin });
-    expect(r2.sent.filter((s) => s.to === email)).toHaveLength(0);
-  });
+      const r2 = recorder();
+      await runReminderSweep({ emailEnabled: true, send: r2.send, webOrigin });
+      expect(r2.sent.filter((s) => s.to === email)).toHaveLength(0);
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-  it("ligada + opt-out → nenhum envio", async () => {
-    const email = await userWithOverdueContract("rem-out", false);
-    const r = recorder();
-    await runReminderSweep({ emailEnabled: true, send: r.send, webOrigin });
-    expect(r.sent.filter((s) => s.to === email)).toHaveLength(0);
-  });
+  it(
+    "cada pessoa recebe no idioma da conta; sem idioma, pt-BR",
+    async () => {
+      const en = await userWithOverdueContract("rem-en", true);
+      const none = await userWithOverdueContract("rem-none", true);
+      await db.update(user).set({ locale: "en-US" }).where(eq(user.email, en));
+      const r = recorder();
+      await runReminderSweep({ emailEnabled: true, send: r.send, webOrigin });
+      expect(r.sent.find((s) => s.to === en)?.html).toContain(
+        '<html lang="en-US">'
+      );
+      expect(r.sent.find((s) => s.to === none)?.html).toContain(
+        '<html lang="pt-BR">'
+      );
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-  it("falha de envio pra um usuário não impede o outro nem as notificações in-app", async () => {
-    const a = await userWithOverdueContract("rem-fail-a", true);
-    const b = await userWithOverdueContract("rem-fail-b", true);
-    const delivered: string[] = [];
-    const result = await runReminderSweep({
-      emailEnabled: true,
-      webOrigin,
-      send: (i) => {
-        if (i.to === a) {
-          return Promise.reject(new Error("boom"));
-        }
-        delivered.push(i.to);
-        return Promise.resolve();
-      },
-    });
-    expect(result.emailsSent).toBeGreaterThanOrEqual(1);
-    expect(delivered).toContain(b);
-    const [rowA] = await db.select().from(user).where(eq(user.email, a));
-    const notifsA = await db
-      .select()
-      .from(notification)
-      .where(eq(notification.userId, rowA?.id as string));
-    expect(notifsA.length).toBeGreaterThan(0);
-  });
+  it(
+    "ligada + opt-out → nenhum envio",
+    async () => {
+      const email = await userWithOverdueContract("rem-out", false);
+      const r = recorder();
+      await runReminderSweep({ emailEnabled: true, send: r.send, webOrigin });
+      expect(r.sent.filter((s) => s.to === email)).toHaveLength(0);
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-  it("send lançando de forma síncrona pra todos → varredura resolve, notificações persistidas", async () => {
-    const a = await userWithOverdueContract("rem-throw", true);
-    const result = await runReminderSweep({
-      emailEnabled: true,
-      webOrigin,
-      send: () => {
-        throw new Error("sync boom");
-      },
-    });
-    expect(result.emailsSent).toBe(0);
-    const [rowA] = await db.select().from(user).where(eq(user.email, a));
-    const notifsA = await db
-      .select()
-      .from(notification)
-      .where(eq(notification.userId, rowA?.id as string));
-    expect(notifsA.length).toBeGreaterThan(0);
-  });
+  it(
+    "falha de envio pra um usuário não impede o outro nem as notificações in-app",
+    async () => {
+      const a = await userWithOverdueContract("rem-fail-a", true);
+      const b = await userWithOverdueContract("rem-fail-b", true);
+      const delivered: string[] = [];
+      const result = await runReminderSweep({
+        emailEnabled: true,
+        webOrigin,
+        send: (i) => {
+          if (i.to === a) {
+            return Promise.reject(new Error("boom"));
+          }
+          delivered.push(i.to);
+          return Promise.resolve();
+        },
+      });
+      expect(result.emailsSent).toBeGreaterThanOrEqual(1);
+      expect(delivered).toContain(b);
+      const [rowA] = await db.select().from(user).where(eq(user.email, a));
+      const notifsA = await db
+        .select()
+        .from(notification)
+        .where(eq(notification.userId, rowA?.id as string));
+      expect(notifsA.length).toBeGreaterThan(0);
+    },
+    SWEEP_TIMEOUT_MS
+  );
+
+  it(
+    "send lançando de forma síncrona pra todos → varredura resolve, notificações persistidas",
+    async () => {
+      const a = await userWithOverdueContract("rem-throw", true);
+      const result = await runReminderSweep({
+        emailEnabled: true,
+        webOrigin,
+        send: () => {
+          throw new Error("sync boom");
+        },
+      });
+      expect(result.emailsSent).toBe(0);
+      const [rowA] = await db.select().from(user).where(eq(user.email, a));
+      const notifsA = await db
+        .select()
+        .from(notification)
+        .where(eq(notification.userId, rowA?.id as string));
+      expect(notifsA.length).toBeGreaterThan(0);
+    },
+    SWEEP_TIMEOUT_MS
+  );
 });

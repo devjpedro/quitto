@@ -82,7 +82,7 @@ describe("PIX do recebedor", () => {
     expect(result.pix.copiaECola).toMatch(PIX_CRC_SUFFIX);
   });
 
-  it("fica sem PIX quando vendedor não tem conta nem override", async () => {
+  it("fica sem PIX quando o contato não tem chave", async () => {
     const ownerCookie = await signUpCookie(uniqueEmail("g2-nolink"));
     const contractId = await createContract(ownerCookie, "buyer");
     await db.insert(participant).values({
@@ -92,27 +92,23 @@ describe("PIX do recebedor", () => {
       linkedUserId: null,
     });
     expect((await detail(ownerCookie, contractId)).pix).toBeNull();
+    expect((await detail(ownerCookie, contractId)).pixMissing).toBe(true);
   });
 
-  it("override vence e mantém o nome do contato", async () => {
-    const ownerCookie = await signUpCookie(uniqueEmail("g2-override"));
+  it("a chave guardada no contato vale e mantém o nome do contato", async () => {
+    const ownerCookie = await signUpCookie(uniqueEmail("g2-contact"));
     const contractId = await createContract(ownerCookie, "buyer");
     await db.insert(participant).values({
       contractId,
       displayName: "João Recebe",
       role: "seller",
       linkedUserId: null,
+      pixKey: "joao@example.com",
     });
-    await app.handle(
-      new Request(`http://localhost/api/contracts/${contractId}`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", cookie: ownerCookie },
-        body: JSON.stringify({ pixKey: "joao@example.com" }),
-      })
-    );
     const result = await detail(ownerCookie, contractId);
     expect(result.pix.copiaECola).toContain("joao@example.com");
     expect(result.pix.payToName).toBe("João Recebe");
+    expect(result.pix.source).toBe("contact");
   });
 
   it("dono vendedor continua usando a própria chave e nome", async () => {

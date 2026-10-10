@@ -1,76 +1,105 @@
-import { Check, ChevronDown } from "lucide-react";
+import { CaretDown, Check } from "@phosphor-icons/react";
 import { Select as SelectPrimitive } from "radix-ui";
-import type { ComponentProps } from "react";
+import { Fragment, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-export const Select = SelectPrimitive.Root;
-export const SelectValue = SelectPrimitive.Value;
-
-export function SelectTrigger({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Trigger>) {
-  return (
-    <SelectPrimitive.Trigger
-      className={cn(
-        "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors focus:outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDown className="size-4 opacity-60" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-  );
+export interface SelectOption {
+  label: string;
+  value: string;
 }
 
-export function SelectContent({
+export interface SelectGroup {
+  /** The group's heading ("2026"); omit for a flat list. */
+  label?: string;
+  options: readonly SelectOption[];
+}
+
+/**
+ * The app's own select (Radix, in the Tátil look): a quiet trigger with a
+ * caret, and a floating list with the chosen option ticked. Keyboard and
+ * type-ahead come from Radix; the list opens beside the trigger on a phone
+ * too, with 44 px rows.
+ */
+export function Select({
   className,
-  children,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Content>) {
+  display,
+  groups,
+  label,
+  onValueChange,
+  value,
+}: {
+  className?: string;
+  /** What the trigger shows; by default the chosen option's label. */
+  display?: ReactNode;
+  groups: readonly SelectGroup[];
+  /** The accessible name: the trigger has no visible label of its own. */
+  label: string;
+  onValueChange: (value: string) => void;
+  value: string;
+}) {
+  const chosen = groups
+    .flatMap((group) => group.options)
+    .find((option) => option.value === value);
   return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
+    <SelectPrimitive.Root onValueChange={onValueChange} value={value}>
+      <SelectPrimitive.Trigger
+        aria-label={label}
         className={cn(
-          "data-[state=closed]:fade-out data-[state=open]:fade-in material-overlay z-50 overflow-hidden rounded-md border border-border-strong text-foreground shadow-[var(--shadow-lg)] duration-[var(--dur-base)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in",
+          "inline-flex h-11 items-center gap-1.5 rounded-control pr-2.5 pl-3 font-display font-semibold text-base text-ink tracking-[-0.01em] transition-colors hover:bg-surface-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand data-[state=open]:bg-surface-card md:h-8 md:text-[15px]",
           className
         )}
-        position="popper"
-        sideOffset={4}
-        {...props}
       >
-        <SelectPrimitive.Viewport className="p-1">
-          {children}
-        </SelectPrimitive.Viewport>
-      </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
-  );
-}
-
-export function SelectItem({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof SelectPrimitive.Item>) {
-  return (
-    <SelectPrimitive.Item
-      className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50",
-        className
-      )}
-      {...props}
-    >
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      <span className="absolute right-2 flex items-center">
-        <SelectPrimitive.ItemIndicator>
-          <Check className="size-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-    </SelectPrimitive.Item>
+        <SelectPrimitive.Value>
+          {display ?? chosen?.label}
+        </SelectPrimitive.Value>
+        <SelectPrimitive.Icon asChild>
+          <CaretDown
+            aria-hidden="true"
+            className="text-ink-muted"
+            size={14}
+            weight="bold"
+          />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          className="z-[70] max-h-[min(22rem,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-card bg-surface p-1.5 text-ink shadow-float ring-1 ring-ink/[.06]"
+          collisionPadding={12}
+          position="popper"
+          sideOffset={8}
+        >
+          <SelectPrimitive.Viewport className="max-h-[inherit]">
+            {groups.map((group, index) => (
+              <Fragment key={group.label ?? index}>
+                {index > 0 ? (
+                  <SelectPrimitive.Separator className="mx-1 my-1.5 h-px bg-divider" />
+                ) : null}
+                <SelectPrimitive.Group>
+                  {group.label ? (
+                    <SelectPrimitive.Label className="px-2.5 pt-1.5 pb-1 text-ink-muted text-xs tabular-nums">
+                      {group.label}
+                    </SelectPrimitive.Label>
+                  ) : null}
+                  {group.options.map((option) => (
+                    <SelectPrimitive.Item
+                      className="flex h-11 cursor-default select-none items-center justify-between gap-6 rounded-control px-2.5 text-sm outline-none data-[highlighted]:bg-surface-card data-[state=checked]:font-semibold md:h-10"
+                      key={option.value}
+                      value={option.value}
+                    >
+                      <SelectPrimitive.ItemText>
+                        {option.label}
+                      </SelectPrimitive.ItemText>
+                      <SelectPrimitive.ItemIndicator>
+                        <Check aria-hidden="true" size={16} weight="bold" />
+                      </SelectPrimitive.ItemIndicator>
+                    </SelectPrimitive.Item>
+                  ))}
+                </SelectPrimitive.Group>
+              </Fragment>
+            ))}
+          </SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 }

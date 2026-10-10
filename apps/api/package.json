@@ -14,7 +14,8 @@
     "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "cron:reminders": "bun run src/cron/reminders.ts"
+    "cron:reminders": "bun run src/cron/reminders.ts",
+    "seed:demo": "bun run src/scripts/seed-demo.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1067.0",

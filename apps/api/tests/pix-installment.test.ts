@@ -85,7 +85,7 @@ describe("GET /installments/:id → pix (gate)", () => {
     expect((await getInstallment(cookie, inst)).pix).toBeNull();
   });
 
-  it("override do contrato vence o default do perfil", async () => {
+  it("o override do contrato não vale mais: vale a chave da conta de quem recebe", async () => {
     const cookie = await signUpCookie(uniqueEmail("pixoverride"));
     await setProfilePix(cookie, "perfil@example.com");
     const id = await createContract(cookie, "seller");
@@ -98,8 +98,9 @@ describe("GET /installments/:id → pix (gate)", () => {
     );
     const inst = await firstInstallmentId(cookie, id);
     const detail = await getInstallment(cookie, inst);
-    expect(detail.pix.copiaECola).toContain("override@example.com");
-    expect(detail.pix.copiaECola).not.toContain("perfil@example.com");
+    expect(detail.pix.copiaECola).toContain("perfil@example.com");
+    expect(detail.pix.copiaECola).not.toContain("override@example.com");
+    expect(detail.pix.source).toBe("account");
   });
 
   it("seller + chave no perfil + parcela paga → pix null", async () => {

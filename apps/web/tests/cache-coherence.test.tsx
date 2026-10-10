@@ -16,10 +16,7 @@ vi.mock("@/lib/api", () => {
   return { api: { api: { contracts } } };
 });
 
-import {
-  useCreateContractMutation,
-  useUpdateInstallmentMutation,
-} from "../src/hooks/use-contract-mutations";
+import { useCreateContract } from "../src/features/contract-wizard/api";
 
 function wrap(client: ReturnType<typeof makeTestQueryClient>) {
   return ({ children }: { children: ReactNode }) => (
@@ -28,10 +25,10 @@ function wrap(client: ReturnType<typeof makeTestQueryClient>) {
 }
 
 describe("cache coherence", () => {
-  it("createContract invalidates the dashboard", async () => {
+  it("createContract invalidates the home", async () => {
     const client = makeTestQueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
-    const { result } = renderHook(() => useCreateContractMutation(), {
+    const { result } = renderHook(() => useCreateContract(), {
       wrapper: wrap(client),
     });
     await result.current.mutateAsync({
@@ -39,29 +36,14 @@ describe("cache coherence", () => {
       ownerRole: "buyer",
       requiresConfirmation: false,
       schedule: {
-        mode: "auto",
+        mode: "split",
         totalAmountCents: 1000,
         installmentsCount: 1,
         firstDueDate: "2026-07-10",
       },
     });
     await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
-    );
-  });
-
-  it("updateInstallment invalidates the dashboard", async () => {
-    const client = makeTestQueryClient();
-    const spy = vi.spyOn(client, "invalidateQueries");
-    const { result } = renderHook(() => useUpdateInstallmentMutation("c1"), {
-      wrapper: wrap(client),
-    });
-    await result.current.mutateAsync({
-      installmentId: "i1",
-      body: { amountCents: 500 },
-    });
-    await waitFor(() =>
-      expect(spy).toHaveBeenCalledWith({ queryKey: ["dashboard"] })
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["home"] })
     );
   });
 });

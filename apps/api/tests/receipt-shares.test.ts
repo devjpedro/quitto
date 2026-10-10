@@ -7,6 +7,7 @@ import {
   contract,
   installment,
   receiptShare,
+  user,
 } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
@@ -262,6 +263,24 @@ describe("recibo público", () => {
     expect(res.headers.get("x-robots-tag")).toBe("noindex");
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("%PDF");
+  });
+
+  it("o PDF público sai no idioma do dono do contrato, não no do visitante", async () => {
+    const email = uniqueEmail("rs-lang");
+    const cookie = await signUpCookie(email);
+    await db.update(user).set({ locale: "en-US" }).where(eq(user.email, email));
+    const { installmentId } = await createPaidInstallment(cookie);
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+    const res = await app.handle(
+      new Request(`http://localhost/api/public/receipts/${token}/receipt.pdf`, {
+        headers: { "accept-language": "pt-BR" },
+      })
+    );
+    expect(res.headers.get("content-disposition")).toBe(
+      'attachment; filename="receipt-aluguel-cia-installment-1.pdf"'
+    );
   });
 
   it("token inexistente, revogado ou parcela não-paga → 404 (JSON e PDF)", async () => {

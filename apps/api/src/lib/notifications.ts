@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { db } from "../db/client";
 import { contract, notification, participant } from "../db/schema";
+import { inBatches, STATEMENT_BATCH } from "./batches";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Exec = typeof db | Tx;
@@ -97,30 +98,34 @@ export async function recipientsFor(
   return [...set];
 }
 
+function toRow(i: NotificationInput) {
+  return {
+    userId: i.userId,
+    type: i.type,
+    contractId: i.contractId,
+    installmentId: i.installmentId ?? null,
+    metadata: i.metadata ?? null,
+    dedupeKey: i.dedupeKey ?? null,
+  };
+}
+
 /**
- * Inserts notifications in bulk, joining an existing tx. `onConflictDoNothing`
- * makes reminder dedupeKeys idempotent (event rows leave dedupeKey null).
+ * Inserts notifications in bulk, joining an existing tx, one statement per
+ * `batch` rows (lib/batches.ts). `onConflictDoNothing` makes reminder
+ * dedupeKeys idempotent (event rows leave dedupeKey null).
  */
 export async function createNotifications(
   exec: Exec,
-  inputs: NotificationInput[]
+  inputs: NotificationInput[],
+  batch = STATEMENT_BATCH
 ): Promise<void> {
-  if (inputs.length === 0) {
-    return;
-  }
-  await exec
-    .insert(notification)
-    .values(
-      inputs.map((i) => ({
-        userId: i.userId,
-        type: i.type,
-        contractId: i.contractId,
-        installmentId: i.installmentId ?? null,
-        metadata: i.metadata ?? null,
-        dedupeKey: i.dedupeKey ?? null,
-      }))
-    )
-    .onConflictDoNothing();
+  await inBatches(inputs, batch, async (rows) => {
+    await exec
+      .insert(notification)
+      .values(rows.map(toRow))
+      .onConflictDoNothing();
+    return [];
+  });
 }
 
 export interface InsertedNotification {
@@ -131,32 +136,23 @@ export interface InsertedNotification {
 }
 
 /** Como createNotifications, mas devolve só as linhas de fato inseridas (dedupe já filtrado). */
-export async function insertNotificationsReturning(
+export function insertNotificationsReturning(
   exec: Exec,
-  inputs: NotificationInput[]
+  inputs: NotificationInput[],
+  batch = STATEMENT_BATCH
 ): Promise<InsertedNotification[]> {
-  if (inputs.length === 0) {
-    return [];
-  }
-  return await exec
-    .insert(notification)
-    .values(
-      inputs.map((i) => ({
-        userId: i.userId,
-        type: i.type,
-        contractId: i.contractId,
-        installmentId: i.installmentId ?? null,
-        metadata: i.metadata ?? null,
-        dedupeKey: i.dedupeKey ?? null,
-      }))
-    )
-    .onConflictDoNothing()
-    .returning({
-      userId: notification.userId,
-      type: notification.type,
-      contractId: notification.contractId,
-      installmentId: notification.installmentId,
-    });
+  return inBatches(inputs, batch, (rows) =>
+    exec
+      .insert(notification)
+      .values(rows.map(toRow))
+      .onConflictDoNothing()
+      .returning({
+        userId: notification.userId,
+        type: notification.type,
+        contractId: notification.contractId,
+        installmentId: notification.installmentId,
+      })
+  );
 }
 
 /** Convenience: resolve recipients for a target and build event notifications. */

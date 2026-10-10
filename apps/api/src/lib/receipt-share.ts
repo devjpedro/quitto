@@ -39,7 +39,7 @@ const UNAVAILABLE = "Recibo não disponível";
  */
 export async function resolvePublicReceipt(
   token: string
-): Promise<ReceiptModel> {
+): Promise<{ model: ReceiptModel; ownerId: string }> {
   const [share] = await db
     .select({ installmentId: receiptShare.installmentId })
     .from(receiptShare)
@@ -60,6 +60,7 @@ export async function resolvePublicReceipt(
     .select({
       title: contract.title,
       installmentsCount: contract.installmentsCount,
+      ownerId: contract.ownerId,
     })
     .from(contract)
     .where(eq(contract.id, inst.contractId))
@@ -71,7 +72,10 @@ export async function resolvePublicReceipt(
     .select({ role: participant.role, displayName: participant.displayName })
     .from(participant)
     .where(eq(participant.contractId, inst.contractId));
-  return buildReceiptModel(c, toModelInstallment(inst), people);
+  return {
+    model: buildReceiptModel(c, toModelInstallment(inst), people),
+    ownerId: c.ownerId,
+  };
 }
 
 /** Achata o modelo nos campos permitidos — nunca espalhar `...model`. */

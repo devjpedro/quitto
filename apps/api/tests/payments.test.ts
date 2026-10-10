@@ -134,7 +134,17 @@ describe.if(configured)("confirm upload (sem confirmação)", () => {
     const cId = await createContract(cookie, false);
     const iId = await firstInstallmentId(cookie, cId);
     const res = await uploadProof(cookie, iId);
-    expect((await res.json()).status).toBe("paid");
+    const body = await res.json();
+    expect(body).toMatchObject({
+      id: iId,
+      contractId: cId,
+      sequence: 1,
+      amountCents: 1000,
+      dueDate: "2026-07-10",
+      status: "paid",
+      confirmedAt: null,
+    });
+    expect(typeof body.paidAt).toBe("string");
   });
 });
 
@@ -217,6 +227,9 @@ describe.if(configured)("GET installment detail", () => {
     expect(typeof body.events[0].actorUserId).toBe("string");
     expect(typeof body.events[0].actorName).toBe("string");
     expect(body.events[0].metadata.fileName).toBe("c.pdf");
+    // The Histórico reads the size from the event, not from the proof row.
+    expect(body.events[0].metadata.sizeBytes).toBe(body.proofs[0].sizeBytes);
+    expect(body.events[0].metadata.sizeBytes).toBeGreaterThan(0);
   });
 });
 
@@ -234,6 +247,26 @@ describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
         body: JSON.stringify({
           objectKey,
           fileName: "evil.pdf",
+          mimeType: "application/pdf",
+        }),
+      })
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it("rejeita uma chave que existe no bucket mas não é desta parcela (-> 422)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("prefix"));
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const objectKey = `proofs/${cId}/outra-parcela/${crypto.randomUUID()}-x.pdf`;
+    await putObjectRaw(objectKey, "application/pdf");
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/proofs`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          objectKey,
+          fileName: "x.pdf",
           mimeType: "application/pdf",
         }),
       })

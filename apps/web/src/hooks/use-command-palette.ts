@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 /**
  * Estado da paleta + atalho global ⌘K / Ctrl+K. Registrado UMA vez, no
- * `_app.tsx` — mesmo contrato do ⌘\ em `use-sidebar.ts`.
+ * `_app.tsx`: um 2º listener faria o toggle se anular.
  */
 export function useCommandPalette(): {
   open: boolean;

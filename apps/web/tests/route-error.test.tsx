@@ -1,11 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RouteError } from "@/components/route-error";
-
-const RETRY_BUTTON = /tentar de novo/i;
+import { renderWithProviders as render } from "./test-utils";
 
 describe("RouteError", () => {
-  it("mostra mensagem amigável e re-tenta ao clicar", () => {
+  it("mostra a frase e tenta de novo ao clicar", () => {
     const reset = vi.fn();
     render(
       <RouteError
@@ -14,8 +13,11 @@ describe("RouteError", () => {
         reset={reset}
       />
     );
-    expect(screen.getByText("Ops, algo deu errado")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: RETRY_BUTTON }));
+    expect(
+      screen.getByRole("heading", { name: "Algo deu errado" })
+    ).toBeVisible();
+    expect(screen.getByText("Algo deu errado. Tente de novo.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
     expect(reset).toHaveBeenCalledTimes(1);
   });
 });

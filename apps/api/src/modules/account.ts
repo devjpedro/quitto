@@ -11,6 +11,8 @@ import {
   user as userTable,
 } from "../db/schema";
 import { buildUserExport } from "../lib/account-export";
+import { exportFilename } from "../lib/documents/labels";
+import { localeFromHeaders, pickLocale, userLocale } from "../lib/locale";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
 
@@ -127,10 +129,14 @@ export const accountModule = new Elysia({ prefix: "/api" })
       })),
     });
 
+    const locale = pickLocale(
+      await userLocale(user.id),
+      localeFromHeaders(request.headers)
+    );
     return new Response(JSON.stringify(payload, null, 2), {
       headers: {
         "content-type": "application/json; charset=utf-8",
-        "content-disposition": 'attachment; filename="quitto-meus-dados.json"',
+        "content-disposition": `attachment; filename="${exportFilename(locale)}"`,
       },
     });
   })

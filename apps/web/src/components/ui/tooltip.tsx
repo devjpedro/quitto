@@ -1,48 +1,35 @@
 import { Tooltip as TooltipPrimitive } from "radix-ui";
-import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
-export function TooltipProvider({
-  delayDuration = 200,
-  ...props
-}: ComponentProps<typeof TooltipPrimitive.Provider>) {
+/**
+ * A short label for an icon-only control, on hover and on keyboard focus
+ * (Radix: it also names the control for a screen reader through
+ * `aria-describedby`, so give the control its own `aria-label` too). Dark
+ * with inverted text, the control's radius, the float shadow.
+ */
+export function Tooltip({
+  children,
+  label,
+  side = "bottom",
+}: {
+  children: ReactNode;
+  label: string;
+  side?: "top" | "right" | "bottom" | "left";
+}) {
   return (
-    <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delayDuration={delayDuration}
-      {...props}
-    />
-  );
-}
-
-export function Tooltip(props: ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
-}
-
-export function TooltipTrigger(
-  props: ComponentProps<typeof TooltipPrimitive.Trigger>
-) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
-
-export function TooltipContent({
-  className,
-  sideOffset = 6,
-  collisionPadding = 8,
-  ...props
-}: ComponentProps<typeof TooltipPrimitive.Content>) {
-  return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        className={cn(
-          "data-[state=closed]:fade-out data-[state=open]:fade-in data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-50 origin-[var(--radix-tooltip-content-transform-origin)] rounded-md bg-foreground px-2 py-1 text-background text-xs shadow-[var(--shadow-md)] duration-[var(--dur-fast)] ease-[var(--ease-out)] data-[state=closed]:animate-out data-[state=open]:animate-in",
-          className
-        )}
-        collisionPadding={collisionPadding}
-        data-slot="tooltip-content"
-        sideOffset={sideOffset}
-        {...props}
-      />
-    </TooltipPrimitive.Portal>
+    <TooltipPrimitive.Provider delayDuration={200}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            className="z-50 rounded-control bg-ink px-2.5 py-1.5 text-ink-inverse text-xs shadow-float"
+            side={side}
+            sideOffset={6}
+          >
+            {label}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }

@@ -1,36 +1,24 @@
-import { randomBytes } from "node:crypto";
-import { PARTICIPANT_ROLE } from "@quitto/shared";
+import { PARTICIPANT_ROLE, parsePixKey } from "@quitto/shared";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { contract, invite, participant } from "../db/schema";
-import { env } from "../env";
 import { getContractRole } from "../lib/contract-access";
 import { normalizeEmail } from "../lib/email";
-import { inviteEmail } from "../lib/email-templates";
-import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
-import { sendEmail } from "../lib/mailer";
-import { ROLE_LABEL } from "../lib/role-label";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "../lib/errors";
+import {
+  inviteExpiry,
+  newInviteToken,
+  sendInviteEmail,
+  trySendInviteEmail,
+} from "../lib/invite-mail";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
-
-const INVITE_TTL_DAYS = 7;
-
-async function sendInviteEmail(args: {
-  email: string;
-  token: string;
-  inviterName: string;
-  contractTitle: string;
-  role: string;
-}): Promise<void> {
-  const acceptUrl = `${env.WEB_ORIGIN}/invites/${args.token}`;
-  const { subject, html } = inviteEmail({
-    acceptUrl,
-    inviterName: args.inviterName,
-    contractTitle: args.contractTitle,
-    roleLabel: ROLE_LABEL[args.role] ?? args.role,
-  });
-  await sendEmail({ to: args.email, subject, html });
-}
 
 /**
  * buyer/seller são papéis únicos por contrato; viewer é ilimitado.
@@ -83,6 +71,10 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       await requireOwner(user.id, params.id);
 
       await assertRoleAvailable(params.id, body.role);
+      // Quem acompanha sem e-mail não teria como ser convidado depois (revisão T8, I4).
+      if (body.role === PARTICIPANT_ROLE.viewer && !body.email?.trim()) {
+        throw new ValidationError("Quem acompanha precisa de um e-mail");
+      }
 
       const [created] = await db
         .insert(participant)
@@ -98,10 +90,12 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { id: created.id };
     },
     {
-      params: t.Object({ id: t.String() }),
+      params: t.Object({ id: idParam }),
       body: t.Object({
         displayName: t.String({ minLength: 1, maxLength: 120 }),
         role: roleSchema,
+        // Só confere quem acompanha; o convite em si vai por /invite.
+        email: t.Optional(t.Union([t.String({ format: "email" }), t.Null()])),
       }),
       response: t.Object({ id: t.String() }),
     }
@@ -135,7 +129,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { ok: true as const };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       response: t.Object({ ok: t.Literal(true) }),
     }
   )
@@ -177,7 +171,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       return { id: target.id, role: body.role };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       body: t.Object({ role: roleSchema }),
       response: t.Object({ id: t.String(), role: roleSchema }),
     }
@@ -205,10 +199,8 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Participante já vinculado a um usuário");
       }
 
-      const token = randomBytes(32).toString("hex");
-      const expiresAt = new Date(
-        Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
-      );
+      const token = newInviteToken();
+      const expiresAt = inviteExpiry();
       await db.insert(invite).values({
         contractId: params.id,
         participantId: params.participantId,
@@ -224,22 +216,20 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         .limit(1);
       // Best-effort: a mail failure must not orphan the invite — the owner
       // still gets the token (copy-link fallback) and can resend.
-      try {
-        await sendInviteEmail({
-          email: normalizeEmail(body.email),
-          token,
-          inviterName: user.name ?? "Alguém",
-          contractTitle: c?.title ?? "um contrato",
-          role: target.role,
-        });
-      } catch (err) {
-        console.warn(`[invite] falha ao enviar e-mail do convite: ${err}`);
-      }
+      await trySendInviteEmail({
+        email: normalizeEmail(body.email),
+        token,
+        inviterId: user.id,
+        inviterName: user.name ?? "",
+        contractId: params.id,
+        contractTitle: c?.title ?? "",
+        role: target.role,
+      });
 
       return { token, expiresAt: expiresAt.toISOString() };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       body: t.Object({
         email: t.String({ format: "email", minLength: 3, maxLength: 200 }),
       }),
@@ -257,6 +247,7 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         .from(invite)
         .where(
           and(
+            eq(invite.contractId, params.id),
             eq(invite.participantId, params.participantId),
             isNull(invite.acceptedAt),
             isNull(invite.declinedAt)
@@ -268,20 +259,31 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         throw new NotFoundError("Nenhum convite pendente para reenviar");
       }
 
-      const token = randomBytes(32).toString("hex");
-      const expiresAt = new Date(
-        Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000
-      );
+      const [target] = await db
+        .select({
+          linkedUserId: participant.linkedUserId,
+          role: participant.role,
+        })
+        .from(participant)
+        .where(
+          and(
+            eq(participant.id, params.participantId),
+            eq(participant.contractId, params.id)
+          )
+        )
+        .limit(1);
+      // A copy of an invite whose slot another copy already filled: nothing to resend.
+      if (target?.linkedUserId) {
+        throw new ConflictError("Esta vaga já foi preenchida");
+      }
+
+      // Owner's decision 15: the same invite, the same link, a fresh deadline.
+      const expiresAt = inviteExpiry();
       await db
         .update(invite)
-        .set({ token, expiresAt })
+        .set({ expiresAt })
         .where(eq(invite.id, pending.id));
 
-      const [target] = await db
-        .select({ role: participant.role })
-        .from(participant)
-        .where(eq(participant.id, params.participantId))
-        .limit(1);
       const [c] = await db
         .select({ title: contract.title })
         .from(contract)
@@ -290,16 +292,67 @@ export const participantsModule = new Elysia({ prefix: "/api" })
 
       await sendInviteEmail({
         email: pending.email,
-        token,
-        inviterName: user.name ?? "Alguém",
-        contractTitle: c?.title ?? "um contrato",
+        token: pending.token,
+        inviterId: user.id,
+        inviterName: user.name ?? "",
+        contractId: params.id,
+        contractTitle: c?.title ?? "",
         role: target?.role ?? "viewer",
       });
 
-      return { token, expiresAt: expiresAt.toISOString() };
+      return { token: pending.token, expiresAt: expiresAt.toISOString() };
     },
     {
-      params: t.Object({ id: t.String(), participantId: t.String() }),
+      params: t.Object({ id: idParam, participantId: idParam }),
       response: t.Object({ token: t.String(), expiresAt: t.String() }),
+    }
+  )
+  .patch(
+    "/contracts/:id/participants/:participantId/pix-key",
+    async ({ request, params, body }) => {
+      const { user } = await requireAuth(request.headers);
+      await requireOwner(user.id, params.id);
+      const [target] = await db
+        .select()
+        .from(participant)
+        .where(
+          and(
+            eq(participant.id, params.participantId),
+            eq(participant.contractId, params.id)
+          )
+        )
+        .limit(1);
+      if (!target) {
+        throw new NotFoundError("Participante não encontrado");
+      }
+      if (target.role !== PARTICIPANT_ROLE.seller) {
+        throw new ValidationError("Só a chave de quem recebe fica no contato");
+      }
+      if (target.linkedUserId) {
+        throw new ValidationError("Com conta, vale a chave da conta");
+      }
+      let pixKey: string | null = null;
+      if (body.pixKey && body.pixKey.trim() !== "") {
+        try {
+          pixKey = parsePixKey(body.pixKey).value;
+        } catch (e) {
+          throw new ValidationError((e as Error).message);
+        }
+      }
+      await db
+        .update(participant)
+        .set({ pixKey })
+        .where(eq(participant.id, target.id));
+      return { id: target.id, pixKey };
+    },
+    {
+      params: t.Object({ id: idParam, participantId: idParam }),
+      body: t.Object({
+        pixKey: t.Union([t.String({ maxLength: 140 }), t.Null()]),
+      }),
+      response: t.Object({
+        id: t.String(),
+        pixKey: t.Union([t.String(), t.Null()]),
+      }),
     }
   );

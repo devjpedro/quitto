@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import { addMonths, todayISO } from "@quitto/shared";
+import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
+import { db } from "../src/db/client";
+import { installment } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function createContract(cookie: string) {
@@ -143,5 +147,52 @@ describe("PATCH installment", () => {
       )
     );
     expect(res.status).toBe(200);
+  });
+
+  it("parcela paga (registrada na criação): 422 e a linha fica intacta", async () => {
+    const cookie = await signUpCookie(uniqueEmail("patch-paga"));
+    const created = await (
+      await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({
+            title: "Já em andamento",
+            ownerRole: "buyer",
+            requiresConfirmation: false,
+            schedule: {
+              mode: "split",
+              totalAmountCents: 300_000,
+              installmentsCount: 3,
+              firstDueDate: addMonths(todayISO(), -2),
+            },
+            paidInstallments: [1],
+          }),
+        })
+      )
+    ).json();
+    const [before] = await db
+      .select()
+      .from(installment)
+      .where(
+        and(eq(installment.contractId, created.id), eq(installment.sequence, 1))
+      );
+    const res = await app.handle(
+      new Request(
+        `http://localhost/api/contracts/${created.id}/installments/${before?.id}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({ amountCents: 1, dueDate: "2099-01-01" }),
+        }
+      )
+    );
+    expect(res.status).toBe(422);
+    const [after] = await db
+      .select()
+      .from(installment)
+      .where(eq(installment.id, before?.id ?? ""));
+    expect(after?.amountCents).toBe(before?.amountCents);
+    expect(after?.dueDate).toBe(before?.dueDate);
   });
 });
