@@ -109,7 +109,10 @@ export async function runReminderSweep(
   }));
 
   const reminders = computeReminders(inputs, today);
-  const inserted = await insertNotificationsReturning(db, reminders);
+  // One transaction: a failed batch rolls the others back, so the next sweep still finds them new for the e-mail.
+  const inserted = await db.transaction((tx) =>
+    insertNotificationsReturning(tx, reminders)
+  );
   let emailsSent = 0;
   if (emailEnabled) {
     // A fase de e-mail nunca derruba a varredura: as notificações in-app já foram inseridas.

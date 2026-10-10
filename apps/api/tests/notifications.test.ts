@@ -511,3 +511,34 @@ describe("notificações em lotes", () => {
     );
   });
 });
+
+describe("lotes dentro de uma transação", () => {
+  it("falha no meio dos lotes não deixa lote pela metade e a repetição devolve todos", async () => {
+    const cookie = await signUpCookie(uniqueEmail("lote-tx"));
+    const userId = await meId(cookie);
+    const contractId = await createContract(cookie, false);
+    const good = Array.from({ length: 5 }, (_, n) => ({
+      userId,
+      contractId,
+      type: "installment_overdue",
+      dedupeKey: `lote-tx:${contractId}:${n}`,
+    }));
+    // A linha 4 aponta para um contrato que não existe: o 2º lote (de 3) falha.
+    const broken = good.map((row, n) =>
+      n === 4 ? { ...row, contractId: "nao-existe" } : row
+    );
+
+    await expect(
+      db.transaction((tx) => insertNotificationsReturning(tx, broken, 3))
+    ).rejects.toThrow();
+    const after = await notifsFor(userId, contractId);
+    expect(
+      after.filter((r) => r.dedupeKey?.startsWith("lote-tx:"))
+    ).toHaveLength(0);
+
+    const again = await db.transaction((tx) =>
+      insertNotificationsReturning(tx, good, 3)
+    );
+    expect(again).toHaveLength(5);
+  });
+});
