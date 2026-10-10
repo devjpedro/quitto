@@ -373,6 +373,9 @@ test("Abrir mostra o comprovante num visualizador do app, sem nova aba; Esc fech
 test("axe em claro e escuro: P1 (quem paga) e P4 (quem confere)", async ({
   browser,
 }) => {
+  // Four axe scans (two panels, two themes) and two accounts: on the CI runner
+  // this passes 30 s; slow() gives it 90 s.
+  test.slow();
   const parties = await ownerPays(browser);
   const first = idOf(parties, 1);
   try {

@@ -136,6 +136,8 @@ test("uma a uma: a soma que passa vira o total, sem bloquear, e cria", async ({
 test("uma a uma: 'Manter R$ 6.000,00' tira das outras e cria com o total combinado", async ({
   page,
 }) => {
+  // Sign-up, four steps and the per-installment sheet: tight on the CI runner.
+  test.slow();
   await signup(page);
   await openWizard(page);
   await about(page);
