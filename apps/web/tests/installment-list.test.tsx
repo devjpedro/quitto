@@ -224,7 +224,11 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
   it("o corpo da aba tem rolagem própria a partir de lateral e a página não: o grid ocupa a altura da tela", () => {
     renderList();
     const body = screen.getByTestId("tab-body");
-    expect(body).toHaveClass("lateral:overflow-y-auto", "lateral:min-h-0");
+    expect(body).toHaveClass(
+      "lateral:overflow-y-auto",
+      "lateral:min-h-0",
+      "lateral:relative"
+    );
     expect(body.closest("[data-perspective]")).toHaveClass("lateral:h-full");
   });
 

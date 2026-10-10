@@ -25,6 +25,7 @@ const ANY_INSTALLMENT = /[?&]installment=/;
 const REASON = "O valor que chegou foi R$ 240,00.";
 const PDF_NAME = /\.pdf$/;
 const WEB = "http://localhost:3001";
+const RECEIPT_FROM_APP = /\/r\/[^/?]+\?from=app$/;
 
 type Parties = Awaited<ReturnType<typeof twoParties>>;
 
@@ -122,9 +123,9 @@ test("pagador envia o comprovante e o aprovador confirma", async ({
     await expect(
       review.getByRole("link", { name: "Recibo em PDF" })
     ).toBeVisible();
-    // Only the owner creates the public link (decision 7).
+    // Only the owner creates the public link (decision 7), so only the owner opens the receipt page.
     await expect(
-      review.getByRole("button", { name: "Compartilhar recibo" })
+      review.getByRole("button", { name: "Abrir recibo" })
     ).toHaveCount(0);
   } finally {
     await closeBoth(parties);
@@ -216,7 +217,7 @@ test("o recebedor marca como recebida, na hora", async ({ browser }) => {
   }
 });
 
-test("compartilhar o recibo: o dono cria o link, e o link abre o recibo público", async ({
+test("abrir o recibo: o dono cria o link e vai à página (com Voltar); o link abre o recibo público", async ({
   browser,
   context,
   page,
@@ -246,14 +247,22 @@ test("compartilhar o recibo: o dono cria o link, e o link abre o recibo público
   });
 
   const panel = await openPanel(page, id, first);
-  await panel.getByRole("button", { name: "Compartilhar recibo" }).click();
-  // The link's line shows up in the block, and its copy goes to the
-  // clipboard (with no share sheet, as here, sharing copies it too).
-  const block = panel.getByTestId("receipt-block");
+  await panel.getByRole("button", { name: "Abrir recibo" }).click();
+  // The page opens in this tab, from the app: it has a "Voltar", and no
+  // invite to create an account (this one is signed in).
+  await expect(page).toHaveURL(RECEIPT_FROM_APP);
+  await expect(
+    page.getByRole("heading", { name: "Recibo de pagamento" })
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Criar conta" })).toHaveCount(0);
+  const url = page.url().replace("?from=app", "");
+  await page.getByRole("button", { name: "Voltar" }).click();
+  await expect(page).toHaveURL(new RegExp(`/contracts/${id}`));
+  // Back in the contract, the link's line shows up in the block, with Copiar.
+  const block = (await openPanel(page, id, first)).getByTestId("receipt-block");
   await block.getByRole("button", { name: "Copiar o link do recibo" }).click();
   await expect(toast(page, "Link copiado").first()).toBeVisible();
-  const url = await page.evaluate(() => navigator.clipboard.readText());
-  expect(url).toContain("/r/");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
 
   const stranger = await browser.newContext();
   try {
@@ -263,6 +272,13 @@ test("compartilhar o recibo: o dono cria o link, e o link abre o recibo público
       visitor.getByRole("heading", { name: "Recibo de pagamento" })
     ).toBeVisible();
     await expect(visitor.getByText("R$ 480,00").first()).toBeVisible();
+    // Signed out: the invite, and no "Voltar".
+    await expect(
+      visitor.getByRole("link", { name: "Criar conta" }).first()
+    ).toBeAttached();
+    await expect(visitor.getByRole("button", { name: "Voltar" })).toHaveCount(
+      0
+    );
   } finally {
     await stranger.close();
   }

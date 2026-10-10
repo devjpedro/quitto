@@ -117,8 +117,9 @@ function ContractContent({ slots }: { slots: ContractSlots }) {
           onTabChange={route.setTab}
           tab={route.tab}
         />
+        {/* `relative`: the rows' sr-only text is absolutely positioned and must be clipped here, not stretch the block around. */}
         <div
-          className="mt-3 lateral:min-h-0 lateral:flex-1 lateral:overflow-y-auto lateral:overscroll-contain"
+          className="lateral:relative mt-3 lateral:min-h-0 lateral:flex-1 lateral:overflow-y-auto lateral:overscroll-contain"
           data-testid="tab-body"
         >
           {slots.tabBody[route.tab](detail, route)}
@@ -141,7 +142,10 @@ export function ContractPage({
   return (
     <div className="lateral:h-full lateral:p-8 p-4 pt-2 md:p-6">
       <div className="mx-auto lateral:h-full w-full max-w-[1840px]">
-        <SectionBoundary fallback={<ContractSkeleton />}>
+        <SectionBoundary
+          className="lateral:h-full"
+          fallback={<ContractSkeleton />}
+        >
           <ContractContent slots={slots} />
         </SectionBoundary>
       </div>

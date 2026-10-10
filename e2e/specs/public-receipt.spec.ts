@@ -55,6 +55,26 @@ test("o recibo mostra o valor, a parcela e quem recebeu, e o PDF baixa", async (
   await visitor.close();
 });
 
+test("Compartilhar copia o link no computador, Imprimir é só ícone e o Voltar não existe sem from=app", async ({
+  browser,
+}) => {
+  const token = await sharedReceipt(browser);
+  const visitor = await browser.newContext({
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  const page = await visitor.newPage();
+  await page.goto(`/r/${token}`);
+  await waitForHydrated(page);
+  await expect(page.getByRole("button", { name: "Voltar" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Imprimir" })).toHaveText("");
+  await page.getByRole("button", { name: "Compartilhar" }).click();
+  await expect(page.getByText("Link copiado").first()).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(
+    new RegExp(`/r/${token}$`)
+  );
+  await visitor.close();
+});
+
 test("um token que não existe: 404 e a frase", async ({ page }) => {
   const response = await page.goto("/r/token-que-nao-existe");
   expect(response?.status()).toBe(404);
