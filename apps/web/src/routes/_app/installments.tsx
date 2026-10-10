@@ -8,6 +8,7 @@ import {
 import { InstallmentsPage } from "@/features/installments/components/installments-page";
 import { installmentsSearch } from "@/features/installments/lib/installments-search";
 import { monthOf, monthQuery } from "@/features/installments/lib/month-range";
+import { waitOnServer } from "@/lib/ssr-section-wait";
 
 export const Route = createFileRoute("/_app/installments")({
   validateSearch: installmentsSearch,
@@ -16,11 +17,12 @@ export const Route = createFileRoute("/_app/installments")({
     installment: search.installment,
     month: search.month,
   }),
-  // Not awaited: the SSR streams the list (and, in parallel, the open
-  // installment and its contract) into the page's SectionBoundary.
-  loader: ({ context, deps }) => {
+  // The SSR waits a moment for the list (lib/ssr-section-wait.ts), then
+  // streams it, with the open installment and its contract in parallel, into
+  // the page's SectionBoundary.
+  loader: async ({ context, deps }) => {
     const today = todayISO();
-    context.queryClient.prefetchQuery(
+    const list = context.queryClient.prefetchQuery(
       installmentsListQueryOptions(
         monthQuery(deps.month ?? monthOf(today), today)
       )
@@ -31,6 +33,7 @@ export const Route = createFileRoute("/_app/installments")({
         installmentQueryOptions(deps.installment)
       );
     }
+    await waitOnServer(list);
   },
   component: InstallmentsPage,
 });

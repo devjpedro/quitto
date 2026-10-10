@@ -7,6 +7,7 @@ import { ContractPage } from "@/features/contracts/components/contract-page";
 import { CONTRACT_SLOTS } from "@/features/contracts/components/contract-slots";
 import { installmentQueryOptions } from "@/features/installments/api";
 import { contractSearch } from "@/lib/contract-search";
+import { waitOnServer } from "@/lib/ssr-section-wait";
 
 /** The page with the slots the later tasks fill (contract-slots.tsx): this file never changes again. */
 function ContractRoutePage() {
@@ -19,11 +20,13 @@ export const Route = createFileRoute("/_app/contracts/$id")({
     installment: search.installment,
     tab: search.tab,
   }),
-  // Not awaited: the SSR streams the contract (and, in parallel, the open
-  // installment or the history tab) into the page's SectionBoundary while the
-  // shell renders.
-  loader: ({ context, deps, params }) => {
-    context.queryClient.prefetchQuery(contractQueryOptions(params.id));
+  // The SSR waits a moment for the contract (lib/ssr-section-wait.ts), then
+  // streams it, with the open installment or the history tab in parallel,
+  // into the page's SectionBoundary.
+  loader: async ({ context, deps, params }) => {
+    const contract = context.queryClient.prefetchQuery(
+      contractQueryOptions(params.id)
+    );
     if (deps.installment) {
       context.queryClient.prefetchQuery(
         installmentQueryOptions(deps.installment)
@@ -34,6 +37,7 @@ export const Route = createFileRoute("/_app/contracts/$id")({
         contractEventsQueryOptions(params.id)
       );
     }
+    await waitOnServer(contract);
   },
   component: ContractRoutePage,
 });
