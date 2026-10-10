@@ -1,72 +1,101 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/delete-account-dialog", () => ({
-  DeleteAccountDialog: () => <div data-testid="delete-dialog" />,
+const mocks = vi.hoisted(() => ({
+  patchMe: vi.fn(),
+  deletionSummary: vi.fn(),
 }));
-vi.mock("@/components/pix-key-form", () => ({
-  PixKeyForm: () => <div data-testid="pix-key-form" />,
+vi.mock("@tanstack/react-router", async () => ({
+  Link: (await import("./router-link-stub")).LinkStub,
+  useHydrated: () => true,
 }));
-const meData = vi.hoisted(() => ({
-  value: {
-    id: "u1",
-    name: "Maria",
-    email: "maria@example.com",
-    emailRemindersAvailable: false,
-    emailRemindersOptIn: false,
+vi.mock("@/lib/api", () => ({
+  api: {
+    api: {
+      me: {
+        patch: mocks.patchMe,
+        "deletion-summary": { get: mocks.deletionSummary },
+      },
+    },
   },
 }));
-vi.mock("@/hooks/use-me", () => ({
-  useMeQuery: () => ({ data: meData.value }),
-}));
-vi.mock("@/hooks/use-email-reminders", () => ({
-  useUpdateEmailRemindersMutation: () => ({
-    mutate: vi.fn(),
-    isPending: false,
-  }),
+vi.mock("@/lib/auth-client", () => ({
+  changePassword: vi.fn(),
+  signOut: vi.fn(),
 }));
 
-import { SettingsPage } from "../src/features/settings/settings-page";
+import { overwriteGetLocale } from "@/paraglide/runtime.js";
+import { renderSettings } from "./settings-fixtures";
 
-const EXPORT = /exportar/i;
+const PROFILE = /Perfil/;
+const PIX = /Recebimento \(PIX\)/;
+const REMINDERS = /Lembretes/;
+const SECURITY = /Segurança/;
+const DATA = /Seus dados/;
+const EMAIL = /agora@demo\.quitto\.dev/;
+const ENGLISH = /English \(US\)/;
+const PORTUGUESE = /Português \(Brasil\)/;
+const BRL_PT = /R\$ 1\.250,00/;
+const BRL_EN = /R\$1,250\.00/;
 
-describe("SettingsPage", () => {
-  it("shows export link and the delete section", () => {
-    render(<SettingsPage />);
-    expect(screen.getByRole("link", { name: EXPORT })).toHaveAttribute(
-      "href",
-      "/api/me/export"
-    );
-    expect(screen.getByTestId("delete-dialog")).toBeInTheDocument();
-  });
+afterEach(() => {
+  overwriteGetLocale(() => "pt-BR");
+  vi.clearAllMocks();
+});
 
-  it("shows the profile name and email from useMeQuery", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("Maria")).toBeInTheDocument();
-    expect(screen.getByText("maria@example.com")).toBeInTheDocument();
-  });
-
-  it("renders the PixKeyForm", () => {
-    render(<SettingsPage />);
-    expect(screen.getByTestId("pix-key-form")).toBeInTheDocument();
-  });
-
-  it("hides the email reminders section when the global switch is off", () => {
-    meData.value.emailRemindersAvailable = false;
-    render(<SettingsPage />);
+describe("Ajustes", () => {
+  it("as cinco seções, na ordem, sob o título Ajustes", () => {
+    renderSettings("profile");
     expect(
-      screen.queryByRole("heading", { name: "Lembretes por e-mail" })
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
-  });
-
-  it("shows the email reminders section when the global switch is on", () => {
-    meData.value.emailRemindersAvailable = true;
-    render(<SettingsPage />);
-    expect(
-      screen.getByRole("heading", { name: "Lembretes por e-mail" })
+      screen.getByRole("heading", { level: 1, name: "Ajustes" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
-    meData.value.emailRemindersAvailable = false;
+    const names = screen
+      .getAllByRole("link")
+      .map((link) => link.textContent ?? "");
+    expect(names[0]).toMatch(PROFILE);
+    expect(names[1]).toMatch(PIX);
+    expect(names[2]).toMatch(REMINDERS);
+    expect(names[3]).toMatch(SECURITY);
+    expect(names[4]).toMatch(DATA);
+    expect(screen.getByRole("link", { name: PROFILE })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("Lembretes some sem a chave global", () => {
+    renderSettings("profile", { emailRemindersAvailable: false });
+    expect(screen.queryByRole("link", { name: REMINDERS })).toBeNull();
+  });
+
+  it("sem senha (Google): a frase e nenhum campo de senha", () => {
+    renderSettings("security", { hasPassword: false });
+    expect(screen.getByText("Você entra com o Google")).toBeVisible();
+    expect(screen.getByText("Sem senha no Quitto.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Trocar a senha" })).toBeNull();
+  });
+
+  it("o Perfil mostra nome, e-mail e o idioma da conta marcado", () => {
+    renderSettings("profile", { locale: "en-US" });
+    expect(screen.getByText("João Souza")).toBeVisible();
+    expect(screen.getByText(EMAIL)).toBeVisible();
+    expect(screen.getByRole("radio", { name: ENGLISH })).toBeChecked();
+    expect(screen.getByRole("radio", { name: PORTUGUESE })).not.toBeChecked();
+  });
+
+  it("sem idioma na conta, o do navegador vem marcado", () => {
+    renderSettings("profile", { locale: null });
+    expect(screen.getByRole("radio", { name: PORTUGUESE })).toBeChecked();
+  });
+
+  it("chegar em /settings/pix sem chave: o foco no campo da chave", () => {
+    renderSettings("pix");
+    expect(screen.getByLabelText("Sua chave PIX")).toHaveFocus();
+  });
+
+  it("o idioma mostra a data e o dinheiro naquele idioma", () => {
+    renderSettings("profile");
+    expect(screen.getByText(BRL_PT)).toBeVisible();
+    expect(screen.getByText(BRL_EN)).toBeVisible();
   });
 });

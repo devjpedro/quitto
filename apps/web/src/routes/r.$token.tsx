@@ -1,10 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import {
-  PublicReceiptPage,
-  PublicReceiptUnavailable,
-} from "@/features/receipts/public-receipt-page";
-import { PAGE_TITLE } from "@/lib/page-title";
+import { PublicReceiptPage } from "@/features/receipts/components/public-receipt-page";
+import { ReceiptUnavailable } from "@/features/receipts/components/receipt-unavailable";
 import { getPublicReceiptSSR } from "@/lib/public-receipt-ssr";
+import { m } from "@/paraglide/messages.js";
 
 function PublicReceiptRoute() {
   const receipt = Route.useLoaderData();
@@ -13,6 +11,8 @@ function PublicReceiptRoute() {
 }
 
 export const Route = createFileRoute("/r/$token")({
+  // The page is the data, and an unknown token must answer HTTP 404: the one
+  // loader that waits (planner's decision 14).
   loader: async ({ params }) => {
     const receipt = await getPublicReceiptSSR({ data: params.token });
     if (!receipt) {
@@ -22,14 +22,17 @@ export const Route = createFileRoute("/r/$token")({
   },
   head: () => ({
     meta: [
-      { title: PAGE_TITLE.publicReceipt },
+      { title: m.page_title_receipt() },
       { name: "robots", content: "noindex" },
       // OG genérico: valor e nomes nunca vão pro preview do chat.
-      { property: "og:title", content: "Recibo de pagamento · Quitto" },
-      { property: "og:description", content: "Recibo emitido pelo Quitto." },
+      { property: "og:title", content: m.public_receipt_og_title() },
+      {
+        property: "og:description",
+        content: m.public_receipt_og_description(),
+      },
       { property: "og:type", content: "website" },
     ],
   }),
   component: PublicReceiptRoute,
-  notFoundComponent: PublicReceiptUnavailable,
+  notFoundComponent: ReceiptUnavailable,
 });

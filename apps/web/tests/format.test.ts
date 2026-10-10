@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   dateToISO,
   formatBRL,
   formatISODateBR,
-  formatRelativeTimeBR,
   parseBRDateToISO,
   parseBRLToCents,
   parseISOToLocalDate,
 } from "../src/lib/format";
+import { importInZone, ZONES } from "./time-zones";
 
 describe("formatBRL", () => {
   it("formats integer cents as Brazilian currency", () => {
@@ -65,6 +65,25 @@ describe("dateToISO", () => {
   });
 });
 
+describe("datas no fuso da máquina", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it.each(ZONES)("as datas nunca mudam de dia pelo fuso (%s)", async (zone) => {
+    const f = await importInZone(zone, () => import("../src/lib/format"));
+    // Local midnight in this zone: Tokyo's is the previous day in UTC.
+    expect(f.dateToISO(new Date(2026, 6, 10))).toBe("2026-07-10");
+    expect(f.dateToISO(new Date(2026, 0, 1))).toBe("2026-01-01");
+    expect(f.dateToISO(f.parseISOToLocalDate("2026-08-10") as Date)).toBe(
+      "2026-08-10"
+    );
+    expect(f.parseISOToLocalDate("2026-07-10")?.getDate()).toBe(10);
+    expect(f.formatISODateBR("2026-10-02")).toBe("02/10/2026");
+    expect(f.parseBRDateToISO("31/12/2026")).toBe("2026-12-31");
+  });
+});
+
 describe("parseISOToLocalDate", () => {
   it("parses ISO into a local Date with matching components", () => {
     const d = parseISOToLocalDate("2026-07-10");
@@ -88,24 +107,5 @@ describe("parseISOToLocalDate", () => {
 
   it("accepts a valid leap day", () => {
     expect(parseISOToLocalDate("2024-02-29")).toBeInstanceOf(Date);
-  });
-});
-
-describe("formatRelativeTimeBR", () => {
-  const now = new Date("2026-06-13T12:00:00Z");
-
-  it("formats minutes ago", () => {
-    const iso = new Date("2026-06-13T11:30:00Z").toISOString();
-    expect(formatRelativeTimeBR(iso, now)).toBe("há 30 minutos");
-  });
-
-  it("formats days ago", () => {
-    const iso = new Date("2026-06-11T12:00:00Z").toISOString();
-    expect(formatRelativeTimeBR(iso, now)).toBe("há 2 dias");
-  });
-
-  it("formats just now as seconds", () => {
-    const iso = new Date("2026-06-13T11:59:55Z").toISOString();
-    expect(formatRelativeTimeBR(iso, now)).toBe("há 5 segundos");
   });
 });

@@ -1,65 +1,54 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
-import type * as React from "react";
-
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium text-sm outline-none transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+export const buttonVariants = cva(
+  "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium text-sm transition-[background-color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface active:scale-[.97] disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        primary: "bg-ink text-ink-inverse hover:bg-ink/90",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-line bg-surface text-ink hover:bg-surface-sunken",
+        // Inside a card (DIRECAO › Forma): one step lighter than the card, no border.
+        inset: "bg-surface-inset text-ink hover:bg-surface-inset-hover",
+        ghost: "text-ink hover:bg-surface-sunken",
+        // Dark: light button with dark text on the green card, as in mockup 08.
+        // The dark:hover keeps the hover from falling back to the graphite one.
+        onBrand:
+          "bg-surface text-ink hover:bg-surface/90 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface dark:bg-ink dark:text-ink-inverse dark:hover:bg-ink/90",
+        onBrandOutline:
+          "border border-on-brand/40 text-on-brand hover:bg-on-brand/10 focus-visible:ring-highlight focus-visible:ring-offset-brand-surface",
+        danger: "bg-danger text-ink-inverse hover:bg-danger/90",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        sm: "h-11 px-3 md:h-9",
+        md: "h-11 px-4 md:h-10",
+        lg: "h-12 px-5 text-base",
       },
+      block: { true: "w-full", false: "" },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+    defaultVariants: { variant: "primary", size: "md", block: false },
   }
 );
 
-function Button({
+export function Button({
   className,
-  variant = "default",
-  size = "default",
+  variant,
+  size,
+  block,
   asChild = false,
+  type = "button",
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+}: ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot.Root : "button";
-
   return (
     <Comp
-      className={cn(buttonVariants({ variant, size, className }))}
-      data-size={size}
-      data-slot="button"
-      data-variant={variant}
+      className={cn(buttonVariants({ variant, size, block }), className)}
+      type={asChild ? undefined : type}
       {...props}
     />
   );
 }
-
-export { Button, buttonVariants };

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { contract, participant } from "../src/db/schema";
+import { contract, participant, user } from "../src/db/schema";
 import { buildUserExport, type ExportInput } from "../src/lib/account-export";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
@@ -112,6 +112,20 @@ describe("GET /api/me/export", () => {
     expect(body.profile).toBeDefined();
   });
 
+  it("a exportação se chama quitto-my-data.json em en-US e quitto-meus-dados.json em pt-BR", async () => {
+    const email = uniqueEmail("exp-name");
+    const cookie = await signUpCookie(email);
+    const name = async () =>
+      (
+        await app.handle(
+          new Request("http://localhost/api/me/export", { headers: { cookie } })
+        )
+      ).headers.get("content-disposition");
+    expect(await name()).toBe('attachment; filename="quitto-meus-dados.json"');
+    await db.update(user).set({ locale: "en-US" }).where(eq(user.email, email));
+    expect(await name()).toBe('attachment; filename="quitto-my-data.json"');
+  });
+
   it("exports contracts where the caller is a linked participant (not owner)", async () => {
     const ownerCookie = await signUpCookie(uniqueEmail("exp-owner"));
     const ownedContract = await createContract(ownerCookie, false);
@@ -168,6 +182,14 @@ describe("DELETE /api/me", () => {
       })
     );
     expect(res.status).toBe(200);
+
+    // o acesso é revogado na hora: a sessão apagada não autentica mais
+    const after = await app.handle(
+      new Request("http://localhost/api/me", {
+        headers: { cookie: mortalCookie },
+      })
+    );
+    expect(after.status).toBe(401);
 
     // contrato próprio sumiu
     const own = await db

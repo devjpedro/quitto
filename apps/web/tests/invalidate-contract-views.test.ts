@@ -7,14 +7,30 @@ function spyQc() {
 }
 
 describe("invalidateContractViews", () => {
-  it("always invalidates contracts and dashboard", () => {
+  it("always invalidates contracts and the home", () => {
     const qc = spyQc();
     invalidateContractViews(qc);
     expect(qc.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["contracts"],
     });
     expect(qc.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["dashboard"],
+      queryKey: ["home"],
+    });
+  });
+
+  it("invalida também a lista de pessoas", () => {
+    const qc = spyQc();
+    invalidateContractViews(qc);
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["people"],
+    });
+  });
+
+  it("invalida também a lista de parcelas", () => {
+    const qc = spyQc();
+    invalidateContractViews(qc);
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["installments"],
     });
   });
 

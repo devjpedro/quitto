@@ -1,6 +1,8 @@
+// First: the locale strategy is in place before anything renders.
+import "./lib/ssr-locale";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
-import { BrandLoader } from "./components/brand-loader";
+import { PagePending } from "./components/layout/page-pending";
 import { NotFound } from "./components/not-found";
 import { RouteError } from "./components/route-error";
 import { makeQueryClient } from "./lib/query";
@@ -12,11 +14,13 @@ export function getRouter() {
     routeTree,
     defaultPreload: "intent",
     scrollRestoration: true,
+    // From md the white panel is what scrolls (ShellFrame), not the page.
+    scrollToTopSelectors: ["#conteudo"],
     defaultErrorComponent: RouteError,
     // Fallback do <Suspense> de cada rota: sem ele uma rota que suspende (chunk
     // ainda baixando) cai no Suspense do Outlet raiz com `null` → tela vazia.
-    // Por rota, a suspensão fica contida no <main> e a sidebar continua.
-    defaultPendingComponent: BrandLoader,
+    // Por rota, o fallback fica contido no <main> e o shell (sidebar/abas) continua.
+    defaultPendingComponent: PagePending,
     defaultNotFoundComponent: NotFound,
     context: { queryClient },
   });

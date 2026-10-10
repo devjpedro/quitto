@@ -1,0 +1,1 @@
+ALTER TABLE "installment" ADD COLUMN "registered_on_create" boolean DEFAULT false NOT NULL;

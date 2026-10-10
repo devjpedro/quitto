@@ -1,8 +1,8 @@
-import { INSTALLMENT_STATUS } from "@quitto/shared";
+import { INSTALLMENT_STATUS, type Locale, todayISO } from "@quitto/shared";
 import PDFDocument from "pdfkit";
-import { formatISODateBR } from "../dates";
-import { formatCentsBRL } from "../money";
-import { DOC_INSTALLMENT_STATUS_LABEL, DOC_TEXT } from "./labels";
+import { formatISODate } from "../dates";
+import { formatCents } from "../money";
+import { type DocText, docStatusLabel, docText } from "./labels";
 import type { ReceiptModel, StatementModel } from "./model";
 import { DOC_STYLE } from "./style";
 
@@ -20,38 +20,63 @@ function collect(doc: Doc): Promise<Uint8Array> {
   });
 }
 
-function header(doc: Doc, title: string): number {
+const ICON_BOX = 24;
+const ICON_ARC = { startDeg: 125, sweepDeg: 254.6 };
+
+/** The app icon in vector: a Floresta square and the logo's open ring (geometry of apps/web ring-geometry.ts: radius 9 of 24, stroke 4, ~70% of the ring, opening turned 125°). */
+function drawIcon(doc: Doc, x: number, y: number, box: number): void {
+  const k = box / ICON_BOX;
   doc
-    .font(font.bold)
-    .fontSize(size.brand)
+    .roundedRect(x, y, box, box, box * 0.25)
     .fillColor(color.brand)
-    .text(DOC_TEXT.brand, margin, margin, { continued: false });
+    .fill();
+  const r = 9 * k;
+  const cx = x + box / 2;
+  const cy = y + box / 2;
+  const point = (deg: number) => {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)] as const;
+  };
+  const [x0, y0] = point(ICON_ARC.startDeg);
+  const [x1, y1] = point(ICON_ARC.startDeg + ICON_ARC.sweepDeg);
+  doc
+    .path(`M ${x0} ${y0} A ${r} ${r} 0 1 1 ${x1} ${y1}`)
+    .lineWidth(4 * k)
+    .lineCap("round")
+    .strokeColor("#FFFFFF")
+    .stroke();
+  doc.lineCap("butt");
+}
+
+function header(doc: Doc, title: string): number {
+  drawIcon(doc, margin, margin, size.icon);
   doc
     .font(font.bold)
     .fontSize(size.heading)
     .fillColor(color.muted)
-    .text(title, margin, margin + 4, { align: "right" });
-  const y = margin + 28;
+    .text(title, margin, margin + 7, {
+      align: "right",
+      width: doc.page.width - margin * 2,
+    });
+  const y = margin + size.icon + 12;
   doc
     .moveTo(margin, y)
     .lineTo(doc.page.width - margin, y)
-    .strokeColor(color.brand)
+    .strokeColor(color.line)
     .lineWidth(1)
     .stroke();
   doc.fillColor(color.text);
   return y + 16;
 }
 
-function footer(doc: Doc): void {
+function footer(doc: Doc, t: DocText, locale: Locale): void {
   const y = doc.page.height - margin;
   doc
     .font(font.body)
     .fontSize(size.small)
     .fillColor(color.muted)
     .text(
-      DOC_TEXT.generatedAt(
-        formatISODateBR(new Date().toISOString().slice(0, 10))
-      ),
+      t.generatedAt({ date: formatISODate(todayISO(), locale) }),
       margin,
       y - 10,
       {
@@ -75,9 +100,13 @@ function metaRow(doc: Doc, label: string, value: string, y: number): number {
   return y + 30;
 }
 
-export function renderReceiptPdf(model: ReceiptModel): Promise<Uint8Array> {
+export function renderReceiptPdf(
+  model: ReceiptModel,
+  locale: Locale
+): Promise<Uint8Array> {
+  const t = docText(locale);
   const doc = new PDFDocument({ size: "A4", margin });
-  let y = header(doc, DOC_TEXT.receiptTitle);
+  let y = header(doc, t.receiptTitle);
 
   doc
     .font(font.bold)
@@ -90,42 +119,35 @@ export function renderReceiptPdf(model: ReceiptModel): Promise<Uint8Array> {
     .fontSize(size.body)
     .fillColor(color.muted)
     .text(
-      DOC_TEXT.installmentOfTotal(model.sequence, model.installmentsCount),
+      t.installmentOfTotal({
+        n: model.sequence,
+        total: model.installmentsCount,
+      }),
       margin,
       y
     );
   y = doc.y + 16;
 
-  y = metaRow(
-    doc,
-    DOC_TEXT.payerLabel,
-    model.parties.payerName ?? DOC_TEXT.emptyParty,
-    y
-  );
-  y = metaRow(
-    doc,
-    DOC_TEXT.receiverLabel,
-    model.parties.receiverName ?? DOC_TEXT.emptyParty,
-    y
-  );
+  y = metaRow(doc, t.payer, model.parties.payerName ?? t.emptyParty, y);
+  y = metaRow(doc, t.receiver, model.parties.receiverName ?? t.emptyParty, y);
 
   doc
     .font(font.body)
     .fontSize(size.small)
     .fillColor(color.muted)
-    .text(DOC_TEXT.amountLabel, margin, y);
+    .text(t.amount, margin, y);
   doc
     .font(font.bold)
     .fontSize(size.amount)
     .fillColor(color.brand)
-    .text(formatCentsBRL(model.amountCents), margin, y + 10);
+    .text(formatCents(model.amountCents, locale), margin, y + 10);
   y = doc.y + 16;
 
-  y = metaRow(doc, DOC_TEXT.dueDateLabel, formatISODateBR(model.dueDate), y);
+  y = metaRow(doc, t.dueDate, formatISODate(model.dueDate, locale), y);
   y = metaRow(
     doc,
-    DOC_TEXT.paidAtLabel,
-    model.paidAt ? formatISODateBR(model.paidAt) : DOC_TEXT.emptyParty,
+    t.paidAt,
+    model.paidAt ? formatISODate(model.paidAt, locale) : t.emptyParty,
     y
   );
 
@@ -134,19 +156,19 @@ export function renderReceiptPdf(model: ReceiptModel): Promise<Uint8Array> {
     .fontSize(size.body)
     .fillColor(color.text)
     .text(
-      DOC_TEXT.receiptSentence(
-        formatCentsBRL(model.amountCents),
-        model.sequence,
-        model.installmentsCount,
-        model.contractTitle,
-        model.paidAt ? formatISODateBR(model.paidAt) : ""
-      ),
+      t.receiptSentence({
+        amount: formatCents(model.amountCents, locale),
+        n: model.sequence,
+        total: model.installmentsCount,
+        title: model.contractTitle,
+        paidAt: model.paidAt ? formatISODate(model.paidAt, locale) : "",
+      }),
       margin,
       y + 10,
       { width: doc.page.width - margin * 2 }
     );
 
-  footer(doc);
+  footer(doc, t, locale);
   return collect(doc);
 }
 
@@ -165,9 +187,13 @@ function statusColor(status: string): string {
   return color.pending;
 }
 
-export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
+export function renderStatementPdf(
+  model: StatementModel,
+  locale: Locale
+): Promise<Uint8Array> {
+  const t = docText(locale);
   const doc = new PDFDocument({ size: "A4", margin });
-  let y = header(doc, DOC_TEXT.statementTitle);
+  let y = header(doc, t.statementTitle);
 
   doc
     .font(font.bold)
@@ -180,18 +206,18 @@ export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
     .fontSize(size.body)
     .fillColor(color.muted)
     .text(
-      `${DOC_TEXT.payerLabel}: ${model.parties.payerName ?? DOC_TEXT.emptyParty}   .   ${DOC_TEXT.receiverLabel}: ${model.parties.receiverName ?? DOC_TEXT.emptyParty}`,
+      `${t.payer}: ${model.parties.payerName ?? t.emptyParty} · ${t.receiver}: ${model.parties.receiverName ?? t.emptyParty}`,
       margin,
       y
     );
   y = doc.y + 6;
   doc.text(
-    DOC_TEXT.progressSummary(
-      formatCentsBRL(model.progress.totalCents),
-      formatCentsBRL(model.progress.paidCents),
-      model.progress.percent,
-      model.progress.overdueCount
-    ),
+    t.progressSummary({
+      total: formatCents(model.progress.totalCents, locale),
+      paid: formatCents(model.progress.paidCents, locale),
+      percent: model.progress.percent,
+      overdue: t.overdue({ count: model.progress.overdueCount }),
+    }),
     margin,
     y
   );
@@ -202,17 +228,19 @@ export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
       .font(font.bold)
       .fontSize(size.heading)
       .fillColor(color.paid)
-      .text(DOC_TEXT.paidSeal, margin, y);
+      .text(t.paidSeal, margin, y);
     y = doc.y + 2;
     doc
       .font(font.body)
       .fontSize(size.small)
       .fillColor(color.muted)
       .text(
-        DOC_TEXT.quittanceSentence(
-          model.contractTitle,
-          model.fullyPaidAt ? formatISODateBR(model.fullyPaidAt) : ""
-        ),
+        t.quittanceSentence({
+          title: model.contractTitle,
+          date: model.fullyPaidAt
+            ? formatISODate(model.fullyPaidAt, locale)
+            : "",
+        }),
         margin,
         y
       );
@@ -225,7 +253,7 @@ export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
   const drawTableHeader = (top: number): number => {
     let x = margin;
     doc.font(font.bold).fontSize(size.small).fillColor(color.brand);
-    DOC_TEXT.tableHeaders.forEach((h, i) => {
+    t.tableHeaders.forEach((h, i) => {
       const w = widths[i] ?? 0;
       doc.text(h, x + 2, top + 4, { width: w - 4 });
       x += w;
@@ -257,10 +285,10 @@ export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
     let x = margin;
     const cells = [
       String(r.sequence),
-      formatISODateBR(r.dueDate),
-      formatCentsBRL(r.amountCents),
-      DOC_INSTALLMENT_STATUS_LABEL[r.status],
-      r.paidAt ? formatISODateBR(r.paidAt) : "—",
+      formatISODate(r.dueDate, locale),
+      formatCents(r.amountCents, locale),
+      docStatusLabel(r.status, locale),
+      r.paidAt ? formatISODate(r.paidAt, locale) : t.emptyParty,
     ];
     cells.forEach((c, i) => {
       const w = widths[i] ?? 0;
@@ -274,6 +302,6 @@ export function renderStatementPdf(model: StatementModel): Promise<Uint8Array> {
     y += rowH;
   });
 
-  footer(doc);
+  footer(doc, t, locale);
   return collect(doc);
 }

@@ -3,9 +3,13 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { seedContract, signup, waitForHydrated } from "../fixtures";
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
+const PHONE_WIDTH = 768;
 const CONTRACT_URL = /\/contracts\/[0-9a-f-]{36}$/;
 const NEW_CONTRACT_URL = /\/contracts\/new\?title=/;
 const CONTRACT_TITLE = "Aluguel do apê";
+const CONTRACT_OPTION = /^Aluguel do apê/;
+const LOAN_OPTION = /^Empréstimo/;
+const SETTINGS_URL = /\/settings$/;
 /**
  * `signup` cria o usuário como "Usuário E2E" (`fixtures.ts`) e o dono entra
  * como participante do contrato com esse mesmo `displayName`. A busca é
@@ -30,7 +34,13 @@ async function openPaletteByShortcut(page: Page): Promise<Locator> {
   await page
     .locator("html[data-shortcuts-ready]")
     .waitFor({ state: "attached" });
-  await page.keyboard.press("ControlOrMeta+k");
+  // No celular não há teclado: a lupa do topo abre a mesma paleta.
+  const phone = (page.viewportSize()?.width ?? 1280) < PHONE_WIDTH;
+  if (phone) {
+    await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  } else {
+    await page.keyboard.press("ControlOrMeta+k");
+  }
   const palette = page.getByRole("dialog");
   await expect(palette.getByRole("combobox")).toBeFocused();
   return palette;
@@ -62,7 +72,7 @@ test("⌘K acha contrato por título e navega", async ({ page }) => {
   // itens montam com a busca já preenchida.
   await page.keyboard.type("aluguel");
 
-  const found = palette.getByRole("option", { name: CONTRACT_TITLE });
+  const found = palette.getByRole("option", { name: CONTRACT_OPTION });
   await expect(found).toBeVisible();
   // o item precisa estar SELECIONADO, senão o Enter é no-op.
   await expect(found).toHaveAttribute("aria-selected", "true");
@@ -81,7 +91,7 @@ test("acha contrato pelo nome do participante, sem acento", async ({
   await waitForHydrated(page);
 
   const palette = await openPaletteByShortcut(page);
-  const emprestimo = palette.getByRole("option", { name: "Empréstimo" });
+  const emprestimo = palette.getByRole("option", { name: LOAN_OPTION });
 
   // "usuario" não aparece no título: só casa via `participantNames`.
   await page.keyboard.type(OWNER_NAME_UNACCENTED);
@@ -99,39 +109,24 @@ test("sem resultado, cria contrato com o texto digitado", async ({ page }) => {
   await page.keyboard.type("consórcio da moto");
 
   await expect(
-    palette.getByRole("option", { name: 'Criar contrato "consórcio da moto"' })
+    palette.getByRole("option", { name: "Criar contrato “consórcio da moto”" })
   ).toBeVisible();
   await page.keyboard.press("Enter");
 
   await expect(page).toHaveURL(NEW_CONTRACT_URL);
-  await expect(page.getByLabel("Título")).toHaveValue("consórcio da moto");
+  await expect(page.getByLabel("Nome do contrato")).toHaveValue(
+    "consórcio da moto"
+  );
 });
 
-test("mobile: a lupa da bottom-nav abre a busca", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test("Ajustes pela paleta", async ({ page }) => {
   await signup(page);
-
-  // No mobile o <aside> do desktop está `display:none`, então some da árvore
-  // de acessibilidade e sobra só a bottom-nav com este nome.
-  const bottomNav = page.getByRole("navigation", {
-    name: "Navegação principal",
-  });
-  await expect(bottomNav.locator("a, button")).toHaveText([
-    "Dashboard",
-    "Contratos",
-    "Buscar",
-    "Notificações",
-    "Conta",
-  ]);
-
-  // `exact` separa do gatilho "Buscar…" da sidebar expandida.
-  await bottomNav.getByRole("button", { name: "Buscar", exact: true }).click();
-
-  const palette = page.getByRole("dialog");
-  await expect(palette.getByRole("combobox")).toBeFocused();
-  await page.keyboard.type("contratos");
+  const palette = await openPaletteByShortcut(page);
+  await page.keyboard.type("ajustes");
+  await palette.getByRole("option", { name: "Ajustes", exact: true }).click();
+  await expect(page).toHaveURL(SETTINGS_URL);
   await expect(
-    palette.getByRole("option", { name: "Contratos" })
+    page.getByRole("heading", { level: 1, name: "Ajustes" })
   ).toBeVisible();
 });
 
@@ -153,7 +148,7 @@ for (const scheme of ["light", "dark"] as const) {
 
     const palette = await openPaletteByShortcut(page);
     await expect(
-      palette.getByRole("option", { name: CONTRACT_TITLE })
+      palette.getByRole("option", { name: CONTRACT_OPTION })
     ).toBeVisible();
     await settle(palette);
 

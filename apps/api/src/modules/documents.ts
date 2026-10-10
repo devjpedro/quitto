@@ -5,6 +5,7 @@ import { db } from "../db/client";
 import { contract, installment, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { buildStatementCsv } from "../lib/documents/csv";
+import { documentFilename } from "../lib/documents/labels";
 import {
   buildReceiptModel,
   buildStatementModel,
@@ -13,19 +14,13 @@ import {
 } from "../lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../lib/documents/pdf";
 import { ConflictError, NotFoundError } from "../lib/errors";
+import { localeFromHeaders, pickLocale, userLocale } from "../lib/locale";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 
-/** ASCII slug for a safe Content-Disposition filename. */
-export function slug(value: string): string {
-  return (
-    value
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .toLowerCase()
-      .slice(0, 60) || "documento"
-  );
+/** The language of a download: the caller's account, then the request, then pt-BR. */
+async function downloadLocale(userId: string, headers: Headers) {
+  return pickLocale(await userLocale(userId), localeFromHeaders(headers));
 }
 
 async function loadContractFor(userId: string, contractId: string) {
@@ -74,10 +69,19 @@ export const documentsModule = new Elysia({ prefix: "/api" })
         people,
         todayISO()
       );
-      const bytes = await renderStatementPdf(model);
-      return pdfResponse(bytes, `extrato-${slug(c.title)}.pdf`);
+      const locale = await downloadLocale(user.id, request.headers);
+      const bytes = await renderStatementPdf(model, locale);
+      return pdfResponse(
+        bytes,
+        documentFilename({
+          ext: "pdf",
+          kind: "statement",
+          locale,
+          title: c.title,
+        })
+      );
     },
-    { params: t.Object({ id: t.String() }) }
+    { params: t.Object({ id: idParam }) }
   )
   .get(
     "/contracts/:id/statement.csv",
@@ -90,15 +94,21 @@ export const documentsModule = new Elysia({ prefix: "/api" })
         people,
         todayISO()
       );
-      const csv = buildStatementCsv(model);
+      const locale = await downloadLocale(user.id, request.headers);
+      const csv = buildStatementCsv(model, locale);
       return new Response(`﻿${csv}`, {
         headers: {
           "content-type": "text/csv; charset=utf-8",
-          "content-disposition": `attachment; filename="extrato-${slug(c.title)}.csv"`,
+          "content-disposition": `attachment; filename="${documentFilename({
+            ext: "csv",
+            kind: "statement",
+            locale,
+            title: c.title,
+          })}"`,
         },
       });
     },
-    { params: t.Object({ id: t.String() }) }
+    { params: t.Object({ id: idParam }) }
   )
   .get(
     "/installments/:installmentId/receipt.pdf",
@@ -121,11 +131,18 @@ export const documentsModule = new Elysia({ prefix: "/api" })
         toModelInstallment(inst),
         people
       );
-      const bytes = await renderReceiptPdf(model);
+      const locale = await downloadLocale(user.id, request.headers);
+      const bytes = await renderReceiptPdf(model, locale);
       return pdfResponse(
         bytes,
-        `recibo-${slug(c.title)}-parcela-${inst.sequence}.pdf`
+        documentFilename({
+          ext: "pdf",
+          kind: "receipt",
+          locale,
+          sequence: inst.sequence,
+          title: c.title,
+        })
       );
     },
-    { params: t.Object({ installmentId: t.String() }) }
+    { params: t.Object({ installmentId: idParam }) }
   );

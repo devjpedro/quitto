@@ -148,6 +148,8 @@ describe("DELETE /api/contracts/:id/me (sair)", () => {
         )
       );
     expect(audits.length).toBe(1);
+    // The Histórico names who left even when the account is gone ("Membro" is the slot's name).
+    expect(audits[0]?.metadata).toEqual({ participantName: "Membro" });
 
     const [c] = await db
       .select({ ownerId: contract.ownerId })

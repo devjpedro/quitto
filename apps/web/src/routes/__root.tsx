@@ -6,20 +6,30 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Toaster } from "sonner";
-import "@fontsource/space-grotesk/500.css";
-import "@fontsource/space-grotesk/700.css";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "@fontsource-variable/bricolage-grotesque";
 import "../index.css";
+import { AppToaster } from "@/components/ui/app-toaster";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
+import { seedSession } from "@/lib/session-route";
 import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
+import { m } from "@/paraglide/messages.js";
+import { getLocale } from "@/paraglide/runtime.js";
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // The session is decided once, here, and every route reads it from the
+  // context: the layouts redirect on it, and the logo (HomeLogo) is a link
+  // only when there is one. Cheap: with no cookie it never calls the API.
+  beforeLoad: async ({ context }) => ({
+    session: await seedSession(context.queryClient),
+  }),
   // No cliente lê o cookie direto: server function aqui é um request por preload.
   loader: () =>
     typeof document === "undefined"
@@ -28,19 +38,25 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1.0" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1.0, viewport-fit=cover",
+      },
       {
         name: "description",
-        content:
-          "Quitto — gerencie contratos parcelados, comprovantes e quitação em um só lugar.",
+        content: m.meta_description(),
       },
       {
         name: "theme-color",
-        content: loaderData === "dark" ? "#1c1c1c" : "#faf9f6",
+        content: loaderData === "dark" ? "#1A1B18" : "#F1F0EB",
       },
       { title: "Quitto" },
     ],
-    links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+    links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+    ],
   }),
   component: RootDocument,
 });
@@ -60,7 +76,7 @@ function RootDocument() {
   return (
     <html
       className={theme === "dark" ? "dark" : undefined}
-      lang="pt-BR"
+      lang={getLocale()}
       suppressHydrationWarning
     >
       <head>
@@ -71,7 +87,7 @@ function RootDocument() {
       </head>
       <body>
         <Outlet />
-        <Toaster position="top-right" richColors />
+        <AppToaster />
         <Scripts />
       </body>
     </html>

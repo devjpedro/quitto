@@ -8,12 +8,47 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // In CI the specs run against the dev server (Vite compiles each route on its
+  // first hit) on a 2-core runner: the multi-route and axe specs pass 30 s
+  // there while taking 10-20 s locally. Locally the defaults stay.
+  timeout: process.env.CI ? 120_000 : 30_000,
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
+    // A fresh account has no language chosen (null), so the browser's
+    // Accept-Language decides the UI. Chromium defaults to en-US, and the specs
+    // assert pt-BR copy: pin the browser to pt-BR so every page renders it.
+    locale: "pt-BR",
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "mobile",
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+        isMobile: true,
+      },
+      testMatch: [
+        "**/shell.spec.ts",
+        "**/home*.spec.ts",
+        "**/contract-*.spec.ts",
+        "**/wizard*.spec.ts",
+        "**/invite*.spec.ts",
+        "**/contracts-list.spec.ts",
+        "**/installments*.spec.ts",
+        "**/people*.spec.ts",
+        "**/auth.spec.ts",
+        "**/settings.spec.ts",
+        "**/public-receipt.spec.ts",
+        "**/command-palette.spec.ts",
+        "**/smoke.spec.ts",
+      ],
+    },
+  ],
   webServer: [
     {
       command: "bun run --filter @quitto/api dev",

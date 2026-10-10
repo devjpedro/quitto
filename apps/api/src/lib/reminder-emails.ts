@@ -4,6 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db/client";
 import { contract, installment, user } from "../db/schema";
 import { type ReminderEmailItem, reminderDigestEmail } from "./email-templates";
+import { pickLocale } from "./locale";
 import type { SendEmailInput } from "./mailer";
 import type { InsertedNotification } from "./notifications";
 
@@ -30,7 +31,12 @@ export async function sendReminderEmails(
   }
   const userIds = [...new Set(withInstallment.map((n) => n.userId))];
   const recipients = await db
-    .select({ id: user.id, email: user.email, name: user.name })
+    .select({
+      id: user.id,
+      email: user.email,
+      locale: user.locale,
+      name: user.name,
+    })
     .from(user)
     .where(and(inArray(user.id, userIds), eq(user.emailRemindersOptIn, true)));
   if (recipients.length === 0) {
@@ -85,9 +91,10 @@ export async function sendReminderEmails(
     items.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     const { subject, html } = reminderDigestEmail({
       name: r.name,
+      locale: pickLocale(r.locale),
       items,
       homeUrl: `${deps.webOrigin}/`,
-      settingsUrl: `${deps.webOrigin}/settings`,
+      settingsUrl: `${deps.webOrigin}/settings/reminders`,
     });
     try {
       await deps.send({ to: r.email, subject, html });

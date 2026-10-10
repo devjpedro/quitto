@@ -19,3 +19,20 @@ export function isoDateInTimeZone(
 export function todayISO(timeZone: string = APP_TIME_ZONE): string {
   return isoDateInTimeZone(new Date(), timeZone);
 }
+
+/** The earliest year a date may have: four digits, no leading zero ("0202" is a typo). */
+const MIN_YEAR = 1000;
+
+/** A YYYY-MM-DD that is a real calendar day with a four-digit year (rejects 2027-02-31, month 13 and 0202-11-10). */
+export function isRealISODate(iso: string): boolean {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  if (!(y && m && d) || y < MIN_YEAR) {
+    return false;
+  }
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return (
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
+  );
+}

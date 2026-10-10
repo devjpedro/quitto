@@ -6,6 +6,7 @@ import { runReminderSweep } from "../src/cron/reminders";
 import { db } from "../src/db/client";
 import { notification, participant } from "../src/db/schema";
 import { addDays } from "../src/lib/dates";
+import { insertNotificationsReturning } from "../src/lib/notifications";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 async function createContract(cookie: string, requiresConfirmation: boolean) {
@@ -242,7 +243,9 @@ describe("endpoints de notificação", () => {
         })
       )
     ).json();
-    expect(list.length).toBe(2);
+    // Two in a row, same type and contract: one line (B's notice is not here, or it would be 3).
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ count: 2, unreadCount: 2 });
 
     const count = await (
       await app.handle(
@@ -321,76 +324,93 @@ describe("endpoints de notificação", () => {
   });
 });
 
+/**
+ * `runReminderSweep` is global by design (it reads every open installment of
+ * every active contract), so its cost grows with the database, not with the
+ * test: a dev database that kept tens of thousands of test installments from
+ * earlier runs takes far longer than bun's 5 s default. These tests only
+ * assert on their own users' rows, so a longer limit is the honest fix.
+ */
+const SWEEP_TIMEOUT_MS = 60_000;
+
 describe("sweep de lembretes", () => {
-  it("gera lembrete para parcela vencida e é idempotente", async () => {
-    const cookie = await signUpCookie(uniqueEmail("rem-1"));
-    const payerId = await meId(cookie);
-    // contrato com primeira parcela já vencida
-    const res = await app.handle(
-      new Request("http://localhost/api/contracts", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie },
-        body: JSON.stringify({
-          title: "Vencida",
-          ownerRole: "buyer",
-          requiresConfirmation: false,
-          schedule: {
-            mode: "custom",
-            installments: [
-              { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
-            ],
-          },
-        }),
-      })
-    );
-    const contractId = (await res.json()).id as string;
-
-    await runReminderSweep();
-    await runReminderSweep(); // segunda passada não duplica
-
-    const rows = await db
-      .select()
-      .from(notification)
-      .where(
-        and(
-          eq(notification.userId, payerId),
-          eq(notification.contractId, contractId)
-        )
+  it(
+    "gera lembrete para parcela vencida e é idempotente",
+    async () => {
+      const cookie = await signUpCookie(uniqueEmail("rem-1"));
+      const payerId = await meId(cookie);
+      // contrato com primeira parcela já vencida
+      const res = await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie },
+          body: JSON.stringify({
+            title: "Vencida",
+            ownerRole: "buyer",
+            requiresConfirmation: false,
+            schedule: {
+              mode: "custom",
+              installments: [
+                { amountCents: 1000, dueDate: addDays(todayISO(), -2) },
+              ],
+            },
+          }),
+        })
       );
-    expect(rows.length).toBe(1);
-    expect(rows[0]?.type).toBe("installment_overdue");
-  });
+      const contractId = (await res.json()).id as string;
 
-  it("dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)", async () => {
-    const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
-    const ownerId = await meId(ownerCookie);
-    const res = await app.handle(
-      new Request("http://localhost/api/contracts", {
-        method: "POST",
-        headers: { "content-type": "application/json", cookie: ownerCookie },
-        body: JSON.stringify({
-          title: "Venda",
-          ownerRole: "seller",
-          requiresConfirmation: false,
-          schedule: {
-            mode: "auto",
-            totalAmountCents: 3000,
-            installmentsCount: 3,
-            firstDueDate: addDays(todayISO(), -2),
-          },
-        }),
-      })
-    );
-    const contractId = (await res.json()).id as string;
+      await runReminderSweep();
+      await runReminderSweep(); // segunda passada não duplica
 
-    await runReminderSweep();
+      const rows = await db
+        .select()
+        .from(notification)
+        .where(
+          and(
+            eq(notification.userId, payerId),
+            eq(notification.contractId, contractId)
+          )
+        );
+      expect(rows.length).toBe(1);
+      expect(rows[0]?.type).toBe("installment_overdue");
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
-    const rows = await notifsFor(ownerId, contractId);
-    const types = rows.map((r) => r.type);
-    expect(types).toContain("installment_overdue_receivable");
-    expect(types).not.toContain("installment_overdue");
-    expect(types).not.toContain("installment_due_soon");
-  });
+  it(
+    "dono-vendedor recebe lembrete 'a receber' (sem comprador vinculado)",
+    async () => {
+      const ownerCookie = await signUpCookie(uniqueEmail("rem-seller"));
+      const ownerId = await meId(ownerCookie);
+      const res = await app.handle(
+        new Request("http://localhost/api/contracts", {
+          method: "POST",
+          headers: { "content-type": "application/json", cookie: ownerCookie },
+          body: JSON.stringify({
+            title: "Venda",
+            ownerRole: "seller",
+            requiresConfirmation: false,
+            schedule: {
+              mode: "auto",
+              totalAmountCents: 3000,
+              installmentsCount: 3,
+              firstDueDate: addDays(todayISO(), -2),
+            },
+          }),
+        })
+      );
+      const contractId = (await res.json()).id as string;
+
+      await runReminderSweep();
+
+      const rows = await notifsFor(ownerId, contractId);
+      const types = rows.map((r) => r.type);
+      expect(types).toContain("installment_overdue_receivable");
+      expect(types).not.toContain("installment_overdue");
+      expect(types).not.toContain("installment_due_soon");
+    },
+    SWEEP_TIMEOUT_MS
+  );
 
   it.skipIf(!hasStorage)(
     "não gera lembrete para parcela em awaiting_confirmation",
@@ -450,6 +470,75 @@ describe("sweep de lembretes", () => {
           )
         );
       expect(rows).toHaveLength(0);
-    }
+    },
+    SWEEP_TIMEOUT_MS
   );
+});
+
+describe("notificações em lotes", () => {
+  it("7 linhas com lote de 3 viram 3 inserts; a 2ª vez não duplica", async () => {
+    const cookie = await signUpCookie(uniqueEmail("lote"));
+    const userId = await meId(cookie);
+    const contractId = await createContract(cookie, false);
+    const inputs = Array.from({ length: 7 }, (_, n) => ({
+      userId,
+      contractId,
+      type: "installment_overdue",
+      dedupeKey: `lote:${contractId}:${n}`,
+    }));
+    let inserts = 0;
+    const counting = new Proxy(db, {
+      get(target, key) {
+        const value = Reflect.get(target, key, target);
+        if (key === "insert") {
+          return (...args: Parameters<typeof db.insert>) => {
+            inserts += 1;
+            return target.insert(...args);
+          };
+        }
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    expect(
+      await insertNotificationsReturning(counting, inputs, 3)
+    ).toHaveLength(7);
+    expect(inserts).toBe(3);
+    expect(await insertNotificationsReturning(db, inputs, 3)).toHaveLength(0);
+    const rows = await notifsFor(userId, contractId);
+    expect(rows.filter((r) => r.dedupeKey?.startsWith("lote:"))).toHaveLength(
+      7
+    );
+  });
+});
+
+describe("lotes dentro de uma transação", () => {
+  it("falha no meio dos lotes não deixa lote pela metade e a repetição devolve todos", async () => {
+    const cookie = await signUpCookie(uniqueEmail("lote-tx"));
+    const userId = await meId(cookie);
+    const contractId = await createContract(cookie, false);
+    const good = Array.from({ length: 5 }, (_, n) => ({
+      userId,
+      contractId,
+      type: "installment_overdue",
+      dedupeKey: `lote-tx:${contractId}:${n}`,
+    }));
+    // A linha 4 aponta para um contrato que não existe: o 2º lote (de 3) falha.
+    const broken = good.map((row, n) =>
+      n === 4 ? { ...row, contractId: "nao-existe" } : row
+    );
+
+    await expect(
+      db.transaction((tx) => insertNotificationsReturning(tx, broken, 3))
+    ).rejects.toThrow();
+    const after = await notifsFor(userId, contractId);
+    expect(
+      after.filter((r) => r.dedupeKey?.startsWith("lote-tx:"))
+    ).toHaveLength(0);
+
+    const again = await db.transaction((tx) =>
+      insertNotificationsReturning(tx, good, 3)
+    );
+    expect(again).toHaveLength(5);
+  });
 });

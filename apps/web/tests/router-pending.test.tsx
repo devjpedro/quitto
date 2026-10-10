@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { expect, test } from "vitest";
 import { getRouter } from "../src/router";
 
@@ -10,6 +10,6 @@ test("router tem um pending padrão visível (nunca tela vazia)", () => {
   if (!Pending) {
     return;
   }
-  render(<Pending />);
-  expect(screen.getByRole("status")).toBeInTheDocument();
+  const { container } = render(<Pending />);
+  expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
 });

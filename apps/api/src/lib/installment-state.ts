@@ -7,7 +7,8 @@ export type InstallmentAction =
   | "submit_proof"
   | "confirm"
   | "dispute"
-  | "mark_paid";
+  | "mark_paid"
+  | "mark_received";
 
 /**
  * Pure transition function. `requiresConfirmation` selects the ruleset.
@@ -38,8 +39,17 @@ export function nextStatus(
     ) {
       return INSTALLMENT_STATUS.disputed;
     }
+    if (
+      action === "mark_received" &&
+      (current === INSTALLMENT_STATUS.pending ||
+        current === INSTALLMENT_STATUS.disputed)
+    ) {
+      return INSTALLMENT_STATUS.confirmed;
+    }
   } else if (
-    (action === "submit_proof" || action === "mark_paid") &&
+    (action === "submit_proof" ||
+      action === "mark_paid" ||
+      action === "mark_received") &&
     current !== INSTALLMENT_STATUS.paid
   ) {
     return INSTALLMENT_STATUS.paid;
