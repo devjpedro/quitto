@@ -12,7 +12,13 @@ import { isTimeoutError } from "./with-timeout";
 
 declare module "@tanstack/react-query" {
   interface Register {
-    mutationMeta: { successMessage?: string };
+    mutationMeta: {
+      /** Said instead of the generic toast when the mutation fails (a failure the caller can name). */
+      errorMessage?: string;
+      /** silentError: the mutation shows its own error (a field, a sheet), so no toast. */
+      silentError?: boolean;
+      successMessage?: string;
+    };
     /** silentRefetchError: a failed background refetch of this query never toasts. */
     queryMeta: { silentRefetchError?: boolean };
   }
@@ -95,9 +101,12 @@ export function makeQueryClient(): QueryClient {
     }),
     mutationCache: new MutationCache({
       onSuccess: toastSuccessFromMeta,
-      onError: (error) => {
+      onError: (error, _variables, _onMutateResult, mutation) => {
+        if (mutation.meta?.silentError) {
+          return;
+        }
         if (shouldToast(error)) {
-          toast.error(errorMessage(error));
+          toast.error(mutation.meta?.errorMessage ?? errorMessage(error));
         }
       },
     }),

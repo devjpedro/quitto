@@ -8,13 +8,14 @@ import {
   RouterProvider,
   useLocation,
 } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, type ShellProps } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
+import { queryKeys } from "@/lib/query-keys";
 import type { SessionIdentity } from "@/lib/session-resolver";
-import { renderWithProviders } from "./test-utils";
+import { makeTestQueryClient, renderWithProviders } from "./test-utils";
 
 vi.mock("@/lib/auth-client", () => ({ signOut: vi.fn(async () => undefined) }));
 vi.mock("@/lib/api", () => ({
@@ -56,9 +57,10 @@ async function renderAt(
     component: () => (
       <AppFrame
         activeContracts={{ items: [], total: 0 }}
+        detail={null}
         identity={maria}
         moment={null}
-        navCounts={{ contracts: 0, now: 0 }}
+        navCounts={{ contracts: 0, installments: 0, now: 0, people: 0 }}
         notificationsOpen={false}
         onOpenNotifications={openNotifications}
         onOpenSearch={vi.fn()}
@@ -83,7 +85,10 @@ async function renderAt(
     routeTree: rootRoute,
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  renderWithProviders(<RouterProvider router={router} />);
+  // The app has a session (the root seeds it), so the logo is a link home.
+  const client = makeTestQueryClient();
+  client.setQueryData(queryKeys.session, maria);
+  renderWithProviders(<RouterProvider router={router} />, { client });
   await screen.findByRole("heading", { name: `page ${path}` });
 }
 
@@ -102,6 +107,18 @@ describe("AppFrame", () => {
     expect(nav.getByRole("link", { name: "Agora" })).not.toHaveAttribute(
       "aria-current"
     );
+  });
+
+  it("depois de navegar por um link da sidebar o foco vai para o bloco rolável, para o teclado rolar", async () => {
+    await renderAt("/");
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    await userEvent.click(
+      within(sidebarNav as HTMLElement).getByRole("link", { name: "Contratos" })
+    );
+    await screen.findByRole("heading", { name: "page /contracts" });
+    expect(document.getElementById("conteudo")).toHaveFocus();
   });
 
   it("the bell and the sidebar row carry the unread count and open the panel", async () => {
@@ -200,7 +217,7 @@ describe("AppFrame", () => {
     );
   });
 
-  it("o cartão limão do marco do momento: rótulo, anel com o %, título e detalhe", async () => {
+  it("o cartão limão do marco do momento: rótulo, anel com o %, e o título; o detalhe fica de fora (2 linhas)", async () => {
     await renderAt("/", {
       moment: {
         label: "Mais perto de quitar",
@@ -216,11 +233,7 @@ describe("AppFrame", () => {
     expect(within(card).getByText("90%")).toBeVisible();
     expect(card.querySelector("svg")).toHaveAttribute("width", "22");
     expect(within(card).getByText("Celular da Ana · 9/10")).toBeVisible();
-    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toBeVisible();
-    // A long detail wraps without leaving one word (the date) alone on the last line.
-    expect(within(card).getByText("Falta 1 parcela, em 13/10")).toHaveClass(
-      "text-pretty"
-    );
+    expect(within(card).queryByText("Falta 1 parcela, em 13/10")).toBeNull();
   });
 
   it("um marco que não é progresso (pago no mês): sem anel e sem %", async () => {
@@ -298,7 +311,9 @@ describe("AppFrame", () => {
   });
 
   it("Agora and Contratos show their counts, hidden from AT and read in the link name", async () => {
-    await renderAt("/contracts", { navCounts: { contracts: 2, now: 3 } });
+    await renderAt("/contracts", {
+      navCounts: { contracts: 2, installments: 4, now: 3, people: 2 },
+    });
     const [sidebarNav, tabBar] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
@@ -322,8 +337,24 @@ describe("AppFrame", () => {
     );
   });
 
+  it("a sidebar diz Parcelas, 4 neste mês, e Pessoas, 2 pessoas", async () => {
+    await renderAt("/contracts", {
+      navCounts: { contracts: 2, installments: 4, now: 3, people: 2 },
+    });
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    const nav = within(sidebarNav as HTMLElement);
+    expect(
+      nav.getByRole("link", { name: "Parcelas, 4 neste mês" })
+    ).toBeVisible();
+    expect(nav.getByRole("link", { name: "Pessoas, 2 pessoas" })).toBeVisible();
+  });
+
   it("one pending action and one active contract read in the singular", async () => {
-    await renderAt("/", { navCounts: { contracts: 1, now: 1 } });
+    await renderAt("/", {
+      navCounts: { contracts: 1, installments: 1, now: 1, people: 1 },
+    });
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",
     });
@@ -361,6 +392,33 @@ describe("AppFrame", () => {
     expect(
       within(screen.getByRole("banner")).getByRole("img", { name: "Quitto" })
     ).toHaveStyle({ fontSize: "22px" });
+  });
+
+  it("makes the sidebar logo a link home, named for it", async () => {
+    await renderAt("/");
+    const home = within(screen.getByRole("complementary")).getByRole("link", {
+      name: "Quitto, início",
+    });
+    expect(home).toHaveAttribute("href", "/");
+    expect(within(home).getByRole("img", { name: "Quitto" })).toBeVisible();
+  });
+
+  it("gives the sidebar search field the 44 px of the menu rows", async () => {
+    await renderAt("/");
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(
+      sidebar.getByRole("button", {
+        name: (name) => name.startsWith("Buscar"),
+      })
+    ).toHaveClass("h-11");
+    expect(sidebar.getByRole("link", { name: "Agora" })).toHaveClass(
+      "min-h-11"
+    );
+    // A column taller than the screen scrolls; it never squeezes the field.
+    expect(sidebar.getByRole("navigation")).toHaveClass("shrink-0");
+    expect(
+      sidebar.getByRole("button", { name: (name) => name.startsWith("Buscar") })
+    ).toHaveClass("shrink-0");
   });
 
   it("has a skip link to the main content", async () => {
@@ -402,10 +460,76 @@ describe("AppFrame", () => {
 
   it("offers 'Novo contrato' in the mobile tab bar", async () => {
     await renderAt("/");
-    expect(screen.getByRole("link", { name: "Novo contrato" })).toHaveAttribute(
-      "href",
-      "/contracts/new"
+    const links = screen.getAllByRole("link", { name: "Novo contrato" });
+    // The tab bar's ＋ and the sidebar's quiet button.
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "/contracts/new");
+    }
+  });
+
+  it("a sidebar tem o ＋ de Novo contrato na linha da logo: 36 px, sem fundo, contorno line-strong, nomeado e com tooltip no foco", async () => {
+    await renderAt("/");
+    const aside = document.querySelector("aside") as HTMLElement;
+    const button = within(aside).getByRole("link", { name: "Novo contrato" });
+    expect(button).toHaveClass(
+      "size-9",
+      "border",
+      "border-line-strong",
+      "hover:bg-surface-card"
     );
+    expect(button.className).not.toMatch(BG_FILL);
+    expect(button).toHaveTextContent("");
+    expect(button).toHaveAttribute("data-tour", "new-contract");
+    // On the logo's line, beside the link home, and no wide button under the group.
+    const logo = within(aside).getByRole("link", { name: "Quitto, início" });
+    expect(logo.parentElement).toBe(button.parentElement);
+    const [sidebarNav] = screen.getAllByRole("navigation", {
+      name: "Navegação principal",
+    });
+    expect(
+      within(sidebarNav as HTMLElement).queryByRole("link", {
+        name: "Novo contrato",
+      })
+    ).toBeNull();
+    // The tooltip names it on keyboard focus.
+    act(() => button.focus());
+    expect(button).toHaveFocus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Novo contrato"
+    );
+  });
+
+  it("no detalhe, a barra de cima tem ‹ Contratos, o sino e as ações, sem busca e sem avatar", async () => {
+    await renderAt("/contracts/c6", {
+      unreadCount: 3,
+      detail: {
+        backLabel: "Contratos",
+        backTo: "/contracts",
+        actions: (
+          <button aria-label="Exportar e ações do contrato" type="button" />
+        ),
+      },
+    });
+    const topBar = within(screen.getByRole("banner"));
+    // "‹ Contratos" where the logo was (DIRECAO › Layout: not a placeholder).
+    expect(topBar.getByRole("link", { name: "Contratos" })).toHaveAttribute(
+      "href",
+      "/contracts"
+    );
+    expect(topBar.queryByRole("img", { name: "Quitto" })).toBeNull();
+    expect(
+      topBar.getByRole("button", { name: "Notificações, 3 não lidas" })
+    ).toBeVisible();
+    expect(
+      topBar.getByRole("button", { name: "Exportar e ações do contrato" })
+    ).toBeVisible();
+    expect(topBar.queryByRole("button", { name: "Buscar" })).toBeNull();
+    expect(topBar.queryByRole("button", { name: ACCOUNT_TRIGGER })).toBeNull();
+    // The sidebar ignores it: its logo, search and account stay.
+    const sidebar = within(screen.getByRole("complementary"));
+    expect(sidebar.getByRole("img", { name: "Quitto" })).toBeVisible();
+    expect(sidebar.getByRole("button", { name: "Buscar…" })).toBeVisible();
   });
 });
 
@@ -450,14 +574,16 @@ const SIX = {
   ],
 };
 
+const BG_FILL = /(^|\s)bg-/;
+
 describe("Sidebar · Contratos ativos (mockup 13)", () => {
-  it("até 5, na ordem que chegam, cada um com o anel e a fração; Ver todos (N) quando há mais", async () => {
+  it("até 3, na ordem que chegam, cada um com o anel e a fração; Ver todos (N) quando há mais", async () => {
     await renderAt("/", { activeContracts: SIX });
     const list = screen.getByRole("list", { name: "Contratos ativos" });
     const links = within(list).getAllByRole("link");
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(3);
     // The order they come in (the API's fixed order), never re-sorted here.
-    for (const [index, contract] of SIX.items.entries()) {
+    for (const [index, contract] of SIX.items.slice(0, 3).entries()) {
       expect(links[index]).toHaveTextContent(contract.title);
     }
     expect(links[0]).toHaveAttribute("href", "/contracts/c6");
@@ -544,9 +670,9 @@ describe("Sidebar · Contratos ativos (mockup 13)", () => {
     ).toBeNull();
   });
 
-  it("itens da sidebar: hover com nav-hover e foco por dentro, sem cortar no canto; com 5, sem Ver todos", async () => {
-    await renderAt("/", { activeContracts: { ...SIX, total: 5 } });
-    expect(screen.queryByRole("link", { name: "Ver todos (5)" })).toBeNull();
+  it("itens da sidebar: hover com nav-hover e foco por dentro, sem cortar no canto; com 3, sem Ver todos", async () => {
+    await renderAt("/", { activeContracts: { ...SIX, total: 3 } });
+    expect(screen.queryByRole("link", { name: "Ver todos (3)" })).toBeNull();
     // The sidebar's own nav: the tab bar has a "Contratos" link too, in the DOM with it.
     const [sidebarNav] = screen.getAllByRole("navigation", {
       name: "Navegação principal",

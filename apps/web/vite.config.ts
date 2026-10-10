@@ -8,6 +8,7 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { nitro } from "nitro/vite";
 import { defineConfig, type PluginOption } from "vite";
 import { paraglideOptions } from "./paraglide.config";
+import { dedupeDevStylesPlugin } from "./scripts/dedupe-dev-styles";
 
 const analyze = process.env.ANALYZE === "1";
 // No `vercel build` rodando dentro do GitHub Actions, a autodetecção do Nitro
@@ -20,6 +21,7 @@ const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN;
 export default defineConfig(({ command }) => ({
   plugins: [
     paraglideVitePlugin(paraglideOptions),
+    dedupeDevStylesPlugin(),
     tanstackStart(),
     // Nitro empacota o servidor do Start pro alvo de deploy (na Vercel detecta
     // o preset sozinho e gera o Build Output API). Só no build: no `vite dev`

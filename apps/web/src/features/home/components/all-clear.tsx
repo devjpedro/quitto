@@ -1,5 +1,6 @@
-import { CheckCircle } from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { formatMoney, formatRelativeDays } from "@/lib/locale-format";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
@@ -36,18 +37,24 @@ export function AllClear({
       })
     : m.home_all_clear_none();
   return (
-    <div className="flex flex-wrap items-center gap-3.5 rounded-card bg-surface-card p-4">
+    <div className="flex flex-wrap items-center gap-3.5 rounded-card bg-highlight p-4 text-on-highlight">
       <span
         aria-hidden="true"
-        className="flex size-11 shrink-0 items-center justify-center rounded-control bg-brand-subtle text-brand"
+        className="relative flex size-11 shrink-0 items-center justify-center"
       >
-        <CheckCircle size={22} weight="fill" />
+        <ProgressRing
+          className="absolute inset-0 size-11"
+          percent={100}
+          size={44}
+          tone="onHighlight"
+        />
+        <Check size={20} weight="bold" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-display font-semibold text-lg tracking-[-0.02em]">
           {m.home_all_clear_title()}
         </p>
-        <p className="text-ink-muted text-sm">{text}</p>
+        <p className="text-sm">{text}</p>
       </div>
       {hasUpcoming ? (
         // A row of its own on a phone: next to the text it would squeeze it to ~80 px.
@@ -55,7 +62,7 @@ export function AllClear({
           className="w-full md:w-auto"
           onClick={jumpToUpcoming}
           size="sm"
-          variant="inset"
+          variant="onBrand"
         >
           {m.home_all_clear_cta()}
         </Button>

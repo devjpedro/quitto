@@ -82,15 +82,16 @@ test("carregamento SSR: o navegador lê só o que o SSR não trouxe, uma vez cad
   ).toBeVisible();
   expect(homeReads).toEqual(["/api/me"]);
 
-  // The contracts route has no loader: the SSR never reads the list, and the
-  // browser reads it once, plus the home that feeds the sidebar's counters.
+  // The contracts list has a loader: it streams in the HTML, and the browser
+  // reads only what the shell asks for (the home that feeds the sidebar's counters).
   const contractsReads = await apiReadsOfSsrLoad(page, "/contracts", [
-    "/api/contracts",
     "/api/home",
     "/api/me",
   ]);
-  await expect(page.getByRole("heading", { name: "Contratos" })).toBeVisible();
-  expect(contractsReads).toEqual(["/api/contracts", "/api/home", "/api/me"]);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Contratos" })
+  ).toBeVisible();
+  expect(contractsReads).toEqual(["/api/home", "/api/me"]);
 
   // Without the hint the SSR reads /me itself and seeds it, so the browser
   // reads nothing at all. Not an empty pass: the loads above show the reads.
@@ -122,7 +123,11 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   // with it. A fastForward would also fire, inside the jump, the 15 s timeout
   // of every read started meanwhile, which no real wait aborts.
   await advanceDateNow(page, 60_000);
-  await page.getByRole("link", { name: "Novo contrato" }).hover();
+  await page
+    .getByRole("link", { name: "Novo contrato" })
+    .filter({ visible: true })
+    .first()
+    .hover();
   const row = page.locator(`a[href="/contracts/${id}"]`).first();
   await row.hover();
   await row.click();
@@ -139,6 +144,9 @@ test("hover e navegação dentro do app não chamam server functions", async ({
   for (const name of ["Contratos", "Agora"]) {
     await nav.getByRole("link", { name }).hover();
   }
+  // The hover preload of the list reads it now (it has a loader): let that
+  // read settle first, so the 60 s age data that is already in the cache.
+  await page.waitForLoadState("networkidle");
   await advanceDateNow(page, 60_000);
   const contractsReads: string[] = [];
   page.on("request", (req) => {

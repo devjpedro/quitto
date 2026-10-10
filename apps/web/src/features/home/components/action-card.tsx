@@ -19,10 +19,11 @@ function buttonVariant(first: boolean, index: number): CardButtonVariant {
  * Below the content width two buttons need side by side (the wider locale,
  * gap included), each takes a whole row: never one left alone (decision 16).
  * Most pairs fit in 240 px; below md a group's "Ver parcelas" is a 44 px icon.
+ * Below 23.5rem the WhatsApp button says "Cobrar", as on the contract.
  */
 const STACK_BELOW: Record<string, string> = {
-  "whatsapp,mark_received": "@max-[23rem]:w-full", // 362 px
-  "whatsapp,see_installments": "@max-[15rem]:w-full md:@max-[21rem]:w-full", // 331 px
+  "whatsapp,mark_received": "@max-[17rem]:w-full", // "Cobrar" + "Marcar como recebida": 272 px
+  "whatsapp,see_installments": "@max-[15rem]:w-full md:@max-[15.5rem]:w-full", // "Charge" + "See installments": 238 px
   "pay_oldest,see_installments": "@max-[15rem]:w-full md:@max-[17rem]:w-full", // 267 px
 };
 
@@ -48,7 +49,11 @@ export function ActionCard({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const view = describeAction(action, { first, locale, today });
+  const view = describeAction(action, {
+    first,
+    locale,
+    today,
+  });
   const buttons = actionButtons(action);
   const stack = STACK_BELOW[buttons.join()] ?? "@max-[15rem]:w-full";
   const { busy, run } = useActionHandlers(action, tryLock, () =>

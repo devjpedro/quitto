@@ -1,7 +1,10 @@
 import { t } from "elysia";
 
-const directionSchema = t.Union([t.Literal("pay"), t.Literal("receive")]);
-const nullableString = t.Union([t.String(), t.Null()]);
+export const directionSchema = t.Union([
+  t.Literal("pay"),
+  t.Literal("receive"),
+]);
+export const nullableString = t.Union([t.String(), t.Null()]);
 
 const upcomingItemSchema = t.Object({
   installmentId: t.String(),
@@ -15,7 +18,7 @@ const upcomingItemSchema = t.Object({
   status: t.String(),
 });
 
-const barStatusSchema = t.Union([
+export const barStatusSchema = t.Union([
   t.Literal("paid"),
   t.Literal("overdue"),
   t.Literal("review"),
@@ -50,6 +53,7 @@ const installmentActionSchema = t.Object({
   counterpartyName: nullableString,
   pixCode: nullableString,
   canMarkPaid: t.Boolean(),
+  canMarkReceived: t.Boolean(),
   canConfirm: t.Boolean(),
   count: t.Integer(),
   installmentIds: t.Array(t.String()),
@@ -127,6 +131,8 @@ export const homeSchema = t.Object({
   }),
   unreadCount: t.Integer(),
   activeContractsCount: t.Integer(),
+  monthInstallmentsCount: t.Integer(),
+  peopleCount: t.Integer(),
   activeContracts: t.Array(
     t.Object({
       contractId: t.String(),

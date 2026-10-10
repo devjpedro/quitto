@@ -67,6 +67,9 @@ const TEXT_PAIRS: [string, string][] = [
   // The inset (secondary) button's hover, in the panel and on a phone.
   ["ink", "surface-inset-hover"],
   ["ink", "page-inset-hover"],
+  ["ink", "row-selected"],
+  ["ink-muted", "row-selected"],
+  ["brand", "row-selected"],
   ["brand", "surface-card"],
   ["brand", "surface-inset"],
   ["danger", "surface-card"],
@@ -98,6 +101,11 @@ const TEXT_PAIRS: [string, string][] = [
   ["on-avatar", "avatar-rose"],
   ["on-avatar", "avatar-wine"],
   ["on-avatar", "avatar-graphite"],
+  // The chosen option (mockup 15): its title and hint, at rest and on hover.
+  ["ink", "surface-selected"],
+  ["ink-muted", "surface-selected"],
+  ["ink", "surface-selected-hover"],
+  ["ink-muted", "surface-selected-hover"],
 ];
 
 // [foreground, background] pairs of non-text UI (WCAG 1.4.11, 3:1). From md
@@ -106,6 +114,10 @@ const TEXT_PAIRS: [string, string][] = [
 const NON_TEXT_PAIRS: [string, string][] = [
   ["brand", "canvas"],
   ["ink", "canvas"],
+  // Form fields: the outline against the field and what is around it (WCAG 1.4.11).
+  ["field-line", "surface"],
+  ["field-line", "surface-sunken"],
+  ["field-line", "surface-card"],
   // The installment bar's segments on its track, and the green card's
   // overdue stripe (WCAG 1.4.11).
   ["brand", "track"],
@@ -119,6 +131,9 @@ const NON_TEXT_PAIRS: [string, string][] = [
   ["danger", "canvas"],
   ["danger", "nav-hover"],
   ["danger", "surface-raised"],
+  // The chosen option's filled radio on its tint, at rest and on hover (WCAG 1.4.11).
+  ["brand", "surface-selected"],
+  ["brand", "surface-selected-hover"],
 ];
 
 // [foreground, background, alpha] text drawn with opacity on a token: the
@@ -353,6 +368,18 @@ describe("surface layers", () => {
     ["panel, dark", dark, "surface-card", "surface-card-hover"],
     ["phone, light", light, "surface", "page-card-hover"],
     ["phone, dark", dark, "surface", "page-card-hover"],
+    [
+      "option selected, light",
+      light,
+      "surface-selected",
+      "surface-selected-hover",
+    ],
+    [
+      "option selected, dark",
+      dark,
+      "surface-selected",
+      "surface-selected-hover",
+    ],
   ];
   for (const [context, tokens, card, hover] of CARD_HOVER_CONTEXTS) {
     it(`${context}: the card's hover is a visible step down from it`, () => {

@@ -1,15 +1,10 @@
 import type { Locale } from "@quitto/shared";
 import type { TagTone } from "@/components/ui/tag";
+import { inviteTerms } from "@/lib/invite-terms-text";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { m } from "@/paraglide/messages.js";
 import type { HomeAction, InstallmentAction } from "../types";
-import {
-  inviteTerms,
-  kindTag,
-  legendOf,
-  type PersonLine,
-  personLine,
-} from "./action-text";
+import { kindTag, legendOf, type PersonLine, personLine } from "./action-text";
 
 export type { PersonLine } from "./action-text";
 
@@ -27,7 +22,7 @@ export type ActionButtonKind =
   | "pay_oldest"
   | "see_installments";
 
-/** Buttons that open the installment in its contract (the legacy drawer until Fase 2): on a group, the oldest one. */
+/** Buttons that open the installment in its contract: on a group, the oldest one. */
 export const LINK_BUTTONS: ReadonlySet<ActionButtonKind> =
   new Set<ActionButtonKind>([
     "pix",
@@ -40,7 +35,11 @@ export const LINK_BUTTONS: ReadonlySet<ActionButtonKind> =
 export interface ActionView {
   /** The card's amount: the group's total, or the installment's; null on an invite. */
   amountCents: number | null;
-  /** Installment cards: "4 de 12 pagas" and "falta R$ 14.400,00", under the bar. */
+  /**
+   * Installment cards: "4 de 12 pagas" and "falta R$ 14.400,00", under the
+   * bar. Null (no bar either) on a card whose contract a card above already
+   * shows: once per screen.
+   */
   legend: { done: string; remaining: string } | null;
   person: PersonLine | null;
   /** "parcela 5 de 12" / "parcelas 3 e 4 de 12"; null on an invite. */
@@ -68,7 +67,16 @@ const ROLE_NAME: Record<string, Message> = {
 /** Everything a card says, in `locale`. */
 export function describeAction(
   action: HomeAction,
-  { first, locale, today }: { first: boolean; locale: Locale; today: string }
+  {
+    first,
+    locale,
+    today,
+  }: {
+    first: boolean;
+    locale: Locale;
+    /** A card above is of the same contract, and already shows its bar. */
+    today: string;
+  }
 ): ActionView {
   const options = { locale };
   if (action.kind === "invite") {
@@ -136,6 +144,8 @@ export function actionButtons(action: HomeAction): ActionButtonKind[] {
       if (action.direction === "pay") {
         return payButtons(action);
       }
-      return action.canMarkPaid ? ["whatsapp", "mark_received"] : ["whatsapp"];
+      return action.canMarkReceived
+        ? ["whatsapp", "mark_received"]
+        : ["whatsapp"];
   }
 }

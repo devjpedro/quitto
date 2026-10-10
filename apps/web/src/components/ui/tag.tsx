@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const TONE: Record<
-  "neutral" | "brand" | "highlight" | "warning" | "danger" | "ink",
+  "neutral" | "brand" | "highlight" | "warning" | "danger" | "ink" | "sunken",
   string
 > = {
   // Neutral only sits inside a card (DIRECAO › Forma): one step lighter.
@@ -13,6 +13,8 @@ const TONE: Record<
   danger: "bg-danger-subtle text-danger",
   // "Vence hoje" (mockup 13): the black of action on the day it is due.
   ink: "bg-ink text-ink-inverse",
+  // On a white card (the wizard's preview): "Você paga" one step down.
+  sunken: "bg-surface-sunken text-ink-muted",
 };
 
 export type TagTone = keyof typeof TONE;

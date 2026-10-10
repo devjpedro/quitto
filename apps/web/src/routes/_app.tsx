@@ -2,54 +2,64 @@ import {
   createFileRoute,
   Outlet,
   redirect,
-  useNavigate,
+  useMatch,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { type ComponentProps, lazy, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { CommandPalette } from "@/components/command-palette";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
+import { prefetchWhenIdle, warmMotion } from "@/components/ui/motion-scope";
+import { ContractMobileMenu } from "@/features/contracts/components/contract-mobile-menu";
 import {
   useActiveContracts,
   useMomentMilestone,
   useNavCounts,
   useUnreadCount,
 } from "@/features/home/shell-selectors";
-import { NotificationsPanel } from "@/features/notifications/components/notifications-panel";
 import {
   NotificationsPanelContext,
   useNotificationsPanel,
 } from "@/features/notifications/hooks/use-notifications-panel";
+import { useTourAutostart } from "@/features/tour/hooks/use-tour-autostart";
+import { useTourOpen } from "@/features/tour/lib/tour-store";
 import { useCommandPalette } from "@/hooks/use-command-palette";
+import { useEverTrue } from "@/hooks/use-ever-true";
 import { useIdentity } from "@/hooks/use-identity";
-import {
-  clearIdentityCookie,
-  usePersistIdentityCookie,
-} from "@/hooks/use-identity-cookie";
-import { useLocaleSync } from "@/hooks/use-locale-sync";
-import { meQueryOptions, useMeQuery } from "@/hooks/use-me";
-import { queryKeys } from "@/lib/query-keys";
-import { isSessionLost } from "@/lib/session-gate";
-import { getSessionSSR } from "@/lib/ssr-session";
+import { useSessionGate } from "@/hooks/use-session-gate";
+import { m } from "@/paraglide/messages.js";
+
+// Nothing here draws until the user asks (⌘K, the bell, the tour): the chunks
+// come on first use, and the browser fetches them ahead when it is idle.
+const loadPalette = () =>
+  import("@/components/command-palette/command-palette").then((mod) => ({
+    default: mod.CommandPalette,
+  }));
+const loadNotifications = () =>
+  import("@/features/notifications/components/notifications-panel").then(
+    (mod) => ({ default: mod.NotificationsPanel })
+  );
+const loadTour = () =>
+  import("@/features/tour/components/tour-overlay").then((mod) => ({
+    default: mod.TourOverlay,
+  }));
+const CommandPalette = lazy(loadPalette);
+const NotificationsPanel = lazy(loadNotifications);
+const TourOverlay = lazy(loadTour);
+
+function prefetchOverlays() {
+  return prefetchWhenIdle(() => {
+    warmMotion();
+    loadPalette();
+    loadNotifications();
+    loadTour();
+  });
+}
 
 export const Route = createFileRoute("/_app")({
-  beforeLoad: async ({ context, location }) => {
-    // SSR only. On the client the session lives in the query cache and the
-    // layout reacts to a 401; calling a server function here would cost a
-    // browser → Vercel → API round-trip on every preload and click.
-    if (typeof document !== "undefined") {
-      return;
-    }
-    const session = await getSessionSSR();
-    if (session.status === "anon") {
+  beforeLoad: ({ context, location }) => {
+    if (context.session === "anon") {
       throw redirect({ to: "/login", search: { redirect: location.href } });
-    }
-    if (session.status === "authed") {
-      context.queryClient.setQueryData(queryKeys.session, session.identity);
-      if (session.me) {
-        context.queryClient.setQueryData(meQueryOptions.queryKey, session.me);
-      }
     }
     // "unknown" (cold API): render the shell anyway; the client validates.
   },
@@ -57,32 +67,53 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const me = useMeQuery();
+  useSessionGate();
+  // The overlays and the animation engine are fetched once the page is quiet.
+  useEffect(prefetchOverlays, []);
+  useTourAutostart();
   const identity = useIdentity();
   const unreadCount = useUnreadCount();
   const moment = useMomentMilestone();
   const navCounts = useNavCounts();
   const activeContracts = useActiveContracts();
   const notifications = useNotificationsPanel();
-  const navigate = useNavigate();
   // Registered ONCE here: this layout owns the global ⌘K shortcut.
   const { open: searchOpen, setOpen: setSearchOpen } = useCommandPalette();
-  const sessionLost = isSessionLost(me.error);
+  const paletteMounted = useEverTrue(searchOpen);
+  const notificationsMounted = useEverTrue(notifications.open);
+  const tourMounted = useEverTrue(useTourOpen());
+  // A contract on a phone: the top bar goes back to the list and carries the
+  // contract's "⋯" (decision 15: decided by the route, no width JS).
+  const contractMatch = useMatch({
+    from: "/_app/contracts/$id",
+    shouldThrow: false,
+  });
+  // A section of Ajustes on a phone is a screen: "‹ Ajustes" goes back to the list.
+  const settingsMatch = useMatch({
+    from: "/_app/settings/$section",
+    shouldThrow: false,
+  });
 
-  useLocaleSync(me.data?.locale);
-  usePersistIdentityCookie(me.data);
-
-  useEffect(() => {
-    if (sessionLost) {
-      clearIdentityCookie();
-      navigate({ to: "/login", search: { redirect: undefined } });
-    }
-  }, [sessionLost, navigate]);
+  let detail: ComponentProps<typeof AppFrame>["detail"] = null;
+  if (contractMatch) {
+    detail = {
+      backLabel: m.contract_back(),
+      backTo: "/contracts",
+      actions: <ContractMobileMenu contractId={contractMatch.params.id} />,
+    };
+  } else if (settingsMatch) {
+    detail = {
+      backLabel: m.settings_title(),
+      backTo: "/settings",
+      actions: null,
+    };
+  }
 
   return (
     <NotificationsPanelContext value={notifications.show}>
       <AppFrame
         activeContracts={activeContracts}
+        detail={detail}
         identity={identity}
         moment={moment}
         navCounts={navCounts}
@@ -91,18 +122,31 @@ function AppLayout() {
         onOpenSearch={() => setSearchOpen(true)}
         unreadCount={unreadCount}
       >
-        <CommandPalette
-          onOpenChange={setSearchOpen}
-          onOpenNotifications={notifications.show}
-          open={searchOpen}
-        />
-        <NotificationsPanel
-          // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
-          fallbackFocus={visibleNotificationsTrigger}
-          onOpenChange={notifications.setOpen}
-          open={notifications.open}
-          unreadCount={unreadCount}
-        />
+        {paletteMounted ? (
+          <Suspense fallback={null}>
+            <CommandPalette
+              onOpenChange={setSearchOpen}
+              onOpenNotifications={notifications.show}
+              open={searchOpen}
+            />
+          </Suspense>
+        ) : null}
+        {notificationsMounted ? (
+          <Suspense fallback={null}>
+            <NotificationsPanel
+              // Opened from the ⌘K palette, which leaves as the panel opens: back to the bell.
+              fallbackFocus={visibleNotificationsTrigger}
+              onOpenChange={notifications.setOpen}
+              open={notifications.open}
+              unreadCount={unreadCount}
+            />
+          </Suspense>
+        ) : null}
+        {tourMounted ? (
+          <Suspense fallback={null}>
+            <TourOverlay />
+          </Suspense>
+        ) : null}
         <ErrorBoundary
           FallbackComponent={ErrorFallback}
           resetKeys={[identity?.id]}

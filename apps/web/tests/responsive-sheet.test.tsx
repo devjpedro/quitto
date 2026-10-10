@@ -1,8 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ResponsiveSheet } from "@/components/ui/responsive-sheet";
+import {
+  ResponsiveSheet,
+  useSheetVariant,
+} from "@/components/ui/responsive-sheet";
 
 const originalWidth = window.innerWidth;
 afterEach(() => {
@@ -78,11 +81,14 @@ function SheetFromLauncher({ leaves }: { leaves: "at-open" | "after-open" }) {
 }
 
 describe("ResponsiveSheet", () => {
-  it("is a named dialog that focuses the content first, not the close button", () => {
+  it("is a named dialog that focuses the content first, not the close button", async () => {
     renderSheet();
-    expect(
-      screen.getByRole("dialog", { name: "Parcela 7 de 12" })
-    ).toBeVisible();
+    // The side panel fades in (opacity 0 to 1), so it is visible once it ends.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("dialog", { name: "Parcela 7 de 12" })
+      ).toBeVisible()
+    );
     expect(
       screen.getByRole("button", { name: "Enviar comprovante" })
     ).toHaveFocus();
@@ -104,8 +110,11 @@ describe("ResponsiveSheet", () => {
     );
     const side = screen.getByRole("dialog");
     expect(side).toHaveAttribute("data-variant", "side");
-    // viewport-fit=cover: a phone on its side (md+) has the notch at a side.
-    expect(side).toHaveClass(
+    // From md it lives inside the board: flush with the right edge of a box
+    // that clips it (viewport-fit=cover: that box stays off a side notch).
+    expect(side).toHaveClass("absolute", "inset-y-0", "right-0");
+    expect(side.parentElement).toHaveClass(
+      "overflow-hidden",
       "right-[max(0.75rem,env(safe-area-inset-right))]",
       "bottom-[max(0.75rem,env(safe-area-inset-bottom))]"
     );
@@ -120,6 +129,30 @@ describe("ResponsiveSheet", () => {
       "data-variant",
       "bottom"
     );
+  });
+
+  it("useSheetVariant says which variant the content is in, and null outside a sheet", () => {
+    function Variant() {
+      return <p data-testid="variant">{String(useSheetVariant())}</p>;
+    }
+    window.innerWidth = 390;
+    const { unmount } = render(
+      <ResponsiveSheet onOpenChange={vi.fn()} open title="A">
+        <Variant />
+      </ResponsiveSheet>
+    );
+    expect(screen.getByTestId("variant")).toHaveTextContent("bottom");
+    unmount();
+    window.innerWidth = 1024;
+    const second = render(
+      <ResponsiveSheet onOpenChange={vi.fn()} open title="B">
+        <Variant />
+      </ResponsiveSheet>
+    );
+    expect(screen.getByTestId("variant")).toHaveTextContent("side");
+    second.unmount();
+    render(<Variant />);
+    expect(screen.getByTestId("variant")).toHaveTextContent("null");
   });
 
   it("gives the focus back to the button that opened it, on Escape and on Close", async () => {
@@ -181,11 +214,30 @@ describe("ResponsiveSheet", () => {
       </ResponsiveSheet>
     );
     const { rerender } = render(sheet(true));
-    expect(screen.getByRole("dialog")).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeVisible());
     rerender(sheet(false));
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     );
+  });
+
+  it("fades while it leaves, so nothing crosses the canvas or the page's end", async () => {
+    const sheet = (open: boolean) => (
+      <ResponsiveSheet onOpenChange={vi.fn()} open={open} title="Parcela">
+        <p>x</p>
+      </ResponsiveSheet>
+    );
+    const { rerender } = render(sheet(true));
+    // The animation engine loads on demand (MotionScope): let it arrive.
+    await act(async () => {
+      await import("@/lib/motion-features");
+    });
+    rerender(sheet(false));
+    await waitFor(() => {
+      const dialog = screen.getByRole("dialog", { hidden: true });
+      expect(dialog.style.opacity).not.toBe("");
+      expect(Number(dialog.style.opacity)).toBeLessThan(1);
+    });
   });
 
   describe("drag to dismiss", () => {
@@ -234,5 +286,119 @@ describe("ResponsiveSheet", () => {
       await dragDown(screen.getByText("Parcela"));
       expect(onOpenChange).not.toHaveBeenCalled();
     });
+  });
+
+  it("bottom sheet: o rodapé fica preso embaixo, fora da rolagem; o teto é 91%; as setas do cabeçalho não aparecem", async () => {
+    window.innerWidth = 390;
+    render(
+      <ResponsiveSheet
+        footer={<button type="button">Copiar código PIX</button>}
+        headerActions={<button type="button">Próxima parcela</button>}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Parcela 7 de 10",
+    });
+    expect(dialog).toHaveClass("max-h-[91dvh]");
+    // The footer takes the safe area; the frame does not add it again.
+    expect(dialog).not.toHaveClass("pb-[env(safe-area-inset-bottom)]");
+    expect(
+      screen
+        .getByRole("button", { name: "Copiar código PIX" })
+        .closest(".overflow-y-auto")
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Próxima parcela" })
+    ).toBeNull();
+  });
+
+  it("bottom sheet com controles preenchidos: o ✕ é o quadrado de 44 px preenchido (surface-card, mockup 14 E), não um ícone solto; sem a opção, fica solto", async () => {
+    window.innerWidth = 390;
+    const { unmount } = render(
+      <ResponsiveSheet
+        filledControls
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    const close = await screen.findByRole("button", { name: "Fechar" });
+    expect(close).toHaveClass(
+      "size-11",
+      "bg-surface-card",
+      "hover:bg-surface-card-hover"
+    );
+    unmount();
+
+    render(
+      <ResponsiveSheet onOpenChange={() => undefined} open title="Notificações">
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    expect(
+      await screen.findByRole("button", { name: "Fechar" })
+    ).not.toHaveClass("bg-surface-card");
+  });
+
+  it("bottom sheet sem rodapé: o próprio quadro folga a safe-area", async () => {
+    window.innerWidth = 390;
+    render(
+      <ResponsiveSheet onOpenChange={() => undefined} open title="Parcela 7">
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Parcela 7" })
+    ).toHaveClass("pb-[env(safe-area-inset-bottom)]");
+  });
+
+  it("lateral: as setas no cabeçalho, sem o rodapé do celular", async () => {
+    window.innerWidth = 1024;
+    render(
+      <ResponsiveSheet
+        footer={<button type="button">Copiar código PIX</button>}
+        headerActions={<button type="button">Próxima parcela</button>}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <p>corpo</p>
+      </ResponsiveSheet>
+    );
+    await waitFor(async () =>
+      expect(
+        await screen.findByRole("button", { name: "Próxima parcela" })
+      ).toBeVisible()
+    );
+    expect(
+      screen.queryByRole("button", { name: "Copiar código PIX" })
+    ).toBeNull();
+  });
+
+  it("onKeyDown ouve as teclas de dentro do sheet (o painel anda com ↓ sem remontar)", async () => {
+    window.innerWidth = 1024;
+    const onKeyDown = vi.fn();
+    render(
+      <ResponsiveSheet
+        onKeyDown={onKeyDown}
+        onOpenChange={() => undefined}
+        open
+        title="Parcela 7 de 10"
+      >
+        <button type="button">corpo</button>
+      </ResponsiveSheet>
+    );
+    (await screen.findByRole("button", { name: "corpo" })).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(onKeyDown).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "ArrowDown" })
+    );
   });
 });

@@ -13,6 +13,7 @@ import "../index.css";
 import { AppToaster } from "@/components/ui/app-toaster";
 import { clearChunkReloadMark } from "@/lib/chunk-reload";
 import { initSentry } from "@/lib/sentry";
+import { seedSession } from "@/lib/session-route";
 import { parseThemeCookie, THEME_INIT_SCRIPT } from "@/lib/theme";
 import { getThemeSSR } from "@/lib/theme-ssr";
 import { m } from "@/paraglide/messages.js";
@@ -23,6 +24,12 @@ export interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // The session is decided once, here, and every route reads it from the
+  // context: the layouts redirect on it, and the logo (HomeLogo) is a link
+  // only when there is one. Cheap: with no cookie it never calls the API.
+  beforeLoad: async ({ context }) => ({
+    session: await seedSession(context.queryClient),
+  }),
   // No cliente lê o cookie direto: server function aqui é um request por preload.
   loader: () =>
     typeof document === "undefined"

@@ -1,4 +1,5 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, it } from "vitest";
 import { AppToaster } from "../src/components/ui/app-toaster";
@@ -78,6 +79,25 @@ describe("AppToaster", () => {
     expect(list).toHaveClass(
       "[--app-toast-bottom:calc(env(safe-area-inset-bottom)_+_5.25rem)]",
       "md:[--app-toast-bottom:1.5rem]"
+    );
+  });
+
+  it("todo toast tem um ✕ do Phosphor, com nome 'Fechar', alvo de 44 px no celular e foco visível; clicar fecha", async () => {
+    const user = userEvent.setup();
+    render(<AppToaster />);
+    act(() => {
+      toast.success("Parcela marcada como paga");
+    });
+    const item = await toastWith("Parcela marcada como paga");
+    const close = within(item).getByRole("button", { name: "Fechar" });
+    expect(close).toHaveClass("size-11", "md:size-8", "focus-visible:ring-2");
+    expect(close.querySelector("svg")).toHaveAttribute(
+      "viewBox",
+      "0 0 256 256"
+    );
+    await user.click(close);
+    await waitFor(() =>
+      expect(screen.queryByText("Parcela marcada como paga")).toBeNull()
     );
   });
 });

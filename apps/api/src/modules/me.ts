@@ -2,7 +2,8 @@ import { isLocale, type Locale, parsePixKey } from "@quitto/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import { user as userTable } from "../db/schema";
+import { account, user as userTable } from "../db/schema";
+import { loadDeletionSummary } from "../lib/deletion-summary";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { NotFoundError, ValidationError } from "../lib/errors";
 import { requireAuth } from "../lib/session";
@@ -22,9 +23,19 @@ export const meModule = new Elysia({ prefix: "/api" })
           pixKey: userTable.pixKey,
           emailRemindersOptIn: userTable.emailRemindersOptIn,
           locale: userTable.locale,
+          createdAt: userTable.createdAt,
+          tourCompletedAt: userTable.tourCompletedAt,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
+        .limit(1);
+      // A Google-only account has no credential row: no password to change.
+      const [credential] = await db
+        .select({ id: account.id })
+        .from(account)
+        .where(
+          and(eq(account.userId, user.id), eq(account.providerId, "credential"))
+        )
         .limit(1);
       return {
         id: user.id,
@@ -35,6 +46,9 @@ export const meModule = new Elysia({ prefix: "/api" })
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
         locale: isLocale(row?.locale) ? row.locale : null,
         emailRemindersAvailable: emailRemindersEnabled(),
+        hasPassword: credential !== undefined,
+        createdAt: (row?.createdAt ?? new Date()).toISOString(),
+        tourCompletedAt: row?.tourCompletedAt?.toISOString() ?? null,
       };
     },
     {
@@ -47,6 +61,23 @@ export const meModule = new Elysia({ prefix: "/api" })
         emailRemindersOptIn: t.Boolean(),
         locale: accountLocaleSchema,
         emailRemindersAvailable: t.Boolean(),
+        hasPassword: t.Boolean(),
+        createdAt: t.String(),
+        tourCompletedAt: t.Union([t.String(), t.Null()]),
+      }),
+    }
+  )
+  .get(
+    "/me/deletion-summary",
+    async ({ request }) => {
+      const { user } = await requireAuth(request.headers);
+      return await loadDeletionSummary(user.id);
+    },
+    {
+      response: t.Object({
+        contracts: t.Integer(),
+        installments: t.Integer(),
+        people: t.Array(t.Object({ name: t.String() })),
       }),
     }
   )
@@ -58,6 +89,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         pixKey?: string | null;
         emailRemindersOptIn?: boolean;
         locale?: Locale;
+        tourCompletedAt?: Date | null;
       } = {};
       if (body.pixKey !== undefined) {
         patch.pixKey = null;
@@ -75,6 +107,9 @@ export const meModule = new Elysia({ prefix: "/api" })
       if (body.locale !== undefined) {
         patch.locale = body.locale;
       }
+      if (body.tourCompleted !== undefined) {
+        patch.tourCompletedAt = body.tourCompleted ? new Date() : null;
+      }
       if (Object.keys(patch).length > 0) {
         await db.update(userTable).set(patch).where(eq(userTable.id, user.id));
       }
@@ -83,6 +118,7 @@ export const meModule = new Elysia({ prefix: "/api" })
           pixKey: userTable.pixKey,
           emailRemindersOptIn: userTable.emailRemindersOptIn,
           locale: userTable.locale,
+          tourCompletedAt: userTable.tourCompletedAt,
         })
         .from(userTable)
         .where(eq(userTable.id, user.id))
@@ -91,6 +127,7 @@ export const meModule = new Elysia({ prefix: "/api" })
         pixKey: row?.pixKey ?? null,
         emailRemindersOptIn: row?.emailRemindersOptIn ?? false,
         locale: isLocale(row?.locale) ? row.locale : null,
+        tourCompletedAt: row?.tourCompletedAt?.toISOString() ?? null,
       };
     },
     {
@@ -98,11 +135,14 @@ export const meModule = new Elysia({ prefix: "/api" })
         pixKey: t.Optional(t.Union([t.String(), t.Null()])),
         emailRemindersOptIn: t.Optional(t.Boolean()),
         locale: t.Optional(localeSchema),
+        // true: finished or skipped the tour (now); false: "Refazer", it shows again.
+        tourCompleted: t.Optional(t.Boolean()),
       }),
       response: t.Object({
         pixKey: t.Union([t.String(), t.Null()]),
         emailRemindersOptIn: t.Boolean(),
         locale: accountLocaleSchema,
+        tourCompletedAt: t.Union([t.String(), t.Null()]),
       }),
     }
   )

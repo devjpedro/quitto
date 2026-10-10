@@ -50,7 +50,11 @@ describe("POST /api/contracts/:id/participants", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: stranger },
-        body: JSON.stringify({ displayName: "X", role: "viewer" }),
+        body: JSON.stringify({
+          displayName: "X",
+          role: "viewer",
+          email: "acompanha@exemplo.com",
+        }),
       })
     );
     expect(res.status).toBe(404);
@@ -81,7 +85,11 @@ describe("POST /api/contracts/:id/participants", () => {
           {
             method: "POST",
             headers: { "content-type": "application/json", cookie: owner },
-            body: JSON.stringify({ displayName: name, role }),
+            body: JSON.stringify({
+              displayName: name,
+              role,
+              email: "pessoa@exemplo.com",
+            }),
           }
         )
       );
@@ -96,6 +104,40 @@ describe("POST /api/contracts/:id/participants", () => {
     expect((await add("viewer", "C2")).status).toBe(200);
   });
 
+  it("quem acompanha exige e-mail (422); quem paga ou recebe pode ficar só com o nome", async () => {
+    const owner = await signUpCookie(uniqueEmail("po-viewer-email"));
+    const contractId = await createContract(owner);
+    const add = (body: Record<string, unknown>) =>
+      app.handle(
+        new Request(
+          `http://localhost/api/contracts/${contractId}/participants`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json", cookie: owner },
+            body: JSON.stringify(body),
+          }
+        )
+      );
+    expect((await add({ displayName: "Ana", role: "viewer" })).status).toBe(
+      422
+    );
+    expect(
+      (await add({ displayName: "Ana", role: "viewer", email: "  " })).status
+    ).toBe(422);
+    expect((await add({ displayName: "Ana", role: "seller" })).status).toBe(
+      200
+    );
+    expect(
+      (
+        await add({
+          displayName: "Ana",
+          role: "viewer",
+          email: "ana@exemplo.com",
+        })
+      ).status
+    ).toBe(200);
+  });
+
   it("não autenticado retorna 401", async () => {
     const owner = await signUpCookie(uniqueEmail("po-unauth"));
     const contractId = await createContract(owner);
@@ -104,7 +146,11 @@ describe("POST /api/contracts/:id/participants", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ displayName: "X", role: "viewer" }),
+        body: JSON.stringify({
+          displayName: "X",
+          role: "viewer",
+          email: "acompanha@exemplo.com",
+        }),
       })
     );
     expect(res.status).toBe(401);
@@ -120,7 +166,11 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: owner },
-        body: JSON.stringify({ displayName: "Temporário", role: "viewer" }),
+        body: JSON.stringify({
+          displayName: "Temporário",
+          role: "viewer",
+          email: "acompanha@exemplo.com",
+        }),
       })
     );
     expect(addRes.status).toBe(200);
@@ -145,7 +195,11 @@ describe("DELETE /api/contracts/:id/participants/:participantId", () => {
       new Request(`http://localhost/api/contracts/${contractId}/participants`, {
         method: "POST",
         headers: { "content-type": "application/json", cookie: owner },
-        body: JSON.stringify({ displayName: "Alvo", role: "viewer" }),
+        body: JSON.stringify({
+          displayName: "Alvo",
+          role: "viewer",
+          email: "acompanha@exemplo.com",
+        }),
       })
     );
     expect(addRes.status).toBe(200);
@@ -211,7 +265,11 @@ function addParticipant(
     new Request(`http://localhost/api/contracts/${contractId}/participants`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie },
-      body: JSON.stringify({ displayName: name, role }),
+      body: JSON.stringify({
+        displayName: name,
+        role,
+        email: "pessoa@exemplo.com",
+      }),
     })
   );
 }

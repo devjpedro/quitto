@@ -75,6 +75,7 @@ export function installmentAction(
     counterpartyName: "Maria Souza",
     pixCode: "000201pix",
     canMarkPaid: true,
+    canMarkReceived: false,
     canConfirm: false,
     count: 1,
     installmentIds: [installmentId],
@@ -148,6 +149,8 @@ export function homeFixture(over: Partial<Home> = {}): Home {
     },
     unreadCount: 0,
     activeContractsCount: 0,
+    monthInstallmentsCount: 0,
+    peopleCount: 0,
     activeContracts: [],
     ...over,
   };

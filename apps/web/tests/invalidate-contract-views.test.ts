@@ -18,6 +18,22 @@ describe("invalidateContractViews", () => {
     });
   });
 
+  it("invalida também a lista de pessoas", () => {
+    const qc = spyQc();
+    invalidateContractViews(qc);
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["people"],
+    });
+  });
+
+  it("invalida também a lista de parcelas", () => {
+    const qc = spyQc();
+    invalidateContractViews(qc);
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["installments"],
+    });
+  });
+
   it("also invalidates the specific contract when an id is given", () => {
     const qc = spyQc();
     invalidateContractViews(qc, "c1");

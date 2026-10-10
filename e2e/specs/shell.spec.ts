@@ -4,6 +4,9 @@ import { openAccountMenu, signup, waitForHydrated } from "../fixtures";
 const PT_BR_HTML = /<html[^>]*lang="pt-BR"/;
 const IDENTITY_COOKIE = "quitto_identity";
 
+const INSTALLMENTS_URL = /\/installments/;
+const PEOPLE_URL = /\/people/;
+
 test("o shell aparece na hora mesmo com a API lenta (sem bloquear no cliente)", async ({
   page,
 }, testInfo) => {
@@ -166,4 +169,25 @@ test("celular: o fim da página não fica escondido atrás da tab bar", async ({
   expect((spacerBox?.y ?? 0) + (spacerBox?.height ?? 0)).toBeLessThanOrEqual(
     barBoxAtBottom?.y ?? 0
   );
+});
+
+test("celular: a tab bar leva a Parcelas e a Pessoas", async ({
+  page,
+}, testInfo) => {
+  // biome-ignore lint/suspicious/noSkippedTests: a tab bar só existe no celular
+  test.skip(testInfo.project.name !== "mobile", "só no viewport de celular");
+  await signup(page);
+  const tabBar = page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .filter({ visible: true });
+  await tabBar.getByRole("link", { name: "Parcelas" }).click();
+  await expect(page).toHaveURL(INSTALLMENTS_URL);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Parcelas" })
+  ).toBeVisible();
+  await tabBar.getByRole("link", { name: "Pessoas" }).click();
+  await expect(page).toHaveURL(PEOPLE_URL);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pessoas" })
+  ).toBeVisible();
 });

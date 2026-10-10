@@ -3,16 +3,28 @@ import { API_FAILURE, nowLink, signup, waitForHydrated } from "../fixtures";
 
 const NEW_CONTRACT_URL = /\/contracts\/new$/;
 
-test("loader que falha mostra a fronteira de erro (não tela branca)", async ({
+test("Contratos com o /api/contracts falhando: o erro fica na seção (não tela branca)", async ({
   page,
 }) => {
   await signup(page);
-  // The contracts list is fetched in the browser: page.route reaches it.
+  // The list streams in its own section (SectionBoundary): the page keeps its
+  // title. The SSR reads it on the server, out of page.route's reach, so the
+  // failure is on the way in from another page.
+  await page.goto("/");
+  await waitForHydrated(page);
   await page.route("**/api/contracts", (route) => route.fulfill(API_FAILURE));
-  await page.goto("/contracts");
-  await expect(page.getByText("Ops, algo deu errado")).toBeVisible({
-    timeout: 15_000,
-  });
+  await page
+    .locator("#app-shell nav")
+    .first()
+    .getByRole("link", { name: "Contratos" })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Contratos" })
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(
+    "Não foi possível carregar esta parte.",
+    { timeout: 15_000 }
+  );
 });
 
 test("Agora com o /api/home falhando: o erro fica só na seção", async ({
@@ -54,15 +66,17 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
   for (const name of [
     "Agora",
     "Contratos",
-    "Conta",
-    "Criar contrato",
+    "Ajustes",
+    "Novo contrato",
     "Notificações",
   ]) {
     await expect(
       palette.getByRole("option", { name, exact: true })
     ).toBeVisible();
   }
-  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Algo deu errado" })
+  ).toHaveCount(0);
 
   // By keyboard: Tab from the field reaches Tentar de novo, and Enter reads
   // the list again there, without running the highlighted command (Agora).
@@ -82,8 +96,10 @@ test("⌘K com o /api/contracts falhando: o erro fica na paleta e o shell segue 
   expect(new URL(page.url()).pathname).toBe("/");
 
   await palette
-    .getByRole("option", { name: "Criar contrato", exact: true })
+    .getByRole("option", { name: "Novo contrato", exact: true })
     .click();
   await expect(page).toHaveURL(NEW_CONTRACT_URL);
-  await expect(page.getByText("Ops, algo deu errado")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Algo deu errado" })
+  ).toHaveCount(0);
 });

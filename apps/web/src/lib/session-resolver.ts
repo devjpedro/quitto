@@ -11,11 +11,17 @@ export interface SessionIdentity {
 }
 
 export interface SessionUser extends SessionIdentity {
+  /** ISO timestamp of the account's creation ("no Quitto desde setembro de 2025"). */
+  createdAt: string;
   emailRemindersAvailable: boolean;
   emailRemindersOptIn: boolean;
+  /** False on a Google-only account: there is no password to change. */
+  hasPassword: boolean;
   /** null = the user never chose a language (the browser decides until they do). */
   locale: Locale | null;
   pixKey: string | null;
+  /** ISO instant the guided tour was finished or skipped; null = it still shows once (first access). */
+  tourCompletedAt: string | null;
 }
 
 export type SessionResult =

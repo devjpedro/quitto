@@ -28,6 +28,8 @@ export const user = pgTable("user", {
   locale: text("locale"),
   // Set when the user dismisses the "Comece por aqui" checklist on the home.
   onboardingDismissedAt: timestamp("onboarding_dismissed_at"),
+  // Set when the user finishes or skips the guided tour (first access); null = it shows once. "Refazer" in Ajustes clears it.
+  tourCompletedAt: timestamp("tour_completed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -133,6 +135,10 @@ export const installment = pgTable(
     status: installmentStatusEnum("status").notNull().default("pending"),
     paidAt: timestamp("paid_at"),
     confirmedAt: timestamp("confirmed_at"),
+    // Already paid when the contract was created: no proof, approval or reminder.
+    registeredOnCreate: boolean("registered_on_create")
+      .notNull()
+      .default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("installment_contract_id_idx").on(table.contractId)]
@@ -150,6 +156,10 @@ export const participant = pgTable(
     linkedUserId: text("linked_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    // The receiver's Pix key kept on a contact without an account (owner's
+    // decision, 2026-10-05). Once the contact has an account, the account's
+    // key counts and this one stays stored, unused.
+    pixKey: text("pix_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

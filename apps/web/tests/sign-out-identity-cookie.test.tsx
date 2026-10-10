@@ -2,7 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useDeleteAccountMutation } from "@/hooks/use-account";
+import { useDeleteAccount } from "@/features/settings/api";
 import { useSignOut } from "@/hooks/use-sign-out";
 import {
   parseIdentityCookie,
@@ -54,14 +54,14 @@ describe("useSignOut", () => {
   });
 });
 
-describe("useDeleteAccountMutation", () => {
+describe("useDeleteAccount", () => {
   it("clears the identity cookie before the hard navigation to /login", async () => {
     const seen = stubLocation();
     const client = makeTestQueryClient();
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
-    const { result } = renderHook(() => useDeleteAccountMutation(), {
+    const { result } = renderHook(() => useDeleteAccount(), {
       wrapper,
     });
     act(() => result.current.mutate());

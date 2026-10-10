@@ -1,4 +1,5 @@
 import { CaretRight } from "@phosphor-icons/react";
+import { StepAnchor, type StepState } from "@/components/ui/step-anchor";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
@@ -8,7 +9,6 @@ import {
   stepTarget,
 } from "../lib/onboarding";
 import type { HomeOnboarding } from "../types";
-import { StepAnchor, type StepState } from "./step-anchor";
 import { StepLink } from "./step-link";
 
 /**

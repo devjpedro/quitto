@@ -119,6 +119,14 @@ describe("Tag", () => {
       "text-ink-inverse"
     );
   });
+
+  it("Tag sunken: o degrau de baixo, para ficar sobre o branco", () => {
+    render(<Tag tone="sunken">Você paga</Tag>);
+    expect(screen.getByText("Você paga")).toHaveClass(
+      "bg-surface-sunken",
+      "text-ink-muted"
+    );
+  });
 });
 
 function Segmented() {

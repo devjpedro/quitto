@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ApiError, unwrap } from "../src/lib/api-client";
+import { ApiError, unwrap, unwrapOrNull } from "../src/lib/api-client";
 import { TimeoutError } from "../src/lib/with-timeout";
 
 describe("unwrap", () => {
@@ -46,5 +46,33 @@ describe("unwrap", () => {
         Promise.resolve({ data: null, error: { status: 503, value: timeout } })
       )
     ).rejects.toBe(timeout);
+  });
+});
+
+describe("unwrapOrNull", () => {
+  const notFound = () =>
+    Promise.resolve({
+      data: null,
+      error: {
+        status: 404,
+        value: {
+          error: { code: "NOT_FOUND", message: "Contrato não encontrado" },
+        },
+      },
+    });
+
+  it("answers null for a 404: the resource is gone, which is an answer, not a failure", async () => {
+    await expect(unwrapOrNull(notFound())).resolves.toBeNull();
+  });
+
+  it("returns data, and still throws every other error", async () => {
+    await expect(
+      unwrapOrNull(Promise.resolve({ data: { id: "abc" }, error: null }))
+    ).resolves.toEqual({ id: "abc" });
+    await expect(
+      unwrapOrNull(
+        Promise.resolve({ data: null, error: { status: 500, value: "boom" } })
+      )
+    ).rejects.toMatchObject({ httpStatus: 500 });
   });
 });

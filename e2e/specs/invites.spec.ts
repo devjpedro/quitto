@@ -2,39 +2,41 @@ import { expect, test } from "@playwright/test";
 import {
   newUser,
   randomEmail,
+  scan,
   seedContract,
   seedInvite,
   waitForHydrated,
 } from "../fixtures";
 
-const ACCEPT_INVITE = /Aceitar convite/i;
-const WRONG_EMAIL = /Este convite é para outro e-mail/i;
-const ALREADY_PARTICIPANT = /Você já participa deste contrato/i;
-const INVITE_TITLE = "Convite E2E";
+const TITLE = "Viagem para Floripa (dividida)";
 
-test("convidado com e-mail certo aceita e vê o contrato", async ({
+test("o convidado vê quem convidou e as condições, e aceitar abre o contrato", async ({
   browser,
 }) => {
   const a = await newUser(browser);
   const b = await newUser(browser);
   try {
-    const { id } = await seedContract(a.page.request, { title: INVITE_TITLE });
+    const { id } = await seedContract(a.page.request, {
+      title: TITLE,
+      ownerRole: "seller",
+    });
     const { token } = await seedInvite(a.page.request, id, {
-      displayName: "Vendedor",
-      role: "seller",
+      displayName: "Convidado",
+      role: "buyer",
       email: b.email,
     });
     await b.page.goto(`/invites/${token}`);
     await waitForHydrated(b.page);
     await expect(
-      b.page.getByRole("heading", { name: "Convite para um contrato" })
+      b.page.getByRole("heading", { level: 1, name: TITLE })
     ).toBeVisible();
-    await b.page.getByRole("button", { name: ACCEPT_INVITE }).click();
+    await expect(b.page.getByText("Você entra como quem paga.")).toBeVisible();
+    await scan(b.page);
+    await b.page.getByRole("button", { name: "Aceitar convite" }).click();
     await b.page.waitForURL(`**/contracts/${id}`);
-    await b.page.goto("/contracts");
-    // In the list, not in the sidebar's "Contratos ativos".
+    await b.page.goto(`/invites/${token}`);
     await expect(
-      b.page.getByRole("main").getByText(INVITE_TITLE)
+      b.page.getByRole("heading", { name: "Você já aceitou este convite" })
     ).toBeVisible();
   } finally {
     await a.close();
@@ -42,21 +44,56 @@ test("convidado com e-mail certo aceita e vê o contrato", async ({
   }
 });
 
-test("convite para outro e-mail não pode ser aceito", async ({ browser }) => {
+test("recusar pede confirmação e a tela vira 'Você recusou'", async ({
+  browser,
+}) => {
   const a = await newUser(browser);
   const b = await newUser(browser);
   try {
-    const { id } = await seedContract(a.page.request, { title: INVITE_TITLE });
+    const { id } = await seedContract(a.page.request, { title: TITLE });
     const { token } = await seedInvite(a.page.request, id, {
-      displayName: "Vendedor",
+      displayName: "Convidado",
       role: "seller",
-      email: randomEmail(),
+      email: b.email,
     });
     await b.page.goto(`/invites/${token}`);
     await waitForHydrated(b.page);
-    await expect(b.page.getByText(WRONG_EMAIL)).toBeVisible();
+    await b.page.getByRole("button", { name: "Recusar", exact: true }).click();
+    const dialog = b.page.getByRole("dialog", { name: "Recusar o convite?" });
+    await dialog.getByRole("button", { name: "Recusar convite" }).click();
     await expect(
-      b.page.getByRole("button", { name: ACCEPT_INVITE })
+      b.page.getByRole("heading", { name: "Você recusou este convite" })
+    ).toBeVisible();
+  } finally {
+    await a.close();
+    await b.close();
+  }
+});
+
+test("outra conta: só o e-mail mascarado e Trocar de conta", async ({
+  browser,
+}) => {
+  const a = await newUser(browser);
+  const b = await newUser(browser);
+  try {
+    const { id } = await seedContract(a.page.request, { title: TITLE });
+    const guest = randomEmail();
+    const { token } = await seedInvite(a.page.request, id, {
+      displayName: "Convidado",
+      role: "seller",
+      email: guest,
+    });
+    await b.page.goto(`/invites/${token}`);
+    await waitForHydrated(b.page);
+    await expect(
+      b.page.getByRole("heading", { name: "Este convite é para outro e-mail" })
+    ).toBeVisible();
+    await expect(b.page.getByText(guest)).toHaveCount(0);
+    await expect(
+      b.page.getByRole("button", { name: "Trocar de conta" })
+    ).toBeVisible();
+    await expect(
+      b.page.getByRole("button", { name: "Aceitar convite" })
     ).toHaveCount(0);
   } finally {
     await a.close();
@@ -64,88 +101,42 @@ test("convite para outro e-mail não pode ser aceito", async ({ browser }) => {
   }
 });
 
-test("dono que já participa vê aviso de já participar", async ({ browser }) => {
+test("o dono vê o convite que mandou; reenviar mantém o link", async ({
+  browser,
+}) => {
   const a = await newUser(browser);
   try {
-    const { id } = await seedContract(a.page.request, { title: INVITE_TITLE });
+    const { id } = await seedContract(a.page.request, { title: TITLE });
     const { token } = await seedInvite(a.page.request, id, {
-      displayName: "Vendedor",
+      displayName: "Convidado",
       role: "seller",
       email: randomEmail(),
     });
     await a.page.goto(`/invites/${token}`);
-    await expect(a.page.getByText(ALREADY_PARTICIPANT)).toBeVisible();
+    await waitForHydrated(a.page);
     await expect(
-      a.page.getByRole("button", { name: ACCEPT_INVITE })
-    ).toHaveCount(0);
-  } finally {
-    await a.close();
-  }
-});
-
-test("convite já aceito fica indisponível", async ({ browser }) => {
-  const a = await newUser(browser);
-  const b = await newUser(browser);
-  try {
-    const { id } = await seedContract(a.page.request, { title: INVITE_TITLE });
-    const { token } = await seedInvite(a.page.request, id, {
-      displayName: "Vendedor",
-      role: "seller",
-      email: b.email,
-    });
-    await b.page.goto(`/invites/${token}`);
-    await waitForHydrated(b.page);
-    await b.page.getByRole("button", { name: ACCEPT_INVITE }).click();
-    await b.page.waitForURL(`**/contracts/${id}`);
-    await b.page.goto(`/invites/${token}`);
-    await waitForHydrated(b.page); // reabrir o mesmo token
-    await expect(
-      b.page.getByRole("heading", { name: "Convite indisponível" })
+      a.page.getByRole("heading", { name: "Este é o convite que você mandou" })
     ).toBeVisible();
+    await a.page.getByRole("button", { name: "Reenviar e-mail" }).click();
+    await expect(a.page.getByText("Convite reenviado")).toBeVisible();
+    await a.page.goto(`/invites/${token}`);
     await expect(
-      b.page.getByRole("button", { name: ACCEPT_INVITE })
-    ).toHaveCount(0);
+      a.page.getByRole("heading", { name: "Este é o convite que você mandou" })
+    ).toBeVisible();
   } finally {
     await a.close();
-    await b.close();
   }
 });
 
-test("dono gerencia participantes: remove um e troca o papel de outro", async ({
+test("um token que não existe: 'Este convite não existe'", async ({
   browser,
 }) => {
   const a = await newUser(browser);
   try {
-    const { id } = await seedContract(a.page.request, { title: INVITE_TITLE });
-    await seedInvite(a.page.request, id, {
-      displayName: "Fulano",
-      role: "viewer",
-      email: randomEmail(),
-    });
-    const { participantId: ciclanoId } = await seedInvite(a.page.request, id, {
-      displayName: "Ciclano",
-      role: "seller",
-      email: randomEmail(),
-    });
-    await a.page.goto(`/contracts/${id}`);
-    await a.page.getByRole("button", { name: "Gerenciar" }).click();
-    const drawer = a.page.getByLabel("Participantes");
-    // remover Fulano
-    await drawer.getByRole("button", { name: "Ações de Fulano" }).click();
-    await a.page
-      .getByRole("menuitem", { name: "Remover participante" })
-      .click();
-    await a.page
-      .getByRole("dialog", { name: "Remover participante" })
-      .getByRole("button", { name: "Remover", exact: true })
-      .click();
-    await expect(drawer.getByText("Fulano")).toHaveCount(0);
-    // trocar o papel de Ciclano: vendedor → convidado
-    await a.page.locator(`#role-${ciclanoId}`).click();
-    await a.page.getByRole("option", { name: "convidado" }).click();
-    await expect(a.page.locator(`#role-${ciclanoId}`)).toContainText(
-      "convidado"
-    );
+    await a.page.goto("/invites/nao-existe");
+    await expect(
+      a.page.getByRole("heading", { name: "Este convite não existe" })
+    ).toBeVisible();
   } finally {
     await a.close();
   }

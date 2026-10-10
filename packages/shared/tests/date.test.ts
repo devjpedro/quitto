@@ -27,3 +27,18 @@ describe("todayISO", () => {
     expect(todayISO()).toMatch(ISO_DATE_RE);
   });
 });
+
+describe("a data da parcela editada", () => {
+  it("exige um dia real com o ano de 4 dígitos", async () => {
+    const { updateInstallmentSchema } = await import("../src/index");
+    expect(
+      updateInstallmentSchema.safeParse({ dueDate: "2027-02-28" }).success
+    ).toBe(true);
+    expect(
+      updateInstallmentSchema.safeParse({ dueDate: "0202-11-10" }).success
+    ).toBe(false);
+    expect(
+      updateInstallmentSchema.safeParse({ dueDate: "2027-02-31" }).success
+    ).toBe(false);
+  });
+});

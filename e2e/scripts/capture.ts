@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "@playwright/test";
@@ -6,7 +7,24 @@ import { chromium, type Page } from "@playwright/test";
 // phone, the owner's laptop and a wide monitor, in light and dark. Signs in
 // as a demo account (bun run seed:demo in apps/api, right before) and saves
 // the viewport and the full page. --sizes swaps the widths (e.g. the 1536
-// and 1840 tiers of open question 3).
+// and 1840 tiers of open question 3). A contract's screen:
+//   --contract <title>   opens that contract (needs --name, so the files do
+//                        not mix with the home's);
+//   --installment <n>    opens the panel of installment n (shots wait for the
+//                        panel's animation);
+//   --tab people|history opens that tab;
+//   --click <prefix>     after loading, clicks the first visible element whose
+//                        data-testid starts with <prefix> (a list's row or
+//                        card) and waits for the panel or sheet it opens;
+//   --name <label>       the label of the files (default "home");
+//   --locale pt-BR|en-US the language of the browser, the context and the
+//                        cookie (en-US files get an "-en" suffix);
+//   --receipt moto:1     opens the seed's public receipt link of that
+//                        contract and installment (use with --anon);
+//   --palette            opens the ⌘K palette before the shot (a phone taps
+//                        the magnifier); --query <text> types in it;
+//   --accept-invites     accepts the pending invites first. It changes the
+//                        database: run seed:demo again afterwards.
 const WEB = process.env.WEB_URL ?? "http://localhost:3001";
 const DEFAULT_SIZES = "390x844,1512x860,1920x1080";
 const THEMES = ["light", "dark"] as const;
@@ -29,10 +47,16 @@ function arg(name: string, fallback?: string): string {
   return value;
 }
 
-const account = arg("account");
+const anon = process.argv.includes("--anon");
+const account = anon ? "anon" : arg("account");
 const out = arg("out");
-const path = arg("path", "/");
-const expectedPath = new URL(path, WEB).pathname;
+const name = arg(
+  "name",
+  process.argv.includes("--contract") ? undefined : "home"
+);
+let path = arg("path", "/");
+let expectedPath = new URL(path, WEB).pathname;
+const locale = arg("locale", "pt-BR");
 const sizes = arg("sizes", DEFAULT_SIZES)
   .split(",")
   .map((size) => {
@@ -109,50 +133,246 @@ async function noLoading(page: Page, where: string): Promise<void> {
  * Waits for the page to settle before a shot. networkidle is not enough: it
  * is met while the bundle still hydrates (no request for 500 ms), and only
  * then "Notificações recentes" asks for its list (useRecentNotifications waits
- * for hydration and a lateral screen). So wait for no loading state; then, on
- * the home from lateral up, for that list or its empty state, but only if the
- * block is there: the first access has no lower part, and a failed list takes
- * the block away. Never demand it.
+ * for hydration and a lateral screen). The block has no skeleton: it enters
+ * only with a row, so on the home from lateral up wait for the notifications
+ * answer (it may be already in, hence the short limit) and then for the
+ * network to calm down. Never demand the block: the first access has no lower
+ * part, and a failed list or nothing but what a card already says leaves it out.
  */
 async function settle(page: Page, width: number, where: string): Promise<void> {
   await noLoading(page, where);
   if (expectedPath === "/" && width >= LATERAL) {
-    const recent = page.getByRole("region", { name: "Notificações recentes" });
-    if ((await recent.count()) > 0) {
-      try {
-        // The skeleton is aria-hidden, so neither of these matches it.
-        await recent
-          .getByRole("list")
-          .or(recent.getByRole("heading", { name: "Nada novo por aqui" }))
-          .first()
-          .waitFor();
-      } catch (error) {
-        throw new Error(
-          `${where}: "Notificações recentes" não mostrou a lista nem o estado vazio em 30 s (a API de notificações falhou?)`,
-          { cause: error }
-        );
-      }
-    }
+    await page
+      .waitForResponse((res) => res.url().includes("/api/notifications"), {
+        timeout: 3000,
+      })
+      .catch(() => undefined);
+    await page.waitForLoadState("networkidle");
   }
   await noLoading(page, where);
   await page.evaluate(() => document.fonts.ready);
+  if (process.argv.includes("--installment") || clickPrefix) {
+    await settlePanel(page, where);
+  }
 }
 
-const session = await sessionCookies();
-const browser = await chromium.launch();
+const clickPrefix = process.argv.includes("--click") ? arg("click") : null;
+
+/** The first visible element of a list (a row, a card) opens its panel or sheet. */
+async function clickFirst(page: Page, prefix: string, where: string) {
+  const target = page.locator(`[data-testid^="${prefix}"]:visible`).first();
+  await target.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {
+    throw new Error(`${where}: nenhum [data-testid^="${prefix}"] visível`);
+  });
+  await target.click();
+}
+
+/** How long the PDF viewer takes to paint the page after its frame loads. */
+const PDF_PAINT_MS = 2000;
+
+/** The panel: the sheet below lateral, the docked column from lateral up (not a dialog there). */
+const PANEL = "[role='dialog'], [data-testid='installment-panel-docked']";
+
+/**
+ * With --installment the panel opens on load, and a shot taken during its
+ * entrance shows it half see-through over the page. Wait for the CSS
+ * animations, then for the panel's box and opacity to hold across two frames
+ * (a spring run in JS is not in getAnimations()). From lateral the panel is
+ * the docked column, which is no dialog: whichever of the two is shown.
+ */
+async function settlePanel(page: Page, where: string): Promise<void> {
+  const panel = page
+    .locator(
+      "[role='dialog']:visible, [data-testid='installment-panel-docked']:visible"
+    )
+    .first();
+  await panel.waitFor({ state: "visible", timeout: 15_000 });
+  // A PDF proof (P4) is drawn by the browser's viewer some time after its
+  // frame loads, out of reach of the page (another origin): give it that.
+  const pdf = panel.locator("iframe");
+  if ((await pdf.count()) > 0) {
+    await pdf
+      .first()
+      .elementHandle()
+      .then((frame) => frame?.contentFrame())
+      .then((frame) => frame?.waitForLoadState("load"))
+      .catch(() => undefined);
+    await page.waitForTimeout(PDF_PAINT_MS);
+  }
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished))
+  );
+  try {
+    await page.waitForFunction(
+      (selector) => {
+        const el = [...document.querySelectorAll(selector)].find((each) =>
+          each.checkVisibility()
+        );
+        if (!el) {
+          return false;
+        }
+        const read = () => {
+          const r = el.getBoundingClientRect();
+          return `${r.x},${r.y},${r.width},${r.height},${getComputedStyle(el).opacity}`;
+        };
+        const w = window as unknown as { __panelRead?: string };
+        const now = read();
+        const stable =
+          w.__panelRead === now && getComputedStyle(el).opacity === "1";
+        w.__panelRead = now;
+        return stable;
+      },
+      PANEL,
+      { polling: "raf", timeout: 10_000 }
+    );
+  } catch (error) {
+    throw new Error(`${where}: o painel da parcela não assentou em 10 s`, {
+      cause: error,
+    });
+  }
+}
+
+const SEARCH_BUTTON = /^(Buscar|Search)$/;
+
+/** Opens ⌘K (a phone taps the magnifier), types the query if any, and waits for its entrance. */
+async function openPalette(page: Page, mobile: boolean): Promise<void> {
+  await page
+    .locator("html[data-shortcuts-ready]")
+    .waitFor({ state: "attached" });
+  if (mobile) {
+    await page
+      .getByRole("button", { name: SEARCH_BUTTON })
+      .filter({ visible: true })
+      .first()
+      .click();
+  } else {
+    await page.keyboard.press("ControlOrMeta+k");
+  }
+  await page.getByRole("dialog").getByRole("combobox").waitFor();
+  if (process.argv.includes("--query")) {
+    await page.keyboard.type(arg("query"));
+  }
+  // The finite ones only (a skeleton's pulse never ends), and a cancelled one is over too.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (a) =>
+            a.effect?.getComputedTiming().iterations !==
+            Number.POSITIVE_INFINITY
+        )
+        .map((a) => a.finished.catch(() => undefined))
+    )
+  );
+}
+
+const session = anon ? [] : await sessionCookies();
+const cookie = session.map((c) => `${c.name}=${c.value}`).join("; ");
+
+async function api<T>(route: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${WEB}/api${route}`, {
+    ...init,
+    headers: {
+      cookie,
+      origin: WEB,
+      "content-type": "application/json",
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`${route} respondeu ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
+
+if (process.argv.includes("--accept-invites")) {
+  // The spectator's view (F5): accept the account's pending invites first.
+  const home = await api<{ actions: { kind: string; token?: string }[] }>(
+    "/home"
+  );
+  for (const action of home.actions) {
+    if (action.kind === "invite" && action.token) {
+      await api(`/invites/${action.token}/accept`, { method: "POST" });
+    }
+  }
+}
+
+const contractTitle = process.argv.includes("--contract")
+  ? arg("contract")
+  : null;
+if (contractTitle) {
+  const contracts = await api<{ id: string; title: string }[]>("/contracts");
+  const target = contracts.find((c) => c.title === contractTitle);
+  if (!target) {
+    throw new Error(
+      `${account} não tem o contrato "${contractTitle}": rodou o seed:demo?`
+    );
+  }
+  const search = new URLSearchParams();
+  if (process.argv.includes("--installment")) {
+    const detail = await api<{
+      installments: { id: string; sequence: number }[];
+    }>(`/contracts/${target.id}`);
+    const wanted = Number(arg("installment"));
+    const it = detail.installments.find((i) => i.sequence === wanted);
+    if (!it) {
+      throw new Error(`"${contractTitle}" não tem a parcela ${wanted}`);
+    }
+    search.set("installment", it.id);
+  }
+  if (process.argv.includes("--tab")) {
+    search.set("tab", arg("tab"));
+  }
+  path = `/contracts/${target.id}${search.size > 0 ? `?${search}` : ""}`;
+  expectedPath = `/contracts/${target.id}`;
+}
+
+/** The seed's invite link: apps/api/src/lib/demo-seed-kit.ts (demoInviteToken) computes the same. */
+function demoInviteToken(contractKey: string): string {
+  return createHash("sha256")
+    .update(`quitto-demo-invite:${contractKey}`)
+    .digest("hex");
+}
+
+if (process.argv.includes("--invite")) {
+  path = `/invites/${demoInviteToken(arg("invite"))}`;
+  expectedPath = path;
+}
+
+/** The seed's receipt link: apps/api/src/lib/demo-seed-kit.ts (demoReceiptToken) computes the same. */
+function demoReceiptToken(contractKey: string, sequence: number): string {
+  return createHash("sha256")
+    .update(`quitto-demo-receipt:${contractKey}:${sequence}`)
+    .digest("base64url");
+}
+
+if (process.argv.includes("--receipt")) {
+  const [contractKey = "", sequence = ""] = arg("receipt").split(":");
+  path = `/r/${demoReceiptToken(contractKey, Number(sequence))}`;
+  expectedPath = path;
+}
+
+// The full Chromium, not the headless shell: only it has the PDF viewer the
+// installment panel's proof preview shows (owner's decision 4).
+const browser = await chromium.launch({
+  args: [`--lang=${locale}`],
+  channel: "chromium",
+});
 try {
   for (const size of sizes) {
     for (const theme of THEMES) {
       const context = await browser.newContext({
         viewport: { width: size.width, height: size.height },
         deviceScaleFactor: 1,
-        locale: "pt-BR",
+        locale,
         isMobile: size.mobile,
         hasTouch: size.mobile,
       });
       await context.addCookies([
         ...session,
         { name: "theme", value: theme, url: WEB },
+        { name: "locale", value: locale, url: WEB },
       ]);
       const page = await context.newPage();
       await page.goto(`${WEB}${path}`);
@@ -165,9 +385,19 @@ try {
           `${account} caiu em ${landed}, não em ${expectedPath}: rodou o seed:demo?`
         );
       }
-      const file = join(out, `${account}-${size.name}-${theme}`);
+      const file = join(
+        out,
+        `${account}-${name}-${size.name}-${theme}${locale === "pt-BR" ? "" : "-en"}`
+      );
       const where = `${account} ${size.width}x${size.height} ${theme} (${path})`;
+      if (clickPrefix) {
+        await noLoading(page, where);
+        await clickFirst(page, clickPrefix, where);
+      }
       await settle(page, size.width, where);
+      if (process.argv.includes("--palette")) {
+        await openPalette(page, size.mobile);
+      }
       await page.screenshot({ path: `${file}.png` });
       if (size.mobile) {
         // A fullPage shot paints the phone's fixed tab bar where the first

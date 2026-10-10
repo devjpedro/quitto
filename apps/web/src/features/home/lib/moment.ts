@@ -1,9 +1,9 @@
 import type { Locale } from "@quitto/shared";
+import { sinceDate } from "@/lib/date-parts";
 import { formatDate, formatMoney, formatMonthName } from "@/lib/locale-format";
 import { pluralForm } from "@/lib/plural";
 import { m } from "@/paraglide/messages.js";
 import type { Home } from "../types";
-import { sinceDate } from "./action-text";
 import type { MomentMilestoneCell } from "./milestones";
 import { guideContext, onboardingView } from "./onboarding";
 
@@ -86,12 +86,14 @@ function remainingDetail(
 /**
  * The lime card's text, in `locale`; `today` (the home's, São Paulo) tells a
  * late installment from one still ahead. The strip's cells read their text
- * from here too, so both always agree.
+ * from here too, so both always agree. On a phone the lime cell is short
+ * (variant "phone"): "Mais perto de quitar · 67%" and just the contract's name.
  */
 export function momentView(
   moment: MomentMilestone,
   locale: Locale,
-  today: string
+  today: string,
+  variant: "card" | "phone" = "card"
 ): MomentView {
   const options = { locale };
   switch (moment.id) {
@@ -112,6 +114,17 @@ export function momentView(
         percent: 100,
       };
     case "closest":
+      if (variant === "phone") {
+        return {
+          label: m.home_moment_phone_label(
+            { percent: moment.percent },
+            options
+          ),
+          title: moment.title,
+          detail: null,
+          percent: moment.percent,
+        };
+      }
       return {
         label: m.home_milestone_closest({}, options),
         title: m.home_milestone_closest_value(

@@ -5,6 +5,8 @@ date: 2026-07-14
 
 # Modo de cronograma "mensal" (contrato finito que guarda a intenção)
 
+> Os modos `auto` e `custom` citados aqui foram superados pela ADR-0009 (`split` / `monthly` + `installments[]`).
+
 Adicionar um terceiro **modo de cronograma** — `mensal` — ao lado de `auto` e `custom`:
 o usuário informa **valor mensal + nº de meses** (+ 1º vencimento) e o sistema gera N parcelas
 **iguais e exatas**. O contrato **guarda a intenção** (valor mensal + nº de meses), não só as parcelas.

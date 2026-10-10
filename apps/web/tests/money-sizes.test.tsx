@@ -52,4 +52,12 @@ describe("Money sizes", () => {
     render(<Money cents={32_000} sign="+" />);
     expect(screen.getByText("+ R$ 320,00")).toBeVisible();
   });
+
+  it("summary: 22 px, R$ em 11 (o resumo do celular no wizard)", () => {
+    const { container } = render(<Money cents={600_000} size="summary" />);
+    expect(container.firstElementChild).toHaveClass("text-[22px]");
+    expect(container.querySelector("[aria-hidden] > span")).toHaveClass(
+      "text-[11px]"
+    );
+  });
 });

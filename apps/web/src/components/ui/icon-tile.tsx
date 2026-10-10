@@ -5,13 +5,14 @@ import { m } from "@/paraglide/messages.js";
 /** Above this, the corner shows "99+": three characters still fit the tile. */
 const MAX_COUNT = 99;
 
-export type IconTileTone = "brand" | "warning" | "danger" | "neutral";
+export type IconTileTone = "brand" | "warning" | "danger" | "neutral" | "ink";
 
 const TONE: Record<IconTileTone, string> = {
   brand: "bg-brand-subtle text-brand",
   warning: "bg-warning-subtle text-warning",
   danger: "bg-danger-subtle text-danger",
   neutral: "bg-surface-inset text-ink-muted",
+  ink: "bg-ink text-ink-inverse",
 };
 
 /**
@@ -22,10 +23,13 @@ const TONE: Record<IconTileTone, string> = {
  * Decorative: the row's title says it (a group's title says the count).
  */
 export function IconTile({
+  className,
   count,
   icon: IconComponent,
   tone,
 }: {
+  /** For a tile that sits straight on the white panel, where its own fill would vanish. */
+  className?: string;
   count?: number;
   icon: Icon;
   tone: IconTileTone;
@@ -35,7 +39,8 @@ export function IconTile({
       aria-hidden="true"
       className={cn(
         "relative flex size-10 shrink-0 items-center justify-center rounded-control",
-        TONE[tone]
+        TONE[tone],
+        className
       )}
     >
       <IconComponent size={19} />

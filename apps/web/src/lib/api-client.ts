@@ -66,3 +66,21 @@ export async function unwrap<T>(call: Promise<EdenResult<T>>): Promise<T> {
   }
   return data as T;
 }
+
+/**
+ * unwrap for a resource a link can outlive (an old e-mail or notification
+ * for a deleted contract): a 404 is the answer null, not an error, so the SSR
+ * renders the "not found" itself instead of throwing into the stream.
+ */
+export async function unwrapOrNull<T>(
+  call: Promise<EdenResult<T>>
+): Promise<T | null> {
+  try {
+    return await unwrap(call);
+  } catch (error) {
+    if (error instanceof ApiError && error.httpStatus === 404) {
+      return null;
+    }
+    throw error;
+  }
+}

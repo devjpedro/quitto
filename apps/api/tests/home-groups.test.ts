@@ -24,7 +24,6 @@ function contractRow(
     ownerRole: "seller",
     requiresConfirmation: false,
     status: "active",
-    pixKey: null,
     installmentsCount: 12,
     createdAt: new Date("2026-06-01T12:00:00Z"),
     ...over,
@@ -49,9 +48,10 @@ function person(
   contractId: string,
   role: string,
   linkedUserId: string | null,
-  displayName: string
+  displayName: string,
+  pixKey: string | null = null
 ): HomeParticipantRow {
-  return { contractId, role, linkedUserId, displayName };
+  return { contractId, role, linkedUserId, displayName, pixKey };
 }
 
 function rows(over: Partial<HomeContractRows>): HomeContractRows {
@@ -95,16 +95,15 @@ const NOTEBOOK = {
 
 /** "Aluguel da sala": I pay, Helena Duarte receives. */
 const RENT = {
-  // With a key, so a single overdue card keeps its PIX code and a group drops it.
   contract: contractRow({
     id: "al",
     title: "Aluguel da sala",
     ownerRole: "buyer",
-    pixKey: "helena.duarte@exemplo.com",
   }),
   people: [
     person("al", "buyer", ME, "João Souza"),
-    person("al", "seller", null, "Helena Duarte"),
+    // With a key on the contact, so a single overdue card keeps its PIX code and a group drops it.
+    person("al", "seller", null, "Helena Duarte", "helena.duarte@exemplo.com"),
   ],
 };
 
@@ -128,6 +127,7 @@ function overdueCard(
     counterpartyName: null,
     pixCode: null,
     canMarkPaid: true,
+    canMarkReceived: false,
     canConfirm: false,
     count: 1,
     installmentIds: [over.installmentId],
@@ -185,6 +185,7 @@ describe("buildAgenda: atrasadas agrupadas", () => {
       counterpartyName: "Marina Pires",
       pixCode: null,
       canMarkPaid: false,
+      canMarkReceived: false,
       canConfirm: false,
     });
   });

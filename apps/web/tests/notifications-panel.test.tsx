@@ -261,7 +261,7 @@ describe("NotificationsPanel", () => {
     ).not.toHaveAccessibleDescription();
   });
 
-  it("abrir um grupo lê os avisos dele e abre o contrato filtrado no que ele conta", async () => {
+  it("abrir um grupo lê os avisos dele e abre o contrato sem busca", async () => {
     getList.mockResolvedValue({ data: [overdueGroup], error: null });
     postRead.mockResolvedValue({ data: { ok: true, count: 24 }, error: null });
     const { onOpenChange } = renderPanel(24);
@@ -273,7 +273,7 @@ describe("NotificationsPanel", () => {
     expect(navigate).toHaveBeenCalledWith({
       to: "/contracts/$id",
       params: { id: "c9" },
-      search: { status: "overdue" },
+      search: {},
     });
   });
 

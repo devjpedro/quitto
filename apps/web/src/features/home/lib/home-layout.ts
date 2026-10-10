@@ -12,15 +12,10 @@ export interface HomeLayout {
   allClear: boolean;
   compactGuide: boolean;
   empty: boolean;
-  fewActions: boolean;
   guide: OnboardingView;
   hasContract: boolean;
   heroGuide: boolean;
-  showChips: boolean;
 }
-
-/** "Próximos 30 dias" joins the actions' row from lateral up to this many cards (planner's decision 9). */
-export const FEW_ACTIONS_MAX = 2;
 
 /**
  * Which blocks the home shows. The green guide card leads only when there is
@@ -40,30 +35,6 @@ export function homeLayout(home: Home): HomeLayout {
     compactGuide: guide.visible && hasActions,
     allClear: hasContract && !hasActions && !heroGuide,
     empty: !(hasContract || hasActions || guide.visible),
-    fewActions:
-      hasContract && hasActions && home.actions.length <= FEW_ACTIONS_MAX,
-    showChips: hasContract || hasActions,
-  };
-}
-
-/**
- * The lower part's columns from lateral with few cards (mockup 13, frame E):
- * notifications and the guide left, milestones right. Without milestones
- * from md the guide takes their column, so neither block stretches across
- * the content. `left`/`right`: the column shows a block from lateral. Two
- * columns only with a block in each, and an empty one takes no room.
- */
-export function fewLowerColumns(blocks: {
-  guide: boolean;
-  milestones: boolean;
-  notifications: boolean;
-}): { guideRight: boolean; left: boolean; right: boolean } {
-  const { guide, milestones, notifications } = blocks;
-  const guideRight = !milestones && notifications && guide;
-  return {
-    guideRight,
-    left: notifications || guide,
-    right: milestones || guideRight,
   };
 }
 

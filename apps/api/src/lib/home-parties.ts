@@ -13,7 +13,6 @@ export interface HomeContractRow {
   installmentsCount: number;
   ownerId: string;
   ownerRole: string;
-  pixKey: string | null;
   requiresConfirmation: boolean;
   status: string;
   title: string;
@@ -36,6 +35,8 @@ export interface HomeParticipantRow {
   contractId: string;
   displayName: string;
   linkedUserId: string | null;
+  /** The receiver's key kept on a contact without an account. */
+  pixKey: string | null;
   role: string;
 }
 
@@ -63,7 +64,10 @@ export interface PartyContract {
   recebedor: Recebedor;
 }
 
-function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
+export function groupBy<T>(
+  items: T[],
+  key: (item: T) => string
+): Map<string, T[]> {
   const out = new Map<string, T[]>();
   for (const item of items) {
     const list = out.get(key(item));
@@ -80,6 +84,17 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
 function payerName(people: HomeParticipantRow[]): string | null {
   const buyers = people.filter((p) => p.role === "buyer");
   return buyers.length === 1 ? (buyers[0]?.displayName ?? null) : null;
+}
+
+/** The other party's name: the receiver when the caller pays, the single payer when they receive. */
+export function counterpartyNameOf(
+  direction: Direction,
+  recebedor: Recebedor,
+  people: HomeParticipantRow[]
+): string | null {
+  return direction === DIRECTION.pay
+    ? recebedor.displayName
+    : payerName(people);
 }
 
 export function partyContracts(
@@ -106,8 +121,7 @@ export function partyContracts(
       contract: c,
       direction,
       recebedor,
-      counterpartyName:
-        direction === DIRECTION.pay ? recebedor.displayName : payerName(people),
+      counterpartyName: counterpartyNameOf(direction, recebedor, people),
       installments: installmentsBy.get(c.id) ?? [],
     });
   }
@@ -119,8 +133,5 @@ export function pixCodeFor(
   party: PartyContract,
   amountCents: number
 ): string | null {
-  return (
-    installmentPix(party.contract.pixKey, party.recebedor, amountCents)?.code ??
-    null
-  );
+  return installmentPix(party.recebedor, amountCents)?.code ?? null;
 }

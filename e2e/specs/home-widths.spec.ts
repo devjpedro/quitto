@@ -8,102 +8,32 @@ import {
   seedWide,
 } from "../home-helpers";
 
-test("muitas ações: carrossel com 1 de N no celular e Ver todas no desktop", async ({
+test("muitas ações: um cartão em destaque e 'Na sequência' com 3 linhas e o '+ N'; sem carrossel", async ({
   page,
-}, testInfo) => {
+}) => {
   await signup(page);
-  await seedOneEach(page.request, "Muitas E2E", [-40, -30, -20, -10, -5]);
+  await seedOneEach(page.request, "Muitas E2E", [-40, -30, -20, -10, -5, -3]);
   await page.goto("/");
   // A click before hydration lands on the server HTML and is lost.
   await waitForHydrated(page);
+  // Only the first action is a card; the others are lines with no button.
   await expect(card(page, "Muitas E2E 1 · parcela 1 de 1")).toBeVisible();
-  if (testInfo.project.name === "mobile") {
-    await expect(page.getByText("1 de 5")).toBeVisible();
-    // the next card peeks at the edge, the last one is off screen
-    await expect(card(page, "Muitas E2E 2 · parcela 1 de 1")).toBeInViewport();
-    await expect(
-      card(page, "Muitas E2E 5 · parcela 1 de 1")
-    ).not.toBeInViewport();
-    await expectNoPageScrollX(page);
-    // keyboard reaches every card: focusing a button in an off-screen card scrolls it in
-    await card(page, "Muitas E2E 5 · parcela 1 de 1")
-      .getByRole("button", { name: "Já paguei" })
-      .focus();
-    await expect(card(page, "Muitas E2E 5 · parcela 1 de 1")).toBeInViewport();
-    await page.getByRole("button", { name: "Ver todas", exact: true }).click();
-    const last = card(page, "Muitas E2E 5 · parcela 1 de 1");
-    await last.scrollIntoViewIfNeeded();
-    await expect(last).toBeInViewport();
-    await expect(page.getByText("1 de 5")).toHaveCount(0);
-    await expectNoPageScrollX(page);
-  } else {
-    await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeHidden();
-    await page.getByRole("button", { name: "Ver todas (5)" }).click();
-    await expect(card(page, "Muitas E2E 4 · parcela 1 de 1")).toBeVisible();
-    await expect(card(page, "Muitas E2E 5 · parcela 1 de 1")).toBeVisible();
-  }
+  await expect(page.getByRole("article")).toHaveCount(1);
+  const next = page.getByRole("region", { name: "Na sequência" });
+  await expect(next.getByRole("listitem")).toHaveCount(3);
+  await expect(next.getByText("+ 2 em Parcelas")).toBeVisible();
+  await expect(next.getByRole("button")).toHaveCount(0);
+  // No carousel any more: nothing says "1 de N", nothing hides in a strip.
+  await expect(page.getByText("1 de 6")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Ver todas" })).toHaveCount(0);
+  await expectNoPageScrollX(page);
 });
 
-test.describe("tablet a 800 px", () => {
-  test.use({ viewport: { width: 800, height: 1000 } });
-
-  test("o carrossel de 5 ações ao lado da sidebar não faz a página rolar de lado", async ({
-    page,
-  }, testInfo) => {
-    // biome-ignore lint/suspicious/noSkippedTests: the mobile project has its own viewport
-    test.skip(
-      testInfo.project.name === "mobile",
-      "o projeto mobile tem viewport própria"
-    );
-    await signup(page);
-    await seedOneEach(page.request, "Tablet E2E", [-40, -30, -20, -10, -5]);
-    await page.goto("/");
-    await waitForHydrated(page);
-    // Below lg it is still the carousel, now beside the sidebar.
-    await expect(card(page, "Tablet E2E 1 · parcela 1 de 1")).toBeVisible();
-    await expect(page.getByText("1 de 5")).toBeVisible();
-    await expectNoPageScrollX(page);
-  });
-});
-
-test.describe("desktop a 1024 px", () => {
-  test.use({ viewport: { width: 1024, height: 768 } });
-
-  test("a grade de 3 cartões cabe no painel ao lado da sidebar", async ({
-    page,
-  }, testInfo) => {
-    // biome-ignore lint/suspicious/noSkippedTests: the mobile project has its own viewport
-    test.skip(
-      testInfo.project.name === "mobile",
-      "o projeto mobile tem viewport própria"
-    );
-    await signup(page);
-    await seedOneEach(page.request, "Grade E2E", [-30, -20, -10]);
-    await page.goto("/");
-    for (const n of [1, 2, 3]) {
-      await expect(
-        card(page, `Grade E2E ${n} · parcela 1 de 1`)
-      ).toBeInViewport();
-    }
-    // From lg the cards are a grid: no carousel counter, nothing past the panel's edge.
-    await expect(page.getByText("1 de 3")).toBeHidden();
-    const overflows = await page
-      .locator("#conteudo")
-      .evaluate((main) => main.scrollWidth > main.clientWidth);
-    expect(overflows).toBe(false);
-  });
-});
-
-for (const { width, perRow } of [
-  { width: 1440, perRow: 3 },
-  { width: 1660, perRow: 4 },
-  { width: 1920, perRow: 5 },
-  { width: 2560, perRow: 5 },
-]) {
-  test.describe(`tela larga a ${width} px`, () => {
+for (const width of [800, 1024, 1440, 1920, 2560]) {
+  test.describe(`tela a ${width} px`, () => {
     test.use({ viewport: { width, height: 1000 } });
 
-    test("a moldura acompanha a tela, a sidebar tem 232 px e as ações crescem por colunas", async ({
+    test("a moldura acompanha a tela, a sidebar tem 232 px e nada rola de lado", async ({
       page,
     }, testInfo) => {
       // biome-ignore lint/suspicious/noSkippedTests: the mobile project has its own viewport
@@ -122,20 +52,14 @@ for (const { width, perRow } of [
       const main = await box(page.locator("#conteudo"));
       expect(main.x).toBeCloseTo(232, 0);
       expect(main.x + main.width).toBeCloseTo(viewportWidth - 12, 0);
-      // One row of cards, never wider ones: 3 up to 1535, 4 up to 1839, 5 from 1840.
-      const row = page.getByRole("article").filter({ visible: true });
-      await expect(row).toHaveCount(perRow);
-      const tops = await row.evaluateAll((cards) =>
-        cards.map((el) => Math.round(el.getBoundingClientRect().top))
+      // From md the panel scrolls inside the screen, never the page (B3).
+      await expectNoPageScrollX(page);
+      const pageScrolls = await page.evaluate(
+        () =>
+          (document.scrollingElement?.scrollHeight ?? 0) >
+          document.documentElement.clientHeight
       );
-      expect(new Set(tops).size).toBe(1);
-      await expect(
-        page.getByRole("button", { name: "Ver todas (6)" })
-      ).toBeVisible();
-      // The side column exists from 1440.
-      await expect(
-        page.getByRole("region", { name: "Notificações recentes" })
-      ).toBeVisible();
+      expect(pageScrolls).toBe(false);
       const overflows = await page
         .locator("#conteudo")
         .evaluate((el) => el.scrollWidth > el.clientWidth);
@@ -143,6 +67,25 @@ for (const { width, perRow } of [
     });
   });
 }
+
+test.describe("tela larga: a ação e 'Na sequência' lado a lado", () => {
+  test.use({ viewport: { width: 1512, height: 1000 } });
+
+  test("a 1512 o cartão e a sequência dividem a linha, e Próximos 30 dias e Marcos a de baixo", async ({
+    page,
+  }, testInfo) => {
+    // biome-ignore lint/suspicious/noSkippedTests: the mobile project has its own viewport
+    test.skip(
+      testInfo.project.name === "mobile",
+      "o projeto mobile tem viewport própria"
+    );
+    await seedWide(page);
+    const hero = await box(card(page, "Larga E2E 1 · parcela 1 de 1"));
+    const next = await box(page.getByRole("region", { name: "Na sequência" }));
+    expect(Math.abs(hero.y - next.y)).toBeLessThan(2);
+    expect(next.x).toBeGreaterThan(hero.x + hero.width - 1);
+  });
+});
 
 test.describe("tela larga a 2560 px: o teto do conteúdo", () => {
   test.use({ viewport: { width: 2560, height: 1200 } });
@@ -157,68 +100,29 @@ test.describe("tela larga a 2560 px: o teto do conteúdo", () => {
     );
     await seedWide(page);
     const main = await box(page.locator("#conteudo"));
-    // The greeting row spans the content column: h1 on the left, "+ Novo contrato" on the right.
     const title = await box(page.getByRole("heading", { level: 1 }));
-    const shortcut = await box(
-      page.locator("#conteudo").getByRole("link", { name: "Novo contrato" })
-    );
+    const next = await box(page.getByRole("region", { name: "Na sequência" }));
     const left = title.x;
-    const right = shortcut.x + shortcut.width;
+    const right = next.x + next.width;
     expect(right - left).toBeCloseTo(1840, 0);
     expect(left - main.x).toBeCloseTo(main.x + main.width - right, 0);
   });
 });
 
-test.describe("Notificações recentes só a partir de 1440 px", () => {
-  test.use({ viewport: { width: 1439, height: 900 } });
-
-  test("abaixo não aparece nem busca; a partir de 1440 aparece, e Ver todas abre o painel", async ({
-    page,
-  }, testInfo) => {
-    // biome-ignore lint/suspicious/noSkippedTests: the mobile project has its own viewport
-    test.skip(
-      testInfo.project.name === "mobile",
-      "o projeto mobile tem viewport própria"
-    );
-    const calls: string[] = [];
-    page.on("request", (req) => {
-      if (new URL(req.url()).pathname === "/api/notifications") {
-        calls.push(req.url());
-      }
-    });
-    await seedWide(page);
-    const recent = page.getByRole("region", { name: "Notificações recentes" });
-    await expect(recent).toBeHidden();
-    // Below lateral nothing is fetched for a block that is not on screen, not
-    // even once the page settles (the shell refetches right after an SSR load).
-    await page.waitForLoadState("networkidle");
-    expect(calls).toEqual([]);
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await expect(recent).toBeVisible();
-    await expect.poll(() => calls.length).toBeGreaterThan(0);
-    await recent.getByRole("button", { name: "Ver todas" }).click();
-    await expect(
-      page.getByRole("dialog", { name: "Notificações" })
-    ).toBeVisible();
-  });
-});
-
-test("+ Novo contrato ao lado da saudação no desktop; no celular fica o ＋ da tab bar", async ({
+test("'Novo contrato' vive na sidebar (desktop) (o ＋ na linha da logo) e no ＋ da tab bar (celular), não no cabeçalho da home", async ({
   page,
 }, testInfo) => {
   await signup(page);
+  await expect(
+    page.locator("#conteudo").getByRole("link", { name: "Novo contrato" })
+  ).toHaveCount(0);
+  // Desktop: the "＋" on the logo's line; phone: the tab bar's.
   const shortcut = page
-    .locator("#conteudo")
-    .getByRole("link", { name: "Novo contrato" });
-  if (testInfo.project.name === "mobile") {
-    await expect(shortcut).toBeHidden();
-    const tabBarPlus = page
-      .getByRole("navigation", { name: "Navegação principal" })
-      .filter({ visible: true })
-      .getByRole("link", { name: "Novo contrato" });
-    await expect(tabBarPlus).toBeVisible();
-    await expect(tabBarPlus).toHaveAttribute("href", "/contracts/new");
-  } else {
+    .getByRole("link", { name: "Novo contrato" })
+    .filter({ visible: true });
+  await expect(shortcut).toBeVisible();
+  await expect(shortcut).toHaveAttribute("href", "/contracts/new");
+  if (testInfo.project.name !== "mobile") {
     await shortcut.click();
     await page.waitForURL("**/contracts/new");
   }

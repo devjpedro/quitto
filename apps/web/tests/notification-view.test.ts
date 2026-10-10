@@ -206,44 +206,19 @@ describe("notificationView", () => {
     expect(metas[2]).toContain(nb("há~3~dias"));
   });
 
-  it("aonde a linha leva: um grupo abre o contrato filtrado pelo que conta; um aviso, a parcela", () => {
-    expect(
-      notificationTarget(item({ type: "installment_overdue", count: 3 }))
-    ).toEqual({
-      status: "overdue",
-    });
-    expect(
-      notificationTarget(
-        item({ type: "installment_overdue_receivable", count: 24 })
-      )
-    ).toEqual({ status: "overdue" });
-    expect(
-      notificationTarget(item({ type: "installment_paid", count: 2 }))
-    ).toEqual({
-      status: "paid",
-    });
-    expect(
-      notificationTarget(item({ type: "payment_confirmed", count: 2 }))
-    ).toEqual({
-      status: "paid",
-    });
-    expect(
-      notificationTarget(item({ type: "installment_due_soon", count: 2 }))
-    ).toEqual({
-      status: "due",
-    });
-    expect(
-      notificationTarget(
-        item({ type: "installment_due_soon_receivable", count: 2 })
-      )
-    ).toEqual({ status: "due" });
-    // What no filter cuts opens the contract as it is.
-    expect(
-      notificationTarget(item({ type: "proof_submitted", count: 2 }))
-    ).toEqual({});
-    expect(
-      notificationTarget(item({ type: "invite_accepted", count: 2 }))
-    ).toEqual({});
+  it("aonde a linha leva: um grupo abre o contrato sem busca; um aviso, a parcela", () => {
+    for (const type of [
+      "installment_overdue",
+      "installment_overdue_receivable",
+      "installment_paid",
+      "payment_confirmed",
+      "installment_due_soon",
+      "installment_due_soon_receivable",
+      "proof_submitted",
+      "invite_accepted",
+    ]) {
+      expect(notificationTarget(item({ type, count: 2 }))).toEqual({});
+    }
     expect(notificationTarget(item())).toEqual({ installment: "i1" });
   });
 });

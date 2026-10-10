@@ -1,164 +1,30 @@
-import { todayISO } from "@quitto/shared";
-import {
-  and,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  max,
-  min,
-  sum,
-} from "drizzle-orm";
+import { isPaidStatus, todayISO } from "@quitto/shared";
+import { and, count, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { db } from "../db/client";
 import {
   contract,
-  installment,
   invite,
   notification,
   participant,
-  proof,
   user as userTable,
 } from "../db/schema";
-import {
-  visibleContractsWhere,
-  visibleNotificationsWhere,
-} from "../lib/contract-visibility";
+import { loadContractRows } from "../lib/contract-rows";
+import { visibleNotificationsWhere } from "../lib/contract-visibility";
+import { addDays, endOfMonth } from "../lib/dates";
 import { normalizeEmail } from "../lib/email";
 import { emailRemindersEnabled } from "../lib/email-reminders";
 import { buildAgenda } from "../lib/home";
 import { buildMilestones } from "../lib/home-milestones";
 import { onboardingFacts } from "../lib/home-onboarding";
-import { type HomeContractRows, partyContracts } from "../lib/home-parties";
+import { type PartyContract, partyContracts } from "../lib/home-parties";
 import { activeContracts } from "../lib/home-progress";
 import { sidebarContracts } from "../lib/home-sidebar";
 import type { HomeInviteRow } from "../lib/home-types";
+import { loadInviteTerms } from "../lib/invite-terms";
+import { groupPeople } from "../lib/people";
 import { requireAuth } from "../lib/session";
 import { homeSchema } from "./home-schema";
-
-const EMPTY_ROWS: HomeContractRows = {
-  contracts: [],
-  installments: [],
-  participants: [],
-  users: [],
-};
-
-/** Contracts the user sees (owned or linked), with every row the home needs. 3 sequential round trips at most. */
-async function loadContractRows(userId: string): Promise<HomeContractRows> {
-  const contracts = await db
-    .select({
-      id: contract.id,
-      title: contract.title,
-      ownerId: contract.ownerId,
-      ownerRole: contract.ownerRole,
-      requiresConfirmation: contract.requiresConfirmation,
-      status: contract.status,
-      pixKey: contract.pixKey,
-      installmentsCount: contract.installmentsCount,
-      createdAt: contract.createdAt,
-    })
-    .from(contract)
-    .where(visibleContractsWhere(userId));
-  if (contracts.length === 0) {
-    return EMPTY_ROWS;
-  }
-  const ids = contracts.map((c) => c.id);
-  const [installmentRows, participants, proofs] = await Promise.all([
-    db
-      .select({
-        id: installment.id,
-        contractId: installment.contractId,
-        sequence: installment.sequence,
-        amountCents: installment.amountCents,
-        dueDate: installment.dueDate,
-        status: installment.status,
-        paidAt: installment.paidAt,
-      })
-      .from(installment)
-      .where(inArray(installment.contractId, ids)),
-    db
-      .select({
-        contractId: participant.contractId,
-        displayName: participant.displayName,
-        role: participant.role,
-        linkedUserId: participant.linkedUserId,
-      })
-      .from(participant)
-      .where(inArray(participant.contractId, ids)),
-    // Latest proof per installment: when the payer acted in a contract with
-    // confirmation ("Tudo em dia" counts it, not the confirmation time).
-    db
-      .select({ installmentId: proof.installmentId, at: max(proof.createdAt) })
-      .from(proof)
-      .innerJoin(installment, eq(proof.installmentId, installment.id))
-      .where(inArray(installment.contractId, ids))
-      .groupBy(proof.installmentId),
-  ]);
-  const lastProofAt = new Map(proofs.map((p) => [p.installmentId, p.at]));
-  const installments = installmentRows.map((row) => ({
-    ...row,
-    lastProofAt: lastProofAt.get(row.id) ?? null,
-  }));
-  // Owners (seller-owned receive key + name) and linked sellers (their key).
-  const userIds = [
-    ...new Set([
-      ...contracts.map((c) => c.ownerId),
-      ...participants.flatMap((p) =>
-        p.role === "seller" && p.linkedUserId ? [p.linkedUserId] : []
-      ),
-    ]),
-  ];
-  const users = await db
-    .select({
-      id: userTable.id,
-      name: userTable.name,
-      pixKey: userTable.pixKey,
-    })
-    .from(userTable)
-    .where(inArray(userTable.id, userIds));
-  return { contracts, installments, participants, users };
-}
-
-interface InviteTerms {
-  firstDueDate: string | null;
-  installmentsCount: number;
-  maxCents: number | null;
-  minCents: number | null;
-  totalCents: number | null;
-}
-
-/**
- * Count, sum, first due date and the smallest and largest installment of
- * each invited contract, in one grouped read. From the installments, never
- * contract.totalAmountCents: editing one installment does not update it, and
- * the invite page sums the installments too.
- */
-async function loadInviteTerms(
-  contractIds: string[]
-): Promise<Map<string, InviteTerms>> {
-  const terms = new Map<string, InviteTerms>();
-  if (contractIds.length === 0) {
-    return terms;
-  }
-  const rows = await db
-    .select({
-      contractId: installment.contractId,
-      firstDueDate: min(installment.dueDate),
-      minCents: min(installment.amountCents),
-      maxCents: max(installment.amountCents),
-      totalCents: sum(installment.amountCents).mapWith(Number),
-      installmentsCount: count(),
-    })
-    .from(installment)
-    .where(inArray(installment.contractId, contractIds))
-    .groupBy(installment.contractId);
-  for (const { contractId, ...row } of rows) {
-    terms.set(contractId, row);
-  }
-  return terms;
-}
 
 /** Pending invites for the session e-mail: not accepted, not declined, not expired, slot still open. One per slot, and its latest copy decides. */
 async function loadInvites(email: string): Promise<HomeInviteRow[]> {
@@ -209,10 +75,7 @@ async function loadInvites(email: string): Promise<HomeInviteRow[]> {
       totalCents: t?.totalCents ?? 0,
       firstDueDate: t?.firstDueDate ?? null,
       // One amount per installment, or null when they differ (the card shows the total).
-      amountCents:
-        t && t.minCents !== null && t.minCents === t.maxCents
-          ? t.minCents
-          : null,
+      amountCents: t?.amountCents ?? null,
     };
   });
 }
@@ -246,6 +109,21 @@ async function loadUnreadCount(userId: string): Promise<number> {
   return row?.value ?? 0;
 }
 
+/** Unpaid installments due up to the later of the month's end and today + 6: the default window of the Parcelas list. */
+function monthInstallmentsCount(
+  parties: PartyContract[],
+  today: string
+): number {
+  const to = [endOfMonth(today), addDays(today, 6)].sort().at(-1) ?? today;
+  return parties.reduce(
+    (sum, p) =>
+      sum +
+      p.installments.filter((i) => !isPaidStatus(i.status) && i.dueDate <= to)
+        .length,
+    0
+  );
+}
+
 export const homeModule = new Elysia({ prefix: "/api" }).get(
   "/home",
   async ({ request }) => {
@@ -276,6 +154,15 @@ export const homeModule = new Elysia({ prefix: "/api" }).get(
       // followed ones included (parties drops viewers, so count the rows);
       // a paid-off one is not active.
       activeContractsCount: activeContracts(rows).length,
+      // Sidebar counts (planner's D13): what "Parcelas" lists by default
+      // (unpaid, up to the end of the month or a week ahead) and the people.
+      monthInstallmentsCount: monthInstallmentsCount(parties, today),
+      peopleCount: groupPeople(
+        { id: user.id, email: user.email },
+        rows,
+        today,
+        new Date()
+      ).length,
       // "Contratos ativos" in the sidebar: no extra read, the rows are loaded (planner's decision 1).
       activeContracts: sidebarContracts(rows, today),
     };

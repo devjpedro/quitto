@@ -134,6 +134,27 @@
       "when": 1790988518049,
       "tag": "0018_furry_grim_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791256690726,
+      "tag": "0019_participant_pix_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791500137230,
+      "tag": "0020_user_tour_completed_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791562881426,
+      "tag": "0021_installment_registered_on_create",
+      "breakpoints": true
     }
   ]
 }

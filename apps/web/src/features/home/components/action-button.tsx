@@ -94,16 +94,19 @@ export function ActionButton({
     return (
       <Button asChild className={className} size="sm" variant={variant}>
         <a
+          aria-label={`${label} ${m.home_action_whatsapp_hint()}`}
           href={href}
           onClick={guard}
           rel="noopener noreferrer"
           target="_blank"
         >
           <ButtonIcon kind={kind} />
-          {label}
-          {/* The space lives outside the span: the name computation trims an
-              element's own text, so inside it the two words would glue. */}{" "}
-          <span className="sr-only">{m.home_action_whatsapp_hint()}</span>
+          {/* A narrow card (a phone, a 1920 row of five) says "Cobrar", as the
+              contract's card does; the name keeps the whole label. */}
+          <span className="@max-[23.5rem]:hidden">{label}</span>
+          <span className="@max-[23.5rem]:inline hidden">
+            {m.contract_action_charge_short()}
+          </span>
         </a>
       </Button>
     );
@@ -121,7 +124,6 @@ export function ActionButton({
           aria-label={label}
           onClick={guard}
           params={{ id: action.contractId }}
-          search={{ status: "overdue" }}
           to="/contracts/$id"
         >
           <ListBullets aria-hidden="true" className="md:hidden" size={18} />

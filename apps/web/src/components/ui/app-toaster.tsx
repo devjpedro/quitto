@@ -4,8 +4,10 @@ import {
   Info,
   Warning,
   WarningCircle,
+  X,
 } from "@phosphor-icons/react";
 import { Toaster } from "sonner";
+import { m } from "@/paraglide/messages.js";
 
 const ICON = "size-5";
 
@@ -15,7 +17,15 @@ const ICON = "size-5";
  * switches to danger-subtle through an attribute variant, which outranks it.
  */
 const TOAST =
-  "flex w-full items-start gap-2.5 rounded-card border border-line bg-surface-raised p-3.5 font-sans text-ink text-sm shadow-float data-[type=error]:border-danger/30 data-[type=error]:bg-danger-subtle";
+  "relative flex w-full items-start gap-2.5 rounded-card border border-line bg-surface-raised p-3.5 pr-12 font-sans text-ink text-sm shadow-float data-[type=error]:border-danger/30 data-[type=error]:bg-danger-subtle";
+
+/**
+ * The ✕ (sonner's `closeButton`): top right of the toast, 44 px to tap on a
+ * phone and 32 from md. Sonner's own rules (specificity 0,2,0) paint the
+ * button's colors even unstyled, so the ones here carry `!`.
+ */
+const CLOSE =
+  "absolute! top-1 right-1 left-auto! flex size-11 items-center justify-center rounded-control border-0! bg-transparent! p-0 text-ink-muted! transition-colors hover:bg-surface-card! hover:text-ink! focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand md:size-8";
 
 /**
  * The app's toasts on the redesign tokens (no `richColors`): a floating card
@@ -28,9 +38,11 @@ export function AppToaster() {
   return (
     <Toaster
       className="[--app-toast-bottom:calc(env(safe-area-inset-bottom)_+_5.25rem)] md:[--app-toast-bottom:1.5rem]"
+      closeButton
       icons={{
         success: <CheckCircle className={`${ICON} text-brand`} />,
         info: <Info className={`${ICON} text-ink-muted`} />,
+        close: <X aria-hidden="true" size={16} />,
         warning: <Warning className={`${ICON} text-warning`} />,
         error: <WarningCircle className={`${ICON} text-danger`} />,
         loading: (
@@ -47,9 +59,11 @@ export function AppToaster() {
       offset={{ bottom: "var(--app-toast-bottom)", right: "1.5rem" }}
       position="bottom-right"
       toastOptions={{
+        closeButtonAriaLabel: m.sheet_close(),
         unstyled: true,
         classNames: {
           toast: TOAST,
+          closeButton: CLOSE,
           icon: "mt-px flex shrink-0",
           content: "flex min-w-0 flex-col gap-0.5",
           title: "font-medium",

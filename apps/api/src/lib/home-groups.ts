@@ -34,6 +34,7 @@ function mergeGroup(members: InstallmentAction[]): InstallmentAction {
     totalCents: sorted.reduce((sum, action) => sum + action.amountCents, 0),
     pixCode: null,
     canMarkPaid: false,
+    canMarkReceived: false,
     canConfirm: false,
   };
 }

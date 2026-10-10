@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  fewLowerColumns,
-  homeLayout,
-  homeSubtitle,
-} from "@/features/home/lib/home-layout";
+import { homeLayout, homeSubtitle } from "@/features/home/lib/home-layout";
 import { homeFixture, installmentAction, inviteAction } from "./home-fixtures";
 
 const notStarted = {
@@ -27,7 +23,6 @@ describe("homeLayout", () => {
       heroGuide: false,
       compactGuide: false,
       empty: false,
-      showChips: true,
     });
     expect(homeSubtitle(home, layout, "pt-BR")).toBe(
       "Nada pede sua atenção agora."
@@ -76,6 +71,24 @@ describe("homeLayout", () => {
     );
   });
 
+  it("24 atrasadas de um contrato são uma ação agrupada: o subtítulo diz 1, não 24", () => {
+    const sequences = Array.from({ length: 24 }, (_, i) => i + 1);
+    const home = homeFixture({
+      actions: [
+        installmentAction({
+          kind: "overdue",
+          count: 24,
+          sequences,
+          installmentIds: sequences.map((n) => `i${n}`),
+          totalCents: 24 * 125_000,
+        }),
+      ],
+    });
+    expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
+      "1 coisa pede sua atenção"
+    );
+  });
+
   it("acompanhar contratos não esconde o guia: só contam aqueles em que você é parte", () => {
     // Coordinator's rule, end to end: 5 followed contracts (the sidebar's
     // count), none where the person pays or receives.
@@ -101,10 +114,10 @@ describe("homeLayout", () => {
     const home = homeFixture({
       onboarding: { ...notStarted, dismissedAt: "2026-10-02T10:00:00.000Z" },
     });
-    expect(homeLayout(home)).toMatchObject({ empty: true, showChips: false });
+    expect(homeLayout(home)).toMatchObject({ empty: true });
   });
 
-  it("só um convite, sem contrato: não é o vazio nem o Nada pendente, e os chips aparecem", () => {
+  it("só um convite, sem contrato: não é o vazio nem o Nada pendente, e o subtítulo conta o convite", () => {
     const dismissed = {
       ...notStarted,
       dismissedAt: "2026-10-02T10:00:00.000Z",
@@ -115,7 +128,6 @@ describe("homeLayout", () => {
         empty: false,
         allClear: false,
         heroGuide: false,
-        showChips: true,
         compactGuide: onboarding.dismissedAt === null,
       });
       expect(homeSubtitle(home, homeLayout(home), "pt-BR")).toBe(
@@ -142,55 +154,4 @@ describe("homeLayout", () => {
       "1 thing needs your attention"
     );
   });
-});
-
-describe("homeLayout: poucas ações", () => {
-  it("fewActions só com contrato e 1 ou 2 ações", () => {
-    const one = homeFixture({ actions: [installmentAction()] });
-    const two = homeFixture({
-      actions: [
-        installmentAction(),
-        installmentAction({ installmentId: "i2" }),
-      ],
-    });
-    const three = homeFixture({
-      actions: [
-        installmentAction(),
-        installmentAction({ installmentId: "i2" }),
-        installmentAction({ installmentId: "i3" }),
-      ],
-    });
-    expect(homeLayout(one).fewActions).toBe(true);
-    expect(homeLayout(two).fewActions).toBe(true);
-    expect(homeLayout(three).fewActions).toBe(false);
-    expect(homeLayout(homeFixture()).fewActions).toBe(false);
-    const inviteOnly = homeFixture({
-      actions: [inviteAction()],
-      onboarding: { ...homeFixture().onboarding, hasContract: false },
-    });
-    expect(homeLayout(inviteOnly).fewActions).toBe(false);
-  });
-});
-
-describe("fewLowerColumns: a parte de baixo com poucas ações", () => {
-  it.each([
-    // [milestones, notifications, guide] → [guideRight, left, right]
-    [true, true, true, false, true, true],
-    [true, true, false, false, true, true],
-    [true, false, true, false, true, true],
-    [true, false, false, false, false, true],
-    [false, true, true, true, true, true],
-    [false, true, false, false, true, false],
-    [false, false, true, false, true, false],
-    [false, false, false, false, false, false],
-  ])(
-    "marcos %s, notificações %s, guia %s: guia à direita %s, coluna da esquerda %s, da direita %s",
-    (milestones, notifications, guide, guideRight, left, right) => {
-      expect(fewLowerColumns({ guide, milestones, notifications })).toEqual({
-        guideRight,
-        left,
-        right,
-      });
-    }
-  );
 });

@@ -71,10 +71,18 @@ export function useMarkPaidFromHome() {
   );
 }
 
-/** Same endpoint as "Já paguei": the receiver who can also pay marks the money as received. */
+function markReceived(action: InstallmentAction) {
+  return unwrap(
+    api.api
+      .installments({ installmentId: action.installmentId })
+      ["mark-received"].post()
+  );
+}
+
+/** The approver marks the money as received (owner's decision 2): POST …/mark-received. */
 export function useMarkReceivedFromHome() {
   return useHomeActionMutation(
-    markPaid,
+    markReceived,
     m.home_toast_marked_received(),
     useApplyInstallment()
   );

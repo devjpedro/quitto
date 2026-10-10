@@ -11,6 +11,9 @@ export function invalidateContractViews(
 ): void {
   queryClient.invalidateQueries({ queryKey: queryKeys.contracts });
   queryClient.invalidateQueries({ queryKey: queryKeys.home });
+  queryClient.invalidateQueries({ queryKey: queryKeys.people });
+  // The Parcelas list ("installments" is not the single installment's "installment").
+  queryClient.invalidateQueries({ queryKey: ["installments"] });
   if (contractId) {
     queryClient.invalidateQueries({ queryKey: queryKeys.contract(contractId) });
   }

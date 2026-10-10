@@ -1,22 +1,17 @@
 import { GearSix, Moon, SignOut, Sun } from "@phosphor-icons/react";
-import { isLocale, LOCALES, type Locale } from "@quitto/shared";
+import { isLocale, LOCALES } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
 import { DropdownMenu } from "radix-ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChangeLocale } from "@/hooks/use-change-locale";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { useTheme } from "@/hooks/use-theme";
+import { LOCALE_NAME } from "@/lib/locale-names";
 import type { SessionIdentity } from "@/lib/session-resolver";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { Avatar } from "./avatar";
-
-// Language names are endonyms: they read the same in every UI locale.
-const LOCALE_NAME: Record<Locale, string> = {
-  "pt-BR": "Português (Brasil)",
-  "en-US": "English (US)",
-};
 
 const ITEM =
   "flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-[8px] px-2.5 text-sm text-ink outline-none data-[highlighted]:bg-surface-sunken md:min-h-9";

@@ -1,19 +1,21 @@
-import { CalendarBlank } from "@phosphor-icons/react";
+import { CalendarBlank, CaretRight } from "@phosphor-icons/react";
 import { INSTALLMENT_STATUS, type Locale } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import { DateTile } from "@/components/ui/date-tile";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "@/components/ui/money";
+import { SectionTitle } from "@/components/ui/section-title";
 import { Tag } from "@/components/ui/tag";
 import { weekdayName } from "@/lib/date-parts";
-import { pluralForm } from "@/lib/plural";
 import { sequencesLabel } from "@/lib/sequences-label";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import type { Home, UpcomingItem } from "../types";
-import { SectionTitle } from "./section-title";
+
+/** "Próximos 30 dias" shows this many lines; the rest is "Mais N em Parcelas". */
+export const UPCOMING_MAX = 3;
 
 /** "última" for a contract's last installment, "primeira" for its first. */
 function edgeTag(item: UpcomingItem): string | null {
@@ -25,8 +27,9 @@ function edgeTag(item: UpcomingItem): string | null {
 
 /**
  * One upcoming installment (mockup 13): the date tile as its anchor, the
- * contract, the weekday and the side, and the amount with its sign. The
- * installment number joins the meta from md (a phone keeps the row short).
+ * contract, the weekday, and the amount with its sign (the side is the sign and
+ * the color). The installment number joins the meta from md (a phone keeps
+ * the row short), and only when no first/last tag already places the row.
  */
 function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
   const receive = item.direction === "receive";
@@ -57,19 +60,19 @@ function UpcomingRow({ item, locale }: { item: UpcomingItem; locale: Locale }) {
           ) : null}
         </span>
         <span className="mt-[3px] block truncate text-[12.5px] text-ink-muted tabular-nums">
-          {receive
-            ? m.home_upcoming_receive({ date })
-            : m.home_upcoming_pay({ date })}
-          <span className="max-md:hidden">
-            {" "}
-            {m.home_dot_after({
-              text: sequencesLabel(
-                [item.sequence],
-                item.installmentsCount,
-                locale
-              ),
-            })}
-          </span>
+          {date}
+          {edge ? null : (
+            <span className="max-md:hidden">
+              {" "}
+              {m.home_dot_after({
+                text: sequencesLabel(
+                  [item.sequence],
+                  item.installmentsCount,
+                  locale
+                ),
+              })}
+            </span>
+          )}
         </span>
       </span>
       <Money
@@ -96,20 +99,14 @@ export function UpcomingList({
 }) {
   const locale = getLocale();
   const titleId = useId();
-  const total = upcoming.items.length + upcoming.moreCount;
-  const one = (count: number) => pluralForm(count, locale) === "one";
+  const shown = upcoming.items.slice(0, UPCOMING_MAX);
+  const more = upcoming.items.length - shown.length + upcoming.moreCount;
   // Nothing listed, yet there are installment cards above or money due in
   // the window: it is in the cards.
   const allInCards =
     upcoming.items.length === 0 &&
     (hasInstallmentActions ||
       upcoming.toPayCents + upcoming.toReceiveCents > 0);
-  let count: string | null = null;
-  if (total > 0) {
-    count = one(total)
-      ? m.home_upcoming_count_one()
-      : m.home_upcoming_count_other({ count: total });
-  }
   return (
     <section
       aria-labelledby={titleId}
@@ -120,7 +117,21 @@ export function UpcomingList({
       id={UPCOMING_SECTION_ID}
       tabIndex={-1}
     >
-      <SectionTitle aux={count} id={titleId}>
+      <SectionTitle
+        aux={
+          more > 0 ? (
+            <Link
+              className="inline-flex items-center gap-1 rounded-control font-medium text-ink text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              search={{}}
+              to="/installments"
+            >
+              {m.home_upcoming_see_more({ count: more })}
+              <CaretRight aria-hidden="true" size={14} />
+            </Link>
+          ) : null
+        }
+        id={titleId}
+      >
         {m.home_upcoming_title()}
       </SectionTitle>
       {upcoming.items.length === 0 ? (
@@ -140,7 +151,7 @@ export function UpcomingList({
         />
       ) : (
         <ul className="divide-y divide-divider overflow-hidden rounded-card bg-surface-card">
-          {upcoming.items.map((item) => (
+          {shown.map((item) => (
             // The first and last rows take the block's corners (the row
             // inherits them), so the inset focus ring follows the curve
             // instead of being clipped by it.
@@ -153,13 +164,6 @@ export function UpcomingList({
           ))}
         </ul>
       )}
-      {upcoming.moreCount > 0 ? (
-        <p className="mt-2 text-ink-muted text-sm">
-          {one(upcoming.moreCount)
-            ? m.home_upcoming_more_one()
-            : m.home_upcoming_more_other({ count: upcoming.moreCount })}
-        </p>
-      ) : null}
     </section>
   );
 }

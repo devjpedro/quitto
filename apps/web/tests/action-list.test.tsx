@@ -1,12 +1,11 @@
 import { QueryClient, useQuery } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type MouseEventHandler, type ReactNode, useState } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionList } from "@/features/home/components/action-list";
-import { SeeAllButton } from "@/features/home/components/chips-row";
-import { ACTION_LOCK_MS } from "@/features/home/hooks/use-action-lock";
 import type { Home, HomeAction } from "@/features/home/types";
+import { ACTION_LOCK_MS } from "@/hooks/use-action-lock";
 import { queryKeys } from "@/lib/query-keys";
 import {
   homeFixture,
@@ -93,27 +92,8 @@ function makeClient(actions: HomeAction[]) {
   return client;
 }
 
-/** The list as the page mounts it: "Ver todas (N)" lives on the chips row and shares the state. */
 function Actions({ actions }: { actions: HomeAction[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const onToggle = () => setExpanded((value) => !value);
-  return (
-    <>
-      <SeeAllButton
-        count={actions.length}
-        expanded={expanded}
-        listId="acoes"
-        onToggle={onToggle}
-      />
-      <ActionList
-        actions={actions}
-        expanded={expanded}
-        listId="acoes"
-        onToggle={onToggle}
-        today={TODAY}
-      />
-    </>
-  );
+  return <ActionList actions={actions} today={TODAY} />;
 }
 
 /** Actions as a static prop: the card under the finger never leaves the screen. */
@@ -146,6 +126,7 @@ const terrenoGroup = (sequences: number[]) => {
     id: "overdue:vt:receive",
     kind: "overdue",
     direction: "receive",
+    canMarkReceived: true,
     installmentId: `vt-${oldest}`,
     contractId: "vt",
     contractTitle: "Venda do terreno",
@@ -178,23 +159,6 @@ const twoToPay = () => [
 
 const firstMarkPaid = () =>
   screen.getAllByRole("button", { name: "Já paguei" })[0] as HTMLElement;
-
-/** `count` overdue installments of the same contract, 1/12 to count/12. */
-const overdue = (count: number) =>
-  Array.from({ length: count }, (_, i) =>
-    installmentAction({
-      installmentId: `i${i + 1}`,
-      sequence: i + 1,
-      kind: "overdue",
-      dueDate: "2026-09-20",
-    })
-  );
-
-/** The grid cell (`li`) of the card "Aluguel do apê · parcela n de 12". */
-const itemOf = (n: number) =>
-  screen
-    .getByRole("article", { name: nb(`Aluguel do apê · parcela~${n}~de~12`) })
-    .closest("li");
 
 /** The card "Aluguel do apê · parcela n de 12", or null once it left the list. */
 const articleOf = (n: number) =>
@@ -237,7 +201,12 @@ function watchLinkClicks() {
 /** 1/12 has only "Já paguei" (no Pix); 2/12 is to receive (WhatsApp); 3/12 has "Pagar com PIX". */
 const markPaidThenLinks = () => [
   installmentAction({ installmentId: "i1", sequence: 1, pixCode: null }),
-  installmentAction({ installmentId: "i2", sequence: 2, direction: "receive" }),
+  installmentAction({
+    installmentId: "i2",
+    sequence: 2,
+    direction: "receive",
+    canMarkReceived: true,
+  }),
   installmentAction({ installmentId: "i3", sequence: 3 }),
 ];
 
@@ -269,11 +238,11 @@ describe("ActionList", () => {
 
   it("receber: Cobrar no WhatsApp abre o wa.me com a cobrança e o PIX", () => {
     renderList([
-      installmentAction({ installmentId: "x0" }),
       installmentAction({
         installmentId: "r1",
         kind: "overdue",
         direction: "receive",
+        canMarkReceived: true,
         dueDate: "2026-09-28",
         counterpartyName: "Carlos",
         contractTitle: "Notebook",
@@ -345,16 +314,13 @@ describe("ActionList", () => {
       renderLive(markPaidThenLinks());
       await userEvent.click(firstMarkPaid());
       await waitFor(() => expect(articleOf(1)).toBeNull());
-      // 2/12 slid into the place: its WhatsApp link, then 3/12's Pix link.
+      // 2/12 slid into the place: its WhatsApp link is under the finger.
       await userEvent.click(
         screen.getByRole("link", {
           name: "Cobrar no WhatsApp (abre o WhatsApp)",
         })
       );
-      await userEvent.click(
-        screen.getByRole("link", { name: "Pagar com PIX" })
-      );
-      expect(links.cancelled).toEqual([true, true]);
+      expect(links.cancelled).toEqual([true]);
     } finally {
       links.stop();
       clock.restore();
@@ -382,115 +348,6 @@ describe("ActionList", () => {
     }
   });
 
-  it("1 ação: largura toda no celular e 2 colunas no desktop", () => {
-    renderList([installmentAction()]);
-    const item = screen
-      .getByRole("article", { name: nb("Aluguel do apê · parcela~7~de~12") })
-      .closest("li");
-    expect(item).toHaveClass("w-full", "lg:col-span-2");
-    expect(item).not.toHaveClass("w-[calc(100%-2.75rem)]");
-    expect(screen.queryByText("1 de 1")).toBeNull();
-  });
-
-  it("poucas ações: a partir de lateral a lista é subgrid da linha e o cartão único ocupa 1 coluna", () => {
-    renderWithProviders(
-      <ActionList
-        actions={[installmentAction()]}
-        expanded={false}
-        few={1}
-        listId="acoes"
-        onToggle={vi.fn()}
-        today={TODAY}
-      />,
-      { client: makeClient([installmentAction()]) }
-    );
-    const item = screen.getByRole("article").closest("li");
-    const list = item?.parentElement;
-    expect(list).toHaveClass(
-      "lateral:grid-cols-subgrid",
-      "lateral:col-span-full"
-    );
-    expect(list).not.toHaveClass(
-      "2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]"
-    );
-    expect(list?.parentElement).toHaveClass(
-      "lateral:grid",
-      "lateral:grid-cols-subgrid",
-      "lateral:col-span-1"
-    );
-    expect(item).toHaveClass("lg:col-span-2", "lateral:col-span-1");
-  });
-
-  it("5 ações: 1 de 5 no carrossel e Ver todas revela as escondidas no desktop", async () => {
-    renderList(overdue(5));
-    expect(screen.getByText("1 de 5")).toBeVisible();
-    expect(screen.getAllByRole("article")).toHaveLength(5);
-    const fourth = itemOf(4);
-    const fifth = itemOf(5);
-    // Past the row of 3 (lg), back in the row of 4 (2xl) and of 5 (wide).
-    expect(fourth).toHaveClass("lg:hidden", "2xl:block");
-    expect(fifth).toHaveClass("lg:hidden", "wide:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (5)" });
-    expect(seeAll).toHaveAttribute("aria-expanded", "false");
-    // Shown while a card is past the row: until wide, where all 5 fit.
-    expect(seeAll.parentElement).toHaveClass("lg:flex", "wide:hidden");
-    expect(seeAll.parentElement).not.toHaveClass("2xl:hidden");
-    await userEvent.click(seeAll);
-    // Mobile and desktop toggles share the state, and jsdom renders both.
-    for (const button of screen.getAllByRole("button", { name: "Ver menos" })) {
-      expect(button).toHaveAttribute("aria-expanded", "true");
-    }
-    expect(fourth).not.toHaveClass("lg:hidden");
-    expect(fifth).not.toHaveClass("lg:hidden");
-  });
-
-  it("a grade cresce por colunas: 3 em lg, 4 em 2xl e 5 em wide", () => {
-    renderList(overdue(5));
-    const grid = itemOf(1)?.parentElement;
-    expect(grid).toHaveClass(
-      "lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)]",
-      "2xl:grid-cols-[minmax(0,1.25fr)_repeat(3,minmax(0,1fr))]",
-      "wide:grid-cols-[minmax(0,1.25fr)_repeat(4,minmax(0,1fr))]"
-    );
-    // Every card is in the HTML: the width decides by CSS, never by JS.
-    for (const n of [1, 2, 3]) {
-      expect(itemOf(n)).not.toHaveClass("lg:hidden");
-    }
-  });
-
-  it("4 ações: a 4ª aparece a partir de 2xl e o Ver todas some ali", () => {
-    renderList(overdue(4));
-    expect(itemOf(4)).toHaveClass("lg:hidden", "2xl:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (4)" });
-    expect(seeAll.parentElement).toHaveClass(
-      "lg:flex",
-      "2xl:hidden",
-      "wide:hidden"
-    );
-  });
-
-  it("6 ações: a 6ª só aparece com Ver todas, que fica até em wide", () => {
-    renderList(overdue(6));
-    expect(itemOf(6)).toHaveClass("lg:hidden");
-    expect(itemOf(6)).not.toHaveClass("wide:block");
-    const seeAll = screen.getByRole("button", { name: "Ver todas (6)" });
-    expect(seeAll.parentElement).toHaveClass("lg:flex");
-    expect(seeAll.parentElement).not.toHaveClass("wide:hidden");
-  });
-
-  it("3 ações: nenhum Ver todas no desktop", () => {
-    renderList(overdue(3));
-    expect(screen.queryByRole("button", { name: "Ver todas (3)" })).toBeNull();
-  });
-
-  it("o carrossel contém os sr-only: o ul é relative", () => {
-    // The sr-only texts (Money's full amount, "(abre o WhatsApp)") are
-    // absolutely positioned: without a positioned ancestor inside the
-    // carousel they escape its overflow-x and widen the whole page.
-    renderList(overdue(5));
-    expect(itemOf(1)?.parentElement).toHaveClass("relative", "overflow-x-auto");
-  });
-
   it("convite: Aceitar e Recusar no próprio cartão", async () => {
     decline.mockResolvedValue({ data: { ok: true }, error: null });
     renderList([inviteAction()]);
@@ -515,12 +372,13 @@ describe("ActionList", () => {
     expect(markPaid).not.toHaveBeenCalled();
   });
 
-  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato filtrado", () => {
+  it("grupo a receber: Cobrar no WhatsApp cita todas e o total; Ver parcelas abre o contrato", () => {
     renderList([
       installmentAction({
         id: "overdue:nb:receive",
         kind: "overdue",
         direction: "receive",
+        canMarkReceived: true,
         installmentId: "nb-3",
         contractId: "nb",
         contractTitle: "Notebook da Marina",
@@ -541,7 +399,7 @@ describe("ActionList", () => {
     );
     expect(screen.getByRole("link", { name: "Ver parcelas" })).toHaveAttribute(
       "href",
-      "/contracts/nb?status=overdue"
+      "/contracts/nb"
     );
     expect(
       screen.queryByRole("button", { name: MARK_RECEIVED_NAME })
@@ -577,7 +435,7 @@ describe("ActionList", () => {
       within(card).getByRole("link", { name: "Pagar a mais antiga" })
     ).toHaveAttribute("href", "/contracts/al?installment=al-5");
     const seeAll = within(card).getByRole("link", { name: "Ver parcelas" });
-    expect(seeAll).toHaveAttribute("href", "/contracts/al?status=overdue");
+    expect(seeAll).toHaveAttribute("href", "/contracts/al");
     // On a phone a square icon button (h-11 from size sm, w-11 here), named by aria-label.
     expect(seeAll).toHaveClass("max-md:w-11", "max-md:px-0");
     expect(within(card).queryAllByRole("button")).toEqual([]);
@@ -610,42 +468,21 @@ describe("ActionList", () => {
     );
   });
 
-  it("cartão comum: preenchido no tom quente, sem contorno, e o hover desce um degrau", () => {
-    renderList(twoToPay());
-    const second = screen.getByRole("article", {
-      name: nb("Aluguel do apê · parcela~2~de~12"),
-    });
-    expect(second).toHaveClass(
-      "bg-surface-card",
-      "hover:bg-surface-card-hover"
-    );
-    expect(second).not.toHaveClass("border");
-    expect(
-      within(second).getByRole("button", { name: "Já paguei" })
-    ).toHaveClass("bg-surface-inset");
-  });
-
   it("cartão de parcela: a pessoa com rosto, a barra do contrato inteiro e a legenda", () => {
-    renderList([
-      installmentAction({ installmentId: "x0" }),
-      installmentAction(),
-    ]);
-    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    renderList([installmentAction()]);
+    const card = screen.getAllByRole("article")[0] as HTMLElement;
     expect(within(card).getByText("MS")).toHaveAttribute("aria-hidden", "true");
     expect(within(card).getByText("Maria Souza").tagName).toBe("B");
     expect(card.querySelectorAll("[data-status]")).toHaveLength(12);
-    expect(within(card).getByText("6 de 12 pagas")).toBeVisible();
+    expect(within(card).getByText("6 pagas")).toBeVisible();
     expect(within(card).getByText("falta R$ 7.500,00")).toBeVisible();
   });
 
   it("legenda no cartão estreito: quebra a linha em vez de vazar, e o 'falta' fica à direita (1024 px)", () => {
-    renderList([
-      installmentAction({ installmentId: "x0" }),
-      installmentAction(),
-    ]);
-    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    renderList([installmentAction()]);
+    const card = screen.getAllByRole("article")[0] as HTMLElement;
     const remaining = within(card).getByText("falta R$ 7.500,00");
-    // 182 px of content at 1024: "4 de 12 pagas" and "falta R$ 14.400,00" need 190.
+    // 182 px of content at 1024: "4 pagas" and "falta R$ 14.400,00" need 190.
     expect(remaining.parentElement).toHaveClass(
       "flex-wrap",
       "whitespace-nowrap"
@@ -654,8 +491,8 @@ describe("ActionList", () => {
   });
 
   it("convite: avatar de 28 px, o título grande e as condições", () => {
-    renderList([installmentAction({ installmentId: "x0" }), inviteAction()]);
-    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    renderList([inviteAction()]);
+    const card = screen.getAllByRole("article")[0] as HTMLElement;
     expect(within(card).getByText("A")).toHaveClass("size-7");
     expect(within(card).getByText("4 parcelas de R$ 300,00")).toBeVisible();
     expect(card).toHaveTextContent("a partir de 10/11");
@@ -677,34 +514,47 @@ describe("ActionList", () => {
     }
   });
 
-  it("par a receber (Cobrar no WhatsApp + Marcar como recebida, 362 px): empilha abaixo de 368 px, nunca um botão sozinho na linha", () => {
+  it("par a receber como no contrato: o WhatsApp diz 'Cobrar' num cartão estreito (o nome acessível segue inteiro), e o par fica em linha até 272 px ('Cobrar' + 'Marcar como recebida'); abaixo, empilha, nunca um botão sozinho na linha", () => {
     renderList([
-      installmentAction({ installmentId: "x0" }),
-      installmentAction({ installmentId: "r1", direction: "receive" }),
+      installmentAction({
+        installmentId: "r1",
+        direction: "receive",
+        canMarkReceived: true,
+      }),
     ]);
-    const card = screen.getAllByRole("article")[1] as HTMLElement;
+    const card = screen.getAllByRole("article")[0] as HTMLElement;
+    const whatsapp = within(card).getByRole("link", {
+      name: "Cobrar no WhatsApp (abre o WhatsApp)",
+    });
+    expect(within(whatsapp).getByText("Cobrar no WhatsApp")).toHaveClass(
+      "@max-[23.5rem]:hidden"
+    );
+    expect(within(whatsapp).getByText("Cobrar")).toHaveClass(
+      "hidden",
+      "@max-[23.5rem]:inline"
+    );
     for (const control of [
-      within(card).getByRole("link", { name: WHATSAPP_NAME }),
+      whatsapp,
       within(card).getByRole("button", { name: MARK_RECEIVED_NAME }),
     ]) {
-      expect(control).toHaveClass("@max-[23rem]:w-full");
-      expect(control).not.toHaveClass("@max-[15rem]:w-full");
+      expect(control).toHaveClass("@max-[17rem]:w-full");
+      expect(control).not.toHaveClass("@max-[23rem]:w-full");
     }
   });
 
-  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem (331 e 267 px); no celular o ícone de 44 px cabe", () => {
+  it("pares de grupo com o rótulo Ver parcelas: empilham a partir de md abaixo do que pedem ('Cobrar' + 'See installments', 238 px; 267 px); no celular o ícone de 44 px cabe", () => {
     const group = {
       kind: "overdue",
       pixCode: null,
       canMarkPaid: false,
       count: 2,
     } as const;
-    renderList([
-      installmentAction({ installmentId: "x0" }),
+    const receiveList = renderList([
       installmentAction({
         ...group,
         id: "overdue:nb:receive",
         direction: "receive",
+        canMarkReceived: true,
         installmentId: "nb-3",
         contractId: "nb",
         contractTitle: "Notebook da Marina",
@@ -712,6 +562,19 @@ describe("ActionList", () => {
         installmentIds: ["nb-3", "nb-4"],
         sequences: [3, 4],
       }),
+    ]);
+    const receive = screen.getByRole("article");
+    for (const control of [
+      within(receive).getByRole("link", { name: WHATSAPP_NAME }),
+      within(receive).getByRole("link", { name: "Ver parcelas" }),
+    ]) {
+      expect(control).toHaveClass(
+        "@max-[15rem]:w-full",
+        "md:@max-[15.5rem]:w-full"
+      );
+    }
+    receiveList.unmount();
+    renderList([
       installmentAction({
         ...group,
         id: "overdue:al:pay",
@@ -722,96 +585,18 @@ describe("ActionList", () => {
         sequences: [5, 6],
       }),
     ]);
-    const [, receive, pay] = screen.getAllByRole("article") as HTMLElement[];
+    const pay = screen.getByRole("article");
     for (const control of [
-      within(receive as HTMLElement).getByRole("link", { name: WHATSAPP_NAME }),
-      within(receive as HTMLElement).getByRole("link", {
-        name: "Ver parcelas",
-      }),
-    ]) {
-      expect(control).toHaveClass(
-        "@max-[15rem]:w-full",
-        "md:@max-[21rem]:w-full"
-      );
-    }
-    for (const control of [
-      within(pay as HTMLElement).getByRole("link", {
+      within(pay).getByRole("link", {
         name: "Pagar a mais antiga",
       }),
-      within(pay as HTMLElement).getByRole("link", { name: "Ver parcelas" }),
+      within(pay).getByRole("link", { name: "Ver parcelas" }),
     ]) {
       expect(control).toHaveClass(
         "@max-[15rem]:w-full",
         "md:@max-[17rem]:w-full"
       );
     }
-  });
-
-  it("12 px entre os cartões, no carrossel e na grade", () => {
-    renderList(overdue(3));
-    expect(itemOf(1)?.parentElement).toHaveClass("gap-3");
-  });
-
-  it("Já paguei ao lado de um grupo: a falha devolve só o cartão simples, no mesmo lugar, e a contagem volta", async () => {
-    let respond: (value: unknown) => void = () => undefined;
-    markPaid.mockReturnValue(
-      new Promise((resolve) => {
-        respond = resolve;
-      })
-    );
-    const group = installmentAction({
-      id: "overdue:nb:receive",
-      kind: "overdue",
-      direction: "receive",
-      installmentId: "nb-3",
-      contractId: "nb",
-      contractTitle: "Notebook da Marina",
-      dueDate: "2026-08-30",
-      pixCode: null,
-      canMarkPaid: false,
-      count: 2,
-      installmentIds: ["nb-3", "nb-4"],
-      sequences: [3, 4],
-      totalCents: 70_000,
-    });
-    const single = installmentAction({
-      installmentId: "i2",
-      sequence: 2,
-      pixCode: null,
-    });
-    // A card after the single one: putting it back at the end would show.
-    const review = installmentAction({
-      id: "installment:r3",
-      kind: "review",
-      installmentId: "r3",
-      contractId: "mr",
-      contractTitle: "Moto do Rafa",
-      sequence: 3,
-      installmentsCount: 10,
-      canConfirm: true,
-    });
-    const client = makeClient([group, single, review]);
-    const cachedIds = () =>
-      client
-        .getQueryData<Home>(queryKeys.home)
-        ?.actions.map((action) => action.id);
-    renderWithProviders(<LiveList />, { client });
-    await userEvent.click(screen.getByRole("button", { name: "Já paguei" }));
-    await waitFor(() => expect(markPaid).toHaveBeenCalledWith("i2"));
-    // In flight the card has already left, from the screen and the cache.
-    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(2));
-    expect(cachedIds()).toEqual([group.id, review.id]);
-    respond({ data: null, error: { status: 422, value: null } });
-    // The refusal brings back only the single card, where it was: between the
-    // group and the next card, not at the end.
-    await waitFor(() => expect(screen.getAllByRole("article")).toHaveLength(3));
-    const [first, second, third] = screen.getAllByRole("article");
-    expect(first).toHaveTextContent("Notebook da Marina");
-    // toHaveTextContent folds the no-break spaces into plain ones.
-    expect(second).toHaveTextContent("Aluguel do apê · parcela 2 de 12");
-    expect(third).toHaveTextContent("Moto do Rafa");
-    // And the count goes back with it: pending counts are cards, read from the cache.
-    expect(cachedIds()).toEqual([group.id, single.id, review.id]);
   });
 });
 
@@ -831,26 +616,6 @@ describe("ActionList · foco depois da ação", () => {
     await waitFor(() => expect(articleOf(1)).toBeNull());
     expect(document.activeElement).toBe(
       within(articleOf(2) as HTMLElement).getByRole("link", {
-        name: "Pagar com PIX",
-      })
-    );
-  });
-
-  it("pelo teclado: quando sai o último cartão, o foco vai para o anterior", async () => {
-    markPaid.mockReturnValue(new Promise(() => undefined));
-    renderLive(twoToPay());
-    for (let i = 0; i < 4; i++) {
-      await userEvent.tab(); // Pix and "Já paguei" of 1/12, then of 2/12
-    }
-    expect(document.activeElement).toBe(
-      within(articleOf(2) as HTMLElement).getByRole("button", {
-        name: "Já paguei",
-      })
-    );
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() => expect(articleOf(2)).toBeNull());
-    expect(document.activeElement).toBe(
-      within(articleOf(1) as HTMLElement).getByRole("link", {
         name: "Pagar com PIX",
       })
     );

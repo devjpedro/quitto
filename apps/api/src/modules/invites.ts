@@ -1,19 +1,35 @@
-import { NOTIFICATION_TYPE } from "@quitto/shared";
+import { AUDIT_TYPE, NOTIFICATION_TYPE } from "@quitto/shared";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import {
-  contract,
-  installment,
-  invite,
-  participant,
-  user as userTable,
-} from "../db/schema";
+import { contract, invite, participant } from "../db/schema";
+import { recordEvent } from "../lib/audit";
 import { normalizeEmail } from "../lib/email";
-import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
-import { buildInvitePreview } from "../lib/invite-preview";
+import {
+  ForbiddenError,
+  NotFoundError,
+  RateLimitedError,
+  ValidationError,
+} from "../lib/errors";
+import {
+  findInvite,
+  inviteViewFor,
+  publicPreviewFor,
+} from "../lib/invite-load";
 import { createNotifications } from "../lib/notifications";
+import { PUBLIC_HEADERS } from "../lib/public-headers";
+import {
+  clientIp,
+  createRateLimiter,
+  INVITE_PREVIEW_GLOBAL,
+  INVITE_PREVIEW_LIMIT,
+  rateLimitOn,
+} from "../lib/rate-limit";
 import { requireAuth } from "../lib/session";
+import { inviteViewSchema, publicInvitePreviewSchema } from "./invite-schema";
+
+const previewLimiter = createRateLimiter(INVITE_PREVIEW_LIMIT);
+const previewGlobal = createRateLimiter(INVITE_PREVIEW_GLOBAL);
 
 async function loadValidInvite(token: string) {
   const [row] = await db
@@ -56,6 +72,8 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           and(
             eq(invite.email, email),
             isNull(invite.acceptedAt),
+            isNull(invite.declinedAt),
+            isNull(participant.linkedUserId),
             gt(invite.expiresAt, new Date())
           )
         )
@@ -82,82 +100,39 @@ export const invitesModule = new Elysia({ prefix: "/api" })
     "/invites/:token",
     async ({ request, params }) => {
       const { user } = await requireAuth(request.headers);
-      const row = await loadValidInvite(params.token);
-      const [c] = await db
-        .select()
-        .from(contract)
-        .where(eq(contract.id, row.contractId))
-        .limit(1);
-      if (!c) {
-        throw new NotFoundError("Contrato não encontrado");
+      const row = await findInvite(params.token);
+      if (!row) {
+        throw new NotFoundError("Convite não encontrado");
       }
-      const [p] = await db
-        .select()
-        .from(participant)
-        .where(eq(participant.id, row.participantId))
-        .limit(1);
-      if (!p) {
-        throw new NotFoundError("Participante não encontrado");
+      // Every state answers 200 with its status (planner's decision 11);
+      // accept and decline keep refusing what they cannot do.
+      return await inviteViewFor(row, user);
+    },
+    { params: t.Object({ token: t.String() }), response: inviteViewSchema }
+  )
+  .get(
+    "/invites/:token/preview",
+    async ({ request, params, server, set }) => {
+      Object.assign(set.headers, PUBLIC_HEADERS);
+      const ip = clientIp(request, server?.requestIP(request)?.address);
+      // The connection's own limit first: what it sends past it never
+      // reaches the global cap, so one abusive connection cannot spend
+      // everyone's budget (coordinator's call on the brief's order).
+      if (
+        rateLimitOn() &&
+        !(previewLimiter.hit(ip) && previewGlobal.hit("all"))
+      ) {
+        throw new RateLimitedError();
       }
-      // already a participant of this contract (covers the owner, whose slot is
-      // linked to ownerId)
-      const [mine] = await db
-        .select({ id: participant.id })
-        .from(participant)
-        .where(
-          and(
-            eq(participant.contractId, row.contractId),
-            eq(participant.linkedUserId, user.id)
-          )
-        )
-        .limit(1);
-      const [owner] = await db
-        .select({ name: userTable.name })
-        .from(userTable)
-        .where(eq(userTable.id, c.ownerId))
-        .limit(1);
-      const installments = await db
-        .select({ amountCents: installment.amountCents })
-        .from(installment)
-        .where(eq(installment.contractId, row.contractId));
-      const people = await db
-        .select({
-          displayName: participant.displayName,
-          role: participant.role,
-        })
-        .from(participant)
-        .where(eq(participant.contractId, row.contractId));
-      const preview = buildInvitePreview({
-        installments,
-        participants: people,
-      });
-      return {
-        contractTitle: c.title,
-        role: p.role,
-        email: row.email,
-        emailMatches: normalizeEmail(user.email) === row.email,
-        alreadyParticipant: Boolean(mine),
-        inviterName: owner?.name ?? "Alguém",
-        totalAmountCents: preview.totalAmountCents,
-        installmentsCount: preview.installmentsCount,
-        parties: preview.parties,
-      };
+      const row = await findInvite(params.token);
+      if (!row) {
+        throw new NotFoundError("Convite não encontrado");
+      }
+      return await publicPreviewFor(row);
     },
     {
       params: t.Object({ token: t.String() }),
-      response: t.Object({
-        contractTitle: t.String(),
-        role: t.String(),
-        email: t.String(),
-        emailMatches: t.Boolean(),
-        alreadyParticipant: t.Boolean(),
-        inviterName: t.String(),
-        totalAmountCents: t.Number(),
-        installmentsCount: t.Number(),
-        parties: t.Array(
-          t.Object({ displayName: t.String(), role: t.String() })
-        ),
-      }),
+      response: publicInvitePreviewSchema,
     }
   )
   .post(
@@ -171,7 +146,11 @@ export const invitesModule = new Elysia({ prefix: "/api" })
       const contractId = await db.transaction(async (tx) => {
         // slot must not already be linked (double-accept / race)
         const [slot] = await tx
-          .select({ linkedUserId: participant.linkedUserId })
+          .select({
+            linkedUserId: participant.linkedUserId,
+            displayName: participant.displayName,
+            role: participant.role,
+          })
           .from(participant)
           .where(eq(participant.id, row.participantId))
           .limit(1);
@@ -197,6 +176,14 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           .update(participant)
           .set({ linkedUserId: user.id })
           .where(eq(participant.id, row.participantId));
+        await recordEvent(tx, {
+          contractId: row.contractId,
+          actorUserId: user.id,
+          type: AUDIT_TYPE.participantJoined,
+          metadata: slot
+            ? { participantName: slot.displayName, role: slot.role }
+            : undefined,
+        });
         await tx
           .update(invite)
           .set({ acceptedByUserId: user.id, acceptedAt: new Date() })
@@ -263,10 +250,14 @@ export const invitesModule = new Elysia({ prefix: "/api" })
           ]);
         }
       });
-      return { ok: true };
+      const fresh = await findInvite(params.token);
+      if (!fresh) {
+        throw new NotFoundError("Convite não encontrado");
+      }
+      return await inviteViewFor(fresh, user);
     },
     {
       params: t.Object({ token: t.String() }),
-      response: t.Object({ ok: t.Boolean() }),
+      response: inviteViewSchema,
     }
   );

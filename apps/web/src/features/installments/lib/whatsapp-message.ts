@@ -16,8 +16,8 @@ export interface ChargeMessageInput {
 /**
  * Paragraphs of the "Cobrar no WhatsApp" message, in the sender's language:
  * the installment with its amount and due date, then the Pix copy-and-paste
- * code when the receiver has a key. The receipt link of a paid installment
- * comes with the receipt work (Fase 2).
+ * code when the receiver has a key. A paid installment's receipt link is
+ * receiptMessage's.
  */
 export function chargeMessage(
   input: ChargeMessageInput,
@@ -73,6 +73,47 @@ export function groupChargeMessage(
   return [
     m.whatsapp_charge_group(
       { ...params, list: normalizeSpaces(text.text) },
+      { locale }
+    ),
+  ];
+}
+
+export interface ReceiptMessageInput {
+  amountCents: number;
+  contractTitle: string;
+  installmentsCount: number;
+  /** Who sends it: the receiver says "Recebi…", the payer "Paguei…" (review I7). */
+  perspective: "receive" | "pay";
+  sequence: number;
+  url: string;
+}
+
+/** "Parcela paga" (spec §4.2): the receipt's sentence and its public link. */
+export function receiptMessage(
+  input: ReceiptMessageInput,
+  locale: Locale
+): string[] {
+  const params = {
+    sequence: input.sequence,
+    count: input.installmentsCount,
+    title: input.contractTitle,
+    amount: formatMoney(input.amountCents, locale),
+  };
+  const sentence =
+    input.perspective === "receive"
+      ? m.whatsapp_receipt(params, { locale })
+      : m.whatsapp_receipt_paid(params, { locale });
+  return [sentence, input.url];
+}
+
+/** P2: asking the receiver for a key, to pay this installment. */
+export function pixRequestMessage(
+  input: { contractTitle: string; sequence: number },
+  locale: Locale
+): string[] {
+  return [
+    m.whatsapp_pix_request(
+      { sequence: input.sequence, title: input.contractTitle },
       { locale }
     ),
   ];

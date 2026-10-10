@@ -24,11 +24,6 @@ export interface ParticipantRow {
   role: string;
 }
 
-export interface Recebedor {
-  displayName: string | null;
-  profileKey: string | null;
-}
-
 interface OwnedContract {
   ownerId: string;
   ownerRole: string;
@@ -96,74 +91,113 @@ export function capabilitiesFromRows(
   };
 }
 
+export interface Recebedor {
+  displayName: string | null;
+  /** The receiver has an account in the contract: only that account's key counts. */
+  hasAccount: boolean;
+  /** The key that pays them: the account's with an account, else the one kept on the contact. */
+  key: string | null;
+  /** Where `key` came from; null without a key. */
+  keySource: "account" | "contact" | null;
+}
+
+const NO_RECEIVER: Recebedor = {
+  displayName: null,
+  hasAccount: false,
+  key: null,
+  keySource: null,
+};
+
+function fromAccount(
+  displayName: string | null,
+  pixKey: string | null
+): Recebedor {
+  return {
+    displayName,
+    hasAccount: true,
+    key: pixKey,
+    keySource: pixKey ? "account" : null,
+  };
+}
+
 /**
- * Who receives the money and their profile key, from rows already loaded.
- * `users` must hold the owner (seller-owned contracts) and the linked seller.
+ * Who receives the money and the key that pays them, from rows already
+ * loaded (owner's decision, 2026-10-05): with an account, the account's key;
+ * a contact without one, the key kept on the contact; else none. The old
+ * per-contract key no longer counts (planner's decision 1). `users` must hold
+ * the owner (seller-owned contracts) and the linked seller.
  */
 export function pickRecebedor(
   c: OwnedContract,
-  people: { displayName: string; linkedUserId: string | null; role: string }[],
+  people: {
+    displayName: string;
+    linkedUserId: string | null;
+    pixKey: string | null;
+    role: string;
+  }[],
   users: ReadonlyMap<string, { name: string; pixKey: string | null }>
 ): Recebedor {
   if (c.ownerRole === "seller") {
     const owner = users.get(c.ownerId);
-    return {
-      displayName: owner?.name ?? null,
-      profileKey: owner?.pixKey ?? null,
-    };
+    return fromAccount(owner?.name ?? null, owner?.pixKey ?? null);
   }
   const sellers = people.filter((p) => p.role === "seller");
   const [seller] = sellers;
   if (sellers.length !== 1 || !seller) {
-    return { displayName: null, profileKey: null };
+    return NO_RECEIVER;
   }
-  const linked = seller.linkedUserId
-    ? users.get(seller.linkedUserId)
-    : undefined;
+  if (seller.linkedUserId) {
+    return fromAccount(
+      seller.displayName,
+      users.get(seller.linkedUserId)?.pixKey ?? null
+    );
+  }
   return {
     displayName: seller.displayName,
-    profileKey: linked?.pixKey ?? null,
+    hasAccount: false,
+    key: seller.pixKey,
+    keySource: seller.pixKey ? "contact" : null,
   };
 }
 
-/** Who receives the money in the contract, and their profile key. */
-export async function resolveRecebedor(c: {
-  id: string;
-  ownerId: string;
-  ownerRole: string;
-}): Promise<Recebedor> {
-  const people =
-    c.ownerRole === "seller"
-      ? []
-      : await db
-          .select({
-            displayName: participant.displayName,
-            linkedUserId: participant.linkedUserId,
-            role: participant.role,
-          })
-          .from(participant)
-          .where(
-            and(
-              eq(participant.contractId, c.id),
-              eq(participant.role, "seller")
-            )
-          );
-  const userIds =
+/** The receiver's contact row (a seller with no account, in a contract the owner pays): where their key is kept. */
+export function receiverContactId(
+  c: { ownerRole: string },
+  people: { id: string; linkedUserId: string | null; role: string }[]
+): string | null {
+  if (c.ownerRole !== "buyer") {
+    return null;
+  }
+  const sellers = people.filter((p) => p.role === "seller");
+  const [seller] = sellers;
+  return sellers.length === 1 && seller && seller.linkedUserId === null
+    ? seller.id
+    : null;
+}
+
+/** The accounts whose key may pay: the owner of a seller-owned contract, else the linked seller. */
+export async function receiverUsers(
+  c: OwnedContract,
+  people: { linkedUserId: string | null; role: string }[]
+): Promise<Map<string, { name: string; pixKey: string | null }>> {
+  const ids =
     c.ownerRole === "seller"
       ? [c.ownerId]
-      : people.flatMap((p) => (p.linkedUserId ? [p.linkedUserId] : []));
-  const rows =
-    userIds.length === 0
-      ? []
-      : await db
-          .select({
-            id: userTable.id,
-            name: userTable.name,
-            pixKey: userTable.pixKey,
-          })
-          .from(userTable)
-          .where(inArray(userTable.id, userIds));
-  return pickRecebedor(c, people, new Map(rows.map((u) => [u.id, u])));
+      : people.flatMap((p) =>
+          p.role === "seller" && p.linkedUserId ? [p.linkedUserId] : []
+        );
+  if (ids.length === 0) {
+    return new Map();
+  }
+  const rows = await db
+    .select({
+      id: userTable.id,
+      name: userTable.name,
+      pixKey: userTable.pixKey,
+    })
+    .from(userTable)
+    .where(inArray(userTable.id, ids));
+  return new Map(rows.map((u) => [u.id, u]));
 }
 
 /** The contract's owner fields. Throws NotFoundError when it doesn't exist. */

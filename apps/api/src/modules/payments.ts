@@ -1,22 +1,25 @@
-import { isPaidStatus, NOTIFICATION_TYPE } from "@quitto/shared";
-import { and, desc, eq } from "drizzle-orm";
+import {
+  AUDIT_TYPE,
+  INSTALLMENT_STATUS,
+  isPaidStatus,
+  NOTIFICATION_TYPE,
+} from "@quitto/shared";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
-import {
-  auditEvent,
-  contract,
-  installment,
-  proof,
-  user as userTable,
-} from "../db/schema";
+import { proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { getCapabilities, resolveRecebedor } from "../lib/contract-access";
-import { ForbiddenError, NotFoundError, ValidationError } from "../lib/errors";
-import { installmentPix } from "../lib/installment-pix";
+import { ForbiddenError, ValidationError } from "../lib/errors";
+import {
+  installmentEntitySchema,
+  loadInstallmentForUser,
+  toInstallmentEntity,
+  transitionInstallment,
+} from "../lib/installment-access";
 import { nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
+import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
-import { headObject, presignDownload, presignUpload } from "../lib/storage";
+import { headObject, presignUpload } from "../lib/storage";
 
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
@@ -27,81 +30,6 @@ const proofMimeSchema = t.Union([
   t.Literal("image/jpeg"),
   t.Literal("image/png"),
 ]);
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type InstallmentRow = typeof installment.$inferSelect;
-
-/** Every installment mutation answers with the updated row, so the web can setQueryData. */
-const installmentEntitySchema = t.Object({
-  id: t.String(),
-  contractId: t.String(),
-  sequence: t.Integer(),
-  amountCents: t.Integer(),
-  dueDate: t.String(),
-  status: t.String(),
-  paidAt: t.Union([t.String(), t.Null()]),
-  confirmedAt: t.Union([t.String(), t.Null()]),
-});
-
-function toInstallmentEntity(row: InstallmentRow) {
-  return {
-    id: row.id,
-    contractId: row.contractId,
-    sequence: row.sequence,
-    amountCents: row.amountCents,
-    dueDate: row.dueDate,
-    status: row.status,
-    paidAt: row.paidAt?.toISOString() ?? null,
-    confirmedAt: row.confirmedAt?.toISOString() ?? null,
-  };
-}
-
-/**
- * Moves the installment out of the status it was read in. If someone else moved
- * it first (a double tap, the other party), no row matches: it throws 422 inside
- * the transaction, which rolls back before any event or notification is written.
- */
-async function transitionInstallment(
-  tx: Tx,
-  from: InstallmentRow,
-  values: Partial<typeof installment.$inferInsert>
-): Promise<InstallmentRow> {
-  const [row] = await tx
-    .update(installment)
-    .set(values)
-    .where(
-      and(eq(installment.id, from.id), eq(installment.status, from.status))
-    )
-    .returning();
-  if (!row) {
-    throw new ValidationError(
-      "A parcela mudou enquanto você agia; atualize e tente de novo"
-    );
-  }
-  return row;
-}
-
-/** Loads installment + parent contract and the caller's capabilities. Throws 404 if no access. */
-async function loadInstallmentForUser(userId: string, installmentId: string) {
-  const [inst] = await db
-    .select()
-    .from(installment)
-    .where(eq(installment.id, installmentId))
-    .limit(1);
-  if (!inst) {
-    throw new NotFoundError("Parcela não encontrada");
-  }
-  const caps = await getCapabilities(userId, inst.contractId); // 404 se sem acesso
-  const [c] = await db
-    .select()
-    .from(contract)
-    .where(eq(contract.id, inst.contractId))
-    .limit(1);
-  if (!c) {
-    throw new NotFoundError("Contrato não encontrado");
-  }
-  return { inst, contract: c, caps };
-}
 
 export const paymentsModule = new Elysia({ prefix: "/api" })
   .post(
@@ -121,7 +49,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return { uploadUrl, objectKey };
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({
         fileName: t.String({ minLength: 1, maxLength: 200 }),
         mimeType: proofMimeSchema,
@@ -140,6 +68,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       } = await loadInstallmentForUser(user.id, params.installmentId);
       if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
+      }
+
+      // a chave tem de ser da própria parcela (o presign a gera assim)
+      if (!body.objectKey.startsWith(`proofs/${inst.contractId}/${inst.id}/`)) {
+        throw new ValidationError("Comprovante não pertence à parcela");
       }
 
       // valida que o objeto realmente subiu (e tamanho/tipo coerentes)
@@ -163,11 +96,12 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         );
       }
 
-      const newStatus = nextStatus(
-        inst.status,
-        "submit_proof",
-        c.requiresConfirmation
-      );
+      // Paid when the contract was created: the proof is only attached, the
+      // status stays and nobody is told (it is past, not a payment to approve).
+      const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
+      const newStatus = attachOnly
+        ? inst.status
+        : nextStatus(inst.status, "submit_proof", c.requiresConfirmation);
 
       const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
@@ -178,6 +112,9 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           sizeBytes,
           uploadedBy: user.id,
         });
+        if (attachOnly) {
+          return inst;
+        }
         const row = await transitionInstallment(tx, inst, {
           status: newStatus,
           ...(newStatus === "paid" ? { paidAt: new Date() } : {}),
@@ -187,7 +124,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
           installmentId: inst.id,
           actorUserId: user.id,
           type: c.requiresConfirmation ? "proof_submitted" : "installment_paid",
-          metadata: { fileName: body.fileName },
+          metadata: { fileName: body.fileName, sizeBytes },
         });
         await notifyTarget(tx, {
           contractId: inst.contractId,
@@ -205,7 +142,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({
         objectKey: t.String({ minLength: 1 }),
         fileName: t.String({ minLength: 1, maxLength: 200 }),
@@ -255,7 +192,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       response: installmentEntitySchema,
     }
   )
@@ -300,7 +237,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       body: t.Object({ reason: t.Optional(t.String({ maxLength: 500 })) }),
       response: installmentEntitySchema,
     }
@@ -345,119 +282,57 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
+      params: t.Object({ installmentId: idParam }),
       response: installmentEntitySchema,
     }
   )
-  .get(
-    "/installments/:installmentId",
+  .post(
+    "/installments/:installmentId/mark-received",
     async ({ request, params }) => {
       const { user } = await requireAuth(request.headers);
-      const { inst, contract: c } = await loadInstallmentForUser(
-        user.id,
-        params.installmentId
-      ); // 404 se sem acesso
-
-      const proofs = await db
-        .select()
-        .from(proof)
-        .where(eq(proof.installmentId, inst.id));
-      const events = await db
-        .select({
-          id: auditEvent.id,
-          type: auditEvent.type,
-          actorUserId: auditEvent.actorUserId,
-          metadata: auditEvent.metadata,
-          createdAt: auditEvent.createdAt,
-          actorName: userTable.name,
-        })
-        .from(auditEvent)
-        .leftJoin(userTable, eq(auditEvent.actorUserId, userTable.id))
-        .where(eq(auditEvent.installmentId, inst.id))
-        .orderBy(desc(auditEvent.createdAt));
-
-      const proofsOut = await Promise.all(
-        proofs.map(async (p) => ({
-          id: p.id,
-          fileName: p.fileName,
-          mimeType: p.mimeType,
-          sizeBytes: p.sizeBytes,
-          downloadUrl: await presignDownload(p.objectKey),
-          createdAt: p.createdAt.toISOString(),
-        }))
-      );
-
-      let pix: {
-        copiaECola: string;
-        keyType: string;
-        payToName: string;
-      } | null = null;
-      if (!isPaidStatus(inst.status)) {
-        const recebedor = await resolveRecebedor(c);
-        const built = installmentPix(c.pixKey, recebedor, inst.amountCents);
-        if (built) {
-          pix = {
-            copiaECola: built.code,
-            keyType: built.keyType,
-            payToName: recebedor.displayName ?? "",
-          };
-        }
+      const {
+        inst,
+        contract: c,
+        caps,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
+      if (!caps.isApprover) {
+        throw new ForbiddenError("Apenas quem recebe marca como recebida");
       }
-
-      return {
-        id: inst.id,
-        sequence: inst.sequence,
-        amountCents: inst.amountCents,
-        dueDate: inst.dueDate,
-        status: inst.status,
-        proofs: proofsOut,
-        events: events.map((e) => ({
-          id: e.id,
-          type: e.type,
-          actorUserId: e.actorUserId,
-          actorName: e.actorName ?? null,
-          metadata: e.metadata as Record<string, unknown> | null,
-          createdAt: e.createdAt.toISOString(),
-        })),
-        pix,
-      };
+      const newStatus = nextStatus(
+        inst.status,
+        "mark_received",
+        c.requiresConfirmation
+      );
+      const now = new Date();
+      const updated = await db.transaction(async (tx) => {
+        const row = await transitionInstallment(tx, inst, {
+          status: newStatus,
+          paidAt: now,
+          ...(newStatus === INSTALLMENT_STATUS.confirmed
+            ? { confirmedAt: now }
+            : {}),
+        });
+        await recordEvent(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          type: AUDIT_TYPE.installmentReceived,
+        });
+        // The payer reads it as "payment confirmed" (planner's decision 4).
+        await notifyTarget(tx, {
+          contractId: inst.contractId,
+          installmentId: inst.id,
+          actorUserId: user.id,
+          target: "payer",
+          type: NOTIFICATION_TYPE.paymentConfirmed,
+          metadata: { markedReceived: true },
+        });
+        return row;
+      });
+      return toInstallmentEntity(updated);
     },
     {
-      params: t.Object({ installmentId: t.String() }),
-      response: t.Object({
-        id: t.String(),
-        sequence: t.Integer(),
-        amountCents: t.Integer(),
-        dueDate: t.String(),
-        status: t.String(),
-        proofs: t.Array(
-          t.Object({
-            id: t.String(),
-            fileName: t.String(),
-            mimeType: t.String(),
-            sizeBytes: t.Integer(),
-            downloadUrl: t.String(),
-            createdAt: t.String(),
-          })
-        ),
-        events: t.Array(
-          t.Object({
-            id: t.String(),
-            type: t.String(),
-            actorUserId: t.Union([t.String(), t.Null()]),
-            actorName: t.Union([t.String(), t.Null()]),
-            metadata: t.Union([t.Record(t.String(), t.Unknown()), t.Null()]),
-            createdAt: t.String(),
-          })
-        ),
-        pix: t.Union([
-          t.Object({
-            copiaECola: t.String(),
-            keyType: t.String(),
-            payToName: t.String(),
-          }),
-          t.Null(),
-        ]),
-      }),
+      params: t.Object({ installmentId: idParam }),
+      response: installmentEntitySchema,
     }
   );

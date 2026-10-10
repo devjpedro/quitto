@@ -14,7 +14,7 @@ const noop = () => undefined;
 // `cmdk` quebra por ReferenceError/TypeError antes de chegar na asserção:
 //   - `ResizeObserver`: o `CommandList` observa a própria altura (`--cmdk-list-height`).
 //   - `Element.prototype.scrollIntoView`: o `cmdk` rola até o item selecionado.
-//   - `window.matchMedia`: o `useIsDesktop` escolhe Dialog (sm+) ou Sheet.
+//   - `window.matchMedia`: hooks de largura (`useMediaQuery`).
 
 class ResizeObserverStub {
   observe = noop;
@@ -31,6 +31,12 @@ const elementProto = Element.prototype as unknown as {
   scrollIntoView?: () => void;
 };
 elementProto.scrollIntoView ??= noop;
+
+// Radix Select/Popover ask for the pointer capture a click takes; jsdom has none.
+const pointerProto = Element.prototype as unknown as Record<string, unknown>;
+pointerProto.hasPointerCapture ??= () => false;
+pointerProto.setPointerCapture ??= noop;
+pointerProto.releasePointerCapture ??= noop;
 
 // jsdom defines `window.scrollTo` only to log "Not implemented" on every call
 // (sheets and dialogs lock the scroll); `??=` would keep that stub.

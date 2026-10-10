@@ -5,10 +5,10 @@ import {
   getContract,
   isoDaysFromToday,
   newUser,
-  PROOF_PDF,
   seedContract,
   seedInvite,
   signup,
+  uploadProofApi,
   waitForHydrated,
 } from "../fixtures";
 import { card, inviteCard } from "../home-helpers";
@@ -17,6 +17,7 @@ const ACCEPT_INVITE = /Aceitar convite/i;
 const AGENDA_ROW = /Agenda E2E/;
 const FAR_ROW = /Longe E2E/;
 const INSTALLMENT_PARAM = /installment=/;
+const PARCELA_2_DE_2 = /Parcela 2 de 2/;
 const PAID_THIS_MONTH = /Pago em /;
 const WA_PREFIX = "https://wa.me/?text=";
 /** The list's double-tap lock (use-action-lock.ts). */
@@ -78,7 +79,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
     },
   });
   // A payer past the guide: while it shows, the green guide card takes the
-  // place of "Nada pendente agora" (next test).
+  // place of "Tudo em dia" (next test).
   const dismissed = await page.request.post("/api/me/onboarding/dismiss");
   expect(dismissed.ok()).toBe(true);
   await page.goto("/");
@@ -91,23 +92,19 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
     page.getByText("Parcela marcada como paga", { exact: true })
   ).toBeVisible();
   await expect(first).toHaveCount(0);
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toBeVisible();
+  await expect(page.getByText("Tudo em dia", { exact: true })).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toBeVisible();
+  await expect(page.getByText("Tudo em dia", { exact: true })).toBeVisible();
   await expect(card(page, "Aluguel E2E · parcela 1 de 3")).toHaveCount(0);
   // 1 of 3 paid is 33%, below the half "Mais perto de quitar" asks for: the
   // milestone of the moment is what was paid this month. Desktop shows it in
   // the sidebar's lime card; a phone opens the strip with it.
   if (testInfo.project.name === "mobile") {
     await expect(
-      page.getByRole("region", { name: "Marcos" }).getByRole("listitem").first()
+      page.getByRole("region", { name: "Marcos" }).locator(".bg-highlight")
     ).toContainText(PAID_THIS_MONTH);
   } else {
     await expect(
@@ -116,7 +113,7 @@ test("pagador: Já paguei tira a parcela do Agora na hora e fica assim depois de
   }
 });
 
-test("nada pendente com o guia ativo: o guia verde fica no lugar de Nada pendente agora", async ({
+test("nada pendente com o guia ativo: o guia verde fica no lugar de Tudo em dia", async ({
   page,
 }) => {
   await signup(page);
@@ -140,9 +137,7 @@ test("nada pendente com o guia ativo: o guia verde fica no lugar de Nada pendent
   await expect(
     page.getByRole("heading", { level: 2, name: "Cadastre sua chave PIX." })
   ).toBeVisible();
-  await expect(
-    page.getByText("Nada pendente agora", { exact: true })
-  ).toHaveCount(0);
+  await expect(page.getByText("Tudo em dia", { exact: true })).toHaveCount(0);
 });
 
 test("recebedor: Cobrar no WhatsApp leva a cobrança com o PIX, e Marcar como recebida funciona", async ({
@@ -187,13 +182,14 @@ test("convites no Agora: recusar e aceitar ali mesmo, e o recusado não volta", 
   const owner = await newUser(browser);
   const guest = await newUser(browser);
   try {
-    const declined = await seedContract(owner.page.request, {
-      title: "Convite Recusar",
-    });
+    // Newest invite first: "Recusar" is the action card, "Aceitar" a line in "Na sequência".
     const accepted = await seedContract(owner.page.request, {
       title: "Convite Aceitar",
     });
-    for (const id of [declined.id, accepted.id]) {
+    const declined = await seedContract(owner.page.request, {
+      title: "Convite Recusar",
+    });
+    for (const id of [accepted.id, declined.id]) {
       await seedInvite(owner.page.request, id, {
         displayName: "Vendedor",
         role: "seller",
@@ -205,23 +201,30 @@ test("convites no Agora: recusar e aceitar ali mesmo, e o recusado não volta", 
     await guest.page.goto("/");
     // A click before hydration lands on the server HTML and is lost.
     await waitForHydrated(guest.page);
-    await inviteCard(guest.page, "Convite Recusar")
-      .getByRole("button", { name: "Recusar" })
-      .click();
-    await expect(
-      guest.page.getByText("Convite recusado", { exact: true })
-    ).toBeVisible();
-    await expect(inviteCard(guest.page, "Convite Recusar")).toHaveCount(0);
+    // Only the first action is a card with buttons; the next one slides into its place.
+    const decline = async () => {
+      await inviteCard(guest.page, "Convite Recusar")
+        .getByRole("button", { name: "Recusar" })
+        .click();
+      await expect(
+        guest.page.getByText("Convite recusado", { exact: true })
+      ).toBeVisible();
+      await expect(inviteCard(guest.page, "Convite Recusar")).toHaveCount(0);
+    };
+    const accept = async () => {
+      await inviteCard(guest.page, "Convite Aceitar")
+        .getByRole("button", { name: "Aceitar" })
+        .click();
+      await expect(
+        guest.page.getByText("Convite aceito", { exact: true })
+      ).toBeVisible();
+      await expect(inviteCard(guest.page, "Convite Aceitar")).toHaveCount(0);
+    };
+    await decline();
     // A deliberate tap, after the double-tap lock: a tap inside that window
     // lands on the card that slid into place and is swallowed.
     await advanceDateNow(guest.page, ACTION_LOCK_MS + 100);
-    await inviteCard(guest.page, "Convite Aceitar")
-      .getByRole("button", { name: "Aceitar" })
-      .click();
-    await expect(
-      guest.page.getByText("Convite aceito", { exact: true })
-    ).toBeVisible();
-    await expect(inviteCard(guest.page, "Convite Aceitar")).toHaveCount(0);
+    await accept();
 
     await guest.page.reload();
     await waitForHydrated(guest.page);
@@ -263,17 +266,7 @@ test("conferir comprovante: Confirmar no próprio Agora", async ({
     await approver.page.getByRole("button", { name: ACCEPT_INVITE }).click();
     await approver.page.waitForURL(`**/contracts/${id}`);
     const detail = await getContract(payer.page.request, id);
-    await payer.page.goto(
-      `/contracts/${id}?installment=${detail.installments[0].id}`
-    );
-    await waitForHydrated(payer.page);
-    await payer.page.getByLabel("Comprovante").setInputFiles(PROOF_PDF);
-    await payer.page
-      .getByRole("button", { name: "Enviar comprovante" })
-      .click();
-    await expect(
-      payer.page.getByLabel("Parcela").getByText("aguardando")
-    ).toBeVisible();
+    await uploadProofApi(payer.page.request, detail.installments[0].id);
 
     await approver.page.goto("/");
     await waitForHydrated(approver.page);
@@ -292,7 +285,7 @@ test("conferir comprovante: Confirmar no próprio Agora", async ({
   }
 });
 
-test("Próximos 30 dias: a linha abre a parcela na gaveta do contrato", async ({
+test("Próximos 30 dias: a linha abre a parcela no contrato", async ({
   page,
 }) => {
   await signup(page);
@@ -313,5 +306,8 @@ test("Próximos 30 dias: a linha abre a parcela na gaveta do contrato", async ({
     .getByRole("link", { name: AGENDA_ROW })
     .click();
   await expect(page).toHaveURL(INSTALLMENT_PARAM);
-  await expect(page.getByLabel("Parcela")).toBeVisible();
+  // chromium is 1280 wide (the floating sheet); mobile, the bottom sheet.
+  await expect(
+    page.getByRole("dialog", { name: PARCELA_2_DE_2 })
+  ).toBeVisible();
 });

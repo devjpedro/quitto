@@ -114,7 +114,7 @@ for (const theme of ["light", "dark"] as const) {
   test.describe(`axe (${theme}) na tela larga`, () => {
     test.use({ viewport: { width: 1920, height: 1080 } });
 
-    test("estrutura B a 1920 px: sidebar no canvas, marcos e Notificações recentes nas colunas", async ({
+    test("estrutura B a 1920 px: sidebar no canvas e marcos na coluna; sem aviso, sem Notificações recentes", async ({
       page,
       context,
     }, testInfo) => {
@@ -140,16 +140,11 @@ for (const theme of ["light", "dark"] as const) {
       await page.reload();
       await waitForHydrated(page);
       await expect(page.getByRole("region", { name: "Marcos" })).toBeVisible();
-      const recent = page.getByRole("region", {
-        name: "Notificações recentes",
-      });
-      // Wait for the block to settle past its skeleton (aria-hidden): the empty
-      // state of a new account, or the list if a reminder already landed.
+      // A new account has no notice that is not a card: "Notificações recentes"
+      // is gone (the bell's panel keeps the empty state).
       await expect(
-        recent
-          .getByRole("heading", { name: "Nada novo por aqui" })
-          .or(recent.getByRole("list"))
-      ).toBeVisible();
+        page.getByRole("region", { name: "Notificações recentes" })
+      ).toHaveCount(0);
       await expect(
         page.getByRole("complementary").getByText(PAID_THIS_MONTH)
       ).toBeVisible();

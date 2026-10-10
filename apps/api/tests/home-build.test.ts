@@ -22,7 +22,6 @@ function contractRow(
     ownerRole: "buyer",
     requiresConfirmation: false,
     status: "active",
-    pixKey: null,
     installmentsCount: 3,
     createdAt: new Date("2026-09-01T12:00:00Z"),
     ...over,
@@ -47,9 +46,10 @@ function person(
   contractId: string,
   role: string,
   linkedUserId: string | null,
-  displayName: string
+  displayName: string,
+  pixKey: string | null = null
 ): HomeParticipantRow {
-  return { contractId, role, linkedUserId, displayName };
+  return { contractId, role, linkedUserId, displayName, pixKey };
 }
 
 function rows(over: Partial<HomeContractRows>): HomeContractRows {
@@ -205,11 +205,9 @@ describe("buildAgenda: ações", () => {
 
   it("chave PIX guardada que não é mais válida não gera código (nem quebra)", () => {
     const data = rows({
-      contracts: [
-        contractRow({ id: "c", ownerRole: "seller", pixKey: "não-é-chave" }),
-      ],
+      contracts: [contractRow({ id: "c", ownerRole: "seller" })],
       participants: [person("c", "seller", ME, "Eu")],
-      users: [{ id: ME, name: "Eu", pixKey: null }],
+      users: [{ id: ME, name: "Eu", pixKey: "não-é-chave" }],
       installments: [inst({ id: "x", contractId: "c", dueDate: "2026-09-30" })],
     });
     const [action] = agenda(data).actions;
@@ -324,17 +322,14 @@ describe("buildAgenda: ações", () => {
     ]);
   });
 
-  it("PIX para quem paga: usa a chave do vendedor vinculado, e a do contrato vence a do perfil", () => {
+  it("PIX para quem paga: a chave da conta do vendedor vinculado; sem conta, a do contato", () => {
     const data = rows({
-      contracts: [
-        contractRow({ id: "profile" }),
-        contractRow({ id: "own", pixKey: "loja@example.com" }),
-      ],
+      contracts: [contractRow({ id: "profile" }), contractRow({ id: "own" })],
       participants: [
         person("profile", "buyer", ME, "Eu"),
         person("profile", "seller", OTHER, "Maria"),
         person("own", "buyer", ME, "Eu"),
-        person("own", "seller", OTHER, "Maria"),
+        person("own", "seller", null, "Maria", "loja@example.com"),
       ],
       users: [
         { id: ME, name: "Eu", pixKey: "eu@example.com" },
@@ -357,6 +352,61 @@ describe("buildAgenda: ações", () => {
     expect(profileCode).not.toContain("eu@example.com");
     expect(contractCode).toContain("loja@example.com");
     expect(contractCode).not.toContain("maria@example.com");
+  });
+
+  it("quem recebe pode marcar como recebida (com confirmação e a outra parte com conta); quem paga a outra parte com conta não", () => {
+    const data = rows({
+      contracts: [
+        contractRow({
+          id: "moto",
+          ownerRole: "seller",
+          requiresConfirmation: true,
+        }),
+        contractRow({ id: "aluguel", ownerRole: "buyer" }),
+      ],
+      participants: [
+        person("moto", "seller", ME, "Eu"),
+        person("moto", "buyer", OTHER, "Rafael Prado"),
+        person("aluguel", "buyer", ME, "Eu"),
+        person("aluguel", "seller", OTHER, "Helena Duarte"),
+      ],
+      users: [{ id: ME, name: "Eu", pixKey: null }],
+      installments: [
+        inst({ id: "m3", contractId: "moto", dueDate: "2026-08-30" }),
+        inst({ id: "a5", contractId: "aluguel", dueDate: "2026-09-30" }),
+      ],
+    });
+    const byId = new Map(agenda(data).actions.map((a) => [a.id, a]));
+    expect(byId.get("installment:m3")).toMatchObject({
+      kind: "overdue",
+      canMarkPaid: false,
+      canMarkReceived: true,
+    });
+    expect(byId.get("installment:a5")).toMatchObject({
+      kind: "overdue",
+      canMarkReceived: false,
+    });
+  });
+
+  it("o dono que paga um contato sem conta é o aprovador: o cartão de pagar também traz canMarkReceived", () => {
+    const data = rows({
+      contracts: [contractRow({ id: "sala", ownerRole: "buyer" })],
+      participants: [
+        person("sala", "buyer", ME, "Eu"),
+        person("sala", "seller", null, "Helena Duarte"),
+      ],
+      users: [{ id: ME, name: "Eu", pixKey: null }],
+      installments: [
+        inst({ id: "s1", contractId: "sala", dueDate: "2026-09-30" }),
+      ],
+    });
+    expect(
+      agenda(data).actions.find((a) => a.id === "installment:s1")
+    ).toMatchObject({
+      direction: "pay",
+      canMarkPaid: true,
+      canMarkReceived: true,
+    });
   });
 });
 

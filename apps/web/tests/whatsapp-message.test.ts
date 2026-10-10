@@ -3,6 +3,8 @@ import {
   type ChargeMessageInput,
   chargeMessage,
   groupChargeMessage,
+  pixRequestMessage,
+  receiptMessage,
   whatsappUrl,
 } from "@/features/installments/lib/whatsapp-message";
 import { NBSP } from "./nbsp";
@@ -176,5 +178,43 @@ describe("whatsappUrl", () => {
     expect(decodeURIComponent(text)).toBe(
       paragraphs.join(String.fromCharCode(10, 10))
     );
+  });
+});
+
+describe("receiptMessage", () => {
+  const input = {
+    amountCents: 48_000,
+    contractTitle: "Moto do Rafa",
+    installmentsCount: 10,
+    sequence: 2,
+    url: "https://app.quitto.dev/r/7fQ2kX9mVb",
+  };
+
+  it("quem recebe: 'Recebi a parcela…' e o link, em parágrafos", () => {
+    expect(
+      receiptMessage({ ...input, perspective: "receive" }, "pt-BR")
+    ).toEqual([
+      "Oi! Recebi a parcela 2 de 10 de “Moto do Rafa” (R$ 480,00). O recibo está aqui:",
+      "https://app.quitto.dev/r/7fQ2kX9mVb",
+    ]);
+  });
+
+  it("quem paga: 'Paguei a parcela…' (I7)", () => {
+    expect(receiptMessage({ ...input, perspective: "pay" }, "pt-BR")[0]).toBe(
+      "Oi! Paguei a parcela 2 de 10 de “Moto do Rafa” (R$ 480,00). O recibo está aqui:"
+    );
+  });
+});
+
+describe("pixRequestMessage", () => {
+  it("P2: pede a chave para pagar a parcela", () => {
+    expect(
+      pixRequestMessage(
+        { contractTitle: "Curso de inglês", sequence: 3 },
+        "pt-BR"
+      )
+    ).toEqual([
+      "Oi! Pode me mandar a sua chave PIX para eu pagar a parcela 3 de “Curso de inglês”?",
+    ]);
   });
 });

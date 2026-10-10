@@ -60,7 +60,7 @@ describe("describeAction: cartão simples", () => {
       amountCents: 125_000,
       person: { name: "Maria Souza", text: "para Maria Souza" },
       terms: null,
-      legend: { done: "6 de 12 pagas", remaining: "falta R$ 7.500,00" },
+      legend: { done: "6 pagas", remaining: "falta R$ 7.500,00" },
     });
   });
 
@@ -79,7 +79,7 @@ describe("describeAction: cartão simples", () => {
       tone: "danger",
       tag: "Atrasada · há 4 dias",
       person: { name: "Carlos Lima", text: "Carlos Lima te deve" },
-      legend: { done: "6 de 12 recebidas" },
+      legend: { done: "6 recebidas" },
     });
   });
 
@@ -159,7 +159,7 @@ describe("describeAction: cartão simples", () => {
       tag: "Do first · tomorrow",
       sequence: nb("installment~7~of~12"),
       person: { text: "to Maria Souza" },
-      legend: { done: "6 of 12 paid" },
+      legend: { done: "6 paid" },
     });
     expect(
       describeAction(inviteAction(), { ...ctx, locale: "en-US" }).person
@@ -168,10 +168,10 @@ describe("describeAction: cartão simples", () => {
 });
 
 describe("describeAction: grupo de atrasadas", () => {
-  it("a receber: contagem e 'desde' na tag, o total, as parcelas e quem deve", () => {
+  it("a receber: a contagem na tag e o 'desde' só na linha de quem deve (uma vez por tela), o total e as parcelas", () => {
     expect(describeAction(marinaGroup(), ctx)).toMatchObject({
       tone: "danger",
-      tag: "2 atrasadas · desde 30/08",
+      tag: "2 atrasadas",
       title: "Notebook da Marina",
       sequence: nb("parcelas~3 e 4~de~12"),
       amountCents: 70_000,
@@ -179,14 +179,14 @@ describe("describeAction: grupo de atrasadas", () => {
         name: "Marina Pires",
         text: "Marina Pires te deve · desde 30/08",
       },
-      legend: { done: "2 de 12 recebidas", remaining: "falta R$ 3.500,00" },
+      legend: { done: "2 recebidas", remaining: "falta R$ 3.500,00" },
     });
     expect(describeAction(marinaGroup(), { ...ctx, first: true }).tag).toBe(
       "Faça primeiro · 2 atrasadas"
     );
   });
 
-  it("de outro ano: o 'desde' leva o ano; a faixa vira 'a'", () => {
+  it("de outro ano: o 'desde' da linha de quem deve leva o ano; a faixa vira 'a'", () => {
     const view = describeAction(
       marinaGroup({
         contractTitle: "Venda do terreno",
@@ -197,7 +197,8 @@ describe("describeAction: grupo de atrasadas", () => {
       }),
       ctx
     );
-    expect(view.tag).toBe("24 atrasadas · desde 28/10/2024");
+    expect(view.tag).toBe("24 atrasadas");
+    expect(view.person?.text).toBe("Marina Pires te deve · desde 28/10/2024");
     expect(view.sequence).toBe(nb("parcelas~5~a~28~de~60"));
   });
 
@@ -245,7 +246,7 @@ describe("describeAction: grupo de atrasadas", () => {
       amountCents: 250_000,
       person: { name: "Maria Souza", text: "para Maria Souza · desde 01/09" },
       terms: null,
-      legend: { done: "4 de 12 pagas", remaining: "falta R$ 10.000,00" },
+      legend: { done: "4 pagas", remaining: "falta R$ 10.000,00" },
     });
   });
 
@@ -272,10 +273,10 @@ describe("describeAction: grupo de atrasadas", () => {
     expect(
       describeAction(marinaGroup(), { ...ctx, locale: "en-US" })
     ).toMatchObject({
-      tag: "2 overdue · since 08/30",
+      tag: "2 overdue",
       sequence: nb("installments~3 and 4~of~12"),
       person: { text: "Marina Pires owes you · since 08/30" },
-      legend: { done: "2 of 12 received", remaining: "R$3,500.00 left" },
+      legend: { done: "2 received", remaining: "R$3,500.00 left" },
     });
     expect(
       describeAction(marinaGroup(), { ...ctx, first: true, locale: "en-US" })
@@ -362,14 +363,23 @@ describe("actionButtons", () => {
     ).toEqual(["send_proof"]);
   });
 
-  it("receber: WhatsApp, e Marcar como recebida só quando a API deixa", () => {
-    expect(actionButtons(installmentAction({ direction: "receive" }))).toEqual([
-      "whatsapp",
-      "mark_received",
-    ]);
+  it("receber: WhatsApp, e Marcar como recebida quando a API diz que o aprovador pode (canMarkReceived)", () => {
     expect(
       actionButtons(
-        installmentAction({ direction: "receive", canMarkPaid: false })
+        installmentAction({
+          direction: "receive",
+          canMarkPaid: false,
+          canMarkReceived: true,
+        })
+      )
+    ).toEqual(["whatsapp", "mark_received"]);
+    expect(
+      actionButtons(
+        installmentAction({
+          direction: "receive",
+          canMarkPaid: true,
+          canMarkReceived: false,
+        })
       )
     ).toEqual(["whatsapp"]);
   });

@@ -10,5 +10,7 @@ export const paraglideOptions = {
   outdir: "./src/paraglide",
   outputStructure: "message-modules",
   cookieName: "locale",
-  strategy: ["cookie", "preferredLanguage", "baseLocale"],
+  // custom-ssr (src/lib/ssr-locale.ts): the browser follows the server's
+  // choice when there is no cookie; the server skips it.
+  strategy: ["cookie", "custom-ssr", "preferredLanguage", "baseLocale"],
 } satisfies CompilerOptions;

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const LINK_NAME = /voltar ao início/i;
+const LINK_NAME = /ir para o início/i;
 const LOGIN_URL = /\/login/;
 
 test("rota inexistente mostra o 404 de marca (sem tela branca)", async ({

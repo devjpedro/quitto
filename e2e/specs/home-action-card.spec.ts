@@ -7,7 +7,6 @@ import {
 } from "../fixtures";
 
 const WEB = "http://localhost:3001";
-const SEE_ALL = /^(Ver todas|See all) \(\d+\)$/;
 /** Desktop widths where a card's content crosses a pair's limit: 182 px at 1024 up to 336 at 1920. */
 const DESKTOP_WIDTHS = [1024, 1280, 1512, 1536, 1920];
 
@@ -22,8 +21,7 @@ interface CardLayout {
 
 /**
  * Every rendered action card, measured. The legend is the line right after
- * the bar; the buttons are the card's last row. Cards past the desktop row
- * are display: none, so the caller opens "Ver todas" first.
+ * the bar; the buttons are the card's last row.
  */
 function cardLayouts(page: Page): Promise<CardLayout[]> {
   return page.getByRole("article").evaluateAll((cards) =>
@@ -59,7 +57,7 @@ function cardLayouts(page: Page): Promise<CardLayout[]> {
  */
 async function expectTidyCards(page: Page, label: string): Promise<void> {
   const layouts = await cardLayouts(page);
-  expect(layouts.length, label).toBeGreaterThanOrEqual(4);
+  expect(layouts.length, label).toBeGreaterThanOrEqual(1);
   for (const layout of layouts) {
     const where = `${label} · ${layout.name}`;
     expect(layout.overflow, where).toBeLessThanOrEqual(0);
@@ -72,22 +70,17 @@ async function expectTidyCards(page: Page, label: string): Promise<void> {
   }
 }
 
-/** Opens the hidden cards past the desktop row, when there are any. */
-async function showEveryCard(page: Page): Promise<void> {
-  const seeAll = page.getByRole("button", { name: SEE_ALL });
-  if (await seeAll.isVisible()) {
-    await seeAll.click();
-  }
-}
-
 /**
- * One card of each pair that can wrap: a group you pay (Pagar a mais antiga
+ * A card of each pair that can wrap, one account per pair (the home draws only the first action): a group you pay (Pagar a mais antiga
  * + Ver parcelas), a group you receive (Cobrar no WhatsApp + Ver parcelas),
  * one installment to receive (Cobrar no WhatsApp + Marcar como recebida) on
  * a 60-installment contract, whose legend is the longest ("0 de 60
  * recebidas · falta R$ 120.000,00"), and one to pay.
  */
-async function seedEveryPair(page: Page): Promise<void> {
+const PAIRS = ["viagem", "notebook", "terreno", "aluguel"] as const;
+type Pair = (typeof PAIRS)[number];
+
+async function seedPair(page: Page, pair: Pair): Promise<void> {
   const overdue = (days: number[], amountCents: number) => ({
     mode: "custom" as const,
     installments: [...days, 30, 60].map((offset) => ({
@@ -95,58 +88,60 @@ async function seedEveryPair(page: Page): Promise<void> {
       dueDate: isoDaysFromToday(offset),
     })),
   });
-  await seedContract(page.request, {
-    title: "Viagem E2E",
-    schedule: overdue([-20, -12], 150_000),
-  });
-  await seedContract(page.request, {
-    title: "Notebook E2E",
-    ownerRole: "seller",
-    schedule: overdue([-15, -8], 35_000),
-  });
-  await seedContract(page.request, {
-    title: "Terreno E2E",
-    ownerRole: "seller",
-    schedule: {
-      mode: "monthly",
-      monthlyAmountCents: 200_000,
-      months: 60,
-      firstDueDate: isoDaysFromToday(2),
+  const seeds: Record<Pair, Parameters<typeof seedContract>[1]> = {
+    viagem: { title: "Viagem E2E", schedule: overdue([-20, -12], 150_000) },
+    notebook: {
+      title: "Notebook E2E",
+      ownerRole: "seller",
+      schedule: overdue([-15, -8], 35_000),
     },
-  });
-  await seedContract(page.request, {
-    title: "Aluguel E2E",
-    schedule: {
-      mode: "custom",
-      installments: [3, 33].map((offset) => ({
-        amountCents: 125_000,
-        dueDate: isoDaysFromToday(offset),
-      })),
+    terreno: {
+      title: "Terreno E2E",
+      ownerRole: "seller",
+      schedule: {
+        mode: "monthly",
+        monthlyAmountCents: 200_000,
+        months: 60,
+        firstDueDate: isoDaysFromToday(2),
+      },
     },
-  });
+    aluguel: {
+      title: "Aluguel E2E",
+      schedule: {
+        mode: "custom",
+        installments: [3, 33].map((offset) => ({
+          amountCents: 125_000,
+          dueDate: isoDaysFromToday(offset),
+        })),
+      },
+    },
+  };
+  await seedContract(page.request, seeds[pair]);
 }
 
 for (const locale of ["pt-BR", "en-US"]) {
-  test(`cartões de ação (${locale}): nenhuma legenda vaza e nenhum botão fica sozinho numa linha`, async ({
-    page,
-  }, testInfo) => {
-    await signup(page);
-    await seedEveryPair(page);
-    await page
-      .context()
-      .addCookies([{ name: "locale", value: locale, url: WEB }]);
-    await page.goto("/");
-    await waitForHydrated(page);
-    await expect(page.getByRole("article").first()).toBeVisible();
-    if (testInfo.project.name === "mobile") {
-      // The carousel renders every card: off screen, still measured.
-      await expectTidyCards(page, `390 ${locale}`);
-      return;
-    }
-    await showEveryCard(page);
-    for (const width of DESKTOP_WIDTHS) {
-      await page.setViewportSize({ width, height: 1000 });
-      await expectTidyCards(page, `${width} ${locale}`);
-    }
-  });
+  for (const pair of PAIRS) {
+    test(`cartão de ação ${pair} (${locale}): nenhuma legenda vaza e nenhum botão fica sozinho numa linha`, async ({
+      page,
+    }, testInfo) => {
+      await signup(page);
+      await seedPair(page, pair);
+      // Signing up saves the language of the request on the account, and the account wins over the cookie.
+      await page.request.patch("/api/me", { data: { locale } });
+      await page
+        .context()
+        .addCookies([{ name: "locale", value: locale, url: WEB }]);
+      await page.goto("/");
+      await waitForHydrated(page);
+      await expect(page.getByRole("article").first()).toBeVisible();
+      if (testInfo.project.name === "mobile") {
+        await expectTidyCards(page, `390 ${pair} ${locale}`);
+        return;
+      }
+      for (const width of DESKTOP_WIDTHS) {
+        await page.setViewportSize({ width, height: 1000 });
+        await expectTidyCards(page, `${width} ${pair} ${locale}`);
+      }
+    });
+  }
 }

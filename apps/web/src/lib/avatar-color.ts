@@ -1,4 +1,8 @@
-import { WHITESPACE_RE } from "./initials";
+import { normalizeName } from "@quitto/shared";
+
+// The grouping on the API reads names through the same function (planner's D16).
+// biome-ignore lint/performance/noBarrelFile: keeps `@/lib/avatar-color` as the web's import path for normalizeName
+export { normalizeName } from "@quitto/shared";
 
 /**
  * The 8 warm tones of other people's avatars (tokens.css --avatar-*), in
@@ -17,31 +21,6 @@ export const AVATAR_TONES = [
 ] as const;
 
 export type AvatarTone = (typeof AVATAR_TONES)[number];
-
-// Combining diacritical marks (U+0300 to U+036F), left over by NFD.
-const FIRST_MARK = 768;
-const LAST_MARK = 879;
-// Invisible and not whitespace to a regex: zero-width space, non-joiner and
-// joiner (U+200B to U+200D) and the word joiner (U+2060).
-const ZERO_WIDTH = new Set([8203, 8204, 8205, 8288]);
-
-/**
- * "  Marína   Pires " → "marina pires": no accents, lower case, single
- * spaces, and nothing invisible.
- */
-export function normalizeName(name: string): string {
-  return [...name.normalize("NFD")]
-    .filter((ch) => {
-      const code = ch.charCodeAt(0);
-      const mark = code >= FIRST_MARK && code <= LAST_MARK;
-      return !(mark || ZERO_WIDTH.has(code));
-    })
-    .join("")
-    .toLowerCase()
-    .split(WHITESPACE_RE)
-    .filter(Boolean)
-    .join(" ");
-}
 
 function fnv1a32(text: string): number {
   let hash = 2_166_136_261;

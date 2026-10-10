@@ -14,6 +14,25 @@ const closest = {
   nextDueDate: "2026-10-13",
 };
 
+describe("momentView, variante do celular", () => {
+  it("mais perto de quitar: o % no rótulo e só o nome do contrato, sem a fração nem o 'Falta'", () => {
+    const view = { id: "closest" as const, ...closest };
+    expect(momentView(view, "pt-BR", TODAY, "phone")).toEqual({
+      label: "Mais perto de quitar · 90%",
+      title: "Celular da Ana",
+      detail: null,
+      percent: 90,
+    });
+    expect(momentView(view, "en-US", TODAY, "phone").label).toBe(
+      "Closest to paid off · 90%"
+    );
+    // The card (sidebar) is the default and does not change.
+    expect(momentView(view, "pt-BR", TODAY).title).toBe(
+      "Celular da Ana · 9/10"
+    );
+  });
+});
+
 describe("momentMilestone", () => {
   it("tudo em dia no mês passado vem antes de qualquer outro marco", () => {
     const home = homeFixture({
