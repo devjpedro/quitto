@@ -8,6 +8,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // In CI the specs run against the dev server (Vite compiles each route on its
+  // first hit) on a 2-core runner: the multi-route and axe specs pass 30 s
+  // there while taking 10-20 s locally. Locally the defaults stay.
+  timeout: process.env.CI ? 120_000 : 30_000,
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: WEB,
