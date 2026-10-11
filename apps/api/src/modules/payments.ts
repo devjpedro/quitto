@@ -21,6 +21,7 @@ import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { headObject, presignUpload } from "../lib/storage";
 
+const MAX_PROOF_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
 // Explicit literal tuple (not `ALLOWED_MIME.map(...)`): a mapped array widens to
@@ -45,7 +46,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       }
       const safeName = body.fileName.replace(/[^\w.-]/g, "_").slice(0, 120);
       const objectKey = `proofs/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
-      const uploadUrl = await presignUpload(objectKey, body.mimeType);
+      const uploadUrl = await presignUpload(
+        objectKey,
+        body.mimeType,
+        body.sizeBytes
+      );
       return { uploadUrl, objectKey };
     },
     {
@@ -53,6 +58,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       body: t.Object({
         fileName: t.String({ minLength: 1, maxLength: 200 }),
         mimeType: proofMimeSchema,
+        sizeBytes: t.Integer({ minimum: 1, maximum: MAX_PROOF_BYTES }),
       }),
       response: t.Object({ uploadUrl: t.String(), objectKey: t.String() }),
     }
@@ -81,7 +87,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ValidationError("Comprovante não encontrado no storage");
       }
       const sizeBytes = head.ContentLength ?? 0;
-      if (sizeBytes <= 0 || sizeBytes > 10 * 1024 * 1024) {
+      if (sizeBytes <= 0 || sizeBytes > MAX_PROOF_BYTES) {
         throw new ValidationError("Arquivo inválido (vazio ou maior que 10MB)");
       }
       // o tipo do objeto realmente armazenado manda — não confiar só no body

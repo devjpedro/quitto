@@ -107,7 +107,11 @@ export function useProofUpload(contractId: string, installmentId: string) {
         const mimeType = file.type as ProofMime;
         const proofs = api.api.installments({ installmentId: id }).proofs;
         const presign = await unwrap(
-          proofs.presign.post({ fileName: file.name, mimeType })
+          proofs.presign.post({
+            fileName: file.name,
+            mimeType,
+            sizeBytes: file.size,
+          })
         );
         await uploadWithProgress(
           presign.uploadUrl,

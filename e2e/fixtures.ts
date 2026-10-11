@@ -267,9 +267,16 @@ export async function uploadProofApi(
   request: APIRequestContext,
   installmentId: string
 ): Promise<void> {
+  const pdf = readFileSync(PROOF_PDF);
   const presign = await request.post(
     `/api/installments/${installmentId}/proofs/presign`,
-    { data: { fileName: "comprovante.pdf", mimeType: "application/pdf" } }
+    {
+      data: {
+        fileName: "comprovante.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: pdf.length,
+      },
+    }
   );
   expect(presign.ok()).toBeTruthy();
   const { uploadUrl, objectKey } = (await presign.json()) as {
@@ -279,7 +286,7 @@ export async function uploadProofApi(
   const put = await fetch(uploadUrl, {
     method: "PUT",
     headers: { "content-type": "application/pdf" },
-    body: readFileSync(PROOF_PDF),
+    body: pdf,
   });
   expect(put.ok).toBeTruthy();
   const done = await request.post(`/api/installments/${installmentId}/proofs`, {

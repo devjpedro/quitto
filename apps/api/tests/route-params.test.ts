@@ -66,7 +66,7 @@ const routes = (
   [
     "POST",
     `/api/installments/${BAD}/proofs/presign`,
-    { fileName: "pix.pdf", mimeType: "application/pdf" },
+    { fileName: "pix.pdf", mimeType: "application/pdf", sizeBytes: 1234 },
   ],
   [
     "POST",

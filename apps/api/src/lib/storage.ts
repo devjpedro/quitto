@@ -54,18 +54,27 @@ function s3(): { client: S3Client; bucket: string } {
   return { client, bucket: cfg.S3_BUCKET };
 }
 
-/** Presigned PUT URL for the browser to upload directly. Expires in 5 min. */
+/**
+ * Presigned PUT URL for the browser to upload directly. Expires in 60 s and
+ * signs content-length and content-type: the storage refuses a body of another
+ * size or type, so the declared size is the one that lands in the bucket.
+ */
 export function presignUpload(
   objectKey: string,
-  contentType: string
+  contentType: string,
+  sizeBytes: number
 ): Promise<string> {
   const { client: c, bucket } = s3();
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: objectKey,
     ContentType: contentType,
+    ContentLength: sizeBytes,
   });
-  return getSignedUrl(c, command, { expiresIn: 300 });
+  return getSignedUrl(c, command, {
+    expiresIn: 60,
+    signableHeaders: new Set(["content-length", "content-type"]),
+  });
 }
 
 /** Reads object metadata; throws if the object does not exist. */

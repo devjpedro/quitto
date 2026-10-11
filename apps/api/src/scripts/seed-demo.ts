@@ -65,7 +65,7 @@ async function uploadProof(
   objectKey: string,
   bytes: Uint8Array<ArrayBuffer>
 ): Promise<void> {
-  const url = await presignUpload(objectKey, "application/pdf");
+  const url = await presignUpload(objectKey, "application/pdf", bytes.length);
   const res = await fetch(url, {
     method: "PUT",
     body: bytes,
