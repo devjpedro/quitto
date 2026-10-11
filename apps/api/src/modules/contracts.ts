@@ -16,6 +16,7 @@ import { contractCards } from "../lib/contract-cards";
 import { createContract } from "../lib/contract-create";
 import { loadContractRows } from "../lib/contract-rows";
 import { normalizeEmail } from "../lib/email";
+import { checkInviteQuota } from "../lib/email-limits";
 import {
   CodedError,
   codedValidationError,
@@ -98,6 +99,9 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           code: "counterparty.email.self",
           path: "counterparty.email",
         });
+      }
+      if (email) {
+        checkInviteQuota(user.id);
       }
       const created = await createContract(
         { id: user.id, name: user.name },

@@ -6,6 +6,11 @@ import { contract, invite, participant } from "../db/schema";
 import { getContractRole } from "../lib/contract-access";
 import { normalizeEmail } from "../lib/email";
 import {
+  assertPendingInviteRoom,
+  checkInviteQuota,
+  checkResendQuota,
+} from "../lib/email-limits";
+import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -199,6 +204,8 @@ export const participantsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Participante já vinculado a um usuário");
       }
 
+      await assertPendingInviteRoom(params.participantId);
+      checkInviteQuota(user.id);
       const token = newInviteToken();
       const expiresAt = inviteExpiry();
       await db.insert(invite).values({
@@ -276,6 +283,8 @@ export const participantsModule = new Elysia({ prefix: "/api" })
       if (target?.linkedUserId) {
         throw new ConflictError("Esta vaga já foi preenchida");
       }
+
+      checkResendQuota(pending.id);
 
       // Owner's decision 15: the same invite, the same link, a fresh deadline.
       const expiresAt = inviteExpiry();

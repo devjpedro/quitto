@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { env } from "../env";
+import { takeEmailSlot } from "./email-limits";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 
@@ -21,6 +22,9 @@ export async function sendEmail({
       );
     }
     return;
+  }
+  if (!takeEmailSlot()) {
+    throw new Error("Cota diária de e-mail esgotada");
   }
   const { error } = await resend.emails.send({
     from: env.EMAIL_FROM,
