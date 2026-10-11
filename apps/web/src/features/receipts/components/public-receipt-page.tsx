@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   DownloadSimple,
   Files,
   Printer,
@@ -8,7 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import type { PublicReceipt } from "@quitto/shared";
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { rise } from "@/components/stage/stage-panel";
 import { buttonVariants } from "@/components/ui/button";
@@ -41,7 +40,7 @@ function Line({
   value: string;
 }) {
   return (
-    <div className="flex min-h-[52px] items-center gap-3 py-2 pr-4 pl-3">
+    <div className="flex min-h-[60px] items-center gap-3 py-2.5 pr-4 pl-3">
       {/* The face and the tile keep their fill on paper: without it the initials are white on white. */}
       <span className="shrink-0 [print-color-adjust:exact]">{anchor}</span>
       <div className="min-w-0">
@@ -62,7 +61,7 @@ const ICON_ACTION = "size-11 shrink-0 px-0 md:size-10";
  * the browser has one), and the link copied on a computer.
  */
 async function shareReceiptLink(token: string): Promise<void> {
-  // Always the canonical link: never the address bar, which may carry `from=app`.
+  // Always the canonical link.
   const url = `${window.location.origin}/r/${token}`;
   const platform = detectPlatform({
     maxTouchPoints: navigator.maxTouchPoints,
@@ -112,31 +111,19 @@ function IconAction({
  * /r/$token (mockup 19, A8 and A9): the receipt as a perforated paper on the
  * Floresta panel, with what was paid and by whom, "Baixar PDF" below it, and
  * "Compartilhar" and "Imprimir" as icons beside it. Signed in, the invite to
- * create an account is not shown; from the app (`fromApp`), there is a "Voltar". The page is in the visitor's language; the PDF, in the owner's.
+ * create an account is not shown; the page is in the visitor's language; the PDF, in the owner's.
  * An absent party (null) has no row.
  */
 export function PublicReceiptPage({
-  fromApp = false,
   receipt,
   token,
 }: {
-  fromApp?: boolean;
   receipt: PublicReceipt;
   token: string;
 }) {
   useApiWarmup();
   const locale = getLocale();
   const signedIn = useSignedIn();
-  // The "Voltar" is for whoever came from the app, and only while signed in;
-  // the mark is read once and taken off the address bar, so a link copied from
-  // it is the canonical one.
-  const [cameFromApp] = useState(fromApp);
-  const showBack = cameFromApp && signedIn;
-  useEffect(() => {
-    if (fromApp) {
-      window.history.replaceState(window.history.state, "", `/r/${token}`);
-    }
-  }, [fromApp, token]);
   const proof =
     receipt.proofBy && receipt.proofAt
       ? m.public_receipt_proof({
@@ -177,35 +164,21 @@ export function PublicReceiptPage({
       }
     >
       <div className="w-full max-w-[440px] print:max-w-none">
-        {/* From the app: an installed app has no browser back. */}
-        {showBack ? (
-          <button
-            className={cn(
-              buttonVariants({ size: "sm", variant: "onBrandOutline" }),
-              "mb-3 print:hidden"
-            )}
-            onClick={() => window.history.back()}
-            type="button"
-          >
-            <ArrowLeft aria-hidden="true" size={16} />
-            {m.public_receipt_back()}
-          </button>
-        ) : null}
         <div
           className="piece-drop piece-rise print:filter-none"
           style={rise(0)}
         >
           <article
-            className="perforated print:mask-none rounded-t-panel bg-surface px-[18px] pt-4 pb-[26px] text-ink [--bite:7px] md:px-[22px] md:pt-5 md:pb-[28px] print:rounded-none print:bg-white print:p-0 print:text-black"
+            className="perforated print:mask-none rounded-t-panel bg-surface px-[18px] pt-5 pb-[30px] text-ink [--bite:7px] md:px-[26px] md:pt-6 md:pb-[34px] print:rounded-none print:bg-white print:p-0 print:text-black"
             data-testid="public-receipt"
           >
-            <IconTile className="size-9" icon={SealCheck} tone="brand" />
-            <h1 className="mt-3 font-display font-semibold text-[22px] leading-[1.2] tracking-[-0.03em]">
+            <IconTile className="size-10" icon={SealCheck} tone="brand" />
+            <h1 className="mt-4 font-display font-semibold text-2xl leading-[1.2] tracking-[-0.03em]">
               {m.public_receipt_title()}
             </h1>
             <Money
               cents={receipt.amountCents}
-              className="mt-2.5 block"
+              className="mt-3.5 block"
               size="hero"
             />
             <p className="mt-1 text-ink-muted text-sm tabular-nums print:text-black/60">
@@ -219,7 +192,7 @@ export function PublicReceiptPage({
                 }),
               })}
             </p>
-            <div className="mt-4 divide-y divide-divider overflow-hidden rounded-card bg-surface-card print:bg-transparent">
+            <div className="mt-5 divide-y divide-divider overflow-hidden rounded-card bg-surface-card print:bg-transparent">
               <Line
                 anchor={
                   <IconTile
@@ -248,7 +221,7 @@ export function PublicReceiptPage({
                 />
               ) : null}
             </div>
-            <p className="mt-3 flex justify-between text-ink-muted text-xs print:text-black/60">
+            <p className="mt-4 flex justify-between text-ink-muted text-xs print:text-black/60">
               {m.public_receipt_code()}
               <b className="font-medium font-mono text-ink print:text-black">
                 {receiptCode(token)}
@@ -256,7 +229,7 @@ export function PublicReceiptPage({
             </p>
             {proof ? (
               <p
-                className="mt-2 text-ink-muted text-xs leading-[1.45] print:text-black/60"
+                className="mt-3 text-ink-muted text-xs leading-[1.5] print:text-black/60"
                 data-testid="receipt-proof"
               >
                 {proof}
@@ -264,7 +237,7 @@ export function PublicReceiptPage({
             ) : null}
           </article>
         </div>
-        <div className="mt-5 flex gap-2.5 print:hidden">
+        <div className="mt-8 flex gap-2.5 print:hidden">
           <a
             className={cn(
               buttonVariants({ size: "md", variant: "onBrand" }),

@@ -1045,7 +1045,6 @@
   "public_receipt_pdf": "Download PDF",
   "public_receipt_print": "Print",
   "public_receipt_share": "Share",
-  "public_receipt_back": "Back",
   "public_receipt_link_copied": "Link copied",
   "public_receipt_proof": "Proof sent by {name} on {date} at {time} and recorded on Quitto",
   "public_receipt_tagline": "Quitto keeps the date, the reminder, and the receipt of every installment between people.",

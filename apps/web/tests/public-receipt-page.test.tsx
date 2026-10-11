@@ -184,37 +184,6 @@ describe("PublicReceiptPage", () => {
     Reflect.deleteProperty(navigator, "share");
   });
 
-  it("o Voltar só com from=app e logado; o from sai da barra de endereço", async () => {
-    const back = vi.spyOn(window.history, "back").mockImplementation(() => {
-      // No navigation in jsdom.
-    });
-    const client = new QueryClient();
-    client.setQueryData(queryKeys.session, {
-      id: "u1",
-      name: "João Souza",
-      email: "joao@x.dev",
-      image: null,
-    });
-    window.history.replaceState(null, "", "/r/tok?from=app");
-    const { unmount } = render(
-      <PublicReceiptPage fromApp receipt={receipt} token="tok" />,
-      { client }
-    );
-    expect(window.location.search).toBe("");
-    await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
-    expect(back).toHaveBeenCalledTimes(1);
-    unmount();
-    // Signed out, even with from=app: no "Voltar" (the link was forwarded).
-    const signedOut = render(
-      <PublicReceiptPage fromApp receipt={receipt} token="tok" />
-    );
-    expect(screen.queryByRole("button", { name: "Voltar" })).toBeNull();
-    signedOut.unmount();
-    // Signed in without it: neither.
-    render(<PublicReceiptPage receipt={receipt} token="tok" />, { client });
-    expect(screen.queryByRole("button", { name: "Voltar" })).toBeNull();
-  });
-
   it("deslogado vê o convite 'Criar conta'; logado, não", () => {
     const { unmount } = render(
       <PublicReceiptPage receipt={receipt} token="tok" />

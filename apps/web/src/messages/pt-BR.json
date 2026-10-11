@@ -1045,7 +1045,6 @@
   "public_receipt_pdf": "Baixar PDF",
   "public_receipt_print": "Imprimir",
   "public_receipt_share": "Compartilhar",
-  "public_receipt_back": "Voltar",
   "public_receipt_link_copied": "Link copiado",
   "public_receipt_proof": "Comprovante enviado por {name} em {date} às {time} e registrado no Quitto",
   "public_receipt_tagline": "O Quitto guarda a data, o lembrete e o recibo de cada parcela entre pessoas.",

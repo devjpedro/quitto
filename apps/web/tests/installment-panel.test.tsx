@@ -650,13 +650,14 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
   });
 
-  it("P5 (dono): 'Abrir recibo' cria o link e abre a página na mesma aba, com from=app; dois botões (Abrir recibo e Baixar PDF), sem a linha do link, sem Copiar, compartilhar nem WhatsApp", async () => {
+  it("P5 (dono): 'Abrir recibo' cria o link e abre a página em outra aba; com o link feito é um <a target=_blank>; dois botões, sem Copiar, compartilhar nem WhatsApp", async () => {
     const user = userEvent.setup();
-    navigate.mockClear();
     calls.share.mockResolvedValue({
       data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
       error: null,
     });
+    const tab = { close: vi.fn(), location: { href: "" }, opener: {} };
+    const open = vi.spyOn(window, "open").mockReturnValue(tab as never);
     const first = renderPage({
       installment: "i2",
       details: { i2: paidDetail() },
@@ -676,19 +677,19 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     );
     expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
     await user.click(block.getByRole("button", { name: "Abrir recibo" }));
+    // The window opens in the tap, blank, and goes to the link once it exists.
+    expect(open).toHaveBeenCalledWith("", "_blank");
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith({
-        params: { token: "7fQ2kX9mVb" },
-        search: { from: "app" },
-        to: "/r/$token",
-      })
+      expect(tab.location.href).toBe("http://localhost:3000/r/7fQ2kX9mVb")
     );
+    expect(tab.opener).toBeNull();
+    expect(tab.close).not.toHaveBeenCalled();
     expect(calls.share).toHaveBeenCalledTimes(1);
     first.unmount();
 
-    // With the link made, "Abrir recibo" does not create another one.
-    navigate.mockClear();
+    // With the link made, "Abrir recibo" is a plain link, and creates nothing.
     calls.share.mockClear();
+    open.mockClear();
     vi.setSystemTime(Date.now() + ACTION_LOCK_MS);
     renderPage({
       installment: "i2",
@@ -699,16 +700,16 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       },
     });
     const linked = within(screen.getByTestId("receipt-block"));
-    expect(linked.queryByText("localhost:3001/r/7fQ2kX9mVb")).toBeNull();
-    await user.click(linked.getByRole("button", { name: "Abrir recibo" }));
-    await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith({
-        params: { token: "7fQ2kX9mVb" },
-        search: { from: "app" },
-        to: "/r/$token",
-      })
+    const anchor = linked.getByRole("link", { name: "Abrir recibo" });
+    expect(anchor).toHaveAttribute(
+      "href",
+      "http://localhost:3001/r/7fQ2kX9mVb"
     );
+    expect(anchor).toHaveAttribute("target", "_blank");
+    expect(anchor).toHaveAttribute("rel", "noopener noreferrer");
     expect(calls.share).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+    open.mockRestore();
   });
 
   it("parcela paga: o dono não vê 'Editar valor ou data'", () => {
@@ -763,7 +764,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       details: shared,
     });
     let block = within(screen.getByTestId("receipt-block"));
-    expect(block.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
+    expect(block.getByRole("link", { name: "Abrir recibo" })).toBeVisible();
     expect(block.queryByRole("link", { name: WHATSAPP })).toBeNull();
     expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
     expect(block.queryByRole("link", { name: "PDF" })).toBeNull();
@@ -780,14 +781,14 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       details: shared,
     });
     block = within(screen.getByTestId("receipt-block"));
-    expect(block.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
+    expect(block.getByRole("link", { name: "Abrir recibo" })).toBeVisible();
     expect(block.queryByRole("link", { name: "Recibo em PDF" })).toBeNull();
     paying.unmount();
 
     renderPage({ installment: "i2", details: shared, width: 390 });
     block = within(screen.getByTestId("receipt-block"));
-    expect(block.queryByRole("button", { name: "Abrir recibo" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Abrir recibo" })).toBeVisible();
+    expect(block.queryByRole("link", { name: "Abrir recibo" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Abrir recibo" })).toBeVisible();
   });
 
   it("P6 (quem paga): o bloco danger com o rosto de quem contestou, o motivo entre aspas e o envio riscado", () => {

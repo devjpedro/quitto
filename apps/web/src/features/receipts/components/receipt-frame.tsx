@@ -27,13 +27,13 @@ export function ReceiptFrame({
           />
         </div>
         <main
-          className="flex flex-1 flex-col items-center justify-center px-3.5 pt-16 pb-4 md:pt-[72px] md:pb-4 print:p-0"
+          className="flex flex-1 flex-col items-center justify-center px-3.5 pt-24 pb-8 md:py-24 print:p-0"
           id="conteudo"
         >
           {children}
         </main>
         {footer ? (
-          <footer className="relative flex flex-col items-stretch gap-3 px-3.5 pb-4 text-[14px] text-on-brand-muted max-md:text-center md:flex-row md:items-center md:justify-between md:px-9 md:pb-5 print:hidden">
+          <footer className="relative flex flex-col items-stretch gap-3 px-3.5 pb-6 text-[14px] text-on-brand-muted max-md:text-center md:flex-row md:items-center md:justify-between md:px-9 md:pb-[30px] print:hidden">
             {footer}
           </footer>
         ) : null}

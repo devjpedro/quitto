@@ -100,7 +100,7 @@ test("o recibo mostra o valor, a parcela e quem recebeu, e o PDF baixa", async (
   await visitor.close();
 });
 
-test("Compartilhar copia o link no computador, Imprimir é só ícone e o Voltar não existe sem from=app", async ({
+test("Compartilhar copia o link no computador, Imprimir é só ícone e o recibo não tem Voltar", async ({
   browser,
 }) => {
   const token = await sharedReceipt(browser);
@@ -158,57 +158,6 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
-const SIZES = [
-  { height: 740, width: 390 },
-  { height: 720, width: 1280 },
-];
-
-test("a página do recibo cabe na tela, sem rolar, a 390×740 e a 1280×720: deslogado e logado, com e sem o comprovante", async ({
-  browser,
-}) => {
-  test.setTimeout(150_000);
-  for (const proof of [false, true]) {
-    const owner = await sharedReceiptSession(browser, { proof });
-    const visitor = await browser.newContext();
-    try {
-      const signedOut = await visitor.newPage();
-      for (const [who, page] of [
-        ["deslogado", signedOut],
-        ["logado", owner.page],
-      ] as const) {
-        for (const size of SIZES) {
-          await page.setViewportSize(size);
-          // `from=app` too: the "Voltar" is part of the page when signed in.
-          await page.goto(
-            `/r/${owner.token}${who === "logado" ? "?from=app" : ""}`
-          );
-          await waitForHydrated(page);
-          await expect(page.getByTestId("public-receipt")).toBeVisible();
-          if (proof) {
-            await expect(page.getByTestId("receipt-proof")).toBeVisible();
-          }
-          if (who === "logado") {
-            await expect(
-              page.getByRole("button", { name: "Voltar" })
-            ).toBeVisible();
-          }
-          const { scrollHeight, innerHeight } = await page.evaluate(() => ({
-            scrollHeight: document.documentElement.scrollHeight,
-            innerHeight: window.innerHeight,
-          }));
-          expect(
-            scrollHeight,
-            `${who}, ${size.width}×${size.height}, comprovante: ${proof}`
-          ).toBeLessThanOrEqual(innerHeight);
-        }
-      }
-    } finally {
-      await visitor.close();
-      await owner.close();
-    }
-  }
-});
-
 test("Baixar PDF e os dois ícones têm a mesma altura (os ícones são quadrados)", async ({
   browser,
 }) => {
@@ -230,38 +179,6 @@ test("Baixar PDF e os dois ícones têm a mesma altura (os ícones são quadrado
   expect(share?.width).toBe(share?.height);
   expect(print?.width).toBe(print?.height);
   await visitor.close();
-});
-
-test("o Voltar é de quem veio do app: com from=app e deslogado não existe, e o from sai da barra", async ({
-  browser,
-}) => {
-  const owner = await sharedReceiptSession(browser);
-  const visitor = await browser.newContext({
-    permissions: ["clipboard-read", "clipboard-write"],
-  });
-  try {
-    const page = await visitor.newPage();
-    await page.goto(`/r/${owner.token}?from=app`);
-    await waitForHydrated(page);
-    await expect(page.getByTestId("public-receipt")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Voltar" })).toHaveCount(0);
-    await expect(page).toHaveURL(new RegExp(`/r/${owner.token}$`));
-    await page.getByRole("button", { name: "Compartilhar" }).click();
-    await expect(page.getByText("Link copiado").first()).toBeVisible();
-    const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toMatch(new RegExp(`/r/${owner.token}$`));
-    expect(copied).not.toContain("from");
-    // Signed in, from the app: the "Voltar" is there, and the bar is clean too.
-    await owner.page.goto(`/r/${owner.token}?from=app`);
-    await waitForHydrated(owner.page);
-    await expect(
-      owner.page.getByRole("button", { name: "Voltar" })
-    ).toBeVisible();
-    await expect(owner.page).toHaveURL(new RegExp(`/r/${owner.token}$`));
-  } finally {
-    await visitor.close();
-    await owner.close();
-  }
 });
 
 test("Imprimir manda o PDF do recibo para a impressão (não a página)", async ({

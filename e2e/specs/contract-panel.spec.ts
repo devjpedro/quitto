@@ -217,7 +217,7 @@ test("o recebedor marca como recebida, na hora", async ({ browser }) => {
   }
 });
 
-test("abrir o recibo: o dono cria o link e vai à página (com Voltar); o link abre o recibo público", async ({
+test("abrir o recibo: o dono cria o link e abre a página em outra aba; o link abre o recibo público", async ({
   browser,
   context,
   page,
@@ -247,25 +247,34 @@ test("abrir o recibo: o dono cria o link e vai à página (com Voltar); o link a
   });
 
   const panel = await openPanel(page, id, first);
-  await panel.getByRole("button", { name: "Abrir recibo" }).click();
-  // The page opens in this tab, from the app: it has a "Voltar", and no
-  // invite to create an account (this one is signed in).
-  await expect(page).toHaveURL(RECEIPT_PAGE);
+  // The link does not exist yet: the tab opens in the tap and goes to it.
+  const [receiptTab] = await Promise.all([
+    context.waitForEvent("page"),
+    panel.getByRole("button", { name: "Abrir recibo" }).click(),
+  ]);
+  await expect(receiptTab).toHaveURL(RECEIPT_PAGE);
+  const url = receiptTab.url();
+  expect(url).not.toContain("from");
   await expect(
-    page.getByRole("heading", { name: "Recibo de pagamento" })
+    receiptTab.getByRole("heading", { name: "Recibo de pagamento" })
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Criar conta" })).toHaveCount(0);
-  // The mark is off the address bar: what is there is the canonical link.
-  const url = page.url();
-  await page.getByRole("button", { name: "Voltar" }).click();
+  // Signed in: no invite to create an account, and no "Voltar".
+  await expect(
+    receiptTab.getByRole("link", { name: "Criar conta" })
+  ).toHaveCount(0);
+  await expect(receiptTab.getByRole("button", { name: "Voltar" })).toHaveCount(
+    0
+  );
+  await receiptTab.close();
+  // The app stayed where it was: the block has the two buttons, no link line.
   await expect(page).toHaveURL(new RegExp(`/contracts/${id}`));
-  // Back in the contract, the block has the two buttons and no link line.
   const reopened = await openPanel(page, id, first);
   const block = reopened.getByTestId("receipt-block");
-  // The sheet (phone) pins "Abrir recibo" in its footer, outside the block.
+  // With the link made, "Abrir recibo" is a plain link to a new tab (the
+  // sheet on a phone pins it in its footer, outside the block).
   await expect(
-    reopened.getByRole("button", { name: "Abrir recibo" })
-  ).toBeVisible();
+    reopened.getByRole("link", { name: "Abrir recibo" })
+  ).toHaveAttribute("target", "_blank");
   await expect(block.getByRole("link", { name: "Baixar PDF" })).toBeVisible();
   await expect(block.getByRole("button", { name: "Copiar" })).toHaveCount(0);
 
@@ -277,13 +286,10 @@ test("abrir o recibo: o dono cria o link e vai à página (com Voltar); o link a
       visitor.getByRole("heading", { name: "Recibo de pagamento" })
     ).toBeVisible();
     await expect(visitor.getByText("R$ 480,00").first()).toBeVisible();
-    // Signed out: the invite, and no "Voltar".
+    // Signed out: the invite.
     await expect(
       visitor.getByRole("link", { name: "Criar conta" }).first()
     ).toBeAttached();
-    await expect(visitor.getByRole("button", { name: "Voltar" })).toHaveCount(
-      0
-    );
   } finally {
     await stranger.close();
   }

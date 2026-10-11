@@ -41,6 +41,21 @@ export function ReceiptPrimaryButton({
   if (primary === "receipt_pdf") {
     return <ReceiptPdfButton actions={actions} className={className} />;
   }
+  if (actions.existing) {
+    return (
+      <Button asChild className={className}>
+        <a
+          href={actions.existing}
+          onClick={actions.guardLink}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <ArrowSquareOut aria-hidden="true" size={16} />
+          {m.panel_receipt_open()}
+        </a>
+      </Button>
+    );
+  }
   return (
     <Button
       className={className}

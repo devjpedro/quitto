@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 import { ApiError } from "@/lib/api-client";
 import { useShareReceiptMutation } from "../api";
@@ -9,7 +8,7 @@ const TOKEN_TAIL_RE = /\/r\/([^/?#]+)/;
 
 /**
  * What the receipt offers, shared by the block and the bottom sheet's footer:
- * "Abrir recibo" (the public page, in this tab, with the link created on
+ * "Abrir recibo" (the public page, in a new tab, with the link created on
  * demand, once) and the PDF.
  * Each answers to the panel's lock (review I2 of Task 9): the second hit of a
  * double tap does nothing.
@@ -17,7 +16,6 @@ const TOKEN_TAIL_RE = /\/r\/([^/?#]+)/;
 export function useReceiptActions(detail: InstallmentDetail) {
   const { tryLock } = usePanel();
   const share = useShareReceiptMutation(detail.id);
-  const navigate = useNavigate();
   const existing = detail.receiptShare?.url ?? null;
   /** The link, created when there is none yet; null (and said) when it could not be. */
   const linkOf = async (): Promise<{ token: string; url: string } | null> => {
@@ -46,18 +44,29 @@ export function useReceiptActions(detail: InstallmentDetail) {
         event.preventDefault();
       }
     },
-    /** The receipt's page, in this tab: `from=app` gives it a "Voltar" (an installed app has no browser back). */
+    /**
+     * The receipt's page, in a new tab. The window opens in the tap itself (a
+     * popup opened after the await is blocked) and goes to the link once it
+     * exists; with the link made already, the button is a plain anchor.
+     */
     openReceipt: async () => {
       if (!tryLock()) {
         return;
       }
-      const link = await linkOf();
-      if (link) {
-        await navigate({
-          params: { token: link.token },
-          search: { from: "app" },
-          to: "/r/$token",
-        });
+      const tab = window.open("", "_blank");
+      const link = await linkOf().catch((error) => {
+        tab?.close();
+        throw error;
+      });
+      if (!link) {
+        tab?.close();
+        return;
+      }
+      if (tab) {
+        tab.opener = null;
+        tab.location.href = link.url;
+      } else {
+        window.open(link.url, "_blank", "noopener,noreferrer");
       }
     },
   };
