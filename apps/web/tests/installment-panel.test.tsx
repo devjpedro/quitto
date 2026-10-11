@@ -650,9 +650,8 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
   });
 
-  it("P5 (dono): 'Abrir recibo' cria o link e abre a página na mesma aba, com from=app; o link existente aparece com Copiar; não há mais PDF, compartilhar nem WhatsApp aqui", async () => {
+  it("P5 (dono): 'Abrir recibo' cria o link e abre a página na mesma aba, com from=app; dois botões (Abrir recibo e Baixar PDF), sem a linha do link, sem Copiar, compartilhar nem WhatsApp", async () => {
     const user = userEvent.setup();
-    const writeText = vi.spyOn(navigator.clipboard, "writeText");
     navigate.mockClear();
     calls.share.mockResolvedValue({
       data: { token: "7fQ2kX9mVb", createdAt: "2026-10-05T15:00:00.000Z" },
@@ -666,13 +665,15 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     expect(block.getByText("Recibo da parcela 2")).toBeVisible();
     for (const name of [
       "Compartilhar recibo",
-      "Recibo em PDF",
-      "PDF",
       "Copiar link do recibo",
+      "Copiar o link do recibo",
     ]) {
       expect(block.queryByRole("button", { name })).toBeNull();
-      expect(block.queryByRole("link", { name })).toBeNull();
     }
+    expect(block.getByRole("link", { name: "Baixar PDF" })).toHaveAttribute(
+      "href",
+      "/api/installments/i2/receipt.pdf"
+    );
     expect(block.queryByRole("button", { name: WHATSAPP })).toBeNull();
     await user.click(block.getByRole("button", { name: "Abrir recibo" }));
     await waitFor(() =>
@@ -698,7 +699,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       },
     });
     const linked = within(screen.getByTestId("receipt-block"));
-    expect(linked.getByText("localhost:3001/r/7fQ2kX9mVb")).toBeVisible();
+    expect(linked.queryByText("localhost:3001/r/7fQ2kX9mVb")).toBeNull();
     await user.click(linked.getByRole("button", { name: "Abrir recibo" }));
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith({
@@ -708,14 +709,6 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
       })
     );
     expect(calls.share).not.toHaveBeenCalled();
-    await user.click(
-      linked.getByRole("button", { name: "Copiar o link do recibo" })
-    );
-    await waitFor(() =>
-      expect(writeText).toHaveBeenLastCalledWith(
-        "http://localhost:3001/r/7fQ2kX9mVb"
-      )
-    );
   });
 
   it("parcela paga: o dono não vê 'Editar valor ou data'", () => {
@@ -725,7 +718,7 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     ).toBeNull();
   });
 
-  it("P5 (quem não é dono): sem 'Abrir recibo' (não cria link); PDF e, se o link existe, Copiar", () => {
+  it("P5 (quem não é dono): sem 'Abrir recibo' (não cria link); só Baixar PDF, sem a linha do link", () => {
     renderPage({
       contract: motoDetail({
         role: "buyer",
@@ -742,10 +735,8 @@ describe("InstallmentPanel (mockup 14 enxuto, quadro G)", () => {
     });
     const block = within(screen.getByTestId("receipt-block"));
     expect(block.queryByRole("button", { name: "Abrir recibo" })).toBeNull();
-    expect(block.getByRole("link", { name: "Recibo em PDF" })).toBeVisible();
-    expect(
-      block.getByRole("button", { name: "Copiar o link do recibo" })
-    ).toBeVisible();
+    expect(block.getByRole("link", { name: "Baixar PDF" })).toBeVisible();
+    expect(block.queryByText("localhost:3001/r/7fQ2kX9mVb")).toBeNull();
     // Nor does whoever is not the owner edit the installment.
     expect(
       screen.queryByRole("button", { name: "Editar valor ou data" })

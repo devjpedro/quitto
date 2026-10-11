@@ -7,10 +7,9 @@ import {
   ShareNetwork,
 } from "@phosphor-icons/react";
 import type { PublicReceipt } from "@quitto/shared";
-import { Link, useHydrated } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Logo } from "@/components/logo";
 import { rise } from "@/components/stage/stage-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/icon-tile";
@@ -24,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import { getLocale } from "@/paraglide/runtime.js";
 import { useSignedIn } from "../hooks/use-signed-in";
+import { printReceiptPdf, receiptPdfUrl } from "../lib/print-receipt";
 import { ReceiptFrame } from "./receipt-frame";
 
 /** "rTxnbV…3qc": enough of the link's token to tell two receipts apart. */
@@ -41,7 +41,7 @@ function Line({
   value: string;
 }) {
   return (
-    <div className="flex min-h-[60px] items-center gap-3 py-2.5 pr-4 pl-3">
+    <div className="flex min-h-[52px] items-center gap-3 py-2 pr-4 pl-3">
       {/* The face and the tile keep their fill on paper: without it the initials are white on white. */}
       <span className="shrink-0 [print-color-adjust:exact]">{anchor}</span>
       <div className="min-w-0">
@@ -52,15 +52,18 @@ function Line({
   );
 }
 
-const ACTION = "h-12 text-[15px]";
-const ICON_ACTION = "size-12 shrink-0 px-0 md:h-12";
+// One control size (the design system's "md": 44 px, 40 on a computer): the
+// download and the two icons, which are squares of that height.
+const ACTION = "flex-1";
+const ICON_ACTION = "size-11 shrink-0 px-0 md:size-10";
 
 /**
  * "Compartilhar": the system's share sheet on a phone (Android or iOS, where
  * the browser has one), and the link copied on a computer.
  */
-async function shareReceiptLink(): Promise<void> {
-  const url = window.location.origin + window.location.pathname;
+async function shareReceiptLink(token: string): Promise<void> {
+  // Always the canonical link: never the address bar, which may carry `from=app`.
+  const url = `${window.location.origin}/r/${token}`;
   const platform = detectPlatform({
     maxTouchPoints: navigator.maxTouchPoints,
     platform: navigator.platform,
@@ -93,7 +96,7 @@ function IconAction({
       <button
         aria-label={label}
         className={cn(
-          buttonVariants({ variant: "onBrandOutline" }),
+          buttonVariants({ size: "md", variant: "onBrandOutline" }),
           ICON_ACTION
         )}
         onClick={onClick}
@@ -123,8 +126,17 @@ export function PublicReceiptPage({
 }) {
   useApiWarmup();
   const locale = getLocale();
-  const hydrated = useHydrated();
   const signedIn = useSignedIn();
+  // The "Voltar" is for whoever came from the app, and only while signed in;
+  // the mark is read once and taken off the address bar, so a link copied from
+  // it is the canonical one.
+  const [cameFromApp] = useState(fromApp);
+  const showBack = cameFromApp && signedIn;
+  useEffect(() => {
+    if (fromApp) {
+      window.history.replaceState(window.history.state, "", `/r/${token}`);
+    }
+  }, [fromApp, token]);
   const proof =
     receipt.proofBy && receipt.proofAt
       ? m.public_receipt_proof({
@@ -166,11 +178,11 @@ export function PublicReceiptPage({
     >
       <div className="w-full max-w-[440px] print:max-w-none">
         {/* From the app: an installed app has no browser back. */}
-        {fromApp ? (
+        {showBack ? (
           <button
             className={cn(
               buttonVariants({ size: "sm", variant: "onBrandOutline" }),
-              "mb-4 print:hidden"
+              "mb-3 print:hidden"
             )}
             onClick={() => window.history.back()}
             type="button"
@@ -184,20 +196,16 @@ export function PublicReceiptPage({
           style={rise(0)}
         >
           <article
-            className="perforated print:mask-none rounded-t-panel bg-surface px-[18px] pt-5 pb-[30px] text-ink [--bite:7px] md:px-[26px] md:pt-6 md:pb-[34px] print:rounded-none print:bg-white print:p-0 print:text-black"
+            className="perforated print:mask-none rounded-t-panel bg-surface px-[18px] pt-4 pb-[26px] text-ink [--bite:7px] md:px-[22px] md:pt-5 md:pb-[28px] print:rounded-none print:bg-white print:p-0 print:text-black"
             data-testid="public-receipt"
           >
-            {/* On paper: the wordmark, inside the card. */}
-            <div className="mb-5 hidden print:block">
-              <Logo size={22} />
-            </div>
-            <IconTile className="size-10" icon={SealCheck} tone="brand" />
-            <h1 className="mt-4 font-display font-semibold text-2xl leading-[1.2] tracking-[-0.03em]">
+            <IconTile className="size-9" icon={SealCheck} tone="brand" />
+            <h1 className="mt-3 font-display font-semibold text-[22px] leading-[1.2] tracking-[-0.03em]">
               {m.public_receipt_title()}
             </h1>
             <Money
               cents={receipt.amountCents}
-              className="mt-3.5 block"
+              className="mt-2.5 block"
               size="hero"
             />
             <p className="mt-1 text-ink-muted text-sm tabular-nums print:text-black/60">
@@ -211,7 +219,7 @@ export function PublicReceiptPage({
                 }),
               })}
             </p>
-            <div className="mt-5 divide-y divide-divider overflow-hidden rounded-card bg-surface-card print:bg-transparent">
+            <div className="mt-4 divide-y divide-divider overflow-hidden rounded-card bg-surface-card print:bg-transparent">
               <Line
                 anchor={
                   <IconTile
@@ -240,7 +248,7 @@ export function PublicReceiptPage({
                 />
               ) : null}
             </div>
-            <p className="mt-4 flex justify-between text-ink-muted text-xs print:text-black/60">
+            <p className="mt-3 flex justify-between text-ink-muted text-xs print:text-black/60">
               {m.public_receipt_code()}
               <b className="font-medium font-mono text-ink print:text-black">
                 {receiptCode(token)}
@@ -248,41 +256,35 @@ export function PublicReceiptPage({
             </p>
             {proof ? (
               <p
-                className="mt-3 text-ink-muted text-xs leading-[1.5] print:text-black/60"
+                className="mt-2 text-ink-muted text-xs leading-[1.45] print:text-black/60"
                 data-testid="receipt-proof"
               >
                 {proof}
               </p>
             ) : null}
-            {/* On paper: who issued it, and where the receipt lives. */}
-            <p className="mt-6 hidden break-all text-black/60 text-xs print:block">
-              {m.public_receipt_issued()}
-              {hydrated ? ` · ${window.location.href}` : ""}
-            </p>
           </article>
         </div>
-        <div className="mt-8 flex gap-2.5 print:hidden">
+        <div className="mt-5 flex gap-2.5 print:hidden">
           <a
             className={cn(
-              buttonVariants({ variant: "onBrand" }),
-              ACTION,
-              "flex-1"
+              buttonVariants({ size: "md", variant: "onBrand" }),
+              ACTION
             )}
             download
-            href={`/api/public/receipts/${token}/receipt.pdf`}
+            href={receiptPdfUrl(token)}
           >
             <DownloadSimple aria-hidden="true" size={18} />
             {m.public_receipt_pdf()}
           </a>
           <IconAction
             label={m.public_receipt_share()}
-            onClick={shareReceiptLink}
+            onClick={() => shareReceiptLink(token)}
           >
             <ShareNetwork aria-hidden="true" size={20} />
           </IconAction>
           <IconAction
             label={m.public_receipt_print()}
-            onClick={() => window.print()}
+            onClick={() => printReceiptPdf(token)}
           >
             <Printer aria-hidden="true" size={20} />
           </IconAction>

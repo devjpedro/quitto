@@ -1,8 +1,6 @@
-import { Copy, Receipt } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
+import { Receipt } from "@phosphor-icons/react";
 import { IconTile } from "@/components/ui/icon-tile";
 import type { ContractDetail } from "@/features/contracts/types";
-import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages.js";
 import {
@@ -16,48 +14,13 @@ import {
 } from "../lib/panel-actions";
 import type { InstallmentDetail } from "../types";
 import { PANEL_TONE, type PanelMode } from "./panel-context";
-import { ReceiptPrimaryButton } from "./receipt-actions";
+import { ReceiptPdfButton, ReceiptPrimaryButton } from "./receipt-actions";
 
-const PROTOCOL_RE = /^https?:\/\//;
-
-function LinkLine({
-  actions,
-  mode,
-}: {
-  actions: ReceiptActions;
-  mode: PanelMode;
-}) {
-  const copy = useCopy();
-  const url = actions.existing;
-  if (!url) {
-    return null;
-  }
-  const tone = PANEL_TONE[mode];
-  return (
-    <div
-      className={cn(
-        "mt-3 flex h-11 min-w-0 items-center gap-2 rounded-control pr-1.5 pl-3 md:h-10",
-        tone.inner
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate font-mono text-ink-muted text-xs">
-        {url.replace(PROTOCOL_RE, "")}
-      </span>
-      <Button
-        aria-label={m.panel_receipt_copy_label()}
-        className={cn("md:h-8", tone.button)}
-        onClick={() => copy(url, m.panel_link_copied())}
-        size="sm"
-        variant="inset"
-      >
-        <Copy aria-hidden="true" size={15} />
-        {m.panel_receipt_copy()}
-      </Button>
-    </div>
-  );
-}
-
-/** The button under the link (the bottom sheet pins it in its footer instead). */
+/**
+ * The block's two buttons: "Abrir recibo" and "Baixar PDF". The bottom sheet
+ * pins the primary in its footer, so there the block keeps only the PDF of
+ * the owner (whoever downloads already has it pinned).
+ */
 function ReceiptButtons({
   actions,
   mode,
@@ -67,16 +30,26 @@ function ReceiptButtons({
   mode: PanelMode;
   primary: PanelPrimary;
 }) {
-  if (mode === "bottom") {
+  const owner = primary !== "receipt_pdf";
+  if (mode === "bottom" && !owner) {
     return null;
   }
   return (
     <div className="mt-3 flex flex-wrap gap-2">
-      <ReceiptPrimaryButton
-        actions={actions}
-        className="min-w-0 flex-1"
-        primary={primary}
-      />
+      {mode === "bottom" ? null : (
+        <ReceiptPrimaryButton
+          actions={actions}
+          className="min-w-0 flex-1"
+          primary={primary}
+        />
+      )}
+      {owner ? (
+        <ReceiptPdfButton
+          actions={actions}
+          className={cn("min-w-0 flex-1", PANEL_TONE[mode].innerButton)}
+          variant="inset"
+        />
+      ) : null}
     </div>
   );
 }
@@ -84,7 +57,7 @@ function ReceiptButtons({
 /**
  * P5 (mockup 14, frame G): the receipt of a paid installment. The owner
  * opens it ("Abrir recibo": the page shares, prints and downloads it); the
- * others download it. With the link already made, it shows, with Copiar.
+ * others download it. Both have "Baixar PDF".
  */
 export function ReceiptBlock({
   contract,
@@ -116,7 +89,6 @@ export function ReceiptBlock({
           </span>
         </p>
       </div>
-      <LinkLine actions={actions} mode={mode} />
       <ReceiptButtons actions={actions} mode={mode} primary={primary} />
     </div>
   );

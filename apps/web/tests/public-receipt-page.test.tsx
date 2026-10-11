@@ -1,6 +1,6 @@
 import type { PublicReceipt } from "@quitto/shared";
 import { QueryClient } from "@tanstack/react-query";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -87,11 +87,44 @@ describe("PublicReceiptPage", () => {
     );
   });
 
-  it("Imprimir chama window.print", async () => {
+  it("Imprimir no computador baixa o PDF da API e o põe num iframe escondido (não imprime a página)", async () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    const fetchPdf = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(new Blob(["%PDF"])));
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: () => "blob:receipt",
+    });
     render(<PublicReceiptPage receipt={receipt} token="tok" />);
     await userEvent.click(screen.getByRole("button", { name: "Imprimir" }));
-    expect(print).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(document.querySelector('iframe[aria-hidden="true"]')).toBeTruthy()
+    );
+    expect(fetchPdf).toHaveBeenCalledWith(
+      "/api/public/receipts/tok/receipt.pdf"
+    );
+    expect(print).not.toHaveBeenCalled();
+    document.querySelector("iframe")?.remove();
+    Reflect.deleteProperty(URL, "createObjectURL");
+  });
+
+  it("Imprimir no celular abre o PDF numa aba (o visualizador do sistema imprime)", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const fetchPdf = vi.spyOn(globalThis, "fetch");
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1"
+    );
+    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    await userEvent.click(screen.getByRole("button", { name: "Imprimir" }));
+    expect(open).toHaveBeenCalledWith(
+      "/api/public/receipts/tok/receipt.pdf?inline=1",
+      "_blank",
+      "noopener"
+    );
+    expect(fetchPdf).not.toHaveBeenCalledWith(
+      "/api/public/receipts/tok/receipt.pdf"
+    );
   });
 
   it("o horário do comprovante, no fuso de São Paulo; sem comprovante, a linha não existe", () => {
@@ -126,9 +159,8 @@ describe("PublicReceiptPage", () => {
     const writeText = vi.spyOn(navigator.clipboard, "writeText");
     render(<PublicReceiptPage receipt={receipt} token="tok" />);
     await user.click(screen.getByRole("button", { name: "Compartilhar" }));
-    expect(writeText).toHaveBeenCalledWith(
-      `${window.location.origin}${window.location.pathname}`
-    );
+    // Always the canonical link, whatever the address bar says.
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/r/tok`);
     expect(toastSuccess).toHaveBeenCalledWith("Link copiado");
   });
 
@@ -146,23 +178,40 @@ describe("PublicReceiptPage", () => {
     render(<PublicReceiptPage receipt={receipt} token="tok" />);
     await user.click(screen.getByRole("button", { name: "Compartilhar" }));
     expect(share).toHaveBeenCalledWith({
-      url: `${window.location.origin}${window.location.pathname}`,
+      url: `${window.location.origin}/r/tok`,
     });
     expect(writeText).not.toHaveBeenCalled();
     Reflect.deleteProperty(navigator, "share");
   });
 
-  it("com from=app mostra o Voltar, que volta no histórico; sem ele, não", async () => {
+  it("o Voltar só com from=app e logado; o from sai da barra de endereço", async () => {
     const back = vi.spyOn(window.history, "back").mockImplementation(() => {
       // No navigation in jsdom.
     });
+    const client = new QueryClient();
+    client.setQueryData(queryKeys.session, {
+      id: "u1",
+      name: "João Souza",
+      email: "joao@x.dev",
+      image: null,
+    });
+    window.history.replaceState(null, "", "/r/tok?from=app");
     const { unmount } = render(
-      <PublicReceiptPage fromApp receipt={receipt} token="tok" />
+      <PublicReceiptPage fromApp receipt={receipt} token="tok" />,
+      { client }
     );
+    expect(window.location.search).toBe("");
     await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
     expect(back).toHaveBeenCalledTimes(1);
     unmount();
-    render(<PublicReceiptPage receipt={receipt} token="tok" />);
+    // Signed out, even with from=app: no "Voltar" (the link was forwarded).
+    const signedOut = render(
+      <PublicReceiptPage fromApp receipt={receipt} token="tok" />
+    );
+    expect(screen.queryByRole("button", { name: "Voltar" })).toBeNull();
+    signedOut.unmount();
+    // Signed in without it: neither.
+    render(<PublicReceiptPage receipt={receipt} token="tok" />, { client });
     expect(screen.queryByRole("button", { name: "Voltar" })).toBeNull();
   });
 

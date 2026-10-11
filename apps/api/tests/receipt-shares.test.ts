@@ -10,6 +10,9 @@ import {
   receiptShare,
   user,
 } from "../src/db/schema";
+
+const INLINE_RE = /^inline; filename=/;
+
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -325,6 +328,17 @@ describe("recibo público", () => {
     expect(res.headers.get("content-disposition")).toBe(
       'attachment; filename="receipt-aluguel-cia-installment-1.pdf"'
     );
+  });
+
+  it("?inline=1 mostra o PDF em vez de baixá-lo (o Imprimir numa aba)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("rs-inline"));
+    const { installmentId } = await createPaidInstallment(cookie);
+    const { token } = await (
+      await shareReq("POST", installmentId, cookie)
+    ).json();
+    const res = await publicReq(`${token}/receipt.pdf?inline=1`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toMatch(INLINE_RE);
   });
 
   it("token inexistente, revogado ou parcela não-paga → 404 (JSON e PDF)", async () => {

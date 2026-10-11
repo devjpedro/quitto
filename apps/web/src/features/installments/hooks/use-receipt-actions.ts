@@ -1,8 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
-import { useCopy } from "@/hooks/use-copy";
 import { ApiError } from "@/lib/api-client";
-import { m } from "@/paraglide/messages.js";
 import { useShareReceiptMutation } from "../api";
 import { usePanel } from "../components/panel-context";
 import type { InstallmentDetail } from "../types";
@@ -12,14 +10,13 @@ const TOKEN_TAIL_RE = /\/r\/([^/?#]+)/;
 /**
  * What the receipt offers, shared by the block and the bottom sheet's footer:
  * "Abrir recibo" (the public page, in this tab, with the link created on
- * demand, once), the link's copy, and the PDF of whoever cannot make a link.
+ * demand, once) and the PDF.
  * Each answers to the panel's lock (review I2 of Task 9): the second hit of a
  * double tap does nothing.
  */
 export function useReceiptActions(detail: InstallmentDetail) {
   const { tryLock } = usePanel();
   const share = useShareReceiptMutation(detail.id);
-  const copy = useCopy();
   const navigate = useNavigate();
   const existing = detail.receiptShare?.url ?? null;
   /** The link, created when there is none yet; null (and said) when it could not be. */
@@ -47,15 +44,6 @@ export function useReceiptActions(detail: InstallmentDetail) {
     guardLink: (event: MouseEvent) => {
       if (!tryLock()) {
         event.preventDefault();
-      }
-    },
-    copyLink: async () => {
-      if (!tryLock()) {
-        return;
-      }
-      const link = await linkOf();
-      if (link) {
-        await copy(link.url, m.panel_link_copied());
       }
     },
     /** The receipt's page, in this tab: `from=app` gives it a "Voltar" (an installed app has no browser back). */
