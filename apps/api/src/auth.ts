@@ -78,6 +78,10 @@ export const auth = betterAuth({
   },
   socialProviders: googleProvider,
   trustedOrigins: [env.WEB_ORIGIN],
+  // Only Fly's edge header names the connection; X-Forwarded-For is whatever the client sent.
+  advanced: {
+    ipAddress: { ipAddressHeaders: ["fly-client-ip"], ipv6Subnet: 64 },
+  },
   rateLimit: {
     enabled: env.NODE_ENV === "production" || env.RATE_LIMIT_ENABLED === "true",
     storage: "memory",
