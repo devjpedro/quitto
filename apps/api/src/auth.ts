@@ -26,6 +26,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: {
     enabled: true,
+    revokeSessionsOnPasswordReset: true,
     requireEmailVerification:
       env.NODE_ENV === "production" ||
       env.REQUIRE_EMAIL_VERIFICATION === "true",

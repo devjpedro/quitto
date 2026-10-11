@@ -68,7 +68,10 @@ export function useChangePassword() {
       currentPassword: string;
       newPassword: string;
     }) => {
-      const { error } = await changePassword(input);
+      const { error } = await changePassword({
+        ...input,
+        revokeOtherSessions: true,
+      });
       if (error) {
         const code = error.code?.toUpperCase();
         throw new Error(

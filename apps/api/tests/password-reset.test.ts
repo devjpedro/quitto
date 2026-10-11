@@ -12,6 +12,9 @@ const { app } = await import("../src/app");
 const { db } = await import("../src/db/client");
 const { user } = await import("../src/db/schema");
 const { eq } = await import("drizzle-orm");
+const { signUpCookie } = await import("./helpers/auth");
+
+const RESET_TOKEN = /reset-password\/([^?"&\s]+)/;
 
 function email(): string {
   return `reset-${Math.floor(performance.now() * 1000)}@quitto.test`;
@@ -87,5 +90,30 @@ describe("password reset", () => {
     await db.update(user).set({ locale: "pt-BR" }).where(eq(user.email, e));
     await requestReset(e, { cookie: "locale=en-US" });
     expect(sent[0]?.subject).toBe("Crie uma nova senha no Quitto");
+  });
+
+  it("redefinir a senha derruba as sessões abertas", async () => {
+    const e = email();
+    const cookie = await signUpCookie(e);
+    const before = await app.handle(
+      new Request("http://localhost/api/me", { headers: { cookie } })
+    );
+    expect(before.status).toBe(200);
+    sent.length = 0;
+    await requestReset(e, {});
+    const token = RESET_TOKEN.exec(sent[0]?.html ?? "")?.[1];
+    expect(token).toBeTruthy();
+    const reset = await app.handle(
+      new Request("http://localhost/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ newPassword: "nova-senha-456", token }),
+      })
+    );
+    expect(reset.status).toBe(200);
+    const after = await app.handle(
+      new Request("http://localhost/api/me", { headers: { cookie } })
+    );
+    expect(after.status).toBe(401);
   });
 });
