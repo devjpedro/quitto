@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { and, eq, ne } from "drizzle-orm";
 import { db, schema } from "../db/client";
+import { contract, participant } from "../db/schema";
 import { normalizeEmail } from "./email";
 import { createRateLimiter, rateLimitOn } from "./rate-limit";
 
@@ -38,7 +39,7 @@ function emailKey(rawEmail: string): string {
 /**
  * Drops an unverified, password-only account before a new sign-up on the same
  * email: whoever registered first without proving the address must not keep
- * the password they chose (pre-hijacking). Verified or social accounts stay.
+ * the password they chose (pre-hijacking). Verified or social accounts, and any with domain data, stay.
  */
 async function dropUnverifiedSquatter(email: string): Promise<void> {
   const [existing] = await db
@@ -60,6 +61,23 @@ async function dropUnverifiedSquatter(email: string): Promise<void> {
     )
     .limit(1);
   if (social) {
+    return;
+  }
+  // Anything tied to the account (a contract, a slot someone linked) is real data: keep it.
+  const [owned] = await db
+    .select({ id: contract.id })
+    .from(contract)
+    .where(eq(contract.ownerId, existing.id))
+    .limit(1);
+  if (owned) {
+    return;
+  }
+  const [linked] = await db
+    .select({ id: participant.id })
+    .from(participant)
+    .where(eq(participant.linkedUserId, existing.id))
+    .limit(1);
+  if (linked) {
     return;
   }
   await db.delete(schema.user).where(eq(schema.user.id, existing.id));

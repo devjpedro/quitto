@@ -12,7 +12,7 @@ mock.module("../src/lib/mailer", () => ({
 const { app } = await import("../src/app");
 
 import { db } from "../src/db/client";
-import { user } from "../src/db/schema";
+import { contract, participant, user } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 function post(path: string, body: Record<string, unknown>, cookie?: string) {
@@ -94,5 +94,52 @@ describe("pré-sequestro de conta", () => {
     expect(res.status).toBeLessThan(400);
     const [row] = await db.select().from(user).where(eq(user.email, e));
     expect(row?.emailVerified).toBe(true);
+  });
+
+  it("conta não verificada dona de contrato não é apagada por um novo cadastro", async () => {
+    const e = uniqueEmail("presq-dono");
+    await signUp(e, "senha-original-123");
+    const [row] = await db.select().from(user).where(eq(user.email, e));
+    await db.insert(contract).values({
+      ownerId: row?.id ?? "",
+      title: "T",
+      ownerRole: "buyer",
+      totalAmountCents: 1000,
+      installmentsCount: 1,
+    });
+    await signUp(e, "senha-do-intruso-1");
+    const [after] = await db.select().from(user).where(eq(user.email, e));
+    expect(after?.id).toBe(row?.id);
+  });
+
+  it("conta não verificada vinculada a um participante não é apagada", async () => {
+    const donoEmail = uniqueEmail("presq-dono2");
+    await signUpCookie(donoEmail);
+    const [dono] = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, donoEmail));
+    const e = uniqueEmail("presq-vinc");
+    await signUp(e, "senha-original-123");
+    const [row] = await db.select().from(user).where(eq(user.email, e));
+    const [anyContract] = await db
+      .insert(contract)
+      .values({
+        ownerId: dono?.id ?? "",
+        title: "T",
+        ownerRole: "seller",
+        totalAmountCents: 1000,
+        installmentsCount: 1,
+      })
+      .returning();
+    await db.insert(participant).values({
+      contractId: anyContract?.id ?? "",
+      displayName: "X",
+      role: "buyer",
+      linkedUserId: row?.id,
+    });
+    await signUp(e, "senha-do-intruso-1");
+    const [after] = await db.select().from(user).where(eq(user.email, e));
+    expect(after?.id).toBe(row?.id);
   });
 });
