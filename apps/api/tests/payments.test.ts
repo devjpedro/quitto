@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { eq } from "drizzle-orm";
 import { app } from "../src/app";
 import { db } from "../src/db/client";
-import { participant } from "../src/db/schema";
+import { participant, proof } from "../src/db/schema";
+import { headObject } from "../src/lib/storage";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
 
 const configured = Boolean(process.env.S3_ENDPOINT);
@@ -242,7 +244,7 @@ describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
     const cookie = await signUpCookie(uniqueEmail("mime"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
-    const objectKey = `proofs/${cId}/${iId}/${crypto.randomUUID()}-evil.txt`;
+    const objectKey = `incoming/${cId}/${iId}/${crypto.randomUUID()}-evil.txt`;
     await putObjectRaw(objectKey, "text/plain");
     const res = await app.handle(
       new Request(`http://localhost/api/installments/${iId}/proofs`, {
@@ -256,13 +258,15 @@ describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
       })
     );
     expect(res.status).toBe(422);
+    // o objeto rejeitado não fica no bucket
+    await expect(headObject(objectKey)).rejects.toBeDefined();
   });
 
   it("rejeita uma chave que existe no bucket mas não é desta parcela (-> 422)", async () => {
     const cookie = await signUpCookie(uniqueEmail("prefix"));
     const cId = await createContract(cookie, true);
     const iId = await firstInstallmentId(cookie, cId);
-    const objectKey = `proofs/${cId}/outra-parcela/${crypto.randomUUID()}-x.pdf`;
+    const objectKey = `incoming/${cId}/outra-parcela/${crypto.randomUUID()}-x.pdf`;
     await putObjectRaw(objectKey, "application/pdf");
     const res = await app.handle(
       new Request(`http://localhost/api/installments/${iId}/proofs`, {
@@ -276,5 +280,73 @@ describe.if(configured)("confirm upload (MIME do objeto armazenado)", () => {
       })
     );
     expect(res.status).toBe(422);
+  });
+});
+
+describe.if(configured)("confirm upload (prefixo incoming/)", () => {
+  async function register(cookie: string, iId: string, objectKey: string) {
+    return await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/proofs`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          objectKey,
+          fileName: "x.pdf",
+          mimeType: "application/pdf",
+        }),
+      })
+    );
+  }
+
+  it("o presign gera a chave em incoming/", async () => {
+    const cookie = await signUpCookie(uniqueEmail("inc0"));
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const res = await app.handle(
+      new Request(`http://localhost/api/installments/${iId}/proofs/presign`, {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie },
+        body: JSON.stringify({
+          fileName: "a b.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 10,
+        }),
+      })
+    );
+    const { objectKey } = await res.json();
+    expect(objectKey.startsWith(`incoming/${cId}/${iId}/`)).toBe(true);
+  });
+
+  it("rejeita uma chave fora do padrão, mesmo sob a parcela (-> 422)", async () => {
+    const cookie = await signUpCookie(uniqueEmail("inc1"));
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    for (const key of [
+      `proofs/${cId}/${iId}/${crypto.randomUUID()}-x.pdf`,
+      `incoming/${cId}/${iId}/x.pdf`,
+      `incoming/${cId}/${iId}/${crypto.randomUUID()}-../x.pdf`,
+      `incoming/${cId}/${iId}/${crypto.randomUUID()}-a/b.pdf`,
+    ]) {
+      expect((await register(cookie, iId, key)).status).toBe(422);
+    }
+  });
+
+  it("copia para proofs/, apaga o incoming e grava a chave final", async () => {
+    const cookie = await signUpCookie(uniqueEmail("inc2"));
+    const cId = await createContract(cookie, true);
+    const iId = await firstInstallmentId(cookie, cId);
+    const tail = `${crypto.randomUUID()}-ok.pdf`;
+    const incoming = `incoming/${cId}/${iId}/${tail}`;
+    await putObjectRaw(incoming, "application/pdf");
+    const res = await register(cookie, iId, incoming);
+    expect(res.status).toBe(200);
+    const final = `proofs/${cId}/${iId}/${tail}`;
+    expect((await headObject(final)).ContentType).toBe("application/pdf");
+    await expect(headObject(incoming)).rejects.toBeDefined();
+    const [row] = await db
+      .select()
+      .from(proof)
+      .where(eq(proof.installmentId, iId));
+    expect(row?.objectKey).toBe(final);
   });
 });

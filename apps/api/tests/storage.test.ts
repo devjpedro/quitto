@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { env } from "../src/env";
-import { deleteObjects, headObject, presignUpload } from "../src/lib/storage";
+import {
+  copyObject,
+  deleteObject,
+  deleteObjects,
+  headObject,
+  presignUpload,
+} from "../src/lib/storage";
 
 const configured = Boolean(env.S3_ENDPOINT && env.S3_BUCKET);
 
@@ -97,6 +103,40 @@ describe.if(configured)("presign assina o tamanho e o tipo", () => {
       });
       expect(put.status).toBe(403);
     }
+  });
+});
+
+describe.if(configured)("copyObject / deleteObject", () => {
+  beforeAll(ensureBucket);
+
+  async function put(key: string, body: string, type: string) {
+    const url = await presignUpload(key, type, body.length);
+    await fetch(url, {
+      method: "PUT",
+      headers: { "content-type": type },
+      body,
+    });
+  }
+
+  it("copia o objeto mantendo tamanho e content-type, e deixa a origem", async () => {
+    const id = crypto.randomUUID();
+    const from = `test/incoming/${id}-a b.pdf`;
+    const to = `test/proofs/${id}-a b.pdf`;
+    await put(from, "%PDF-1.4", "application/pdf");
+    await copyObject(from, to);
+    const head = await headObject(to);
+    expect(head.ContentLength).toBe(8);
+    expect(head.ContentType).toBe("application/pdf");
+    await headObject(from);
+    await deleteObjects([from, to]);
+  });
+
+  it("deleteObject apaga uma chave e não falha numa chave que não existe", async () => {
+    const key = `test/del/${crypto.randomUUID()}.txt`;
+    await put(key, "x", "text/plain");
+    await deleteObject(key);
+    await expect(headObject(key)).rejects.toBeDefined();
+    await deleteObject(key);
   });
 });
 

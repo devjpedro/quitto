@@ -127,13 +127,15 @@ describe("POST /api/contracts com parcelas já pagas", () => {
       ContentLength: 1234,
       ContentType: "application/pdf",
     } as Awaited<ReturnType<typeof storage.headObject>>);
+    const copy = spyOn(storage, "copyObject").mockResolvedValue();
+    const del = spyOn(storage, "deleteObject").mockResolvedValue();
     try {
       const res = await app.handle(
         new Request(`http://localhost/api/installments/${first?.id}/proofs`, {
           method: "POST",
           headers: { "content-type": "application/json", cookie },
           body: JSON.stringify({
-            objectKey: `proofs/${id}/${first?.id}/x-recibo.pdf`,
+            objectKey: `incoming/${id}/${first?.id}/${crypto.randomUUID()}-recibo.pdf`,
             fileName: "recibo.pdf",
             mimeType: "application/pdf",
           }),
@@ -143,6 +145,8 @@ describe("POST /api/contracts com parcelas já pagas", () => {
       expect((await res.json()).status).toBe("paid");
     } finally {
       head.mockRestore();
+      copy.mockRestore();
+      del.mockRestore();
     }
     const proofs = await db
       .select()

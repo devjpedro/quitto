@@ -19,7 +19,12 @@ import { nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
-import { headObject, presignUpload } from "../lib/storage";
+import {
+  copyObject,
+  deleteObject,
+  headObject,
+  presignUpload,
+} from "../lib/storage";
 
 const MAX_PROOF_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
@@ -45,7 +50,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
       const safeName = body.fileName.replace(/[^\w.-]/g, "_").slice(0, 120);
-      const objectKey = `proofs/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
+      const objectKey = `incoming/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
       const uploadUrl = await presignUpload(
         objectKey,
         body.mimeType,
@@ -76,8 +81,11 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
 
-      // a chave tem de ser da própria parcela (o presign a gera assim)
-      if (!body.objectKey.startsWith(`proofs/${inst.contractId}/${inst.id}/`)) {
+      // a chave tem de ser da própria parcela, no formato exato que o presign gera
+      const incomingKey = new RegExp(
+        `^incoming/${inst.contractId}/${inst.id}/([0-9a-f-]{36}-[\\w.-]{1,120})$`
+      ).exec(body.objectKey);
+      if (!incomingKey) {
         throw new ValidationError("Comprovante não pertence à parcela");
       }
 
@@ -87,20 +95,26 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ValidationError("Comprovante não encontrado no storage");
       }
       const sizeBytes = head.ContentLength ?? 0;
-      if (sizeBytes <= 0 || sizeBytes > MAX_PROOF_BYTES) {
-        throw new ValidationError("Arquivo inválido (vazio ou maior que 10MB)");
-      }
       // o tipo do objeto realmente armazenado manda — não confiar só no body
       const storedMime = head.ContentType;
-      if (
-        !(
-          storedMime && (ALLOWED_MIME as readonly string[]).includes(storedMime)
-        )
-      ) {
+      const badSize = sizeBytes <= 0 || sizeBytes > MAX_PROOF_BYTES;
+      const badMime = !(
+        storedMime && (ALLOWED_MIME as readonly string[]).includes(storedMime)
+      );
+      if (badSize || badMime) {
+        // rejeitado não fica no bucket
+        await deleteObject(body.objectKey).catch(() => undefined);
         throw new ValidationError(
-          "Tipo de arquivo do comprovante não permitido"
+          badSize
+            ? "Arquivo inválido (vazio ou maior que 10MB)"
+            : "Tipo de arquivo do comprovante não permitido"
         );
       }
+
+      // só o que passou na checagem sai de incoming/ para proofs/
+      const finalKey = `proofs/${inst.contractId}/${inst.id}/${incomingKey[1]}`;
+      await copyObject(body.objectKey, finalKey);
+      await deleteObject(body.objectKey).catch(() => undefined);
 
       // Paid when the contract was created: the proof is only attached, the
       // status stays and nobody is told (it is past, not a payment to approve).
@@ -112,7 +126,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
           installmentId: inst.id,
-          objectKey: body.objectKey,
+          objectKey: finalKey,
           fileName: body.fileName,
           mimeType: storedMime,
           sizeBytes,

@@ -1,4 +1,6 @@
 import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -93,6 +95,29 @@ export function presignDownload(objectKey: string): Promise<string> {
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
     { expiresIn: 300 }
   );
+}
+
+/**
+ * Copies an object inside the bucket (metadata, content-type included, is kept).
+ * Uploads land under `incoming/`, which the API only moves to `proofs/` once it
+ * checked them; what is never registered is cleared by an R2 lifecycle rule on
+ * `incoming/` (1 day), set in the Cloudflare console: no code sweeps it.
+ */
+export async function copyObject(from: string, to: string): Promise<void> {
+  const { client: c, bucket } = s3();
+  await c.send(
+    new CopyObjectCommand({
+      Bucket: bucket,
+      Key: to,
+      CopySource: `${bucket}/${from.split("/").map(encodeURIComponent).join("/")}`,
+    })
+  );
+}
+
+/** Deletes one object (idempotent: a missing key is not an error). */
+export async function deleteObject(objectKey: string): Promise<void> {
+  const { client: c, bucket } = s3();
+  await c.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
 }
 
 const DELETE_BATCH = 1000;
