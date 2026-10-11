@@ -1,4 +1,8 @@
-import { type InstallmentStatus, isPaidStatus } from "@quitto/shared";
+import {
+  type InstallmentStatus,
+  isoDateInTimeZone,
+  isPaidStatus,
+} from "@quitto/shared";
 import { type ContractProgress, computeProgress } from "../contract-progress";
 
 export interface ModelContract {
@@ -36,6 +40,12 @@ export interface StatementModel {
   }[];
 }
 
+/** The latest proof of an installment: who sent it (first name) and when (ISO instant). Never the file. */
+export interface ReceiptProof {
+  at: string;
+  by: string;
+}
+
 export interface ReceiptModel {
   amountCents: number;
   contractTitle: string;
@@ -43,6 +53,7 @@ export interface ReceiptModel {
   installmentsCount: number;
   paidAt: string;
   parties: DocumentParties;
+  proof: ReceiptProof | null;
   sequence: number;
 }
 
@@ -88,9 +99,11 @@ export function buildStatementModel(
 export function buildReceiptModel(
   contract: ModelContract,
   installment: ModelInstallment,
-  participants: ModelParticipant[]
+  participants: ModelParticipant[],
+  proof: ReceiptProof | null = null
 ): ReceiptModel {
   return {
+    proof,
     contractTitle: contract.title,
     parties: partiesOf(participants),
     sequence: installment.sequence,
@@ -115,6 +128,8 @@ export function toModelInstallment(it: DbInstallment): ModelInstallment {
     amountCents: it.amountCents,
     dueDate: it.dueDate,
     status: it.status as InstallmentStatus,
-    paidAt: it.paidAt ? it.paidAt.toISOString().slice(0, 10) : null,
+    // The day it was paid in São Paulo: a payment at 21:30 there is already
+    // the next day in UTC, and the receipt said "paid on" the wrong day.
+    paidAt: it.paidAt ? isoDateInTimeZone(it.paidAt) : null,
   };
 }

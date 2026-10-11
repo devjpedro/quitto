@@ -1,14 +1,24 @@
 import { randomBytes } from "node:crypto";
 import { isPaidStatus, type PublicReceipt } from "@quitto/shared";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../db/client";
-import { contract, installment, participant, receiptShare } from "../db/schema";
+import {
+  contract,
+  installment,
+  participant,
+  proof,
+  receiptShare,
+  user,
+} from "../db/schema";
 import {
   buildReceiptModel,
   type ReceiptModel,
+  type ReceiptProof,
   toModelInstallment,
 } from "./documents/model";
 import { NotFoundError } from "./errors";
+
+const WHITESPACE_RE = /\s+/;
 
 /** 256 bits aleatórios em base64url (43 chars) — inviável de enumerar. */
 export function newShareToken(): string {
@@ -29,6 +39,25 @@ export async function findActiveShare(
     )
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The newest proof of the installment, as the fact the receipt states: the
+ * sender's first name and the instant. No proof, or one whose sender's account
+ * is gone, is no line (the file itself never leaves here).
+ */
+export async function latestProofOf(
+  installmentId: string
+): Promise<ReceiptProof | null> {
+  const [row] = await db
+    .select({ at: proof.createdAt, name: user.name })
+    .from(proof)
+    .innerJoin(user, eq(user.id, proof.uploadedBy))
+    .where(eq(proof.installmentId, installmentId))
+    .orderBy(desc(proof.createdAt))
+    .limit(1);
+  const by = row?.name.trim().split(WHITESPACE_RE)[0];
+  return row && by ? { at: row.at.toISOString(), by } : null;
 }
 
 const UNAVAILABLE = "Recibo não disponível";
@@ -73,7 +102,12 @@ export async function resolvePublicReceipt(
     .from(participant)
     .where(eq(participant.contractId, inst.contractId));
   return {
-    model: buildReceiptModel(c, toModelInstallment(inst), people),
+    model: buildReceiptModel(
+      c,
+      toModelInstallment(inst),
+      people,
+      await latestProofOf(inst.id)
+    ),
     ownerId: c.ownerId,
   };
 }
@@ -88,5 +122,7 @@ export function toPublicReceipt(model: ReceiptModel): PublicReceipt {
     paidAt: model.paidAt,
     payerName: model.parties.payerName,
     receiverName: model.parties.receiverName,
+    proofBy: model.proof?.by ?? null,
+    proofAt: model.proof?.at ?? null,
   };
 }

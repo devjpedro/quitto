@@ -167,7 +167,7 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
   )
   .get(
     "/public/receipts/:token/receipt.pdf",
-    async ({ params, set }) => {
+    async ({ params, query, set }) => {
       const { model, ownerId } = await resolveOrNoStore(params.token, set);
       // The page speaks the visitor's language; the PDF the owner's.
       const locale = pickLocale(await userLocale(ownerId));
@@ -184,7 +184,20 @@ export const receiptSharesModule = new Elysia({ prefix: "/api" })
       for (const [k, v] of Object.entries(PUBLIC_HEADERS)) {
         res.headers.set(k, v);
       }
+      // "Imprimir" opens it in a tab (where there is no iframe print): shown, not saved.
+      if (query.inline === "1") {
+        res.headers.set(
+          "content-disposition",
+          (res.headers.get("content-disposition") ?? "").replace(
+            "attachment",
+            "inline"
+          )
+        );
+      }
       return res;
     },
-    { params: t.Object({ token: t.String() }) }
+    {
+      params: t.Object({ token: t.String() }),
+      query: t.Object({ inline: t.Optional(t.String()) }),
+    }
   );
