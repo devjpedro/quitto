@@ -20,6 +20,7 @@ export interface DocText {
     percent: number;
     total: string;
   }) => string;
+  proofSentence: (a: { by: string; date: string; time: string }) => string;
   quittanceSentence: (a: { date: string; title: string }) => string;
   receiptSentence: (a: {
     amount: string;
@@ -37,6 +38,8 @@ export interface DocText {
 
 const DOC_TEXT: Record<Locale, DocText> = {
   "pt-BR": {
+    proofSentence: ({ by, date, time }) =>
+      `Comprovante enviado por ${by} em ${date} às ${time} e registrado no Quitto`,
     receiptTitle: "RECIBO DE PAGAMENTO",
     statementTitle: "EXTRATO DO CONTRATO",
     paidSeal: "QUITADO",
@@ -65,6 +68,8 @@ const DOC_TEXT: Record<Locale, DocText> = {
     },
   },
   "en-US": {
+    proofSentence: ({ by, date, time }) =>
+      `Proof sent by ${by} on ${date} at ${time} and recorded on Quitto`,
     receiptTitle: "PAYMENT RECEIPT",
     statementTitle: "CONTRACT STATEMENT",
     paidSeal: "PAID IN FULL",

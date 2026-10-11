@@ -1,6 +1,6 @@
 import { INSTALLMENT_STATUS, type Locale, todayISO } from "@quitto/shared";
 import PDFDocument from "pdfkit";
-import { formatISODate } from "../dates";
+import { formatInstant, formatISODate } from "../dates";
 import { formatCents } from "../money";
 import { type DocText, docStatusLabel, docText } from "./labels";
 import type { ReceiptModel, StatementModel } from "./model";
@@ -167,6 +167,22 @@ export function renderReceiptPdf(
       y + 10,
       { width: doc.page.width - margin * 2 }
     );
+
+  if (model.proof) {
+    doc
+      .font(font.body)
+      .fontSize(size.small)
+      .fillColor(color.muted)
+      .text(
+        t.proofSentence({
+          by: model.proof.by,
+          ...formatInstant(model.proof.at, locale),
+        }),
+        margin,
+        doc.y + 14,
+        { width: doc.page.width - margin * 2 }
+      );
+  }
 
   footer(doc, t, locale);
   return collect(doc);

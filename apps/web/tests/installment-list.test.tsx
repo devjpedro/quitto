@@ -210,6 +210,28 @@ describe("InstallmentList (mockup 14, enxuto)", () => {
     expect(row(list, "i2")).toHaveAttribute("aria-current", "true");
   });
 
+  it("a parcela selecionada rola para dentro da área da lista (nearest), e só a selecionada", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    route.search = { installment: "i7" };
+    const { list } = renderList();
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(scrollIntoView.mock.contexts[0]).toBe(row(list, "i7"));
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+
+  it("o corpo da aba tem rolagem própria a partir de lateral e a página não: o grid ocupa a altura da tela", () => {
+    renderList();
+    const body = screen.getByTestId("tab-body");
+    expect(body).toHaveClass(
+      "lateral:overflow-y-auto",
+      "lateral:min-h-0",
+      "lateral:relative"
+    );
+    expect(body.closest("[data-perspective]")).toHaveClass("lateral:h-full");
+  });
+
   it("quitado: as 10 linhas, sem tag, com 'recebida' no nome acessível", () => {
     const { list } = renderList(settledMoto());
     const buttons = within(list).getAllByRole("button");

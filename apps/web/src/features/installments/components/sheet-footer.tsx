@@ -26,13 +26,12 @@ interface FooterProps {
   primary: PanelPrimary;
 }
 
-function ReceiptFooter({ className, contract, detail, primary }: FooterProps) {
-  const actions = useReceiptActions(detail, contract);
+function ReceiptFooter({ className, detail, primary }: FooterProps) {
+  const actions = useReceiptActions(detail);
   return (
     <ReceiptPrimaryButton
       actions={actions}
       className={className}
-      contract={contract}
       primary={primary}
     />
   );

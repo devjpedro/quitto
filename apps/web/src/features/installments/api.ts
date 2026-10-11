@@ -206,7 +206,7 @@ export function useUpdateInstallmentMutation(contractId: string) {
 }
 
 /**
- * "Compartilhar recibo": creates or reuses the link (POST is idempotent) and
+ * "Abrir recibo" and "Copiar": creates or reuses the link (POST is idempotent) and
  * answers its public URL. A failure throws, and says so once in its own
  * words ("O link do recibo não foi criado", `meta.errorMessage`) instead of
  * the generic toast; a 401 goes to the session gate as always.
@@ -214,11 +214,14 @@ export function useUpdateInstallmentMutation(contractId: string) {
 export function useShareReceiptMutation(installmentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<{ url: string }> => {
+    mutationFn: async (): Promise<{ token: string; url: string }> => {
       const share = await unwrap(
         api.api.installments({ installmentId })["receipt-share"].post()
       );
-      return { url: `${window.location.origin}/r/${share.token}` };
+      return {
+        token: share.token,
+        url: `${window.location.origin}/r/${share.token}`,
+      };
     },
     meta: { errorMessage: m.panel_receipt_failed() },
     onSettled: () =>
