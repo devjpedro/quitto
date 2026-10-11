@@ -9,7 +9,11 @@ import { ErrorBoundary } from "react-error-boundary";
 import { ErrorFallback } from "@/components/error-fallback";
 import { AppFrame } from "@/components/layout/app-frame";
 import { visibleNotificationsTrigger } from "@/components/layout/notifications-trigger";
-import { prefetchWhenIdle, warmMotion } from "@/components/ui/motion-scope";
+import {
+  prefetchWhenIdle,
+  warmChunk,
+  warmMotion,
+} from "@/components/ui/motion-scope";
 import { ContractMobileMenu } from "@/features/contracts/components/contract-mobile-menu";
 import {
   useActiveContracts,
@@ -52,9 +56,9 @@ const TourOverlay = lazy(loadTour);
 function prefetchOverlays() {
   return prefetchWhenIdle(() => {
     warmMotion();
-    loadPalette();
-    loadNotifications();
-    loadTour();
+    warmChunk(loadPalette);
+    warmChunk(loadNotifications);
+    warmChunk(loadTour);
   });
 }
 
