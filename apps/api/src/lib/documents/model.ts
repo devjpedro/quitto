@@ -1,4 +1,8 @@
-import { type InstallmentStatus, isPaidStatus } from "@quitto/shared";
+import {
+  type InstallmentStatus,
+  isoDateInTimeZone,
+  isPaidStatus,
+} from "@quitto/shared";
 import { type ContractProgress, computeProgress } from "../contract-progress";
 
 export interface ModelContract {
@@ -124,6 +128,8 @@ export function toModelInstallment(it: DbInstallment): ModelInstallment {
     amountCents: it.amountCents,
     dueDate: it.dueDate,
     status: it.status as InstallmentStatus,
-    paidAt: it.paidAt ? it.paidAt.toISOString().slice(0, 10) : null,
+    // The day it was paid in São Paulo: a payment at 21:30 there is already
+    // the next day in UTC, and the receipt said "paid on" the wrong day.
+    paidAt: it.paidAt ? isoDateInTimeZone(it.paidAt) : null,
   };
 }

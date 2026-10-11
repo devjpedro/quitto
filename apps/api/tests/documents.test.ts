@@ -11,6 +11,7 @@ import {
   type ModelContract,
   type ModelInstallment,
   type ModelParticipant,
+  toModelInstallment,
 } from "../src/lib/documents/model";
 import { renderReceiptPdf, renderStatementPdf } from "../src/lib/documents/pdf";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
@@ -82,6 +83,19 @@ describe("buildReceiptModel", () => {
     expect(model.amountCents).toBe(5000);
     expect(model.paidAt).toBe("2026-07-12");
     expect(model.parties.payerName).toBe("Comprador");
+  });
+});
+
+describe("toModelInstallment", () => {
+  it("paidAt é o dia do pagamento em São Paulo, não em UTC", () => {
+    const row = {
+      sequence: 1,
+      amountCents: 48_000,
+      dueDate: "2026-10-10",
+      status: "paid",
+      paidAt: new Date("2026-10-11T00:09:00Z"), // 21:09 de 10/10 em São Paulo
+    } as Parameters<typeof toModelInstallment>[0];
+    expect(toModelInstallment(row).paidAt).toBe("2026-10-10");
   });
 });
 
