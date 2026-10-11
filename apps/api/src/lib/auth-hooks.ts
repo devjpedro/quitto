@@ -8,11 +8,23 @@ import { createRateLimiter, rateLimitOn } from "./rate-limit";
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
-/** Per-email caps on top of the per-IP ones: a botnet varies the IP, not the target. */
+/** Per-email caps on top of the per-IP ones: a botnet varies the IP, not the target. A full table fails open (the per-IP limit still holds). */
 const emailLimiters: Record<string, ReturnType<typeof createRateLimiter>> = {
-  "/sign-in/email": createRateLimiter({ max: 5, windowMs: 15 * MINUTE }),
-  "/request-password-reset": createRateLimiter({ max: 3, windowMs: HOUR }),
-  "/send-verification-email": createRateLimiter({ max: 3, windowMs: HOUR }),
+  "/sign-in/email": createRateLimiter({
+    max: 5,
+    windowMs: 15 * MINUTE,
+    onFull: "allow",
+  }),
+  "/request-password-reset": createRateLimiter({
+    max: 3,
+    windowMs: HOUR,
+    onFull: "allow",
+  }),
+  "/send-verification-email": createRateLimiter({
+    max: 3,
+    windowMs: HOUR,
+    onFull: "allow",
+  }),
 };
 
 export const MAX_NAME_LENGTH = 120;

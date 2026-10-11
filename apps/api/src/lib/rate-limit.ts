@@ -18,6 +18,8 @@ export const MAX_KEYS = 10_000;
 export function createRateLimiter(options: {
   max: number;
   windowMs: number;
+  /** A new key with the table full: refuse it (default) or let it through unstored. */
+  onFull?: "deny" | "allow";
 }): RateLimiter {
   const windows = new Map<string, { count: number; resetAt: number }>();
   return {
@@ -34,7 +36,7 @@ export function createRateLimiter(options: {
           }
         }
         if (windows.size >= MAX_KEYS) {
-          return false;
+          return options.onFull === "allow";
         }
       }
       windows.set(key, { count: 1, resetAt: now + options.windowMs });
