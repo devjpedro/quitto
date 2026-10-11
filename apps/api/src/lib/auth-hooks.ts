@@ -1,4 +1,6 @@
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { and, eq, ne } from "drizzle-orm";
+import { db, schema } from "../db/client";
 import { normalizeEmail } from "./email";
 import { createRateLimiter, rateLimitOn } from "./rate-limit";
 
@@ -12,7 +14,46 @@ const emailLimiters: Record<string, ReturnType<typeof createRateLimiter>> = {
   "/send-verification-email": createRateLimiter({ max: 3, windowMs: HOUR }),
 };
 
-export const authBeforeHook = createAuthMiddleware((ctx) => {
+export const MAX_NAME_LENGTH = 120;
+
+/**
+ * Drops an unverified, password-only account before a new sign-up on the same
+ * email: whoever registered first without proving the address must not keep
+ * the password they chose (pre-hijacking). Verified or social accounts stay.
+ */
+async function dropUnverifiedSquatter(email: string): Promise<void> {
+  const [existing] = await db
+    .select({ id: schema.user.id, emailVerified: schema.user.emailVerified })
+    .from(schema.user)
+    .where(eq(schema.user.email, email))
+    .limit(1);
+  if (!existing || existing.emailVerified) {
+    return;
+  }
+  const [social] = await db
+    .select({ id: schema.account.id })
+    .from(schema.account)
+    .where(
+      and(
+        eq(schema.account.userId, existing.id),
+        ne(schema.account.providerId, "credential")
+      )
+    )
+    .limit(1);
+  if (social) {
+    return;
+  }
+  await db.delete(schema.user).where(eq(schema.user.id, existing.id));
+}
+
+function checkName(body: unknown): void {
+  const name = (body as { name?: unknown } | null)?.name;
+  if (typeof name === "string" && name.length > MAX_NAME_LENGTH) {
+    throw new APIError("BAD_REQUEST", { message: "Nome muito longo." });
+  }
+}
+
+export const authBeforeHook = createAuthMiddleware(async (ctx) => {
   const body = ctx.body as { email?: unknown } | null;
   const rawEmail = typeof body?.email === "string" ? body.email : null;
 
@@ -27,5 +68,14 @@ export const authBeforeHook = createAuthMiddleware((ctx) => {
       message: "Muitas tentativas. Tente mais tarde.",
     });
   }
-  return Promise.resolve();
+
+  if (ctx.path === "/sign-up/email") {
+    checkName(ctx.body);
+    if (rawEmail) {
+      await dropUnverifiedSquatter(normalizeEmail(rawEmail));
+    }
+  }
+  if (ctx.path === "/update-user") {
+    checkName(ctx.body);
+  }
 });
