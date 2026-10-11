@@ -120,6 +120,56 @@ test("Compartilhar copia o link no computador, Imprimir é só ícone e o recibo
   await visitor.close();
 });
 
+const SIZES = [
+  { height: 740, width: 390 },
+  { height: 720, width: 1280 },
+];
+
+test("o recibo cabe na tela sem rolar a 390×740 e a 1280×720, e o cartão não gruda nos botões: deslogado e logado, com e sem o comprovante", async ({
+  browser,
+}) => {
+  test.setTimeout(150_000);
+  for (const proof of [false, true]) {
+    const owner = await sharedReceiptSession(browser, { proof });
+    const visitor = await browser.newContext();
+    try {
+      const signedOut = await visitor.newPage();
+      for (const [who, page] of [
+        ["deslogado", signedOut],
+        ["logado", owner.page],
+      ] as const) {
+        for (const size of SIZES) {
+          const where = `${who}, ${size.width}×${size.height}, comprovante: ${proof}`;
+          await page.setViewportSize(size);
+          await page.goto(`/r/${owner.token}`);
+          await waitForHydrated(page);
+          const card = page.getByTestId("public-receipt");
+          await expect(card).toBeVisible();
+          if (proof) {
+            await expect(page.getByTestId("receipt-proof")).toBeVisible();
+          }
+          const { scrollHeight, innerHeight } = await page.evaluate(() => ({
+            scrollHeight: document.documentElement.scrollHeight,
+            innerHeight: window.innerHeight,
+          }));
+          expect(scrollHeight, where).toBeLessThanOrEqual(innerHeight);
+          const cardBox = await card.boundingBox();
+          const buttonBox = await page
+            .getByRole("link", { name: "Baixar PDF" })
+            .boundingBox();
+          expect(
+            (buttonBox?.y ?? 0) - ((cardBox?.y ?? 0) + (cardBox?.height ?? 0)),
+            where
+          ).toBeGreaterThanOrEqual(24);
+        }
+      }
+    } finally {
+      await visitor.close();
+      await owner.close();
+    }
+  }
+});
+
 test("um token que não existe: 404 e a frase", async ({ page }) => {
   const response = await page.goto("/r/token-que-nao-existe");
   expect(response?.status()).toBe(404);
