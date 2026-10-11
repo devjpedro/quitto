@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   DownloadSimple,
   Files,
   Printer,
@@ -41,7 +42,8 @@ function Line({
 }) {
   return (
     <div className="flex min-h-[60px] items-center gap-3 py-2.5 pr-4 pl-3">
-      {anchor}
+      {/* The face and the tile keep their fill on paper: without it the initials are white on white. */}
+      <span className="shrink-0 [print-color-adjust:exact]">{anchor}</span>
       <div className="min-w-0">
         <p className="text-ink-muted text-xs print:text-black/60">{label}</p>
         <p className="mt-0.5 truncate font-medium text-sm">{value}</p>
@@ -132,7 +134,6 @@ export function PublicReceiptPage({
       : null;
   return (
     <ReceiptFrame
-      back={fromApp}
       footer={
         signedIn ? (
           <span className="max-md:hidden">{m.public_receipt_tagline()}</span>
@@ -164,6 +165,20 @@ export function PublicReceiptPage({
       }
     >
       <div className="w-full max-w-[440px] print:max-w-none">
+        {/* From the app: an installed app has no browser back. */}
+        {fromApp ? (
+          <button
+            className={cn(
+              buttonVariants({ size: "sm", variant: "onBrandOutline" }),
+              "mb-4 print:hidden"
+            )}
+            onClick={() => window.history.back()}
+            type="button"
+          >
+            <ArrowLeft aria-hidden="true" size={16} />
+            {m.public_receipt_back()}
+          </button>
+        ) : null}
         <div
           className="piece-drop piece-rise print:filter-none"
           style={rise(0)}

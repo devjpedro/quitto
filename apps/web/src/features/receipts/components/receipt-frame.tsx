@@ -1,45 +1,24 @@
-import { ArrowLeft } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { LocaleSwitch } from "@/components/locale-switch";
 import { StagePanel } from "@/components/stage/stage-panel";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages.js";
 import { getLocale, setLocale } from "@/paraglide/runtime.js";
 
 /**
  * The public receipt's screen (mockup 19, decision 7): no form, so the
  * Floresta panel takes the whole screen, with the paper in the middle and
  * "Criar conta" for whoever got the link. On paper it is only the page.
- * `footer` is the line at the bottom (what Quitto is, and the way in);
- * `back` puts a "Voltar" (history.back) at the top left, for who came from
- * the app: an installed app has no browser back.
+ * `footer` is the line at the bottom (what Quitto is, and the way in).
  */
 export function ReceiptFrame({
-  back,
   children,
   footer,
 }: {
-  back?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 }) {
   return (
     <div className="min-h-dvh bg-surface font-sans text-ink md:p-3 print:min-h-0 print:bg-white print:p-0 print:text-black">
       <StagePanel className="flex min-h-dvh flex-col md:min-h-[calc(100dvh-24px)] md:rounded-frame print:min-h-0 print:rounded-none print:bg-white print:text-black">
-        {back ? (
-          <button
-            className={cn(
-              buttonVariants({ size: "sm", variant: "onBrandOutline" }),
-              "absolute top-3 left-3 z-[2] md:top-[22px] md:left-[22px] print:hidden"
-            )}
-            onClick={() => window.history.back()}
-            type="button"
-          >
-            <ArrowLeft aria-hidden="true" size={16} />
-            {m.public_receipt_back()}
-          </button>
-        ) : null}
         <div className="absolute top-3 right-3 z-[2] md:top-[26px] md:right-[26px] print:hidden">
           <LocaleSwitch
             onChange={(locale) => setLocale(locale)}
