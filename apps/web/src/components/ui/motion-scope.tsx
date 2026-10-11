@@ -32,9 +32,18 @@ export function prefetchWhenIdle(task: () => void): () => void {
   };
 }
 
+/**
+ * Fetches a chunk ahead. A warm-up that fails is not an error: a tab from
+ * before a deploy asks for a chunk the new one no longer has, and the real use
+ * loads it again (RouteError then reloads the page once).
+ */
+export function warmChunk(load: () => Promise<unknown>): void {
+  load().catch(() => undefined);
+}
+
 /** Fetches the animation engine ahead, so the first sheet opens animated. */
 export function warmMotion(): void {
-  loadFeatures();
+  warmChunk(loadFeatures);
 }
 
 /** The `m.*` inside animate as soon as the engine is there; until then they stay at `initial`. */

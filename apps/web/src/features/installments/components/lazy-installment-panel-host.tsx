@@ -1,5 +1,5 @@
 import { type ComponentProps, lazy, Suspense, useEffect } from "react";
-import { prefetchWhenIdle } from "@/components/ui/motion-scope";
+import { prefetchWhenIdle, warmChunk } from "@/components/ui/motion-scope";
 import { useEverTrue } from "@/hooks/use-ever-true";
 
 const loadHost = () =>
@@ -15,7 +15,7 @@ const Host = lazy(loadHost);
  */
 export function InstallmentPanelHost(props: ComponentProps<typeof Host>) {
   const wanted = useEverTrue(Boolean(props.route.installmentId));
-  useEffect(() => prefetchWhenIdle(() => loadHost()), []);
+  useEffect(() => prefetchWhenIdle(() => warmChunk(loadHost)), []);
   return wanted ? (
     <Suspense fallback={null}>
       <Host {...props} />
