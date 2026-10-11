@@ -148,6 +148,19 @@ test("o recibo cabe na tela sem rolar a 390×740 e a 1280×720, e o cartão não
           if (proof) {
             await expect(page.getByTestId("receipt-proof")).toBeVisible();
           }
+          // The card rises in: measure where it rests, not mid-animation.
+          await page.evaluate(() =>
+            Promise.all(
+              document
+                .getAnimations()
+                .filter(
+                  (animation) =>
+                    animation.effect?.getTiming().iterations !==
+                    Number.POSITIVE_INFINITY
+                )
+                .map((animation) => animation.finished)
+            )
+          );
           const { scrollHeight, innerHeight } = await page.evaluate(() => ({
             scrollHeight: document.documentElement.scrollHeight,
             innerHeight: window.innerHeight,
