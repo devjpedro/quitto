@@ -67,7 +67,7 @@ function ReceiptButtons({
   mode: PanelMode;
   primary: PanelPrimary;
 }) {
-  if (mode === "bottom" && primary !== "receipt_pdf") {
+  if (mode === "bottom") {
     return null;
   }
   return (
