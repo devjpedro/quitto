@@ -64,4 +64,12 @@ describe("limite por e-mail no auth", () => {
       expect((await post(path, victim, "192.0.2.99")).status).toBe(429);
     }
   });
+
+  it("e-mail com mais de 254 caracteres dá 400 e não consome o balde", async () => {
+    const long = `${"a".repeat(300)}@quitto.test`;
+    for (let i = 1; i <= 6; i++) {
+      const res = await post("/sign-in/email", long, `203.0.113.${i}`);
+      expect(res.status).toBe(400);
+    }
+  });
 });

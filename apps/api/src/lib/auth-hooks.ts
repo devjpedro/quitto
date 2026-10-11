@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { and, eq, ne } from "drizzle-orm";
 import { db, schema } from "../db/client";
@@ -15,6 +16,12 @@ const emailLimiters: Record<string, ReturnType<typeof createRateLimiter>> = {
 };
 
 export const MAX_NAME_LENGTH = 120;
+const MAX_EMAIL_LENGTH = 254;
+
+/** Limiter key for an email: a fixed-size hash, so a huge value never sits in memory. */
+function emailKey(rawEmail: string): string {
+  return createHash("sha256").update(normalizeEmail(rawEmail)).digest("hex");
+}
 
 /**
  * Drops an unverified, password-only account before a new sign-up on the same
@@ -57,12 +64,16 @@ export const authBeforeHook = createAuthMiddleware(async (ctx) => {
   const body = ctx.body as { email?: unknown } | null;
   const rawEmail = typeof body?.email === "string" ? body.email : null;
 
+  if (rawEmail && rawEmail.length > MAX_EMAIL_LENGTH) {
+    throw new APIError("BAD_REQUEST", { message: "E-mail inválido." });
+  }
+
   const limiter = emailLimiters[ctx.path];
   if (
     limiter &&
     rateLimitOn() &&
     rawEmail &&
-    !limiter.hit(`${ctx.path}:${normalizeEmail(rawEmail)}`)
+    !limiter.hit(`${ctx.path}:${emailKey(rawEmail)}`)
   ) {
     throw new APIError("TOO_MANY_REQUESTS", {
       message: "Muitas tentativas. Tente mais tarde.",
