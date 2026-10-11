@@ -91,7 +91,10 @@ describe("PublicReceiptPage", () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
     const fetchPdf = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(new Blob(["%PDF"])));
+      // A string body: undici's Response can't read jsdom's Blob in every Node.
+      .mockResolvedValue(
+        new Response("%PDF", { headers: { "content-type": "application/pdf" } })
+      );
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
       value: () => "blob:receipt",
