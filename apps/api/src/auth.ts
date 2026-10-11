@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { eq } from "drizzle-orm";
 import { db, schema } from "./db/client";
 import { env } from "./env";
+import { authBeforeHook } from "./lib/auth-hooks";
 import { AUTH_RATE_RULES } from "./lib/auth-rate-limit";
 import { resetPasswordEmail, verificationEmail } from "./lib/email-templates";
 import { localeFromHeaders, pickLocale, userLocale } from "./lib/locale";
@@ -55,6 +56,7 @@ export const auth = betterAuth({
       await sendEmail({ to: user.email, subject, html });
     },
   },
+  hooks: { before: authBeforeHook },
   databaseHooks: {
     user: {
       create: {
