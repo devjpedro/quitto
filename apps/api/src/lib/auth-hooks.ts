@@ -65,6 +65,42 @@ async function dropUnverifiedSquatter(email: string): Promise<void> {
   await db.delete(schema.user).where(eq(schema.user.id, existing.id));
 }
 
+/** The claims of a JWT, read without verifying it (Better Auth verifies it right after). */
+function unverifiedClaims(token: string): { email?: unknown; iat?: unknown } {
+  try {
+    const payload = token.split(".")[1] ?? "";
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * A verification link only counts for the account that asked for it: if the
+ * address was re-registered after the link was issued (the squatter's account
+ * was dropped), the old link must not verify the new account.
+ */
+async function assertLinkFromCurrentAccount(token: unknown): Promise<void> {
+  if (typeof token !== "string") {
+    return;
+  }
+  const { email, iat } = unverifiedClaims(token);
+  if (typeof email !== "string" || typeof iat !== "number") {
+    return;
+  }
+  const [existing] = await db
+    .select({ createdAt: schema.user.createdAt })
+    .from(schema.user)
+    .where(eq(schema.user.email, normalizeEmail(email)))
+    .limit(1);
+  // iat has second resolution, createdAt millisecond: compare in seconds.
+  if (existing && iat < Math.floor(existing.createdAt.getTime() / 1000)) {
+    throw new APIError("BAD_REQUEST", {
+      message: "Link inválido. Peça um novo e-mail de verificação.",
+    });
+  }
+}
+
 function checkName(body: unknown): void {
   const name = (body as { name?: unknown } | null)?.name;
   if (typeof name === "string" && name.length > MAX_NAME_LENGTH) {
@@ -97,6 +133,9 @@ export const authBeforeHook = createAuthMiddleware(async (ctx) => {
     if (rawEmail) {
       await dropUnverifiedSquatter(normalizeEmail(rawEmail));
     }
+  }
+  if (ctx.path === "/verify-email") {
+    await assertLinkFromCurrentAccount(ctx.query?.token);
   }
   if (ctx.path === "/update-user") {
     checkName(ctx.body);

@@ -1,6 +1,16 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import { eq } from "drizzle-orm";
-import { app } from "../src/app";
+
+const TOKEN_IN_LINK = /token=([\w.-]+)/;
+const sent: { to: string; html: string }[] = [];
+mock.module("../src/lib/mailer", () => ({
+  sendEmail: (input: { to: string; html: string }) => {
+    sent.push(input);
+    return Promise.resolve();
+  },
+}));
+const { app } = await import("../src/app");
+
 import { db } from "../src/db/client";
 import { user } from "../src/db/schema";
 import { signUpCookie, uniqueEmail } from "./helpers/auth";
@@ -53,5 +63,36 @@ describe("pré-sequestro de conta", () => {
     expect(upd.status).toBe(400);
     const ok = await post("/update-user", { name: "Nome ok" }, cookie);
     expect(ok.status).toBe(200);
+  });
+
+  it("o link de verificação do cadastro apagado não verifica a conta recriada", async () => {
+    const e = uniqueEmail("presq-link");
+    await signUp(e, "senha-do-atacante1");
+    const link = sent.findLast((m) => m.to === e)?.html.match(TOKEN_IN_LINK);
+    expect(link?.[1]).toBeTruthy();
+    // The token's iat has second resolution: let the second turn over.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await signUp(e, "senha-do-dono-123");
+    const res = await app.handle(
+      new Request(`http://localhost/api/auth/verify-email?token=${link?.[1]}`)
+    );
+    expect(res.status).toBe(400);
+    expect(res.headers.getSetCookie().join(";")).not.toContain("session_token");
+    const [row] = await db.select().from(user).where(eq(user.email, e));
+    expect(row?.emailVerified).toBe(false);
+  });
+
+  it("o link do cadastro vigente continua verificando a conta", async () => {
+    const e = uniqueEmail("presq-link-ok");
+    await signUp(e, "senha-do-dono-123");
+    const token = sent
+      .findLast((m) => m.to === e)
+      ?.html.match(TOKEN_IN_LINK)?.[1];
+    const res = await app.handle(
+      new Request(`http://localhost/api/auth/verify-email?token=${token}`)
+    );
+    expect(res.status).toBeLessThan(400);
+    const [row] = await db.select().from(user).where(eq(user.email, e));
+    expect(row?.emailVerified).toBe(true);
   });
 });
