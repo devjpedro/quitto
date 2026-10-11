@@ -11,7 +11,8 @@ import {
 /**
  * Mockup 21, M1-A: the invitation to install, in the flow of the home just
  * under the date. Phone only, signed in, outside the installed app; the account
- * remembers an installed app (appInstalledAt), so no browser asks again.
+ * remembers an app installed on a phone (appInstalledAt), so no browser shows
+ * the card again. Only the card: the account menu item stays available.
  */
 export function InstallCard() {
   const { canInstall, dismissed, platform } = useInstallState();

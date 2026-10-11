@@ -115,7 +115,7 @@ test.describe("instalar o app · celular Android", () => {
     ).toHaveCount(0);
   });
 
-  test("abrir em standalone marca a conta, e o card some em outro navegador", async ({
+  test("abrir em standalone marca a conta, e só o card some em outro navegador", async ({
     page,
     browser,
   }) => {
@@ -152,10 +152,11 @@ test.describe("instalar o app · celular Android", () => {
     await fireInstallPrompt(second);
     await second.waitForLoadState("networkidle");
     await expect(second.getByTestId(CARD)).toHaveCount(0);
+    // Only the card obeys the account's mark: the menu item still shows.
     await openAccountMenu(second);
     await expect(
       second.getByRole("menuitem", { name: "Instalar app" })
-    ).toHaveCount(0);
+    ).toBeVisible();
     await other.close();
     expect(email).toBeTruthy();
   });
@@ -220,5 +221,14 @@ test.describe("instalar o app · desktop", () => {
     await fireInstallPrompt(page);
     await page.waitForLoadState("networkidle");
     await expect(page.getByTestId(CARD)).toHaveCount(0);
+  });
+
+  test("o appinstalled no desktop não marca a conta", async ({ page }) => {
+    await signup(page);
+    await waitForHydrated(page);
+    await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
+    await page.waitForLoadState("networkidle");
+    const res = await page.request.get("/api/me");
+    expect((await res.json()).appInstalledAt).toBeNull();
   });
 });
