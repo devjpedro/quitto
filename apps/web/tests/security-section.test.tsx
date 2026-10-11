@@ -84,6 +84,7 @@ describe("Segurança", () => {
       expect(mocks.changePassword).toHaveBeenCalledWith({
         currentPassword: "atual-123",
         newPassword: "nova-senha-1",
+        revokeOtherSessions: true,
       })
     );
     await waitFor(() =>
