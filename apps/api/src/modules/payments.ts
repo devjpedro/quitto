@@ -4,19 +4,25 @@ import {
   isPaidStatus,
   NOTIFICATION_TYPE,
 } from "@quitto/shared";
+import { count, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { ForbiddenError, ValidationError } from "../lib/errors";
+import {
+  ForbiddenError,
+  RateLimitedError,
+  ValidationError,
+} from "../lib/errors";
 import {
   installmentEntitySchema,
   loadInstallmentForUser,
   toInstallmentEntity,
   transitionInstallment,
 } from "../lib/installment-access";
-import { nextStatus } from "../lib/installment-state";
+import { type InstallmentStatus, nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
+import { createRateLimiter, rateLimitOn } from "../lib/rate-limit";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import {
@@ -27,6 +33,34 @@ import {
 } from "../lib/storage";
 
 const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+const MAX_PROOFS_PER_INSTALLMENT = 5;
+
+/** Presigns per user: each one is a URL that can write to the bucket (cost). */
+const presignLimiter = createRateLimiter({ max: 20, windowMs: 3_600_000 });
+
+/**
+ * Whether the installment still takes a proof, and the status it moves to. One
+ * proof at most on an installment registered as paid at creation (it is only
+ * attached); five on any other; and the state machine must accept the send.
+ */
+async function proofIntake(
+  inst: { id: string; status: InstallmentStatus; registeredOnCreate: boolean },
+  requiresConfirmation: boolean
+): Promise<{ attachOnly: boolean; newStatus: InstallmentStatus }> {
+  const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
+  const [row] = await db
+    .select({ n: count() })
+    .from(proof)
+    .where(eq(proof.installmentId, inst.id));
+  const sent = row?.n ?? 0;
+  if (sent >= (attachOnly ? 1 : MAX_PROOFS_PER_INSTALLMENT)) {
+    throw new ValidationError("Limite de comprovantes da parcela atingido");
+  }
+  const newStatus = attachOnly
+    ? inst.status
+    : nextStatus(inst.status, "submit_proof", requiresConfirmation);
+  return { attachOnly, newStatus };
+}
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
 // Explicit literal tuple (not `ALLOWED_MIME.map(...)`): a mapped array widens to
@@ -42,13 +76,20 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
     "/installments/:installmentId/proofs/presign",
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
-      const { inst, caps } = await loadInstallmentForUser(
-        user.id,
-        params.installmentId
-      );
+      if (rateLimitOn() && !presignLimiter.hit(user.id)) {
+        throw new RateLimitedError(
+          "Muitos envios de comprovante. Tente mais tarde."
+        );
+      }
+      const {
+        inst,
+        contract: c,
+        caps,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
       if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
+      await proofIntake(inst, c.requiresConfirmation);
       const safeName = body.fileName.replace(/[^\w.-]/g, "_").slice(0, 120);
       const objectKey = `incoming/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
       const uploadUrl = await presignUpload(
@@ -89,6 +130,12 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ValidationError("Comprovante não pertence à parcela");
       }
 
+      // a parcela ainda aceita comprovante (teto e estado), antes de mexer no storage
+      const { attachOnly, newStatus } = await proofIntake(
+        inst,
+        c.requiresConfirmation
+      );
+
       // valida que o objeto realmente subiu (e tamanho/tipo coerentes)
       const head = await headObject(body.objectKey).catch(() => null);
       if (!head) {
@@ -115,13 +162,6 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       const finalKey = `proofs/${inst.contractId}/${inst.id}/${incomingKey[1]}`;
       await copyObject(body.objectKey, finalKey);
       await deleteObject(body.objectKey).catch(() => undefined);
-
-      // Paid when the contract was created: the proof is only attached, the
-      // status stays and nobody is told (it is past, not a payment to approve).
-      const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
-      const newStatus = attachOnly
-        ? inst.status
-        : nextStatus(inst.status, "submit_proof", c.requiresConfirmation);
 
       const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
