@@ -53,7 +53,13 @@ export function buildApp() {
       }
       // Anonymous 4xx noise (a scanner's 404, a bad body): Elysia's own answer
       // stays, and Sentry does not hear of it.
-      if (code === "NOT_FOUND" || code === "PARSE" || code === "VALIDATION") {
+      if (
+        code === "NOT_FOUND" ||
+        code === "PARSE" ||
+        code === "VALIDATION" ||
+        code === "INVALID_COOKIE_SIGNATURE" ||
+        code === "INVALID_FILE_TYPE"
+      ) {
         return;
       }
       captureException(error);

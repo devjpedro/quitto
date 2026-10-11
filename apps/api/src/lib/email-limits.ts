@@ -2,6 +2,7 @@ import { captureMessage } from "@sentry/bun";
 import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { invite } from "../db/schema";
+import { env } from "../env";
 import { ConflictError, RateLimitedError } from "./errors";
 import { createRateLimiter, rateLimitOn } from "./rate-limit";
 
@@ -57,7 +58,6 @@ export async function assertPendingInviteRoom(
 }
 
 /** Global ceiling on emails a day (in memory, one process): fails closed rather than burn the sender's reputation. */
-export const EMAIL_DAILY_CAP = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 let capWindow = { sent: 0, resetAt: 0, alerted: false };
@@ -67,7 +67,7 @@ export function takeEmailSlot(now: number = Date.now()): boolean {
   if (capWindow.resetAt <= now) {
     capWindow = { sent: 0, resetAt: now + DAY_MS, alerted: false };
   }
-  if (capWindow.sent >= EMAIL_DAILY_CAP) {
+  if (capWindow.sent >= env.EMAIL_DAILY_CAP) {
     if (!capWindow.alerted) {
       capWindow.alerted = true;
       captureMessage("Cota diária de e-mail esgotada", "warning");

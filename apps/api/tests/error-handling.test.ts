@@ -9,13 +9,16 @@ mock.module("@sentry/bun", () => ({
 
 const { buildApp } = await import("../src/app");
 const { signUpCookie, uniqueEmail } = await import("./helpers/auth");
-const { t } = await import("elysia");
+const { t, InvalidCookieSignature } = await import("elysia");
 
 const testApp = buildApp()
   .get("/boom", () => {
     throw new Error(
       "Failed query: select * from user where email = $1 params: x@y"
     );
+  })
+  .get("/bad-cookie", () => {
+    throw new InvalidCookieSignature("session");
   })
   .post("/echo", ({ body }) => body, { body: t.Object({ n: t.Number() }) });
 
@@ -67,6 +70,14 @@ describe("onError", () => {
       new Request("http://localhost/api/contracts/abc", { headers: { cookie } })
     );
     expect(res.status).toBe(404);
+    expect(captured).toHaveLength(0);
+  });
+
+  it("cookie com assinatura inválida não vai para o Sentry nem vira 500", async () => {
+    const res = await testApp.handle(
+      new Request("http://localhost/bad-cookie")
+    );
+    expect(res.status).toBeLessThan(500);
     expect(captured).toHaveLength(0);
   });
 });

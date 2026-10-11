@@ -1,5 +1,7 @@
+import { captureException } from "@sentry/bun";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { db, schema } from "./db/client";
 import { env } from "./env";
@@ -59,6 +61,16 @@ export const auth = betterAuth({
     },
   },
   hooks: { before: authBeforeHook },
+  // An unexpected failure inside Better Auth (a DB error in a hook) must reach
+  // Sentry; the expected 4xx (wrong password, rate limit) is not an incident.
+  onAPIError: {
+    onError: (error) => {
+      if (error instanceof APIError && error.statusCode < 500) {
+        return;
+      }
+      captureException(error);
+    },
+  },
   databaseHooks: {
     user: {
       create: {

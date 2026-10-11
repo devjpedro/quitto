@@ -7,7 +7,8 @@ mock.module("@sentry/bun", () => ({
   captureMessage: (m: string) => captured.push(m),
 }));
 
-const { EMAIL_DAILY_CAP, resetEmailCap, takeEmailSlot } = await import(
+const { env } = await import("../src/env");
+const { resetEmailCap, takeEmailSlot } = await import(
   "../src/lib/email-limits"
 );
 const { sendEmail } = await import("../src/lib/mailer");
@@ -27,7 +28,7 @@ describe("mailer", () => {
 
   it("o teto diário recusa o 501º e avisa o Sentry uma vez por janela", () => {
     const now = 1_000_000;
-    for (let i = 0; i < EMAIL_DAILY_CAP; i++) {
+    for (let i = 0; i < env.EMAIL_DAILY_CAP; i++) {
       expect(takeEmailSlot(now)).toBe(true);
     }
     expect(takeEmailSlot(now)).toBe(false);
