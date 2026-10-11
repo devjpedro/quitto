@@ -130,6 +130,28 @@ export function formatDate(
   return dateFormatter(locale, preset).format(toUtcDate(iso));
 }
 
+/** An instant as São Paulo's date (per the locale) and 24h "HH:mm": the same on any server or device. */
+export function formatInstant(
+  iso: string,
+  locale: Locale
+): { date: string; time: string } {
+  const at = new Date(iso);
+  return {
+    date: new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: APP_TIME_ZONE,
+      year: "numeric",
+    }).format(at),
+    time: new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      minute: "2-digit",
+      timeZone: APP_TIME_ZONE,
+    }).format(at),
+  };
+}
+
 /** Month name of a "YYYY-MM": "setembro" / "September". */
 export function formatMonthName(month: string, locale: Locale): string {
   return cached(

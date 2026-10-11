@@ -1,4 +1,4 @@
-import type { Locale } from "@quitto/shared";
+import { APP_TIME_ZONE, type Locale } from "@quitto/shared";
 
 /** Parses an ISO date (YYYY-MM-DD) into year/month/day numbers (UTC-safe, no timezone drift). */
 function parseISODate(iso: string): { y: number; m: number; d: number } {
@@ -44,4 +44,26 @@ export function endOfMonth(iso: string): string {
   const { y, m } = parseISODate(iso);
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+}
+
+/** An instant as its São Paulo date (per the locale) and 24h time ("HH:mm"). */
+export function formatInstant(
+  iso: string,
+  locale: Locale
+): { date: string; time: string } {
+  const at = new Date(iso);
+  return {
+    date: new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: APP_TIME_ZONE,
+      year: "numeric",
+    }).format(at),
+    time: new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      minute: "2-digit",
+      timeZone: APP_TIME_ZONE,
+    }).format(at),
+  };
 }

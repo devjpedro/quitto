@@ -18,6 +18,8 @@ const SIGNIN_SUBMIT = /^Entrar$/;
  */
 const SIGNIN_FAIL = /E-mail ou senha incorretos/i;
 const LOGIN_URL = /\/login/;
+const HOME_URL = /:3001\/$/;
+const FORGOT_URL = /\/forgot-password/;
 const LOGO_X = 22;
 
 test("criar conta leva ao Agora", async ({ page }) => {
@@ -25,6 +27,18 @@ test("criar conta leva ao Agora", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: GREETING })
   ).toBeVisible();
+});
+
+test("quem está logado não vê o /login: vai ao Agora; esqueci a senha continua aberto", async ({
+  page,
+}) => {
+  await signup(page);
+  await page.goto("/login");
+  await expect(page).toHaveURL(HOME_URL);
+  await page.goto("/login?mode=signup");
+  await expect(page).toHaveURL(HOME_URL);
+  await page.goto("/forgot-password");
+  await expect(page).toHaveURL(FORGOT_URL);
 });
 
 test("entrar com a senha errada mostra a frase de credenciais", async ({

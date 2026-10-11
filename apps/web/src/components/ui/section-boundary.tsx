@@ -3,6 +3,7 @@ import { type ReactNode, Suspense, useRef } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Button } from "@/components/ui/button";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
+import { cn } from "@/lib/utils";
 import { isTimeoutError } from "@/lib/with-timeout";
 import { m } from "@/paraglide/messages.js";
 
@@ -58,11 +59,14 @@ function SectionError({
  */
 export function SectionBoundary({
   children,
+  className,
   fallback,
   renderError,
   slowAfterMs = SLOW_AFTER_MS,
 }: {
   children: ReactNode;
+  /** For the region's own box (a page that fills the screen gives it the height). */
+  className?: string;
   fallback: ReactNode;
   /** A non-null result replaces the "Try again" (a 404 is not worth retrying). */
   renderError?: (error: unknown) => ReactNode | null;
@@ -71,7 +75,10 @@ export function SectionBoundary({
   const regionRef = useRef<HTMLDivElement>(null);
   return (
     <div
-      className="rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className={cn(
+        "rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        className
+      )}
       ref={regionRef}
       tabIndex={-1}
     >

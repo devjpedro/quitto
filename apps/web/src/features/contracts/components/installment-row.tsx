@@ -8,7 +8,7 @@ import {
   WarningCircle,
   XCircle,
 } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Money } from "@/components/ui/money";
 import { NumberTile } from "@/components/ui/number-tile";
 import { Tag } from "@/components/ui/tag";
@@ -114,12 +114,21 @@ export function InstallmentRow({
   sequence: number;
   view: RowView;
 }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  // ↑/↓ in the panel walk the selection: keep the line inside the list's own
+  // scroll (nearest: it does not move a line that is already in view).
+  useEffect(() => {
+    if (selected) {
+      ref.current?.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [selected]);
   return (
     <button
       aria-current={selected ? "true" : undefined}
       className={cn(ROW, selected && "bg-row-selected hover:bg-row-selected")}
       data-installment-row={id}
       onClick={() => onOpen(id)}
+      ref={ref}
       type="button"
     >
       <RowBody

@@ -3,6 +3,7 @@ import { addMonths } from "@quitto/shared";
 import {
   addDays,
   endOfMonth,
+  formatInstant,
   formatISODate,
   toISODate,
 } from "../src/lib/dates";
@@ -55,5 +56,19 @@ describe("formatISODate", () => {
     expect(formatISODate("2026-07-10", "en-US")).toBe("07/10/2026");
     expect(formatISODate("2026-01-01", "pt-BR")).toBe("01/01/2026");
     expect(formatISODate("2026-01-01", "en-US")).toBe("01/01/2026");
+  });
+});
+
+describe("formatInstant", () => {
+  it("shows the instant on São Paulo's clock, across the day boundary", () => {
+    // 01:30 UTC of the 13th is 22:30 of the 12th in São Paulo (UTC-3).
+    expect(formatInstant("2026-07-13T01:30:00Z", "pt-BR")).toEqual({
+      date: "12/07/2026",
+      time: "22:30",
+    });
+    expect(formatInstant("2026-07-12T15:05:00Z", "en-US")).toEqual({
+      date: "07/12/2026",
+      time: "12:05",
+    });
   });
 });
