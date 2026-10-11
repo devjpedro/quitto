@@ -6,6 +6,7 @@ import { runReminderSweep } from "./cron/reminders";
 import { env } from "./env";
 import {
   AppError,
+  InternalError,
   NotFoundError,
   toErrorBody,
   UnauthorizedError,
@@ -50,7 +51,16 @@ export function buildApp() {
         set.status = answer.httpStatus;
         return toErrorBody(answer);
       }
+      // Anonymous 4xx noise (a scanner's 404, a bad body): Elysia's own answer
+      // stays, and Sentry does not hear of it.
+      if (code === "NOT_FOUND" || code === "PARSE" || code === "VALIDATION") {
+        return;
+      }
       captureException(error);
+      // Never the driver's message (it carries the SQL and its params).
+      const answer = new InternalError();
+      set.status = answer.httpStatus;
+      return toErrorBody(answer);
     })
     .use(cors({ origin: env.WEB_ORIGIN, credentials: true }))
     .mount(auth.handler)

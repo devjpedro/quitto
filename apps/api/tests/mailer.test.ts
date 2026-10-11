@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
+const real = await import("@sentry/bun");
 const captured: string[] = [];
 mock.module("@sentry/bun", () => ({
-  captureException: () => undefined,
+  ...real,
   captureMessage: (m: string) => captured.push(m),
 }));
 
