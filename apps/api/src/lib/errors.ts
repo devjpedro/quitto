@@ -55,6 +55,13 @@ export class RateLimitedError extends AppError {
   }
 }
 
+/** The 500 the caller sees: no driver or stack detail, the cause goes to Sentry. */
+export class InternalError extends AppError {
+  constructor(message = "Erro interno") {
+    super({ code: "INTERNAL", httpStatus: 500, message });
+  }
+}
+
 /** A 422 whose code the web translates; details carry the field's path and the message's parameters. */
 export class CodedError extends AppError {
   constructor(args: {

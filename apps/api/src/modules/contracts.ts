@@ -16,26 +16,35 @@ import { contractCards } from "../lib/contract-cards";
 import { createContract } from "../lib/contract-create";
 import { loadContractRows } from "../lib/contract-rows";
 import { normalizeEmail } from "../lib/email";
+import { checkInviteQuota } from "../lib/email-limits";
 import {
   CodedError,
   codedValidationError,
   ForbiddenError,
   NotFoundError,
+  RateLimitedError,
   ValidationError,
 } from "../lib/errors";
 import { trySendInviteEmail } from "../lib/invite-mail";
 import { createNotifications } from "../lib/notifications";
+import { createRateLimiter, rateLimitOn } from "../lib/rate-limit";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
 import { deleteObjects } from "../lib/storage";
 import { contractListItemSchema } from "./list-schemas";
 
 // Types only, no limits (planner's decision 3): the shared zod sets the
-// limits, so every mistake comes back as a code the web translates.
+// limits, so every mistake comes back as a code the web translates. The one
+// exception is the size of the arrays: a body that big is never a form.
+const MAX_ITEMS = 600;
+
 const InstallmentRow = t.Object({
   amountCents: t.Number(),
   dueDate: t.String(),
 });
+
+/** 30 contracts an hour per user: a person does not create that many by hand. */
+const createLimiter = createRateLimiter({ max: 30, windowMs: 60 * 60_000 });
 
 const CreateContractBody = t.Object({
   title: t.String(),
@@ -64,11 +73,11 @@ const CreateContractBody = t.Object({
     }),
     t.Object({
       mode: t.Literal("custom"),
-      installments: t.Array(InstallmentRow),
+      installments: t.Array(InstallmentRow, { maxItems: MAX_ITEMS }),
     }),
   ]),
-  installments: t.Optional(t.Array(InstallmentRow)),
-  paidInstallments: t.Optional(t.Array(t.Number())),
+  installments: t.Optional(t.Array(InstallmentRow, { maxItems: MAX_ITEMS })),
+  paidInstallments: t.Optional(t.Array(t.Number(), { maxItems: MAX_ITEMS })),
   counterparty: t.Optional(
     t.Object({ name: t.String(), email: t.Optional(t.String()) })
   ),
@@ -87,6 +96,11 @@ export const contractsModule = new Elysia({ prefix: "/api" })
     "/contracts",
     async ({ request, body }) => {
       const { user } = await requireAuth(request.headers);
+      if (rateLimitOn() && !createLimiter.hit(user.id)) {
+        throw new RateLimitedError(
+          "Muitos contratos criados. Tente mais tarde."
+        );
+      }
       const parsed = contractRequestSchema.safeParse(body);
       if (!parsed.success) {
         throw codedValidationError(parsed.error.issues);
@@ -98,6 +112,9 @@ export const contractsModule = new Elysia({ prefix: "/api" })
           code: "counterparty.email.self",
           path: "counterparty.email",
         });
+      }
+      if (email) {
+        checkInviteQuota(user.id);
       }
       const created = await createContract(
         { id: user.id, name: user.name },

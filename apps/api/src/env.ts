@@ -26,6 +26,8 @@ const schema = z.object({
   CRON_SECRET: z.string().min(32).optional(),
   // Trava global do e-mail de lembrete: só liga com domínio verificado no Resend.
   EMAIL_REMINDERS_ENABLED: z.literal("true").optional(),
+  // Teto global de e-mails por dia (em memória, um processo): protege a reputação do remetente.
+  EMAIL_DAILY_CAP: z.coerce.number().int().positive().default(500),
   SENTRY_DSN: z.string().optional(),
 });
 

@@ -270,6 +270,8 @@ async function firstInstallmentId(
   return (await res.json()).installments[0].id as string;
 }
 
+const PROOF_BODY = "%PDF-1.4 fake";
+
 async function uploadProof(cookie: string, installmentId: string) {
   const presign = await (
     await app.handle(
@@ -281,6 +283,7 @@ async function uploadProof(cookie: string, installmentId: string) {
           body: JSON.stringify({
             fileName: "c.pdf",
             mimeType: "application/pdf",
+            sizeBytes: PROOF_BODY.length,
           }),
         }
       )
@@ -289,7 +292,7 @@ async function uploadProof(cookie: string, installmentId: string) {
   await fetch(presign.uploadUrl, {
     method: "PUT",
     headers: { "content-type": "application/pdf" },
-    body: "%PDF-1.4 fake",
+    body: PROOF_BODY,
   });
   return app.handle(
     new Request(`http://localhost/api/installments/${installmentId}/proofs`, {

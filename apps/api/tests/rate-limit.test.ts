@@ -35,6 +35,22 @@ describe("createRateLimiter", () => {
     expect(limiter.hit("one-more", 60_000)).toBe(true);
   });
 
+  it("cheio de chaves vivas, onFull allow deixa a nova passar sem guardá-la", () => {
+    const limiter = createRateLimiter({
+      max: 1,
+      windowMs: 60_000,
+      onFull: "allow",
+    });
+    for (let i = 0; i < MAX_KEYS; i += 1) {
+      limiter.hit(`ip-${i}`, 0);
+    }
+    expect(limiter.hit("one-more", 0)).toBe(true);
+    // Not stored: a second hit is "new" again, not counted past the max.
+    expect(limiter.hit("one-more", 0)).toBe(true);
+    // Keys already stored keep being limited.
+    expect(limiter.hit("ip-0", 0)).toBe(false);
+  });
+
   it("o teto global barra mesmo com chaves diferentes", () => {
     const global = createRateLimiter({ max: 2, windowMs: 60_000 });
     expect(["a", "b", "c"].map(() => global.hit("all", 0))).toEqual([

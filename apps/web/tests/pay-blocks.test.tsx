@@ -579,6 +579,7 @@ describe("enviar o comprovante (mockup 14, P7)", () => {
     expect(calls.presign).toHaveBeenCalledWith("i5", {
       fileName: "pix-carlos-outubro.pdf",
       mimeType: "application/pdf",
+      sizeBytes: 20,
     });
     expect(FakeXhr.last.url).toBe("https://s3.local/put");
     expect(FakeXhr.last.sent).toBeInstanceOf(File);

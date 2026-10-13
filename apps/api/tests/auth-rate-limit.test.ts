@@ -12,6 +12,9 @@ const isolatedAuth = betterAuth({
   basePath: "/api/auth",
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: { enabled: true },
+  advanced: {
+    ipAddress: { ipAddressHeaders: ["fly-client-ip"], ipv6Subnet: 64 },
+  },
   rateLimit: {
     enabled: true,
     storage: "memory",
@@ -32,7 +35,7 @@ describe("auth rate limit", () => {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            "x-forwarded-for": ip,
+            "fly-client-ip": ip,
           },
           body: JSON.stringify({
             email: "nope@quitto.test",
@@ -46,5 +49,44 @@ describe("auth rate limit", () => {
       }
     }
     expect(sawTooMany).toBe(true);
+  });
+
+  it("cada IP em fly-client-ip tem o seu balde", async () => {
+    const signIn = (ip: string) =>
+      isolatedApp.handle(
+        new Request("http://localhost/api/auth/sign-in/email", {
+          method: "POST",
+          headers: { "content-type": "application/json", "fly-client-ip": ip },
+          body: JSON.stringify({
+            email: "x@quitto.test",
+            password: "wrongpass",
+          }),
+        })
+      );
+    for (let i = 0; i < AUTH_RATE_LIMITS.signIn + 1; i++) {
+      await signIn("203.0.113.20");
+    }
+    expect((await signIn("203.0.113.20")).status).toBe(429);
+    expect((await signIn("203.0.113.21")).status).not.toBe(429);
+  });
+
+  it("x-forwarded-for sem fly-client-ip é ignorado (não rouba o balde de um IP real)", async () => {
+    const signIn = (headers: Record<string, string>) =>
+      isolatedApp.handle(
+        new Request("http://localhost/api/auth/sign-in/email", {
+          method: "POST",
+          headers: { "content-type": "application/json", ...headers },
+          body: JSON.stringify({
+            email: "y@quitto.test",
+            password: "wrongpass",
+          }),
+        })
+      );
+    for (let i = 0; i < AUTH_RATE_LIMITS.signIn + 1; i++) {
+      await signIn({ "x-forwarded-for": "203.0.113.9, 76.76.21.9" });
+    }
+    expect((await signIn({ "fly-client-ip": "76.76.21.9" })).status).not.toBe(
+      429
+    );
   });
 });

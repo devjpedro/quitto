@@ -1,4 +1,6 @@
 import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -54,18 +56,27 @@ function s3(): { client: S3Client; bucket: string } {
   return { client, bucket: cfg.S3_BUCKET };
 }
 
-/** Presigned PUT URL for the browser to upload directly. Expires in 5 min. */
+/**
+ * Presigned PUT URL for the browser to upload directly. Expires in 60 s and
+ * signs content-length and content-type: the storage refuses a body of another
+ * size or type, so the declared size is the one that lands in the bucket.
+ */
 export function presignUpload(
   objectKey: string,
-  contentType: string
+  contentType: string,
+  sizeBytes: number
 ): Promise<string> {
   const { client: c, bucket } = s3();
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: objectKey,
     ContentType: contentType,
+    ContentLength: sizeBytes,
   });
-  return getSignedUrl(c, command, { expiresIn: 300 });
+  return getSignedUrl(c, command, {
+    expiresIn: 60,
+    signableHeaders: new Set(["content-length", "content-type"]),
+  });
 }
 
 /** Reads object metadata; throws if the object does not exist. */
@@ -84,6 +95,29 @@ export function presignDownload(objectKey: string): Promise<string> {
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
     { expiresIn: 300 }
   );
+}
+
+/**
+ * Copies an object inside the bucket (metadata, content-type included, is kept).
+ * Uploads land under `incoming/`, which the API only moves to `proofs/` once it
+ * checked them; what is never registered is cleared by an R2 lifecycle rule on
+ * `incoming/` (1 day), set in the Cloudflare console: no code sweeps it.
+ */
+export async function copyObject(from: string, to: string): Promise<void> {
+  const { client: c, bucket } = s3();
+  await c.send(
+    new CopyObjectCommand({
+      Bucket: bucket,
+      Key: to,
+      CopySource: `${bucket}/${from.split("/").map(encodeURIComponent).join("/")}`,
+    })
+  );
+}
+
+/** Deletes one object (idempotent: a missing key is not an error). */
+export async function deleteObject(objectKey: string): Promise<void> {
+  const { client: c, bucket } = s3();
+  await c.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
 }
 
 const DELETE_BATCH = 1000;

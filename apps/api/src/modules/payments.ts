@@ -4,23 +4,63 @@ import {
   isPaidStatus,
   NOTIFICATION_TYPE,
 } from "@quitto/shared";
+import { count, eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db/client";
 import { proof } from "../db/schema";
 import { recordEvent } from "../lib/audit";
-import { ForbiddenError, ValidationError } from "../lib/errors";
+import {
+  ForbiddenError,
+  RateLimitedError,
+  ValidationError,
+} from "../lib/errors";
 import {
   installmentEntitySchema,
   loadInstallmentForUser,
   toInstallmentEntity,
   transitionInstallment,
 } from "../lib/installment-access";
-import { nextStatus } from "../lib/installment-state";
+import { type InstallmentStatus, nextStatus } from "../lib/installment-state";
 import { notifyTarget } from "../lib/notifications";
+import { createRateLimiter, rateLimitOn } from "../lib/rate-limit";
 import { idParam } from "../lib/route-params";
 import { requireAuth } from "../lib/session";
-import { headObject, presignUpload } from "../lib/storage";
+import {
+  copyObject,
+  deleteObject,
+  headObject,
+  presignUpload,
+} from "../lib/storage";
 
+const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+const MAX_PROOFS_PER_INSTALLMENT = 5;
+
+/** Presigns per user: each one is a URL that can write to the bucket (cost). */
+const presignLimiter = createRateLimiter({ max: 20, windowMs: 3_600_000 });
+
+/**
+ * Whether the installment still takes a proof, and the status it moves to. One
+ * proof at most on an installment registered as paid at creation (it is only
+ * attached); five on any other; and the state machine must accept the send.
+ */
+async function proofIntake(
+  inst: { id: string; status: InstallmentStatus; registeredOnCreate: boolean },
+  requiresConfirmation: boolean
+): Promise<{ attachOnly: boolean; newStatus: InstallmentStatus }> {
+  const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
+  const [row] = await db
+    .select({ n: count() })
+    .from(proof)
+    .where(eq(proof.installmentId, inst.id));
+  const sent = row?.n ?? 0;
+  if (sent >= (attachOnly ? 1 : MAX_PROOFS_PER_INSTALLMENT)) {
+    throw new ValidationError("Limite de comprovantes da parcela atingido");
+  }
+  const newStatus = attachOnly
+    ? inst.status
+    : nextStatus(inst.status, "submit_proof", requiresConfirmation);
+  return { attachOnly, newStatus };
+}
 const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"] as const;
 
 // Explicit literal tuple (not `ALLOWED_MIME.map(...)`): a mapped array widens to
@@ -36,16 +76,27 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
     "/installments/:installmentId/proofs/presign",
     async ({ request, params, body }) => {
       const { user } = await requireAuth(request.headers);
-      const { inst, caps } = await loadInstallmentForUser(
-        user.id,
-        params.installmentId
-      );
+      if (rateLimitOn() && !presignLimiter.hit(user.id)) {
+        throw new RateLimitedError(
+          "Muitos envios de comprovante. Tente mais tarde."
+        );
+      }
+      const {
+        inst,
+        contract: c,
+        caps,
+      } = await loadInstallmentForUser(user.id, params.installmentId);
       if (!caps.isPayer) {
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
+      await proofIntake(inst, c.requiresConfirmation);
       const safeName = body.fileName.replace(/[^\w.-]/g, "_").slice(0, 120);
-      const objectKey = `proofs/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
-      const uploadUrl = await presignUpload(objectKey, body.mimeType);
+      const objectKey = `incoming/${inst.contractId}/${inst.id}/${crypto.randomUUID()}-${safeName}`;
+      const uploadUrl = await presignUpload(
+        objectKey,
+        body.mimeType,
+        body.sizeBytes
+      );
       return { uploadUrl, objectKey };
     },
     {
@@ -53,6 +104,7 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
       body: t.Object({
         fileName: t.String({ minLength: 1, maxLength: 200 }),
         mimeType: proofMimeSchema,
+        sizeBytes: t.Integer({ minimum: 1, maximum: MAX_PROOF_BYTES }),
       }),
       response: t.Object({ uploadUrl: t.String(), objectKey: t.String() }),
     }
@@ -70,10 +122,19 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ForbiddenError("Apenas o comprador/dono anexa comprovante");
       }
 
-      // a chave tem de ser da própria parcela (o presign a gera assim)
-      if (!body.objectKey.startsWith(`proofs/${inst.contractId}/${inst.id}/`)) {
+      // a chave tem de ser da própria parcela, no formato exato que o presign gera
+      const incomingKey = new RegExp(
+        `^incoming/${inst.contractId}/${inst.id}/([0-9a-f-]{36}-[\\w.-]{1,120})$`
+      ).exec(body.objectKey);
+      if (!incomingKey) {
         throw new ValidationError("Comprovante não pertence à parcela");
       }
+
+      // a parcela ainda aceita comprovante (teto e estado), antes de mexer no storage
+      const { attachOnly, newStatus } = await proofIntake(
+        inst,
+        c.requiresConfirmation
+      );
 
       // valida que o objeto realmente subiu (e tamanho/tipo coerentes)
       const head = await headObject(body.objectKey).catch(() => null);
@@ -81,32 +142,31 @@ export const paymentsModule = new Elysia({ prefix: "/api" })
         throw new ValidationError("Comprovante não encontrado no storage");
       }
       const sizeBytes = head.ContentLength ?? 0;
-      if (sizeBytes <= 0 || sizeBytes > 10 * 1024 * 1024) {
-        throw new ValidationError("Arquivo inválido (vazio ou maior que 10MB)");
-      }
       // o tipo do objeto realmente armazenado manda — não confiar só no body
       const storedMime = head.ContentType;
-      if (
-        !(
-          storedMime && (ALLOWED_MIME as readonly string[]).includes(storedMime)
-        )
-      ) {
+      const badSize = sizeBytes <= 0 || sizeBytes > MAX_PROOF_BYTES;
+      const badMime = !(
+        storedMime && (ALLOWED_MIME as readonly string[]).includes(storedMime)
+      );
+      if (badSize || badMime) {
+        // rejeitado não fica no bucket
+        await deleteObject(body.objectKey).catch(() => undefined);
         throw new ValidationError(
-          "Tipo de arquivo do comprovante não permitido"
+          badSize
+            ? "Arquivo inválido (vazio ou maior que 10MB)"
+            : "Tipo de arquivo do comprovante não permitido"
         );
       }
 
-      // Paid when the contract was created: the proof is only attached, the
-      // status stays and nobody is told (it is past, not a payment to approve).
-      const attachOnly = inst.registeredOnCreate && isPaidStatus(inst.status);
-      const newStatus = attachOnly
-        ? inst.status
-        : nextStatus(inst.status, "submit_proof", c.requiresConfirmation);
+      // só o que passou na checagem sai de incoming/ para proofs/
+      const finalKey = `proofs/${inst.contractId}/${inst.id}/${incomingKey[1]}`;
+      await copyObject(body.objectKey, finalKey);
+      await deleteObject(body.objectKey).catch(() => undefined);
 
       const updated = await db.transaction(async (tx) => {
         await tx.insert(proof).values({
           installmentId: inst.id,
-          objectKey: body.objectKey,
+          objectKey: finalKey,
           fileName: body.fileName,
           mimeType: storedMime,
           sizeBytes,
